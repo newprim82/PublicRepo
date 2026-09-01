@@ -211,32 +211,76 @@ st.markdown("""
     .sidebar-section-header.green { border-left-color: #00E676; }
     .sidebar-section-header.amber { border-left-color: #FFAB00; }
     
-    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 (일체형 네모칸 - 시인성 극대화) */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(button[aria-label*="⚠️"]),
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(button[aria-label*="🚨"]) {
+    /* ✨ [과중 근무 발생 알림] 흰색/빨간색 교차 반짝임(Blinking) 애니메이션 */
+    @keyframes alert-blink {
+        0% {
+            color: #FFFFFF;
+            border-color: #FF1744;
+            background-color: rgba(255, 23, 68, 0.4);
+            box-shadow: 0 0 14px rgba(255, 23, 68, 0.9), inset 0 0 8px rgba(255, 23, 68, 0.5);
+            text-shadow: 0 0 8px #FFFFFF;
+        }
+        50% {
+            color: #FF1744;
+            border-color: #FFFFFF;
+            background-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.6);
+            text-shadow: 0 0 10px #FF1744;
+        }
+        100% {
+            color: #FFFFFF;
+            border-color: #FF1744;
+            background-color: rgba(255, 23, 68, 0.4);
+            box-shadow: 0 0 14px rgba(255, 23, 68, 0.9), inset 0 0 8px rgba(255, 23, 68, 0.5);
+            text-shadow: 0 0 8px #FFFFFF;
+        }
+    }
+
+    @keyframes siren-pulse {
+        0% { transform: scale(1) rotate(0deg); }
+        20% { transform: scale(1.25) rotate(-12deg); }
+        40% { transform: scale(1.25) rotate(12deg); }
+        60% { transform: scale(1.25) rotate(-8deg); }
+        80% { transform: scale(1.25) rotate(8deg); }
+        100% { transform: scale(1) rotate(0deg); }
+    }
+
+    .alert-blink-badge {
+        animation: alert-blink 1.2s infinite ease-in-out !important;
+        padding: 3px 12px !important;
+        border-radius: 8px !important;
+        border: 2px solid #FF1744 !important;
+        font-weight: 900 !important;
+        font-size: 15px !important;
+        letter-spacing: -0.3px !important;
+        display: inline-block !important;
+    }
+
+    .siren-icon {
+        display: inline-block !important;
+        animation: siren-pulse 1.2s infinite ease-in-out !important;
+        font-size: 18px !important;
+    }
+
+    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 (일체형 네모칸) */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) {
         background: linear-gradient(135deg, rgba(211, 47, 47, 0.22), rgba(239, 108, 0, 0.22)) !important;
         border: 1.5px solid rgba(255, 82, 82, 0.6) !important;
         border-left: 8px solid #FF1744 !important;
         border-radius: 14px !important;
-        box-shadow: 0 6px 24px rgba(255, 23, 68, 0.25) !important;
+        box-shadow: 0 6px 24px rgba(255, 23, 68, 0.3) !important;
         padding: 14px 20px !important;
         margin-top: 14px !important;
         margin-bottom: 18px !important;
     }
 
-    /* 🟧 40h 초과 주황색 버튼 스타일 (표준 aria-label 선택자로 100% 강제 적용) */
-    button[aria-label*="⚠️"],
-    button[aria-label*="김시우"],
-    button[aria-label*="홍정표"],
-    button:has([data-testid="stMarkdownContainer"]:has(p)) {
-        /* standard */
-    }
-    
-    button[aria-label*="⚠️"] {
+    /* 🟧 배너 내부 버튼 100% 강제 오렌지색 적용 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button {
         background: linear-gradient(135deg, #FF6D00, #FF9100) !important;
         background-color: #FF6D00 !important;
         color: #FFFFFF !important;
-        border: 1px solid #FFE082 !important;
+        border: 1.5px solid #FFE082 !important;
         border-radius: 20px !important;
         padding: 4px 16px !important;
         font-size: 13px !important;
@@ -247,42 +291,17 @@ st.markdown("""
         box-shadow: 0 4px 14px rgba(255, 109, 0, 0.6) !important;
         white-space: nowrap !important;
     }
-    button[aria-label*="⚠️"] * {
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button *,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button * {
         color: #FFFFFF !important;
         font-weight: 900 !important;
         font-size: 13px !important;
     }
-    button[aria-label*="⚠️"]:hover {
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button:hover {
         background: linear-gradient(135deg, #FF9100, #FFAB00) !important;
-        transform: translateY(-2px) scale(1.03) !important;
-        box-shadow: 0 6px 18px rgba(255, 109, 0, 0.8) !important;
-    }
-
-    /* 🟥 52h 초과 빨간색 버튼 스타일 (표준 aria-label 선택자로 100% 강제 적용) */
-    button[aria-label*="🚨"] {
-        background: linear-gradient(135deg, #FF1744, #D50000) !important;
-        background-color: #FF1744 !important;
-        color: #FFFFFF !important;
-        border: 1px solid #FF8A80 !important;
-        border-radius: 20px !important;
-        padding: 4px 16px !important;
-        font-size: 13px !important;
-        font-weight: 900 !important;
-        min-height: 32px !important;
-        height: 32px !important;
-        line-height: 22px !important;
-        box-shadow: 0 4px 14px rgba(255, 23, 68, 0.7) !important;
-        white-space: nowrap !important;
-    }
-    button[aria-label*="🚨"] * {
-        color: #FFFFFF !important;
-        font-weight: 900 !important;
-        font-size: 13px !important;
-    }
-    button[aria-label*="🚨"]:hover {
-        background: linear-gradient(135deg, #FF5252, #FF1744) !important;
-        transform: translateY(-2px) scale(1.03) !important;
-        box-shadow: 0 6px 18px rgba(255, 23, 68, 0.9) !important;
+        transform: translateY(-2px) scale(1.04) !important;
+        box-shadow: 0 6px 20px rgba(255, 109, 0, 0.85) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1429,10 +1448,10 @@ def main():
             caution_items = [it for it in overwork_items if not it["is_52"]]
 
             with st.container(border=True):
-                # 1행: 상단 알림 제목 + 우측 퀵점프 바로가기 버튼
+                # 1행: 상단 알림 제목 (반짝반짝 애니메이션) + 우측 퀵점프 바로가기 버튼
                 col_head_l, col_head_r = st.columns([7.8, 2.2])
                 with col_head_l:
-                    st.markdown('<div style="font-size: 15.5px; font-weight: 900; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">🚨 <span style="color: #FF5252; background: rgba(255, 23, 68, 0.2); padding: 2px 8px; border-radius: 6px; border: 1px solid #FF1744;">[과중 근무 발생 알림]</span> 선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #FFFFFF;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
                 with col_head_r:
                     st.markdown('<div style="text-align: right;"><a href="#weekly-monitor-section" style="background: linear-gradient(135deg, #FF1744, #D50000); color: #FFFFFF; font-weight: 800; font-size: 12.5px; padding: 7px 16px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(255, 23, 68, 0.45); white-space: nowrap;">👇 주차별 모니터링 표로 바로가기</a></div>', unsafe_allow_html=True)
 
