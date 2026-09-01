@@ -3,7 +3,7 @@ import re
 import sys
 import time
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 
@@ -59,17 +59,28 @@ COLLECTOR_STATUS = {
     "last_log_message": ""
 }
 
-# 현재 활성 스레드 ID 관리
+# 현재 활성 스레드 ID 관리 및 동기화 락
 _ACTIVE_THREAD_TOKEN = 0
 _cycle_lock = threading.Lock()
 _last_execution_timestamp = 0
 
+# 한국 표준시 (KST, UTC+9) 기준 정의
+KST_TIMEZONE = timezone(timedelta(hours=9))
+
+def get_current_kst_time() -> datetime:
+    """OS 타임존(UTC 등)과 관계없이 항상 한국 표준시(KST)를 반환"""
+    try:
+        # UTC 기준 현재 시각을 KST로 변환 후 naive datetime으로 반환
+        return datetime.now(timezone.utc).astimezone(KST_TIMEZONE).replace(tzinfo=None)
+    except Exception:
+        return datetime.now()
+
 
 def get_collector_countdown_info() -> Dict[str, Any]:
     """
-    다음 자동 증분 수집까지 남은 시간(분) 및 예정 시각 정보를 실시간으로 계산하여 반환
+    다음 자동 증분 수집까지 남은 시간(분) 및 예정 시각 정보를 한국 표준시(KST) 기준으로 계산하여 반환
     """
-    now = datetime.now()
+    now = get_current_kst_time()
     interval = max(600, config.COLLECTOR_INTERVAL_SECONDS) # 10분 (600초)
     next_time = COLLECTOR_STATUS.get("next_run_time")
     last_time = COLLECTOR_STATUS.get("last_run_time")
@@ -340,12 +351,13 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             return {"status": "throttled", "message": "쿨다운 대기 중"}
             
         _last_execution_timestamp = now_ts
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        kst_now = get_current_kst_time()
+        now_str = kst_now.strftime("%Y-%m-%d %H:%M:%S")
         target_chat = config.KAKAO_CHAT_TITLE
         
         COLLECTOR_STATUS["last_run_time"] = now_str
         COLLECTOR_STATUS["total_cycles"] += 1
-        COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
+        COLLECTOR_STATUS["next_run_time"] = kst_now + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
         
         log_trace(f"==================================================")
         log_trace(f"🤖 [카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 정기'})] 대상: '{target_chat}'")
