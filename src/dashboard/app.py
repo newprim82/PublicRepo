@@ -21,12 +21,14 @@ import src.parser.reply_matcher as reply_matcher
 import src.services.team_service as team_service
 import src.database.supabase_client as supabase_client
 import src.services.reward_leave_service as reward_leave_service
+import src.collector.kakao_auto_collector as kakao_auto_collector
 
 importlib.reload(kakao_parser)
 importlib.reload(reply_matcher)
 importlib.reload(team_service)
 importlib.reload(supabase_client)
 importlib.reload(reward_leave_service)
+importlib.reload(kakao_auto_collector)
 
 from src.services.team_service import TeamService, DEFAULT_TEAMS, UNASSIGNED_TEAM
 from src.services.reward_leave_service import RewardLeaveService
