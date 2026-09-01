@@ -17,6 +17,9 @@ class Config:
     SUPABASE_URL: str = (os.getenv("SUPABASE_URL", "").strip() or DEFAULT_SUPABASE_URL)
     SUPABASE_KEY: str = (os.getenv("SUPABASE_KEY", "").strip() or DEFAULT_SUPABASE_KEY)
 
+    # Streamlit Cloud 배포 URL (24시간 Keep-Alive 슬립 방지용)
+    STREAMLIT_APP_URL: str = os.getenv("STREAMLIT_APP_URL", "").strip()
+
     # 카카오톡 연동 설정
     KAKAO_CHAT_TITLE: str = os.getenv("KAKAO_CHAT_TITLE", "[기술본부] 업무공유방").strip()
     COLLECTOR_INTERVAL_SECONDS: int = int(os.getenv("COLLECTOR_INTERVAL_SECONDS", "600").split("#")[0].strip())

@@ -13,6 +13,9 @@ from ..parser.reply_matcher import WorkLogMatcher, WorkLogRecord
 from ..database.supabase_client import db_manager
 
 # Windows 전용 모듈 안전 임포트
+import ctypes
+import urllib.request
+
 try:
     import win32gui
     import win32process
@@ -24,6 +27,37 @@ try:
     WIN32_AVAILABLE = True
 except ImportError:
     WIN32_AVAILABLE = False
+
+# Windows 전원 관리 절전 방지 플래그
+ES_CONTINUOUS = 0x80000000
+ES_SYSTEM_REQUIRED = 0x00000001
+ES_AWAYMODE_REQUIRED = 0x00000040
+
+def enable_windows_keep_alive():
+    """대시보드 및 카톡 수집기가 실행되는 동안 Windows 시스템이 절전 모드(Sleep)로 진입하는 것을 차단"""
+    try:
+        if sys.platform == "win32":
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)
+            log_trace("[🛡️ 절전 방지 활성화] Windows 시스템 절전 모드 진입이 원천 차단되었습니다. (24시간 상시 가동)")
+    except Exception as e:
+        log_trace(f"[절전 방지 설정 알림]: {e}")
+
+def ping_streamlit_cloud_app():
+    """10분마다 Streamlit Cloud 웹사이트로 가벼운 HTTP Ping을 전송하여 슬립 모드 진입을 원천 차단"""
+    app_url = config.STREAMLIT_APP_URL
+    if not app_url:
+        return
+    try:
+        req = urllib.request.Request(
+            app_url,
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WorkLogCollector KeepAlive/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            status = response.getcode()
+            log_trace(f"[🌐 Streamlit Cloud Keep-Alive] URL '{app_url}' 핑 성공 (상태 코드: {status})")
+    except Exception as e:
+        log_trace(f"[🌐 Streamlit Cloud 핑 알림]: {e}")
+
 
 
 def safe_print(msg: str):
@@ -413,12 +447,18 @@ def background_collector_loop(token: int):
     except Exception:
         pass
 
+    # Windows OS 시스템 절전 방지 활성화
+    enable_windows_keep_alive()
+
     COLLECTOR_STATUS["is_running"] = True
     interval = max(600, config.COLLECTOR_INTERVAL_SECONDS)  # 10분 (600초)
     COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=interval)
     
     log_trace(f"🚀 [10분 자동 수집 데몬 기동] 토큰={token} | {interval}초(10분)마다 1회씩 실행합니다.")
     
+    # 기동 시 즉시 Streamlit Cloud Keep-Alive 핑 1회 전송
+    ping_streamlit_cloud_app()
+
     while True:
         if token != _ACTIVE_THREAD_TOKEN:
             log_trace(f"[스레드 종료] 이전 수집기 스레드(토큰={token})가 안전하게 종료되었습니다.")
@@ -430,7 +470,9 @@ def background_collector_loop(token: int):
             break
             
         try:
+            enable_windows_keep_alive()
             run_collection_cycle(is_manual=False)
+            ping_streamlit_cloud_app()
         except Exception as e:
             log_trace(f"[수집기 데몬 대기 예외]: {e}")
 
