@@ -32,7 +32,7 @@ from src.services.team_service import TeamService, DEFAULT_TEAMS, UNASSIGNED_TEA
 from src.services.reward_leave_service import RewardLeaveService
 from src.database.supabase_client import db_manager
 from src.analytics.stats_service import StatsService
-from src.collector.kakao_auto_collector import start_background_collector, run_collection_cycle, COLLECTOR_STATUS
+from src.collector.kakao_auto_collector import start_background_collector, run_collection_cycle, get_collector_countdown_info, COLLECTOR_STATUS
 
 # 🚀 대시보드 구동 시 1시간 주기 카카오톡 상시 자동 수집 데몬 1회 자동 기동
 try:
@@ -1267,6 +1267,21 @@ def main():
 
         # 3. 카카오톡 실시간 동기화 & 시스템 관리
         st.markdown('<div class="sidebar-section-header green">🤖 카카오톡 실시간 연동</div>', unsafe_allow_html=True)
+        countdown = get_collector_countdown_info()
+        st.markdown(f"""
+        <div style="background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.35); border-radius: 8px; padding: 9px 12px; margin-bottom: 8px; font-size: 12px;">
+            <div style="font-weight: 800; color: #00E676; display: flex; align-items: center; gap: 4px;">
+                ⏳ 다음 자동 증분 수집:
+            </div>
+            <div style="font-size: 14px; font-weight: 900; color: #FFFFFF; margin-top: 3px;">
+                {countdown['remaining_minutes']}분 뒤 <span style="font-size: 11.5px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
+            </div>
+            <div style="font-size: 11px; color: #94A3B8; margin-top: 3px;">
+                최근 수집: {countdown['last_run_str']} | 1시간 주기 자동
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
         if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
             with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
                 res = run_collection_cycle()
@@ -1380,14 +1395,22 @@ def main():
     if title_mode != "전체 직급" and selected_titles:
         title_badge_str = f" | <b>직급 [{', '.join(selected_titles)}]</b>"
 
-    c_badge_left, c_badge_right = st.columns([8.2, 1.8])
+    c_badge_left, c_badge_timer, c_badge_btn = st.columns([6.8, 1.8, 1.4])
     with c_badge_left:
         st.markdown(
             f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
             unsafe_allow_html=True
         )
-    with c_badge_right:
-        if st.button("⚡ 카톡 즉시 긁어오기", key="btn_manual_kakao_main", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
+    with c_badge_timer:
+        countdown = get_collector_countdown_info()
+        st.markdown(f"""
+        <div style="background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; padding: 4px 8px; height: 38px; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+            <span style="font-size: 11.5px; font-weight: 900; color: #00E5FF;">⏳ {countdown['remaining_minutes']}분 뒤 자동수집</span>
+            <span style="font-size: 10px; color: #94A3B8;">({countdown['next_run_str']} 예정)</span>
+        </div>
+        """, unsafe_allow_html=True)
+    with c_badge_btn:
+        if st.button("⚡ 즉시 수집", key="btn_manual_kakao_main", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
             with st.spinner("💬 카톡에서 최신 대화 수집 중..."):
                 res = run_collection_cycle()
                 if res.get("status") == "success":

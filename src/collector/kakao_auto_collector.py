@@ -2,7 +2,7 @@ import time
 import sys
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 
 from ..config import config
@@ -34,6 +34,7 @@ def safe_print(msg: str):
 COLLECTOR_STATUS = {
     "is_running": False,
     "last_run_time": None,
+    "next_run_time": None,
     "last_status": "대기 중",
     "last_result": None,
     "total_cycles": 0
@@ -41,6 +42,36 @@ COLLECTOR_STATUS = {
 
 _collector_thread: Optional[threading.Thread] = None
 _thread_lock = threading.Lock()
+
+
+def get_collector_countdown_info() -> Dict[str, Any]:
+    """
+    다음 자동 증분 수집까지 남은 시간(분) 및 예정 시각 정보를 반환
+    """
+    now = datetime.now()
+    next_time = COLLECTOR_STATUS.get("next_run_time")
+    last_time = COLLECTOR_STATUS.get("last_run_time")
+    
+    if not next_time:
+        next_time = now + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
+        COLLECTOR_STATUS["next_run_time"] = next_time
+        
+    remaining_seconds = max(0, int((next_time - now).total_seconds()))
+    remaining_minutes = max(1, (remaining_seconds + 59) // 60)
+    
+    if remaining_seconds <= 0:
+        badge_text = "⚡ 증분 수집 준비 중..."
+    else:
+        badge_text = f"⏳ {remaining_minutes}분 뒤 자동 증분 업데이트"
+        
+    return {
+        "is_running": COLLECTOR_STATUS.get("is_running", False),
+        "remaining_minutes": remaining_minutes,
+        "remaining_seconds": remaining_seconds,
+        "next_run_str": next_time.strftime("%H:%M"),
+        "last_run_str": last_time.strftime("%H:%M") if isinstance(last_time, datetime) else (str(last_time).split(" ")[-1][:5] if last_time else "없음"),
+        "badge_text": badge_text
+    }
 
 
 def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
@@ -157,6 +188,7 @@ def run_collection_cycle() -> Dict[str, Any]:
         "total_records": len(records),
         "saved_records": saved
     }
+    COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
     
     safe_print(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 증분 저장/동기화: {saved}건)")
     return {
