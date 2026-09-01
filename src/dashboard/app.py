@@ -1332,21 +1332,20 @@ def main():
                 <div class="sb-sub">최근 수집: {countdown['last_run_str']} | 10분 주기 자동</div>
             </div>
             <script>
-                let targetTs = {countdown['target_timestamp']};
+                let remaining = {countdown['remaining_seconds']};
                 function updateSb() {{
-                    let nowTs = Math.floor(Date.now() / 1000);
-                    let diff = targetTs - nowTs;
                     let tEl = document.getElementById('sb-live-timer');
                     if (!tEl) return;
-                    if (diff <= 0) {{
+                    if (remaining <= 0) {{
                         tEl.innerText = "⚡ 지금 수집 중...";
                         tEl.style.color = "#00E676";
                     }} else {{
-                        let m = Math.floor(diff / 60);
-                        let s = diff % 60;
+                        let m = Math.floor(remaining / 60);
+                        let s = remaining % 60;
                         let sStr = s < 10 ? '0' + s : s;
                         tEl.innerText = (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
                         tEl.style.color = "#FFFFFF";
+                        remaining--;
                     }}
                 }}
                 setInterval(updateSb, 1000);
