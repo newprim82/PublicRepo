@@ -1,0 +1,349 @@
+import hashlib
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional
+from dataclasses import dataclass, asdict
+
+from .kakao_parser import (
+    KakaoMessageParser,
+    RawKakaoMessage,
+    ParsedTaskStart,
+    ParsedTaskEnd,
+    WorkerInfo
+)
+
+@dataclass
+class WorkLogRecord:
+    msg_hash: str
+    log_type: str
+    worker_name: str
+    worker_company: str
+    worker_title: str
+    worker_team: str
+    client_name: str
+    task_description: str
+    estimated_minutes: int
+    actual_minutes: int
+    start_time: datetime
+    end_time: Optional[datetime]
+    status: str                       # 'COMPLETED' or 'PENDING'
+    is_night_work: bool
+    is_weekend_work: bool
+    raw_start_message: str
+    raw_end_message: str
+
+    def to_dict(self) -> dict:
+        d = asdict(self)
+        d['start_time'] = self.start_time.isoformat()
+        d['end_time'] = self.end_time.isoformat() if self.end_time else None
+        return d
+
+
+def check_is_night_work(
+    start_dt: datetime,
+    end_dt: Optional[datetime] = None,
+    raw_message: str = "",
+    estimated_minutes: int = 0,
+    actual_minutes: int = 0
+) -> bool:
+    """
+    사용자 지정 야간 판정 기준:
+    1. ★ 절대 규칙: 'day', 'days', 다일(16시간 이상) 작업은 주간 연속 지원 업무이므로 야간 작업에서 무조건 제외(False)!
+    2. ★ 실제 작업 시간 기준: 카톡 완료글을 늦게 올린 시각이 아니라, [시작 보고 시각 ~ 시작 시각 + 실제 소요시간] 구간이 실제 작업 시간대임!
+       - 예: 09:20 시작 + 8시간 소요 = 17:20 종료 ➔ 09:20~17:20은 순수 주간(08:00~19:00)이므로 야간 아님(False)!
+       - 예: 18:00 시작 + 3시간 소요 = 21:00 종료 ➔ 19:00~21:00이 걸치므로 야간(True)!
+    3. 야간 기준 시간: 19:00 ~ 익일 08:00
+    """
+    # 1. day / days 표기 작업 무조건 야간 제외
+    if raw_message:
+        low = raw_message.lower()
+        if "day" in low or "days" in low or "3일" in low or "2일" in low or "4일" in low or "5일" in low:
+            return False
+
+    # 2. 예정 시간 또는 실제 소요 시간이 16시간 이상인 다일 작업 제외
+    if estimated_minutes >= 16 * 60 or actual_minutes >= 16 * 60:
+        return False
+
+    # 실제 작업 종료 시각 산출 (카톡 늦게 올린 시각이 아닌 실제 작업 소요시간 기준)
+    if actual_minutes > 0:
+        effective_end_dt = start_dt + timedelta(minutes=actual_minutes)
+    elif end_dt and end_dt > start_dt and (end_dt - start_dt).total_seconds() <= 16 * 3600:
+        effective_end_dt = end_dt
+    elif estimated_minutes > 0:
+        effective_end_dt = start_dt + timedelta(minutes=estimated_minutes)
+    else:
+        effective_end_dt = start_dt
+
+    # 총 소요시간이 16시간을 초과하는 다일 작업 제외
+    elapsed_hours = (effective_end_dt - start_dt).total_seconds() / 3600.0
+    if elapsed_hours > 16.0:
+        return False
+
+    def is_hour_night(hour: int) -> bool:
+        # ★ 사용자 정의: 19:00 (저녁 7시) ~ 익일 08:00 (오전 8시)
+        return hour >= 19 or hour < 8
+
+    # 시작 시각 자체가 야간 기준 시간(19시~08시)인 경우
+    if is_hour_night(start_dt.hour):
+        return True
+
+    # 실제 작업 진행 구간(시작시각 ~ 시작시각 + 실제소요시간) 순회 검사
+    cur = start_dt
+    while cur <= effective_end_dt:
+        if is_hour_night(cur.hour):
+            return True
+        cur += timedelta(minutes=30)
+
+    return False
+
+
+def check_is_weekend_work(dt: datetime) -> bool:
+    return dt.weekday() in [5, 6]
+
+
+def generate_msg_hash(worker_name: str, client_name: str, start_dt: datetime, task_desc: str) -> str:
+    unique_str = f"{worker_name.strip()}_{client_name.strip()}_{start_dt.strftime('%Y%m%d_%H%M')}_{task_desc.strip()[:20]}"
+    return hashlib.sha256(unique_str.encode('utf-8')).hexdigest()[:16]
+
+
+class WorkLogMatcher:
+    @classmethod
+    def match_messages(cls, raw_messages: List[RawKakaoMessage]) -> List[WorkLogRecord]:
+        sorted_msgs = sorted(raw_messages, key=lambda m: m.timestamp)
+        
+        pending_starts: List[ParsedTaskStart] = []
+        matched_records: List[WorkLogRecord] = []
+        
+        for msg in sorted_msgs:
+            # 1. 시작 보고 파싱
+            task_starts = KakaoMessageParser.parse_task_starts(msg)
+            if task_starts:
+                for ts in task_starts:
+                    # 시작 메시지 자체에 '완료' 또는 '소요'가 직접 적힌 경우 즉시 COMPLETED 생성
+                    if ts.is_direct_completed and ts.direct_actual_minutes > 0:
+                        msg_hash = generate_msg_hash(ts.worker_name, ts.client_name, ts.timestamp, ts.task_description)
+                        is_night = check_is_night_work(ts.timestamp, ts.timestamp, ts.raw_message, ts.estimated_minutes, ts.direct_actual_minutes)
+                        is_weekend = check_is_weekend_work(ts.timestamp)
+                        matched_records.append(WorkLogRecord(
+                            msg_hash=msg_hash,
+                            log_type=ts.log_type,
+                            worker_name=ts.worker_name,
+                            worker_company=ts.worker_info.company,
+                            worker_title=ts.worker_info.title,
+                            worker_team=ts.worker_info.team,
+                            client_name=ts.client_name,
+                            task_description=ts.task_description,
+                            estimated_minutes=ts.estimated_minutes,
+                            actual_minutes=ts.direct_actual_minutes,
+                            start_time=ts.timestamp,
+                            end_time=ts.timestamp,
+                            status="COMPLETED",
+                            is_night_work=is_night,
+                            is_weekend_work=is_weekend,
+                            raw_start_message=ts.raw_message,
+                            raw_end_message=ts.raw_message
+                        ))
+                    else:
+                        # ★ 핵심: 동일 작업자/고객사/작업내용으로 48시간 이내 중복 시작 보고가 이미 대기 중인 경우 ★
+                        # 새로운 시작 보고를 별도로 만들지 않고, 최초 시작 보고(Pending)의 그룹 ID와 시각을 유지!
+                        duplicate_target = None
+                        for existing in pending_starts:
+                            if (existing.worker_name == ts.worker_name and
+                                existing.client_name == ts.client_name and
+                                existing.task_description == ts.task_description and
+                                (ts.timestamp - existing.timestamp).total_seconds() <= 48 * 3600):
+                                duplicate_target = existing
+                                break
+                                
+                        if duplicate_target:
+                            # 기존 시작 보고의 group_id를 그대로 상속하여 완료 보고 매칭 시 최초 시작일시(7/27 07:17)로 귀속되도록 함
+                            ts.task_group_id = duplicate_target.task_group_id
+                            ts.timestamp = duplicate_target.timestamp
+                            # 기존 것을 최신 메시지로 교체(시작시각은 7/27 최초 시각 유지)
+                            pending_starts.remove(duplicate_target)
+                            pending_starts.append(ts)
+                        else:
+                            pending_starts.append(ts)
+                continue
+                
+            # 2. 완료 보고 파싱
+            task_end = KakaoMessageParser.parse_task_end(msg)
+            if task_end:
+                matched_group_id = None
+                
+                # A. 답장 인용문(Reply content)이 있는 경우 매칭
+                if task_end.reply_target_content:
+                    reply_text = task_end.reply_target_content
+                    for i in range(len(pending_starts) - 1, -1, -1):
+                        p_start = pending_starts[i]
+                        if (p_start.client_name in reply_text or 
+                            p_start.task_description in reply_text or 
+                            p_start.worker_name in reply_text):
+                            matched_group_id = p_start.task_group_id
+                            break
+                            
+                # B. 인용문이 없거나 매칭 실패 시 작업자 이름 기준 가장 최근 시작 보고 매칭 (최대 120시간/5일 이내)
+                if not matched_group_id:
+                    target_name = task_end.worker_info.name
+                    possible_names = [target_name]
+                    if task_end.worker_specific_minutes:
+                        possible_names.extend(task_end.worker_specific_minutes.keys())
+
+                    end_mins = task_end.actual_minutes
+
+                    for i in range(len(pending_starts) - 1, -1, -1):
+                        p_start = pending_starts[i]
+                        if (p_start.worker_name in possible_names or 
+                            p_start.worker_info.name in possible_names or 
+                            any(pn in p_start.worker_info.full_profile for pn in possible_names)):
+                            
+                            # 작업자별 개별 시간이 있는 경우
+                            worker_end_mins = end_mins
+                            if task_end.worker_specific_minutes and p_start.worker_name in task_end.worker_specific_minutes:
+                                worker_end_mins = task_end.worker_specific_minutes[p_start.worker_name]
+
+                            # ★ 사용자 지정 규칙: 단순 완료 보고 시 완료시간과 예정시간의 괴리가 과도하면 오매칭 방지를 위해 건너뜀 ★
+                            # 1) 상한 가드: 완료시간이 (예정시간 + 2시간/120분)을 초과하는 경우 (예: 4시간 예정에 18시간/2day 완료)
+                            # 2) 하한 가드: 3days(27h) 등 다일(Day) 대형 작업에 단발성 5.5시간 등 현격히 작은 완료 보고가 묶이는 것 방지
+                            if p_start.estimated_minutes > 0 and worker_end_mins > 0:
+                                is_too_large = worker_end_mins > (p_start.estimated_minutes + 120)
+                                is_too_small = (p_start.estimated_minutes >= 8 * 60) and (worker_end_mins < p_start.estimated_minutes * 0.6)
+                                if is_too_large or is_too_small:
+                                    if not p_start.client_name or p_start.client_name not in task_end.raw_message:
+                                        continue
+
+                            adj_end_time = task_end.timestamp
+                            if adj_end_time < p_start.timestamp and (p_start.timestamp - adj_end_time).total_seconds() < 24 * 3600:
+                                adj_end_time += timedelta(days=1)
+                                task_end.timestamp = adj_end_time
+
+                            time_diff = (task_end.timestamp - p_start.timestamp).total_seconds()
+                            if 0 <= time_diff <= 120 * 3600:
+                                matched_group_id = p_start.task_group_id
+                                break
+                                
+                # C. 해당 그룹(공동 작업 인원 전체) 매칭 및 완료 처리
+                # ★ COMPLETED 레코드의 start_time은 무조건 원래 시작 보고 시각(Pending 시각)으로 고정! ★
+                if matched_group_id:
+                    group_starts = [p for p in pending_starts if p.task_group_id == matched_group_id]
+                    pending_starts = [p for p in pending_starts if p.task_group_id != matched_group_id]
+                    
+                    for p_start in group_starts:
+                        adj_end_time = task_end.timestamp
+                        if adj_end_time < p_start.timestamp and (p_start.timestamp - adj_end_time).total_seconds() < 24 * 3600:
+                            adj_end_time += timedelta(days=1)
+
+                        calc_minutes = 0
+                        if task_end.worker_specific_minutes and p_start.worker_name in task_end.worker_specific_minutes:
+                            calc_minutes = task_end.worker_specific_minutes[p_start.worker_name]
+                        elif task_end.actual_minutes > 0:
+                            calc_minutes = task_end.actual_minutes
+                        else:
+                            # 시간 미기재 완료 시 (완료시각 - 시작시각) 또는 원래 시작 보고의 예정시간
+                            elapsed_diff = (adj_end_time - p_start.timestamp).total_seconds() / 60.0
+                            if 10 <= elapsed_diff <= 24 * 60:
+                                calc_minutes = int(elapsed_diff)
+                            elif p_start.estimated_minutes > 0:
+                                calc_minutes = p_start.estimated_minutes
+                            else:
+                                calc_minutes = 60
+
+                        # 고유 해시 생성 (원래 시작 시각 기준)
+                        msg_hash = generate_msg_hash(
+                            p_start.worker_name,
+                            p_start.client_name,
+                            p_start.timestamp, # 최초 시작 일시 고정
+                            p_start.task_description
+                        )
+                        
+                        is_night = check_is_night_work(p_start.timestamp, adj_end_time, p_start.raw_message, p_start.estimated_minutes, calc_minutes)
+                        is_weekend = check_is_weekend_work(p_start.timestamp)
+                        
+                        record = WorkLogRecord(
+                            msg_hash=msg_hash,
+                            log_type=p_start.log_type,
+                            worker_name=p_start.worker_name,
+                            worker_company=p_start.worker_info.company,
+                            worker_title=p_start.worker_info.title,
+                            worker_team=p_start.worker_info.team,
+                            client_name=p_start.client_name,
+                            task_description=p_start.task_description,
+                            estimated_minutes=p_start.estimated_minutes,
+                            actual_minutes=calc_minutes,
+                            start_time=p_start.timestamp, # ★ 원래 시작 시각(Pending 시각) ★
+                            end_time=adj_end_time,
+                            status="COMPLETED",
+                            is_night_work=is_night,
+                            is_weekend_work=is_weekend,
+                            raw_start_message=p_start.raw_message,
+                            raw_end_message=task_end.raw_message
+                        )
+                        matched_records.append(record)
+                        
+        # 3. 잔여 미완료 시작 보고들 처리 (48시간 경과 시 시작 내용 기준으로 COMPLETED 자동 전환)
+        latest_ref_time = max([m.timestamp for m in raw_messages]) if raw_messages else datetime.now()
+        
+        for p_start in pending_starts:
+            msg_hash = generate_msg_hash(
+                p_start.worker_name,
+                p_start.client_name,
+                p_start.timestamp,
+                p_start.task_description
+            )
+            is_night = check_is_night_work(p_start.timestamp, None, p_start.raw_message, p_start.estimated_minutes, p_start.estimated_minutes)
+            is_weekend = check_is_weekend_work(p_start.timestamp)
+            
+            time_diff_hours = (latest_ref_time - p_start.timestamp).total_seconds() / 3600.0
+            
+            if time_diff_hours >= 48.0:
+                # 48시간 경과: 시작 보고 내용(예정시간) 기준으로 COMPLETED 자동 전환
+                auto_actual = p_start.estimated_minutes if p_start.estimated_minutes > 0 else 60
+                auto_end_time = p_start.timestamp + timedelta(minutes=auto_actual)
+                
+                record = WorkLogRecord(
+                    msg_hash=msg_hash,
+                    log_type=p_start.log_type,
+                    worker_name=p_start.worker_name,
+                    worker_company=p_start.worker_info.company,
+                    worker_title=p_start.worker_info.title,
+                    worker_team=p_start.worker_info.team,
+                    client_name=p_start.client_name,
+                    task_description=p_start.task_description,
+                    estimated_minutes=p_start.estimated_minutes,
+                    actual_minutes=auto_actual,
+                    start_time=p_start.timestamp,
+                    end_time=auto_end_time,
+                    status="COMPLETED",
+                    is_night_work=is_night,
+                    is_weekend_work=is_weekend,
+                    raw_start_message=p_start.raw_message,
+                    raw_end_message="[자동완료] 48시간 경과로 시작보고 기준 완료 처리"
+                )
+            else:
+                # 48시간 이내: 현재 진행 중(PENDING) 유지
+                record = WorkLogRecord(
+                    msg_hash=msg_hash,
+                    log_type=p_start.log_type,
+                    worker_name=p_start.worker_name,
+                    worker_company=p_start.worker_info.company,
+                    worker_title=p_start.worker_info.title,
+                    worker_team=p_start.worker_info.team,
+                    client_name=p_start.client_name,
+                    task_description=p_start.task_description,
+                    estimated_minutes=p_start.estimated_minutes,
+                    actual_minutes=0,
+                    start_time=p_start.timestamp,
+                    end_time=None,
+                    status="PENDING",
+                    is_night_work=is_night,
+                    is_weekend_work=is_weekend,
+                    raw_start_message=p_start.raw_message,
+                    raw_end_message=""
+                )
+            matched_records.append(record)
+            
+        return matched_records
+
+    @classmethod
+    def parse_and_match_text(cls, full_text: str) -> List[WorkLogRecord]:
+        raw_msgs = KakaoMessageParser.parse_raw_text_to_messages(full_text)
+        return cls.match_messages(raw_msgs)
