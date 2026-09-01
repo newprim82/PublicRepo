@@ -1170,22 +1170,23 @@ def main():
             month_mode = st.selectbox(
                 "📅 대상 기간:",
                 ["특정 월 선택 (기본)", "전체 기간", "다중 월 선택"],
-                index=0
+                index=0,
+                key="sb_filter_month_mode"
             )
             
             selected_months = []
             if month_mode == "전체 기간":
                 selected_months = available_months
             elif month_mode == "특정 월 선택 (기본)":
-                single_month = st.selectbox("조회할 월:", options=available_months, index=0, label_visibility="collapsed")
+                single_month = st.selectbox("조회할 월:", options=available_months, index=0, label_visibility="collapsed", key="sb_filter_single_month")
                 selected_months = [single_month] if single_month else available_months
             else:
-                selected_months = st.multiselect("조회할 월(다중):", options=available_months, default=available_months, label_visibility="collapsed")
+                selected_months = st.multiselect("조회할 월(다중):", options=available_months, default=available_months, label_visibility="collapsed", key="sb_filter_multi_months")
 
             # (2) 소속 팀 선택 (기본값: 기술 1팀)
             team_filter_options = ["전체 팀"] + DEFAULT_TEAMS
             default_team_idx = team_filter_options.index("기술 1팀") if "기술 1팀" in team_filter_options else 0
-            selected_team = st.selectbox("🏢 소속 팀:", options=team_filter_options, index=default_team_idx)
+            selected_team = st.selectbox("🏢 소속 팀:", options=team_filter_options, index=default_team_idx, key="sb_filter_team")
 
             # 선택된 팀에 소속된 팀원 목록 필터링
             if selected_team == "전체 팀":
@@ -1199,7 +1200,8 @@ def main():
             worker_target_type = st.selectbox(
                 "👤 담당 팀원:",
                 [f"{selected_team} 전체 인원 (기본)", "특정 팀원 직접 선택"],
-                index=0
+                index=0,
+                key="sb_filter_worker_target_type"
             )
             
             selected_workers = []
@@ -1212,28 +1214,29 @@ def main():
                     f"팀원 선택 ({selected_team}):",
                     options=team_available_workers,
                     default=[team_available_workers[0]] if team_available_workers else [],
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
+                    key="sb_filter_workers"
                 )
 
             # (4) 추가 상세 필터 (접이식 아코디언으로 정돈)
             with st.expander("🎯 추가 상세 필터 (고객사 / 작업구분 / 직급 / 야간·주말)", expanded=False):
                 # 고객사 선택
                 available_clients = sorted(df_raw["client_name"].dropna().unique())
-                client_mode = st.radio("🏢 고객사 범위:", ["전체 고객사", "특정 고객사 선택"], horizontal=True)
-                selected_clients = available_clients if client_mode == "전체 고객사" else st.multiselect("고객사 선택:", options=available_clients, default=available_clients, label_visibility="collapsed")
+                client_mode = st.radio("🏢 고객사 범위:", ["전체 고객사", "특정 고객사 선택"], horizontal=True, key="sb_filter_client_mode")
+                selected_clients = available_clients if client_mode == "전체 고객사" else st.multiselect("고객사 선택:", options=available_clients, default=available_clients, label_visibility="collapsed", key="sb_filter_clients")
 
                 # 작업구분 필터
                 available_types = sorted(df_raw["log_type"].dropna().unique())
-                type_mode = st.radio("🏷️ 작업 구분:", ["전체 구분", "특정 구분 선택"], horizontal=True)
-                selected_types = available_types if type_mode == "전체 구분" else st.multiselect("작업 구분 선택:", options=available_types, default=available_types, label_visibility="collapsed")
+                type_mode = st.radio("🏷️ 작업 구분:", ["전체 구분", "특정 구분 선택"], horizontal=True, key="sb_filter_type_mode")
+                selected_types = available_types if type_mode == "전체 구분" else st.multiselect("작업 구분 선택:", options=available_types, default=available_types, label_visibility="collapsed", key="sb_filter_types")
 
                 # 👔 직급 필터 (사원 / 대리 / 과장 / 수석)
-                title_mode = st.radio("👔 직급 범위:", ["전체 직급", "특정 직급 선택"], horizontal=True)
-                selected_titles = ["사원", "대리", "과장", "수석"] if title_mode == "전체 직급" else st.multiselect("직급 선택:", options=["사원", "대리", "과장", "수석"], default=["사원", "대리", "과장", "수석"], label_visibility="collapsed")
+                title_mode = st.radio("👔 직급 범위:", ["전체 직급", "특정 직급 선택"], horizontal=True, key="sb_filter_title_mode")
+                selected_titles = ["사원", "대리", "과장", "수석"] if title_mode == "전체 직급" else st.multiselect("직급 선택:", options=["사원", "대리", "과장", "수석"], default=["사원", "대리", "과장", "수석"], label_visibility="collapsed", key="sb_filter_titles")
 
                 # 야간/주말 필터
-                night_only = st.checkbox("🌙 야간 작업만 보기 (19시~08시)")
-                weekend_only = st.checkbox("🏖️ 주말 작업만 보기")
+                night_only = st.checkbox("🌙 야간 작업만 보기 (19시~08시)", key="sb_filter_night_only")
+                weekend_only = st.checkbox("🏖️ 주말 작업만 보기", key="sb_filter_weekend_only")
 
             # 필터 적용
             df = df_raw.copy()
@@ -1379,8 +1382,64 @@ def main():
         if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True, help="Supabase 클라우드 DB에서 최신 동기화 데이터를 즉시 다시 불러옵니다."):
             st.cache_data.clear()
             st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
-            time.sleep(0.5)
+            time.sleep(0.3)
             st.rerun()
+
+        # 60초(1분) 무간섭 자동 화면 갱신 엔진 (세션 상태 & 핵심 조회 기준 100% 영구 유지)
+        st.components.v1.html("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body { margin: 0; padding: 0; background: transparent; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+                .live-sync-bar {
+                    font-size: 10px;
+                    color: #00E676;
+                    font-weight: 800;
+                    text-align: center;
+                    background: rgba(0, 230, 118, 0.08);
+                    border: 1px dashed rgba(0, 230, 118, 0.35);
+                    border-radius: 6px;
+                    padding: 4px 6px;
+                    box-sizing: border-box;
+                    margin-top: 4px;
+                    letter-spacing: -0.2px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="live-sync-bar" id="auto-sync-status">
+                🟢 1분 자동 실시간 동기화 (필터 설정 유지)
+            </div>
+            <script>
+                // 60초(1분)마다 Streamlit 내부 새로고침 버튼을 트리거하여 세션 필터 상태를 100% 보존하며 자동 갱신
+                let countdownSec = 60;
+                function updateSyncStatus() {
+                    let el = document.getElementById('auto-sync-status');
+                    if (!el) return;
+                    if (countdownSec <= 0) {
+                        el.innerText = "⚡ 실시간 동기화 갱신 중...";
+                        try {
+                            const buttons = window.parent.document.querySelectorAll('button');
+                            for (let btn of buttons) {
+                                if (btn.innerText.includes('실시간 Cloud DB 새로고침')) {
+                                    btn.click();
+                                    return;
+                                }
+                            }
+                        } catch(e) {}
+                    } else {
+                        el.innerText = "🟢 1분 자동 동기화 (" + countdownSec + "초 뒤 갱신 / 필터 유지)";
+                        countdownSec--;
+                    }
+                }
+                setInterval(updateSyncStatus, 1000);
+                updateSyncStatus();
+            </script>
+        </body>
+        </html>
+        """, height=30)
 
         # 3. 데이터 수동 동기화 (대화 파일 업로드)
         st.markdown('<div class="sidebar-section-header blue">📥 데이터 동기화 (파일 업로드)</div>', unsafe_allow_html=True)
