@@ -31,6 +31,13 @@ from src.services.team_service import TeamService, DEFAULT_TEAMS, UNASSIGNED_TEA
 from src.services.reward_leave_service import RewardLeaveService
 from src.database.supabase_client import db_manager
 from src.analytics.stats_service import StatsService
+from src.collector.kakao_auto_collector import start_background_collector, COLLECTOR_STATUS
+
+# 🚀 대시보드 구동 시 1시간 주기 카카오톡 상시 자동 수집 데몬 1회 자동 기동
+try:
+    start_background_collector()
+except Exception as e:
+    print(f"[수집기 기동 알림]: {e}")
 
 # Streamlit 페이지 설정
 st.set_page_config(
