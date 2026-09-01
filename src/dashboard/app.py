@@ -1,4 +1,5 @@
 import io
+import time
 import importlib
 import streamlit as st
 import pandas as pd
@@ -31,7 +32,7 @@ from src.services.team_service import TeamService, DEFAULT_TEAMS, UNASSIGNED_TEA
 from src.services.reward_leave_service import RewardLeaveService
 from src.database.supabase_client import db_manager
 from src.analytics.stats_service import StatsService
-from src.collector.kakao_auto_collector import start_background_collector, COLLECTOR_STATUS
+from src.collector.kakao_auto_collector import start_background_collector, run_collection_cycle, COLLECTOR_STATUS
 
 # 🚀 대시보드 구동 시 1시간 주기 카카오톡 상시 자동 수집 데몬 1회 자동 기동
 try:
@@ -1264,7 +1265,28 @@ def main():
             selected_titles = []
             team_available_workers = []
 
-        # 3. 하단 시스템 액션 컨트롤
+        # 3. 카카오톡 실시간 동기화 & 시스템 관리
+        st.markdown('<div class="sidebar-section-header green">🤖 카카오톡 실시간 연동</div>', unsafe_allow_html=True)
+        if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
+            with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
+                res = run_collection_cycle()
+                if res.get("status") == "success":
+                    st.toast(f"🎉 즉시 수집 완료! 총 {res['total_records']}건 분석 (DB 저장: {res['saved_records']}건)", icon="✅")
+                    st.success(f"🎉 즉시 수집 성공! 총 {res['total_records']}건 분석 (DB 저장/동기화: {res['saved_records']}건)")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                elif res.get("status") == "window_not_found":
+                    st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
+                    st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
+                elif res.get("status") == "no_text":
+                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 창을 한 번 클릭(활성화)한 뒤 다시 시도해주세요.")
+                else:
+                    st.info(f"💡 {res.get('message', '수집 완료')}")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+
         st.markdown('<div class="sidebar-section-header amber">⚙️ 시스템 관리</div>', unsafe_allow_html=True)
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
@@ -1358,10 +1380,31 @@ def main():
     if title_mode != "전체 직급" and selected_titles:
         title_badge_str = f" | <b>직급 [{', '.join(selected_titles)}]</b>"
 
-    st.markdown(
-        f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
-        unsafe_allow_html=True
-    )
+    c_badge_left, c_badge_right = st.columns([8.2, 1.8])
+    with c_badge_left:
+        st.markdown(
+            f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
+            unsafe_allow_html=True
+        )
+    with c_badge_right:
+        if st.button("⚡ 카톡 즉시 긁어오기", key="btn_manual_kakao_main", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
+            with st.spinner("💬 카톡에서 최신 대화 수집 중..."):
+                res = run_collection_cycle()
+                if res.get("status") == "success":
+                    st.toast(f"🎉 즉시 수집 완료! (DB 갱신: {res['saved_records']}건)", icon="✅")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
+                elif res.get("status") == "window_not_found":
+                    st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
+                    st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 PC 카카오톡에서 해당 대화방 창을 열어둔 상태에서 다시 눌러주세요!")
+                elif res.get("status") == "no_text":
+                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 창을 한 번 클릭한 뒤 다시 시도해주세요.")
+                else:
+                    st.info(f"💡 {res.get('message', '수집 완료')}")
+                    st.cache_data.clear()
+                    time.sleep(1)
+                    st.rerun()
 
     # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링)
     kpi = StatsService.compute_kpis(df)

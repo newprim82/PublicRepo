@@ -20,6 +20,16 @@ except ImportError:
     WIN32_AVAILABLE = False
     print("[알림] pywin32 / uiautomation 라이브러리가 로드되지 않았습니다. (Windows 환경 필요)")
 
+def safe_print(msg: str):
+    """Windows cp949 콘솔에서도 이모지로 인한 인코딩 오류 없이 안전하게 출력"""
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        safe_msg = msg.encode(sys.stdout.encoding or 'cp949', errors='replace').decode(sys.stdout.encoding or 'cp949')
+        print(safe_msg)
+    except Exception:
+        pass
+
 # 글로벌 수집기 상태 추적
 COLLECTOR_STATUS = {
     "is_running": False,
@@ -150,31 +160,31 @@ def run_collection_cycle() -> Dict[str, Any]:
     COLLECTOR_STATUS["last_run_time"] = now_str
     COLLECTOR_STATUS["total_cycles"] += 1
     
-    print(f"\n[{now_str}] 🤖 [카카오톡 1시간 증분 수집] 대화방 탐색 중: '{target_chat}'...")
+    safe_print(f"\n[{now_str}] 🤖 [카카오톡 1시간 증분 수집] 대화방 탐색 중: '{target_chat}'...")
     
     hwnd = find_kakao_chat_window(target_chat)
     if not hwnd:
         msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않습니다."
-        print(f"[-] {msg}")
+        safe_print(f"[-] {msg}")
         COLLECTOR_STATUS["last_status"] = "대화방 창 미열림"
         return {"status": "window_not_found", "message": msg, "time": now_str}
 
     title = win32gui.GetWindowText(hwnd)
-    print(f"[+] 대상 대화방 감지: '{title}' (HWND: {hwnd})")
+    safe_print(f"[+] 대상 대화방 감지: '{title}' (HWND: {hwnd})")
 
     raw_text = extract_text_from_kakao_window(hwnd)
     if not raw_text:
         msg = "대화창에서 텍스트를 추출하지 못했습니다."
-        print(f"[-] {msg}")
+        safe_print(f"[-] {msg}")
         COLLECTOR_STATUS["last_status"] = "텍스트 없음"
         return {"status": "no_text", "message": msg, "time": now_str}
 
-    print(f"[+] {len(raw_text)}자 대화 텍스트 추출 완료. 증분 파싱 & 매칭 시작...")
+    safe_print(f"[+] {len(raw_text)}자 대화 텍스트 추출 완료. 증분 파싱 & 매칭 시작...")
     records = WorkLogMatcher.parse_and_match_text(raw_text)
     
     if not records:
         msg = "파싱 가능한 작업/지원 보고 메시지가 없습니다."
-        print(f"[-] {msg}")
+        safe_print(f"[-] {msg}")
         COLLECTOR_STATUS["last_status"] = "작업 보고 없음"
         return {"status": "no_records", "message": msg, "time": now_str}
 
@@ -185,7 +195,7 @@ def run_collection_cycle() -> Dict[str, Any]:
         "saved_records": saved
     }
     
-    print(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 증분 저장/동기화: {saved}건)")
+    safe_print(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 증분 저장/동기화: {saved}건)")
     return {
         "status": "success",
         "total_records": len(records),
@@ -201,20 +211,20 @@ def background_collector_loop():
     COLLECTOR_STATUS["is_running"] = True
     interval = config.COLLECTOR_INTERVAL_SECONDS  # 기본 3,600초 (1시간)
     
-    print(f"🚀 [상시 자동 수집 데몬 기동] 1시간({interval}초) 주기로 백그라운드에서 자동 수집을 실행합니다.")
+    safe_print(f"🚀 [상시 자동 수집 데몬 기동] 1시간({interval}초) 주기로 백그라운드에서 자동 수집을 실행합니다.")
     
     # 앱 시작 직후 즉시 1차 수집 시도
     try:
         run_collection_cycle()
     except Exception as e:
-        print(f"[수집기 초기 실행 예외]: {e}")
+        safe_print(f"[수집기 초기 실행 예외]: {e}")
         
     while True:
         try:
             time.sleep(interval)
             run_collection_cycle()
         except Exception as e:
-            print(f"[수집기 데몬 주기 오류]: {e}")
+            safe_print(f"[수집기 데몬 주기 오류]: {e}")
             time.sleep(60)
 
 
@@ -231,11 +241,11 @@ def start_background_collector():
                 daemon=True
             )
             _collector_thread.start()
-            print("[✓] 카카오톡 1시간 자동 수집 백그라운드 스레드가 성공적으로 시작되었습니다.")
+            safe_print("[✓] 카카오톡 1시간 자동 수집 백그라운드 스레드가 성공적으로 시작되었습니다.")
 
 
 if __name__ == "__main__":
-    print("=" * 65)
-    print("🚀 카카오톡 [기술본부] 업무공유방 1시간 증분 자동 수집기")
-    print("=" * 65)
+    safe_print("=" * 65)
+    safe_print("🚀 카카오톡 [기술본부] 업무공유방 1시간 증분 자동 수집기")
+    safe_print("=" * 65)
     background_collector_loop()
