@@ -1126,26 +1126,10 @@ def main():
     # ==========================================
     # 메뉴 분기 2 & 3: 사이드바 필터 및 대시보드
     # ==========================================
+    # 메뉴 분기 2 & 3: 사이드바 필터 및 대시보드
+    # ==========================================
     with st.sidebar:
-        # 1. 데이터 파일 업로드 섹션
-        st.markdown('<div class="sidebar-section-header green">📥 데이터 동기화</div>', unsafe_allow_html=True)
-        with st.expander("💬 카카오톡 대화 파일 업로드 (.txt)", expanded=False):
-            uploaded_file = st.file_uploader("카카오톡 대화 텍스트 파일", type=["txt"], label_visibility="collapsed")
-            if uploaded_file is not None:
-                try:
-                    file_content = uploaded_file.getvalue().decode("utf-8", errors="ignore")
-                    records = WorkLogMatcher.parse_and_match_text(file_content)
-                    if records:
-                        clear_all_caches_and_db()
-                        saved = db_manager.save_work_logs(records)
-                        st.success(f"총 {len(records)}건 최신 엔진으로 완벽 동기화 완료!")
-                        st.rerun()
-                    else:
-                        st.warning("파싱 가능한 작업/지원 메시지가 없습니다. 파일 내용을 확인해주세요.")
-                except Exception as e:
-                    st.error(f"파일 처리 중 오류: {e}")
-
-        # 2. 핵심 조회 기준 필터
+        # 1. 핵심 조회 기준 필터
         if not df_raw.empty:
             st.markdown('<div class="sidebar-section-header">🔍 핵심 조회 기준</div>', unsafe_allow_html=True)
             
@@ -1267,7 +1251,7 @@ def main():
             selected_titles = []
             team_available_workers = []
 
-        # 3. 카카오톡 실시간 동기화 & 시스템 관리
+        # 2. 카카오톡 실시간 동기화
         st.markdown('<div class="sidebar-section-header green">🤖 카카오톡 실시간 연동</div>', unsafe_allow_html=True)
         countdown = get_collector_countdown_info()
         st.markdown(f"""
@@ -1304,6 +1288,25 @@ def main():
                     time.sleep(1)
                     st.rerun()
 
+        # 3. 데이터 수동 동기화 (대화 파일 업로드)
+        st.markdown('<div class="sidebar-section-header blue">📥 데이터 동기화 (파일 업로드)</div>', unsafe_allow_html=True)
+        with st.expander("💬 카카오톡 대화 파일 업로드 (.txt)", expanded=False):
+            uploaded_file = st.file_uploader("카카오톡 대화 텍스트 파일", type=["txt"], label_visibility="collapsed")
+            if uploaded_file is not None:
+                try:
+                    file_content = uploaded_file.getvalue().decode("utf-8", errors="ignore")
+                    records = WorkLogMatcher.parse_and_match_text(file_content)
+                    if records:
+                        clear_all_caches_and_db()
+                        saved = db_manager.save_work_logs(records)
+                        st.success(f"총 {len(records)}건 최신 엔진으로 완벽 동기화 완료!")
+                        st.rerun()
+                    else:
+                        st.warning("파싱 가능한 작업/지원 메시지가 없습니다. 파일 내용을 확인해주세요.")
+                except Exception as e:
+                    st.error(f"파일 처리 중 오류: {e}")
+
+        # 4. 시스템 관리
         st.markdown('<div class="sidebar-section-header amber">⚙️ 시스템 관리</div>', unsafe_allow_html=True)
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
