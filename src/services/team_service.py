@@ -4,7 +4,6 @@ from typing import Dict, List, Optional, Any
 import pandas as pd
 
 from ..config import config
-from ..database.supabase_client import db_manager
 
 DEFAULT_TEAMS = ["기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
 DEFAULT_TITLES = ["사원", "대리", "과장", "수석"]
@@ -13,7 +12,7 @@ UNASSIGNED_TEAM = "미지정"
 class TeamService:
     @staticmethod
     def init_team_table():
-        """Supabase 및 로컬 SQLite에 team_members 테이블 생성 및 컬럼 마이그레이션"""
+        """로컬 SQLite에 team_members 테이블 생성 및 컬럼 마이그레이션"""
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("""
@@ -39,19 +38,6 @@ class TeamService:
         """팀원별 소속팀 및 직급 딕셔너리 반환 { '김시우': {'team': '기술 1팀', 'title': '대리'}, ... }"""
         TeamService.init_team_table()
         info_map = {}
-
-        if db_manager.use_supabase and db_manager.supabase:
-            try:
-                res = db_manager.supabase.table("team_members").select("*").execute()
-                if res.data:
-                    for row in res.data:
-                        info_map[row["worker_name"]] = {
-                            "team": row.get("team_name", UNASSIGNED_TEAM),
-                            "title": row.get("job_title", "")
-                        }
-                    return info_map
-            except Exception as e:
-                pass
 
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
@@ -83,7 +69,6 @@ class TeamService:
         target_team = UNASSIGNED_TEAM if "해제" in team_name or "미지정" in team_name else team_name.strip()
         target_title = job_title.strip()
 
-        # 1. 로컬 SQLite 업데이트
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         
@@ -100,21 +85,6 @@ class TeamService:
         conn.commit()
         conn.close()
 
-        # 2. Supabase 업데이트
-        if db_manager.use_supabase and db_manager.supabase:
-            try:
-                db_manager.supabase.table("team_members").upsert({
-                    "worker_name": worker_name,
-                    "team_name": target_team,
-                    "job_title": target_title
-                }, on_conflict="worker_name").execute()
-                db_manager.supabase.table("work_logs").update({
-                    "worker_team": target_team,
-                    "worker_title": target_title
-                }).eq("worker_name", worker_name).execute()
-            except Exception as e:
-                print(f"[팀원 정보 Supabase 저장 실패]: {e}")
-
     @staticmethod
     def save_team_members(team_name: str, worker_names: List[str]):
         """특정 팀에 소속된 팀원 목록을 일괄 업데이트 (기존 직급 유지)"""
@@ -125,7 +95,6 @@ class TeamService:
         target_team = UNASSIGNED_TEAM if "해제" in team_name or "미지정" in team_name else team_name
         current_info = TeamService.get_team_members_info()
 
-        # 1. 로컬 SQLite 업데이트
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         
@@ -146,21 +115,6 @@ class TeamService:
 
         conn.commit()
         conn.close()
-
-        # 2. Supabase 업데이트
-        if db_manager.use_supabase and db_manager.supabase:
-            try:
-                if target_team == UNASSIGNED_TEAM:
-                    for w in worker_names:
-                        db_manager.supabase.table("team_members").delete().eq("worker_name", w).execute()
-                        db_manager.supabase.table("work_logs").update({"worker_team": UNASSIGNED_TEAM}).eq("worker_name", w).execute()
-                else:
-                    payloads = [{"worker_name": w, "team_name": target_team} for w in worker_names]
-                    db_manager.supabase.table("team_members").upsert(payloads, on_conflict="worker_name").execute()
-                    for w in worker_names:
-                        db_manager.supabase.table("work_logs").update({"worker_team": target_team}).eq("worker_name", w).execute()
-            except Exception as e:
-                print(f"[팀 매핑 Supabase 저장 실패]: {e}")
 
     @staticmethod
     def update_worker_title(worker_name: str, job_title: str):
@@ -198,26 +152,18 @@ class TeamService:
             
             if not worker_rows.empty:
                 if not found_team:
-                    teams = worker_rows["worker_team"].dropna().unique()
-                    for t in teams:
-                        t_clean = t.strip()
-                        if any(dt in t_clean for dt in DEFAULT_TEAMS):
-                            for dt in DEFAULT_TEAMS:
-                                if dt in t_clean:
-                                    found_team = dt
-                                    break
-                        elif t_clean and t_clean != UNASSIGNED_TEAM:
-                            found_team = t_clean
-                        if found_team:
+                    valid_teams = worker_rows["worker_team"].dropna().unique()
+                    for t in valid_teams:
+                        if t and t != UNASSIGNED_TEAM:
+                            found_team = t
                             break
                             
-                if not found_title and "worker_title" in worker_rows.columns:
-                    titles = worker_rows["worker_title"].dropna().unique()
-                    for j in titles:
-                        j_clean = j.strip()
-                        if j_clean:
-                            found_title = j_clean
+                if not found_title:
+                    valid_titles = worker_rows["worker_title"].dropna().unique()
+                    for ti in valid_titles:
+                        if ti:
+                            found_title = ti
                             break
-            
-            if found_team or found_title:
+                            
+            if (found_team and found_team != UNASSIGNED_TEAM) or found_title:
                 TeamService.save_worker_info(w, found_team or UNASSIGNED_TEAM, found_title or "")
