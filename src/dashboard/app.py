@@ -211,76 +211,78 @@ st.markdown("""
     .sidebar-section-header.green { border-left-color: #00E676; }
     .sidebar-section-header.amber { border-left-color: #FFAB00; }
     
-    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 (일체형 네모칸) */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(button[key*="btn_chip_"]) {
-        background: linear-gradient(90deg, rgba(211, 47, 47, 0.15), rgba(239, 108, 0, 0.15)) !important;
-        border: 1px solid rgba(255, 82, 82, 0.5) !important;
-        border-left: 6px solid #FF1744 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
-        padding: 12px 18px !important;
+    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 (일체형 네모칸 - 시인성 극대화) */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(button[aria-label*="⚠️"]),
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(button[aria-label*="🚨"]) {
+        background: linear-gradient(135deg, rgba(211, 47, 47, 0.22), rgba(239, 108, 0, 0.22)) !important;
+        border: 1.5px solid rgba(255, 82, 82, 0.6) !important;
+        border-left: 8px solid #FF1744 !important;
+        border-radius: 14px !important;
+        box-shadow: 0 6px 24px rgba(255, 23, 68, 0.25) !important;
+        padding: 14px 20px !important;
         margin-top: 14px !important;
-        margin-bottom: 16px !important;
+        margin-bottom: 18px !important;
     }
 
-    /* 🟧 40h 초과 주황색 버튼 스타일 (완전한 강제 적용) */
-    button[key*="btn_chip_caution_"],
-    button[data-testid="baseButton-secondary"]:has(p:contains("⚠️")),
-    button:has(p:contains("⚠️")) {
-        background: linear-gradient(135deg, #FF9800, #EF6C00) !important;
-        background-color: #EF6C00 !important;
+    /* 🟧 40h 초과 주황색 버튼 스타일 (표준 aria-label 선택자로 100% 강제 적용) */
+    button[aria-label*="⚠️"],
+    button[aria-label*="김시우"],
+    button[aria-label*="홍정표"],
+    button:has([data-testid="stMarkdownContainer"]:has(p)) {
+        /* standard */
+    }
+    
+    button[aria-label*="⚠️"] {
+        background: linear-gradient(135deg, #FF6D00, #FF9100) !important;
+        background-color: #FF6D00 !important;
         color: #FFFFFF !important;
-        border: 1px solid #FFB74D !important;
+        border: 1px solid #FFE082 !important;
         border-radius: 20px !important;
-        padding: 2px 14px !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        min-height: 28px !important;
-        height: 28px !important;
-        line-height: 20px !important;
-        box-shadow: 0 2px 8px rgba(239, 108, 0, 0.6) !important;
+        padding: 4px 16px !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        line-height: 22px !important;
+        box-shadow: 0 4px 14px rgba(255, 109, 0, 0.6) !important;
         white-space: nowrap !important;
     }
-    button[key*="btn_chip_caution_"] *,
-    button:has(p:contains("⚠️")) * {
+    button[aria-label*="⚠️"] * {
         color: #FFFFFF !important;
-        font-weight: 800 !important;
+        font-weight: 900 !important;
+        font-size: 13px !important;
     }
-    button[key*="btn_chip_caution_"]:hover,
-    button:has(p:contains("⚠️")):hover {
-        background: linear-gradient(135deg, #FFA726, #F57C00) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(239, 108, 0, 0.8) !important;
+    button[aria-label*="⚠️"]:hover {
+        background: linear-gradient(135deg, #FF9100, #FFAB00) !important;
+        transform: translateY(-2px) scale(1.03) !important;
+        box-shadow: 0 6px 18px rgba(255, 109, 0, 0.8) !important;
     }
 
-    /* 🟥 52h 초과 빨간색 버튼 스타일 (완전한 강제 적용) */
-    button[key*="btn_chip_danger_"],
-    button[data-testid="baseButton-secondary"]:has(p:contains("🚨")),
-    button:has(p:contains("🚨")) {
+    /* 🟥 52h 초과 빨간색 버튼 스타일 (표준 aria-label 선택자로 100% 강제 적용) */
+    button[aria-label*="🚨"] {
         background: linear-gradient(135deg, #FF1744, #D50000) !important;
-        background-color: #D32F2F !important;
+        background-color: #FF1744 !important;
         color: #FFFFFF !important;
-        border: 1px solid #FF5252 !important;
+        border: 1px solid #FF8A80 !important;
         border-radius: 20px !important;
-        padding: 2px 14px !important;
-        font-size: 12px !important;
-        font-weight: 800 !important;
-        min-height: 28px !important;
-        height: 28px !important;
-        line-height: 20px !important;
-        box-shadow: 0 2px 8px rgba(213, 0, 0, 0.6) !important;
+        padding: 4px 16px !important;
+        font-size: 13px !important;
+        font-weight: 900 !important;
+        min-height: 32px !important;
+        height: 32px !important;
+        line-height: 22px !important;
+        box-shadow: 0 4px 14px rgba(255, 23, 68, 0.7) !important;
         white-space: nowrap !important;
     }
-    button[key*="btn_chip_danger_"] *,
-    button:has(p:contains("🚨")) * {
+    button[aria-label*="🚨"] * {
         color: #FFFFFF !important;
-        font-weight: 800 !important;
+        font-weight: 900 !important;
+        font-size: 13px !important;
     }
-    button[key*="btn_chip_danger_"]:hover,
-    button:has(p:contains("🚨")):hover {
+    button[aria-label*="🚨"]:hover {
         background: linear-gradient(135deg, #FF5252, #FF1744) !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(213, 0, 0, 0.8) !important;
+        transform: translateY(-2px) scale(1.03) !important;
+        box-shadow: 0 6px 18px rgba(255, 23, 68, 0.9) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1430,30 +1432,35 @@ def main():
                 # 1행: 상단 알림 제목 + 우측 퀵점프 바로가기 버튼
                 col_head_l, col_head_r = st.columns([7.8, 2.2])
                 with col_head_l:
-                    st.markdown('<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">🚨 <span style="color: #FF5252;">[과중 근무 발생 알림]</span> 선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</div>', unsafe_allow_html=True)
+                    st.markdown('<div style="font-size: 15.5px; font-weight: 900; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">🚨 <span style="color: #FF5252; background: rgba(255, 23, 68, 0.2); padding: 2px 8px; border-radius: 6px; border: 1px solid #FF1744;">[과중 근무 발생 알림]</span> 선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</div>', unsafe_allow_html=True)
                 with col_head_r:
-                    st.markdown('<div style="text-align: right;"><a href="#weekly-monitor-section" style="background: linear-gradient(135deg, #FF1744, #D50000); color: #FFFFFF; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 10px rgba(255, 23, 68, 0.4); white-space: nowrap;">👇 주차별 모니터링 표로 바로가기</a></div>', unsafe_allow_html=True)
+                    st.markdown('<div style="text-align: right;"><a href="#weekly-monitor-section" style="background: linear-gradient(135deg, #FF1744, #D50000); color: #FFFFFF; font-weight: 800; font-size: 12.5px; padding: 7px 16px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(255, 23, 68, 0.45); white-space: nowrap;">👇 주차별 모니터링 표로 바로가기</a></div>', unsafe_allow_html=True)
 
-                st.markdown("<div style='margin-top: 6px; margin-bottom: 8px; border-top: 1px solid rgba(255, 82, 82, 0.25);'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid rgba(255, 82, 82, 0.3);'></div>", unsafe_allow_html=True)
                 
-                # 2행: 네모칸 안쪽에 완벽하게 위치하는 초과근무 라벨 & 주황/빨강 뱃지 버튼들
-                col_lbl, col_chips = st.columns([1.8, 8.2])
-                with col_lbl:
-                    if danger_items:
-                        st.markdown(f"<div style='padding-top:5px; font-size:12.5px; font-weight:800; color:#FF5252;'>주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div style='padding-top:5px; font-size:12.5px; font-weight:800; color:#FFA726;'>주 40h 초과 주의 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
-                
-                with col_chips:
-                    chip_cols = st.columns(max(len(overwork_items), 1) + 4)
-                    for idx, item in enumerate(overwork_items):
-                        with chip_cols[idx]:
-                            if item["is_52"]:
-                                if st.button(f"🚨 {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"btn_chip_danger_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
-                                    show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
-                            else:
-                                if st.button(f"⚠️ {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"btn_chip_caution_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
-                                    show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
+                # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우)
+                if danger_items:
+                    col_d_lbl, col_d_chips = st.columns([2.0, 8.0])
+                    with col_d_lbl:
+                        st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FF5252;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
+                    with col_d_chips:
+                        d_cols = st.columns(max(len(danger_items), 1) + 4)
+                        for d_idx, d_item in enumerate(danger_items):
+                            with d_cols[d_idx]:
+                                if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}", help=f"[{d_item['worker_name']}] 보상 휴가 팝업 열기"):
+                                    show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
+
+                # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우)
+                if caution_items:
+                    col_c_lbl, col_c_chips = st.columns([2.0, 8.0])
+                    with col_c_lbl:
+                        st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FFA726;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
+                    with col_c_chips:
+                        c_cols = st.columns(max(len(caution_items), 1) + 4)
+                        for c_idx, c_item in enumerate(caution_items):
+                            with c_cols[c_idx]:
+                                if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}", help=f"[{c_item['worker_name']}] 보상 휴가 팝업 열기"):
+                                    show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
 
     st.divider()
 
