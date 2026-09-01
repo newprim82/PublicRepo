@@ -1270,7 +1270,7 @@ def main():
 
         if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
             with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
-                res = run_collection_cycle()
+                res = run_collection_cycle(is_manual=True)
                 if res.get("status") == "success":
                     st.toast(f"🎉 즉시 수집 완료! 총 {res['total_records']}건 분석 (DB 저장: {res['saved_records']}건)", icon="✅")
                     st.success(f"🎉 즉시 수집 성공! 총 {res['total_records']}건 분석 (DB 저장/동기화: {res['saved_records']}건)")
@@ -1417,7 +1417,7 @@ def main():
     with c_badge_btn:
         if st.button("⚡ 즉시 수집", key="btn_manual_kakao_main", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
             with st.spinner("💬 카톡에서 최신 대화 수집 중..."):
-                res = run_collection_cycle()
+                res = run_collection_cycle(is_manual=True)
                 if res.get("status") == "success":
                     st.toast(f"🎉 즉시 수집 완료! (DB 갱신: {res['saved_records']}건)", icon="✅")
                     st.cache_data.clear()

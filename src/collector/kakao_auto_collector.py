@@ -57,8 +57,9 @@ COLLECTOR_STATUS = {
     "last_log_message": ""
 }
 
-_collector_thread: Optional[threading.Thread] = None
-_thread_lock = threading.Lock()
+# 실행 쿨다운용 락
+_cycle_lock = threading.Lock()
+_last_execution_timestamp = 0
 
 
 def get_collector_countdown_info() -> Dict[str, Any]:
@@ -260,82 +261,89 @@ def extract_text_from_kakao_window(hwnd: int) -> str:
     return ""
 
 
-def run_collection_cycle() -> Dict[str, Any]:
+def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
     """
     1회 증분 수집 사이클 실행: 카톡 창 탐색 -> 텍스트 추출 -> 파싱 -> DB Upsert
+    (중복 동시 실행 방지 락 적용)
     """
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    target_chat = config.KAKAO_CHAT_TITLE
+    global _last_execution_timestamp
     
-    COLLECTOR_STATUS["last_run_time"] = now_str
-    COLLECTOR_STATUS["total_cycles"] += 1
-    
-    log_trace(f"==================================================")
-    log_trace(f"🤖 [카카오톡 증분 수집 시작] 대상: '{target_chat}'")
-    
-    hwnd = find_kakao_chat_window(target_chat)
-    if not hwnd:
-        msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않습니다."
-        log_trace(f"[-] {msg}")
-        COLLECTOR_STATUS["last_status"] = "대화방 창 미열림"
-        COLLECTOR_STATUS["last_log_message"] = msg
-        return {"status": "window_not_found", "message": msg, "time": now_str}
+    with _cycle_lock:
+        now_ts = time.time()
+        # 수동 실행이 아닌 자동 루프의 경우 최소 60초 쿨다운 보장
+        if not is_manual and (now_ts - _last_execution_timestamp < 60):
+            return {"status": "throttled", "message": "쿨다운 대기 중"}
+            
+        _last_execution_timestamp = now_ts
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        target_chat = config.KAKAO_CHAT_TITLE
         
-    raw_text = extract_text_from_kakao_window(hwnd)
-    if not raw_text or len(raw_text.strip()) == 0:
-        msg = "대화창에서 텍스트를 읽지 못했습니다. 카톡 창을 클릭한 뒤 다시 시도해주세요."
-        log_trace(f"[-] {msg}")
-        COLLECTOR_STATUS["last_status"] = "텍스트 추출 실패"
-        COLLECTOR_STATUS["last_log_message"] = msg
-        return {"status": "no_text", "message": msg, "time": now_str}
+        COLLECTOR_STATUS["last_run_time"] = now_str
+        COLLECTOR_STATUS["total_cycles"] += 1
         
-    log_trace(f"[파싱 시작] 텍스트 크기: {len(raw_text)}자")
-    records = WorkLogMatcher.parse_and_match_text(raw_text)
-    if not records:
-        msg = "새로 등록/완료할 작업 보고 메시지가 없습니다."
-        log_trace(f"[✓] {msg}")
-        COLLECTOR_STATUS["last_status"] = "새 작업 없음"
-        COLLECTOR_STATUS["last_log_message"] = msg
+        log_trace(f"==================================================")
+        log_trace(f"🤖 [카카오톡 증분 수집 시작 ({'수동 즉시' if is_manual else '10분 자동'})] 대상: '{target_chat}'")
+        
+        hwnd = find_kakao_chat_window(target_chat)
+        if not hwnd:
+            msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않습니다."
+            log_trace(f"[-] {msg}")
+            COLLECTOR_STATUS["last_status"] = "대화방 창 미열림"
+            COLLECTOR_STATUS["last_log_message"] = msg
+            COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
+            return {"status": "window_not_found", "message": msg, "time": now_str}
+            
+        raw_text = extract_text_from_kakao_window(hwnd)
+        if not raw_text or len(raw_text.strip()) == 0:
+            msg = "대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 클릭한 뒤 다시 시도해주세요."
+            log_trace(f"[-] {msg}")
+            COLLECTOR_STATUS["last_status"] = "텍스트 추출 실패"
+            COLLECTOR_STATUS["last_log_message"] = msg
+            COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
+            return {"status": "no_text", "message": msg, "time": now_str}
+            
+        log_trace(f"[파싱 시작] 텍스트 크기: {len(raw_text)}자")
+        records = WorkLogMatcher.parse_and_match_text(raw_text)
+        if not records:
+            msg = "새로 등록/완료할 작업 보고 메시지가 없습니다."
+            log_trace(f"[✓] {msg}")
+            COLLECTOR_STATUS["last_status"] = "새 작업 없음"
+            COLLECTOR_STATUS["last_log_message"] = msg
+            COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
+            return {"status": "no_records", "message": msg, "time": now_str}
+            
+        saved = db_manager.save_work_logs(records)
+        COLLECTOR_STATUS["last_status"] = f"정상 동기화 ({saved}건 저장/갱신)"
+        COLLECTOR_STATUS["last_result"] = {
+            "total_records": len(records),
+            "saved_records": saved
+        }
         COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
-        return {"status": "no_records", "message": msg, "time": now_str}
+        COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
         
-    saved = db_manager.save_work_logs(records)
-    COLLECTOR_STATUS["last_status"] = f"정상 동기화 ({saved}건 저장/갱신)"
-    COLLECTOR_STATUS["last_result"] = {
-        "total_records": len(records),
-        "saved_records": saved
-    }
-    COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
-    COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
-    
-    log_trace(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
-    return {
-        "status": "success",
-        "total_records": len(records),
-        "saved_records": saved,
-        "time": now_str
-    }
+        log_trace(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
+        return {
+            "status": "success",
+            "total_records": len(records),
+            "saved_records": saved,
+            "time": now_str
+        }
 
 
 def background_collector_loop():
     """
-    백그라운드에서 1시간(3,600초)마다 무한 반복 실행되는 상시 데몬 루프
+    백그라운드에서 10분(600초)마다 1회씩만 정확히 실행되는 상시 데몬 루프
     """
     COLLECTOR_STATUS["is_running"] = True
-    interval = config.COLLECTOR_INTERVAL_SECONDS  # 기본 3,600초 (1시간)
+    interval = config.COLLECTOR_INTERVAL_SECONDS  # 기본 600초 (10분)
     
-    log_trace(f"🚀 [상시 자동 수집 데몬 기동] 1시간({interval}초) 주기로 백그라운드에서 자동 수집을 실행합니다.")
+    log_trace(f"🚀 [상시 자동 수집 데몬 기동] 10분({interval}초) 주기로 백그라운드에서 자동 수집을 실행합니다.")
     
-    # 앱 시작 직후 즉시 1차 수집 시도
-    try:
-        run_collection_cycle()
-    except Exception as e:
-        log_trace(f"[수집기 초기 실행 예외]: {e}")
-        
     while True:
         try:
+            # 10분 대기 후 정기 수집 실행 (앱 시작 시 마구 긁지 않고 대기 후 실행)
             time.sleep(interval)
-            run_collection_cycle()
+            run_collection_cycle(is_manual=False)
         except Exception as e:
             log_trace(f"[수집기 데몬 주기 오류]: {e}")
             time.sleep(60)
@@ -343,18 +351,18 @@ def background_collector_loop():
 
 def start_background_collector():
     """
-    상시 백그라운드 수집기 스레드를 1회 시작
+    프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 싱글톤 보장
+    (Streamlit 재실행/리로드 시 중복 스레드 생성 원천 방지)
     """
-    global _collector_thread
-    with _thread_lock:
-        if _collector_thread is None or not _collector_thread.is_alive():
-            _collector_thread = threading.Thread(
-                target=background_collector_loop,
-                daemon=True,
-                name="KakaoAutoCollectorThread"
-            )
-            _collector_thread.start()
-            log_trace("[✓] 카카오톡 1시간 자동 수집 백그라운드 스레드가 정상 시작되었습니다.")
-            return True
-        else:
-            return False
+    if hasattr(sys, "_kakao_collector_thread_running") and sys._kakao_collector_thread_running:
+        return False
+        
+    sys._kakao_collector_thread_running = True
+    thread = threading.Thread(
+        target=background_collector_loop,
+        daemon=True,
+        name="KakaoAutoCollectorThread"
+    )
+    thread.start()
+    log_trace("[✓] 카카오톡 10분 자동 수집 백그라운드 데몬이 단독 기동되었습니다.")
+    return True
