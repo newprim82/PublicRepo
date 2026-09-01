@@ -1327,12 +1327,11 @@ def main():
             show_kpi_overdue_dialog(df)
 
     # ----------------------------------------------------
-    # 🚨 상단 과중 근무 실시간 감지 & 퀵 점프(Quick Jump) 알림 배너
+    # 🚨 상단 과중 근무 실시간 감지 & 원클릭 보상휴가 팝업 배너
     # ----------------------------------------------------
     if not df.empty and "week_label" in df.columns:
         all_rewards = RewardLeaveService.get_all_reward_leaves()
-        top_unrewarded_52 = []  # 52시간 이상 미보상
-        top_unrewarded_40 = []  # 40시간 이상 52시간 미만 미보상
+        overwork_items = []
         
         # 주차별/팀원별 집계
         wk_user_agg = df.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
@@ -1343,42 +1342,37 @@ def main():
             short_w = w_lbl.split(" ")[-2] if " " in w_lbl else w_lbl
             if val >= 40.0:
                 if (w_name, w_lbl) not in all_rewards:
-                    if val >= 52.0:
-                        top_unrewarded_52.append(f"{w_name}({short_w}:{val}h)")
-                    else:
-                        top_unrewarded_40.append(f"{w_name}({short_w}:{val}h)")
+                    overwork_items.append({
+                        "worker_name": w_name,
+                        "week_label": w_lbl,
+                        "short_w": short_w,
+                        "val": val,
+                        "is_52": (val >= 52.0)
+                    })
 
-        if top_unrewarded_52 or top_unrewarded_40:
-            danger_cnt = len(top_unrewarded_52)
-            caution_cnt = len(top_unrewarded_40)
-            
-            details_html = []
-            if top_unrewarded_52:
-                chips = " ".join([f'<span style="background:#D32F2F; color:#FFFFFF; padding:2px 8px; border-radius:10px; font-weight:700; font-size:12px; margin-right:4px;">🚨 {item}</span>' for item in top_unrewarded_52])
-                details_html.append(f"<b>주 52h 법정한도 초과 위험 ({danger_cnt}건):</b> {chips}")
-            if top_unrewarded_40:
-                chips = " ".join([f'<span style="background:#EF6C00; color:#FFFFFF; padding:2px 8px; border-radius:10px; font-weight:700; font-size:12px; margin-right:4px;">⚠️ {item}</span>' for item in top_unrewarded_40])
-                details_html.append(f"<b>주 40h 초과 주의 ({caution_cnt}건):</b> {chips}")
-                
-            detail_text = " &nbsp;&nbsp;|&nbsp;&nbsp; ".join(details_html)
-            
-            st.markdown(f"""
-            <div style="background: linear-gradient(90deg, rgba(211, 47, 47, 0.16), rgba(239, 108, 0, 0.16)); border: 1px solid rgba(255, 82, 82, 0.4); border-left: 6px solid #FF1744; border-radius: 12px; padding: 14px 20px; margin-top: 14px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);">
-                <div style="flex: 1; padding-right: 16px;">
-                    <div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">
-                        🚨 <span style="color: #FF5252;">[과중 근무 발생 알림]</span> 선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!
-                    </div>
-                    <div style="font-size: 13px; color: #E2E8F0; margin-top: 6px; line-height: 1.5;">
-                        {detail_text}
-                    </div>
+        if overwork_items:
+            st.markdown("""
+            <div style="background: linear-gradient(90deg, rgba(211, 47, 47, 0.18), rgba(239, 108, 0, 0.18)); border: 1px solid rgba(255, 82, 82, 0.5); border-left: 6px solid #FF1744; border-radius: 12px; padding: 12px 18px; margin-top: 12px; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);">
+                <div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">
+                    🚨 <span style="color: #FF5252;">[과중 근무 발생 알림]</span> 선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!
                 </div>
-                <div>
-                    <a href="#weekly-monitor-section" style="background: linear-gradient(135deg, #FF1744, #D50000); color: #FFFFFF; font-weight: 800; font-size: 13px; padding: 10px 18px; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(255, 23, 68, 0.4); white-space: nowrap;">
-                        👇 주차별 모니터링 표로 바로가기
-                    </a>
+                <div style="font-size: 12.5px; color: #E2E8F0; margin-top: 4px;">
+                    💡 <b>아래 팀원 버튼을 클릭</b>하시면 <b>즉시 세부 작업 내역 팝업</b>이 열려 <b>보상 휴가를 바로 등록</b>하실 수 있습니다.
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # 팀원 배지 버튼들을 촘촘하게 배치
+            num_cols = min(len(overwork_items), 5)
+            btn_cols = st.columns(max(num_cols, 1))
+            for idx, item in enumerate(overwork_items):
+                col_idx = idx % num_cols
+                with btn_cols[col_idx]:
+                    icon = "🚨" if item["is_52"] else "⚠️"
+                    btn_label = f"{icon} {item['worker_name']}({item['short_w']}:{item['val']}h)"
+                    btn_type = "primary" if item["is_52"] else "secondary"
+                    if st.button(btn_label, key=f"btn_ovw_alert_{item['worker_name']}_{item['week_label']}", use_container_width=True, type=btn_type, help=f"[{item['worker_name']}] 님의 {item['week_label']} 상세 내역 및 보상 휴가 팝업 열기"):
+                        show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
 
     st.divider()
 
