@@ -1710,18 +1710,19 @@ def main():
                                 if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}", help=f"[{c_item['worker_name']}] 보상 휴가 팝업 열기"):
                                     show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
         else:
-            # 🟢 과중 근무자가 없는 경우: 차분한 정상 상태 배너 (상자 정가운데 완전 중앙 정렬)
-            with st.container(border=True):
-                st.markdown("""
-                <div style="display: flex; justify-content: center; align-items: center; width: 100%; min-height: 36px; gap: 16px; flex-wrap: wrap; text-align: center;">
-                    <div style="font-size: 14.5px; font-weight: 700; color: #E2E8F0; display: inline-flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 16px; line-height: 1;">🟢</span>
-                        <span class="normal-status-badge">[과중 근무 없음]</span>
-                        <span style="color: #94A3B8; font-size: 13.5px; margin-left: 2px;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
-                    </div>
-                    <a href="#weekly-monitor-section" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #E2E8F0; font-weight: 700; font-size: 12px; padding: 5px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1;">👇 주차별 모니터링 표</a>
+            # 🟢 과중 근무자가 없는 경우: 상하 여백이 100% 동일한 일체형 카드 배너
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 229, 255, 0.05)); border: 1.5px solid rgba(0, 230, 118, 0.35); border-radius: 10px; padding: 10px 18px; margin: 10px 0 14px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0, 230, 118, 0.12);">
+                <div style="font-size: 14.5px; font-weight: 700; color: #E2E8F0; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
+                    <span style="font-size: 16px; line-height: 1;">🟢</span>
+                    <span style="background: rgba(0, 230, 118, 0.18); color: #00E676; border: 1.5px solid rgba(0, 230, 118, 0.6); padding: 3px 10px; border-radius: 6px; font-weight: 900; font-size: 13px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
+                    <span style="color: #94A3B8; font-size: 13.5px; line-height: 1;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
                 </div>
-                """, unsafe_allow_html=True)
+                <div style="margin: 0; padding: 0;">
+                    <a href="#weekly-monitor-section" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #E2E8F0; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1;">👇 주차별 모니터링 표</a>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.divider()
 
