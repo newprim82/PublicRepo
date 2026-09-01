@@ -290,6 +290,30 @@ st.markdown("""
         margin-bottom: 18px !important;
     }
 
+    /* 🟢 과중 근무 없음 (정상 상태) 배너 컨테이너 테두리 & 배경 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
+        background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 229, 255, 0.05)) !important;
+        border: 1.5px solid rgba(0, 230, 118, 0.4) !important;
+        border-left: 8px solid #00E676 !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 16px rgba(0, 230, 118, 0.15) !important;
+        padding: 12px 18px !important;
+        margin-top: 14px !important;
+        margin-bottom: 18px !important;
+    }
+
+    .normal-status-badge {
+        background: rgba(0, 230, 118, 0.18) !important;
+        color: #00E676 !important;
+        border: 1.5px solid rgba(0, 230, 118, 0.6) !important;
+        padding: 3px 12px !important;
+        border-radius: 8px !important;
+        font-weight: 900 !important;
+        font-size: 14px !important;
+        letter-spacing: -0.3px !important;
+        display: inline-block !important;
+    }
+
     /* 🟧 배너 내부 버튼 100% 강제 오렌지색 적용 */
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button,
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button {
@@ -1564,6 +1588,14 @@ def main():
                             with c_cols[c_idx]:
                                 if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}", help=f"[{c_item['worker_name']}] 보상 휴가 팝업 열기"):
                                     show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
+        else:
+            # 🟢 과중 근무자가 없는 경우: 차분한 정상 상태 배너 표출 (깜빡임 애니메이션 없음)
+            with st.container(border=True):
+                col_norm_l, col_norm_r = st.columns([8.0, 2.0])
+                with col_norm_l:
+                    st.markdown('<div style="font-size: 14.5px; font-weight: 700; color: #E2E8F0; display: flex; align-items: center; gap: 8px;"><span style="font-size: 16px;">🟢</span> <span class="normal-status-badge">[과중 근무 없음]</span> <span style="color: #94A3B8;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span></div>', unsafe_allow_html=True)
+                with col_norm_r:
+                    st.markdown('<div style="text-align: right;"><a href="#weekly-monitor-section" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #E2E8F0; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">👇 주차별 모니터링 표</a></div>', unsafe_allow_html=True)
 
     st.divider()
 
