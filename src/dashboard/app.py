@@ -1284,42 +1284,76 @@ def main():
         # 2. 카카오톡 실시간 동기화
         st.markdown('<div class="sidebar-section-header green">🤖 카카오톡 실시간 연동</div>', unsafe_allow_html=True)
         countdown = get_collector_countdown_info()
-        st.markdown(f"""
-        <div style="background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.35); border-radius: 8px; padding: 9px 12px; margin-bottom: 8px; font-size: 12px;">
-            <div style="font-weight: 800; color: #00E676; display: flex; align-items: center; gap: 4px;">
-                ⏳ 다음 자동 증분 수집:
-            </div>
-            <div style="font-size: 14px; font-weight: 900; color: #FFFFFF; margin-top: 3px;">
-                <span id="sb-live-timer">{countdown['remaining_minutes']}분 뒤</span> <span id="sb-live-sub" style="font-size: 11.5px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
-            </div>
-            <div style="font-size: 11px; color: #94A3B8; margin-top: 3px;">
-                최근 수집: {countdown['last_run_str']} | 10분 주기 자동
-            </div>
-        </div>
-        <script>
-        (function() {{
-            let targetTs = {countdown['target_timestamp']};
-            function updateSbTimer() {{
-                let nowTs = Math.floor(Date.now() / 1000);
-                let diff = targetTs - nowTs;
-                let tEl = document.getElementById('sb-live-timer');
-                if (!tEl) return;
-                if (diff <= 0) {{
-                    tEl.innerText = "⚡ 지금 수집 중...";
-                    tEl.style.color = "#00E676";
-                }} else {{
-                    let m = Math.floor(diff / 60);
-                    let s = diff % 60;
-                    let sStr = s < 10 ? '0' + s : s;
-                    tEl.innerText = (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
-                    tEl.style.color = "#FFFFFF";
+        st.components.v1.html(f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    background: transparent;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    overflow: hidden;
                 }}
-            }}
-            setInterval(updateSbTimer, 1000);
-            updateSbTimer();
-        }})();
-        </script>
-        """, unsafe_allow_html=True)
+                .sb-card {{
+                    background: rgba(0, 230, 118, 0.08);
+                    border: 1px solid rgba(0, 230, 118, 0.35);
+                    border-radius: 8px;
+                    padding: 7px 10px;
+                    box-sizing: border-box;
+                }}
+                .sb-title {{
+                    font-weight: 800;
+                    color: #00E676;
+                    font-size: 11.5px;
+                }}
+                .sb-main {{
+                    font-size: 13.5px;
+                    font-weight: 900;
+                    color: #FFFFFF;
+                    margin-top: 2px;
+                }}
+                .sb-sub {{
+                    font-size: 10.5px;
+                    color: #94A3B8;
+                    margin-top: 2px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="sb-card">
+                <div class="sb-title">⏳ 다음 자동 증분 수집:</div>
+                <div class="sb-main">
+                    <span id="sb-live-timer">{countdown['remaining_minutes']}분 뒤</span> <span style="font-size: 11px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
+                </div>
+                <div class="sb-sub">최근 수집: {countdown['last_run_str']} | 10분 주기 자동</div>
+            </div>
+            <script>
+                let targetTs = {countdown['target_timestamp']};
+                function updateSb() {{
+                    let nowTs = Math.floor(Date.now() / 1000);
+                    let diff = targetTs - nowTs;
+                    let tEl = document.getElementById('sb-live-timer');
+                    if (!tEl) return;
+                    if (diff <= 0) {{
+                        tEl.innerText = "⚡ 지금 수집 중...";
+                        tEl.style.color = "#00E676";
+                    }} else {{
+                        let m = Math.floor(diff / 60);
+                        let s = diff % 60;
+                        let sStr = s < 10 ? '0' + s : s;
+                        tEl.innerText = (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
+                        tEl.style.color = "#FFFFFF";
+                    }}
+                }}
+                setInterval(updateSb, 1000);
+                updateSb();
+            </script>
+        </body>
+        </html>
+        """, height=72)
 
         if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
             with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
@@ -1461,35 +1495,75 @@ def main():
         )
     with c_badge_timer:
         countdown = get_collector_countdown_info()
-        st.markdown(f"""
-        <div style="background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.4); border-radius: 8px; padding: 4px 8px; height: 38px; display: flex; flex-direction: column; justify-content: center; text-align: center;">
-            <span id="main-live-timer" style="font-size: 11.5px; font-weight: 900; color: #00E5FF;">⏳ {countdown['remaining_minutes']}분 뒤 자동수집</span>
-            <span id="main-live-sub" style="font-size: 10px; color: #94A3B8;">({countdown['next_run_str']} 예정)</span>
-        </div>
-        <script>
-        (function() {{
-            let targetTs = {countdown['target_timestamp']};
-            function updateMainTimer() {{
-                let nowTs = Math.floor(Date.now() / 1000);
-                let diff = targetTs - nowTs;
-                let tEl = document.getElementById('main-live-timer');
-                if (!tEl) return;
-                if (diff <= 0) {{
-                    tEl.innerText = "⚡ 지금 수집 중...";
-                    tEl.style.color = "#00E676";
-                }} else {{
-                    let m = Math.floor(diff / 60);
-                    let s = diff % 60;
-                    let sStr = s < 10 ? '0' + s : s;
-                    tEl.innerText = "⏳ " + (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
-                    tEl.style.color = "#00E5FF";
+        st.components.v1.html(f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    background: transparent;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    overflow: hidden;
                 }}
-            }}
-            setInterval(updateMainTimer, 1000);
-            updateMainTimer();
-        }})();
-        </script>
-        """, unsafe_allow_html=True)
+                .timer-badge {{
+                    background: rgba(0, 229, 255, 0.1);
+                    border: 1px solid rgba(0, 229, 255, 0.4);
+                    border-radius: 8px;
+                    padding: 3px 6px;
+                    height: 38px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    text-align: center;
+                    box-sizing: border-box;
+                }}
+                .timer-main {{
+                    font-size: 11.5px;
+                    font-weight: 900;
+                    color: #00E5FF;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                }}
+                .timer-sub {{
+                    font-size: 9.5px;
+                    color: #94A3B8;
+                    line-height: 1.2;
+                    white-space: nowrap;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="timer-badge">
+                <div class="timer-main" id="main-live-timer">⏳ {countdown['remaining_minutes']}분 뒤 자동수집</div>
+                <div class="timer-sub" id="main-live-sub">({countdown['next_run_str']} 예정)</div>
+            </div>
+            <script>
+                let targetTs = {countdown['target_timestamp']};
+                function updateMainTimer() {{
+                    let nowTs = Math.floor(Date.now() / 1000);
+                    let diff = targetTs - nowTs;
+                    let tEl = document.getElementById('main-live-timer');
+                    if (!tEl) return;
+                    if (diff <= 0) {{
+                        tEl.innerText = "⚡ 지금 수집 중...";
+                        tEl.style.color = "#00E676";
+                    }} else {{
+                        let m = Math.floor(diff / 60);
+                        let s = diff % 60;
+                        let sStr = s < 10 ? '0' + s : s;
+                        tEl.innerText = "⏳ " + (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
+                        tEl.style.color = "#00E5FF";
+                    }}
+                }}
+                setInterval(updateMainTimer, 1000);
+                updateMainTimer();
+            </script>
+        </body>
+        </html>
+        """, height=40)
     with c_badge_btn:
         if st.button("⚡ 즉시 수집", key="btn_manual_kakao_main", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
             with st.spinner("💬 카톡에서 최신 대화 수집 중..."):
