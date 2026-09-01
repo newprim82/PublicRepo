@@ -58,6 +58,8 @@ COLLECTOR_STATUS = {
     "last_log_message": ""
 }
 
+# 현재 활성 스레드 ID 관리 (이전 중복 스레드 즉시 자동 종료용)
+_ACTIVE_THREAD_TOKEN = 0
 _cycle_lock = threading.Lock()
 _last_execution_timestamp = 0
 
@@ -107,13 +109,11 @@ def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
         nonlocal found_hwnd
         if win32gui.IsWindowVisible(hwnd):
             title = win32gui.GetWindowText(hwnd)
-            cls_name = win32gui.GetClassName(hwnd)
             if not title:
                 return True
                 
             title_clean = title.replace("🚩", "").replace("✨", "").replace("🏳️", "").strip().lower()
             
-            # 카카오톡 대화방 창 조건
             if ("기술본부" in title_clean or "업무공유" in title_clean or target_clean in title_clean) and title != "카카오톡":
                 found_hwnd = hwnd
                 return False
@@ -132,11 +132,11 @@ def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
     return found_hwnd
 
 
-def extract_text_from_kakao_window(hwnd: int) -> str:
+def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     """
     열려 있는 카카오톡 창에서 대화 목록을 안전하게 추출
-    1순위: 100% 무간섭 UIA 직접 읽기 (창 활성화/키보드 조작 전혀 없음)
-    2순위: UIA 실패 시에만 안전 복사 Fallback (대화목록 영역만 타겟팅)
+    - 자동 수집(is_manual=False): 100% 무간섭 UIA 직접 읽기만 수행 (창 깜빡임/포커스 이동 전혀 없음)
+    - 수동 즉시(is_manual=True): UIA 우선 시도 후 실패 시에만 안전 복사 Fallback
     """
     if not WIN32_AVAILABLE or not hwnd:
         return ""
@@ -145,8 +145,6 @@ def extract_text_from_kakao_window(hwnd: int) -> str:
         pythoncom.CoInitialize()
     except Exception:
         pass
-
-    log_trace(f"[추출 시작] HWND={hwnd} 대상 텍스트 추출 시도")
 
     # 1. 자식 윈도우 중 대화 목록 리스트(EVA_VH_ListControl_RPC) 탐색
     list_hwnd = None
@@ -163,16 +161,15 @@ def extract_text_from_kakao_window(hwnd: int) -> str:
             if "EVA_VH_ListControl_RPC" in c_name:
                 list_hwnd = ch
                 break
-    except Exception as e:
-        log_trace(f"[자식 윈도우 탐색 오류]: {e}")
+    except Exception:
+        pass
 
-    # [1단계] 100% 무간섭 UIA 텍스트 추출 (창 활성화 및 포커스 이동 전혀 없음)
+    # [1단계] 100% 무간섭 백그라운드 UIA 추출
     extracted_lines = []
     try:
         target_ctrl_hwnd = list_hwnd if list_hwnd else hwnd
         ctrl = auto.ControlFromHandle(target_ctrl_hwnd)
         if ctrl:
-            log_trace("[UIA] 백그라운드 무간섭 텍스트 추출 시도...")
             for c, depth in auto.WalkTree(ctrl, getChildren=auto.GetChildren):
                 if depth > 15:
                     continue
@@ -188,7 +185,13 @@ def extract_text_from_kakao_window(hwnd: int) -> str:
     except Exception as e:
         log_trace(f"[UIA 추출 알림]: {e}")
 
-    # [2단계] UIA로 읽히지 않는 경우에만 안전 복사 Fallback 실행
+    # 자동 수집인 경우 사용자의 화면을 방해하지 않기 위해 여기서 반환
+    if not is_manual:
+        if extracted_lines:
+            return "\n".join(extracted_lines)
+        return ""
+
+    # [2단계: 오직 수동 버튼 클릭 시에만 실행되는 Fallback]
     try:
         old_clipboard = ""
         try:
@@ -202,14 +205,11 @@ def extract_text_from_kakao_window(hwnd: int) -> str:
             except Exception:
                 pass
 
-        # 대화목록 창(EVA_VH_ListControl_RPC)에만 안전하게 포커스 후 복사
         target_focus = list_hwnd if list_hwnd else hwnd
         if target_focus:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
             win32gui.SetForegroundWindow(hwnd)
             time.sleep(0.05)
-            
-            # 대화 목록 영역 클릭
             win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, (100 << 16) | 100)
             win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, (100 << 16) | 100)
             time.sleep(0.05)
@@ -229,7 +229,6 @@ def extract_text_from_kakao_window(hwnd: int) -> str:
             except Exception:
                 pass
 
-        # 사용자 기존 클립보드 즉시 복원
         if old_clipboard:
             try:
                 win32clipboard.OpenClipboard()
@@ -243,16 +242,13 @@ def extract_text_from_kakao_window(hwnd: int) -> str:
                     pass
 
         if copied_text and len(copied_text.strip()) > 10:
-            lines = copied_text.strip().split("\n")
-            log_trace(f"[✓ 클립보드 복사 성공] 총 {len(lines)}줄 ({len(copied_text)}자) 획득")
             return copied_text.strip()
     except Exception as e:
-        log_trace(f"[복사 Fallback 예외]: {e}")
+        log_trace(f"[수동 복사 Fallback 예외]: {e}")
 
     if extracted_lines:
         return "\n".join(extracted_lines)
 
-    log_trace("[-] 텍스트 수집 실패")
     return ""
 
 
@@ -282,7 +278,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
         COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
         
         log_trace(f"==================================================")
-        log_trace(f"🤖 [카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 자동'})] 대상: '{target_chat}'")
+        log_trace(f"🤖 [카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 정기'})] 대상: '{target_chat}'")
         
         hwnd = find_kakao_chat_window(target_chat)
         if not hwnd:
@@ -292,7 +288,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             COLLECTOR_STATUS["last_log_message"] = msg
             return {"status": "window_not_found", "message": msg, "time": now_str}
             
-        raw_text = extract_text_from_kakao_window(hwnd)
+        raw_text = extract_text_from_kakao_window(hwnd, is_manual=is_manual)
         if not raw_text or len(raw_text.strip()) == 0:
             msg = "대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 클릭한 뒤 다시 시도해주세요."
             log_trace(f"[-] {msg}")
@@ -326,7 +322,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
         }
 
 
-def background_collector_loop():
+def background_collector_loop(token: int):
     """
     백그라운드에서 10분(600초)마다 1회씩만 정확히 실행되는 상시 데몬 루프
     """
@@ -339,31 +335,42 @@ def background_collector_loop():
     interval = max(600, config.COLLECTOR_INTERVAL_SECONDS)  # 10분 (600초)
     COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=interval)
     
-    log_trace(f"🚀 [10분 자동 수집 데몬 정상 기동] {interval}초(10분)마다 1회씩 백그라운드에서 실행합니다.")
+    log_trace(f"🚀 [10분 자동 수집 데몬 기동] 토큰={token} | {interval}초(10분)마다 1회씩 실행합니다.")
     
     while True:
+        # 새로운 스레드가 떴으면 이전 스레드는 스스로 종료
+        if token != _ACTIVE_THREAD_TOKEN:
+            log_trace(f"[스레드 종료] 이전 수집기 스레드(토큰={token})가 안전하게 종료되었습니다.")
+            break
+            
+        # ★ 10분(600초)을 온전히 대기
+        time.sleep(interval)
+        
+        if token != _ACTIVE_THREAD_TOKEN:
+            break
+            
         try:
-            # ★ 10분(600초)을 온전히 대기
-            time.sleep(interval)
             run_collection_cycle(is_manual=False)
         except Exception as e:
             log_trace(f"[수집기 데몬 대기 예외]: {e}")
-            time.sleep(interval)
 
 
 def start_background_collector():
     """
-    프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 싱글톤 보장
+    프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 토큰 기반 싱글톤 보장
     """
-    if hasattr(sys, "_kakao_collector_thread_running") and sys._kakao_collector_thread_running:
-        return False
-        
-    sys._kakao_collector_thread_running = True
+    global _ACTIVE_THREAD_TOKEN
+    
+    # 이전 스레드 토큰 무효화
+    _ACTIVE_THREAD_TOKEN += 1
+    current_token = _ACTIVE_THREAD_TOKEN
+    
     thread = threading.Thread(
         target=background_collector_loop,
+        args=(current_token,),
         daemon=True,
-        name="KakaoAutoCollectorThread"
+        name=f"KakaoAutoCollectorThread_{current_token}"
     )
     thread.start()
-    log_trace("[✓] 카카오톡 10분 자동 수집 백그라운드 데몬이 단독 기동되었습니다.")
+    log_trace(f"[✓] 카카오톡 10분 자동 수집 데몬(토큰={current_token})이 단독 기동되었습니다.")
     return True

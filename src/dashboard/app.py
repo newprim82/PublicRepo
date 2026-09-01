@@ -36,9 +36,15 @@ from src.database.supabase_client import db_manager
 from src.analytics.stats_service import StatsService
 from src.collector.kakao_auto_collector import start_background_collector, run_collection_cycle, get_collector_countdown_info, COLLECTOR_STATUS
 
-# 🚀 대시보드 구동 시 1시간 주기 카카오톡 상시 자동 수집 데몬 1회 자동 기동
-try:
+@st.cache_resource
+def init_single_collector_daemon():
+    """Streamlit 수명 주기 전체에서 단 1회만 백그라운드 10분 수집 데몬을 실행"""
     start_background_collector()
+    return True
+
+# 🚀 대시보드 구동 시 10분 주기 카카오톡 상시 자동 수집 데몬 1회 단독 기동
+try:
+    init_single_collector_daemon()
 except Exception as e:
     print(f"[수집기 기동 알림]: {e}")
 
