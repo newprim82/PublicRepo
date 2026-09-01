@@ -32,12 +32,12 @@ class DatabaseManager:
             try:
                 self.supabase = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
                 self.use_supabase = True
-                print("[DB] ☁️ Supabase 클라우드 DB에 성공적으로 연결되었습니다. (다중 PC 실시간 동기화 모드)")
+                print("[DB] Supabase Cloud DB connected successfully. (Multi-PC Real-Time Sync Mode)")
             except Exception as e:
-                print(f"[DB 경고] Supabase 연결 실패: {e}. 로컬 SQLite로 전환합니다.")
+                print(f"[DB Warning] Supabase connection failed: {e}. Fallback to local SQLite.")
                 self.use_supabase = False
         else:
-            print("[DB 알림] Supabase 미설정 상태입니다. 로컬 SQLite 모드로 동작합니다.")
+            print("[DB Info] Supabase not configured. Running in local SQLite mode.")
             self.use_supabase = False
 
     def _init_local_db(self):

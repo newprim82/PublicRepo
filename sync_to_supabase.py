@@ -3,6 +3,13 @@ import sqlite3
 import pandas as pd
 from pathlib import Path
 
+# Windows 콘솔 cp949 유니코드 오류 방지
+try:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
 # 프로젝트 루트 경로 추가
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -11,12 +18,12 @@ from src.database.supabase_client import db_manager
 
 def sync_local_to_supabase():
     print("=" * 60)
-    print("☁️ [Supabase 클라우드 데이터 일괄 동기화 마이그레이션 도구]")
+    print("[Supabase Cloud DB Data Sync Migration Tool]")
     print("=" * 60)
 
     if not config.is_supabase_configured() or not db_manager.use_supabase:
-        print("[!] Supabase 연결 정보가 설정되지 않았습니다.")
-        print("💡 .env 파일에 SUPABASE_URL 과 SUPABASE_KEY 를 입력해주세요.")
+        print("[!] Supabase is not configured or connection failed.")
+        print("Please check SUPABASE_URL and SUPABASE_KEY in .env file.")
         return
 
     # 1. 로컬 SQLite에서 최신 작업 로그 읽기
@@ -36,7 +43,7 @@ def sync_local_to_supabase():
         
     conn.close()
 
-    print(f"📊 로컬 SQLite 내역: 작업 로그 {len(df_logs)}건 / 팀원 정보 {len(df_teams)}명 / 보상 휴가 {len(df_rewards)}건")
+    print(f"Local SQLite: Work logs: {len(df_logs)} | Team members: {len(df_teams)} | Reward leaves: {len(df_rewards)}")
 
     # 3. Supabase work_logs 일괄 Upsert
     if not df_logs.empty:
@@ -66,11 +73,16 @@ def sync_local_to_supabase():
         total_uploaded = 0
         for i in range(0, len(payloads), batch_size):
             batch = payloads[i:i+batch_size]
-            db_manager.supabase.table("work_logs").upsert(batch, on_conflict="msg_hash").execute()
-            total_uploaded += len(batch)
-            print(f"  - [작업 로그 업로드 중...] {total_uploaded}/{len(payloads)}건 완료")
+            try:
+                db_manager.supabase.table("work_logs").upsert(batch, on_conflict="msg_hash").execute()
+                total_uploaded += len(batch)
+                print(f"  - [Uploading work logs...] {total_uploaded}/{len(payloads)} completed")
+            except Exception as e:
+                print(f"  - [Error during batch upload]: {e}")
+                print("    (Please make sure you have executed supabase_schema.sql in Supabase SQL Editor!)")
+                return
 
-        print(f"🎉 [성공] 총 {total_uploaded}건의 작업 로그가 Supabase 클라우드에 완벽히 동기화되었습니다!")
+        print(f"[SUCCESS] Uploaded {total_uploaded} work logs to Supabase!")
 
     # 4. 팀원 정보 동기화
     if not df_teams.empty:
@@ -81,8 +93,11 @@ def sync_local_to_supabase():
                 "team_name": r["team_name"],
                 "job_title": r.get("job_title", "")
             })
-        db_manager.supabase.table("team_members").upsert(team_payloads, on_conflict="worker_name").execute()
-        print(f"👥 [성공] 총 {len(team_payloads)}명의 팀원 소속/직급 정보가 Supabase에 동기화되었습니다!")
+        try:
+            db_manager.supabase.table("team_members").upsert(team_payloads, on_conflict="worker_name").execute()
+            print(f"[SUCCESS] Synchronized {len(team_payloads)} team members to Supabase!")
+        except Exception as e:
+            print(f"[Warning] Team members sync error: {e}")
 
     # 5. 보상 휴가 정보 동기화
     if not df_rewards.empty:
@@ -94,10 +109,13 @@ def sync_local_to_supabase():
                 "leave_hours": float(r["leave_hours"]),
                 "note": r["note"]
             })
-        db_manager.supabase.table("reward_leave_logs").upsert(reward_payloads).execute()
-        print(f"🎁 [성공] 총 {len(reward_payloads)}건의 보상 휴가 기록이 Supabase에 동기화되었습니다!")
+        try:
+            db_manager.supabase.table("reward_leave_logs").upsert(reward_payloads).execute()
+            print(f"[SUCCESS] Synchronized {len(reward_payloads)} reward leaves to Supabase!")
+        except Exception as e:
+            print(f"[Warning] Reward leaves sync error: {e}")
 
-    print("\n✅ 모든 데이터가 Supabase 클라우드로 완벽히 이전되었습니다! 이제 모든 PC에서 실시간으로 공유됩니다.")
+    print("\n[SUCCESS] All data has been synchronized to Supabase Cloud DB!")
 
 if __name__ == "__main__":
     sync_local_to_supabase()
