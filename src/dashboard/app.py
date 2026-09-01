@@ -348,6 +348,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+@st.cache_data(ttl=15, show_spinner=False)
 def load_data() -> pd.DataFrame:
     df = db_manager.fetch_all_work_logs()
     if not df.empty:
@@ -1374,6 +1375,12 @@ def main():
                     st.cache_data.clear()
                     time.sleep(1)
                     st.rerun()
+
+        if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True, help="Supabase 클라우드 DB에서 최신 동기화 데이터를 즉시 다시 불러옵니다."):
+            st.cache_data.clear()
+            st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
+            time.sleep(0.5)
+            st.rerun()
 
         # 3. 데이터 수동 동기화 (대화 파일 업로드)
         st.markdown('<div class="sidebar-section-header blue">📥 데이터 동기화 (파일 업로드)</div>', unsafe_allow_html=True)
