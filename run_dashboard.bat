@@ -1,8 +1,8 @@
-﻿@echo off
+@echo off
 chcp 65001 > nul
-echo ===================================================================
-echo   [대시보드 시작] 팀 지원 시간 & 업무량 분석 웹 대시보드 실행 중...
-echo ===================================================================
-cd /d "%~dp0"
-python -m streamlit run src\dashboard\app.py
+echo ========================================================
+echo 🚀 팀 업무량 & 지원 시간 분석 대시보드 실행 (work-time-dashboard)
+echo ========================================================
+cd work-time-dashboard
+streamlit run src/dashboard/app.py
 pause
