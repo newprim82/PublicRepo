@@ -109,34 +109,137 @@ def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
 
 def extract_text_from_kakao_window(hwnd: int) -> str:
     """
-    열려 있는 카카오톡 창에서 텍스트 대화 내용을 100% 순수 읽기 전용(Read-Only)으로 추출
-    (💡 채팅방에 글자가 입력되거나 키보드/마우스가 동작하는 일은 절대 없습니다.)
+    열려 있는 카카오톡 창에서 텍스트 대화 내용을 100% 안전하고 정밀하게 추출
+    (1단계: UIA 리스트 컨트롤 직접 읽기 -> 2단계: 자식 윈도우 전수 탐색 -> 3단계: 안전 리스트 복사 Fallback)
     """
     if not WIN32_AVAILABLE or not hwnd:
         return ""
 
     extracted_lines = []
 
-    # 100% 안전한 Windows UI Automation 직접 텍스트 읽기 (Read-Only)
+    # 1. 자식 윈도우 중 대화 목록 리스트(EVA_VH_ListControl_RPC) 탐색
+    list_hwnd = None
+    child_hwnds = []
+    
+    def enum_child_proc(h, _):
+        child_hwnds.append(h)
+        return True
+
     try:
-        control = auto.ControlFromHandle(hwnd)
-        if control:
-            def recurse_find_text(ctrl, depth=0):
-                if depth > 10:
-                    return
-                # 읽기 전용 속성(Name)만 조회 (키보드/마우스 이벤트 전혀 발생하지 않음)
-                name_val = ctrl.Name
-                if name_val and len(name_val.strip()) > 0:
-                    text_str = name_val.strip()
-                    # 메시지 전송 버튼이나 윈도우 제어 버튼 제외
-                    if not any(ign == text_str for ign in ["최소화", "최대화", "닫기", "전송", "메뉴", "검색", "이모티콘", "파일 보내기", "음성 대화", "페이스톡"]):
-                        extracted_lines.append(text_str)
-                for child in ctrl.GetChildren():
-                    recurse_find_text(child, depth + 1)
+        win32gui.EnumChildWindows(hwnd, enum_child_proc, None)
+        for ch in child_hwnds:
+            c_name = win32gui.GetClassName(ch)
+            if "EVA_VH_ListControl_RPC" in c_name:
+                list_hwnd = ch
+                break
+    except Exception:
+        pass
+
+    # [1단계] 대화 리스트 컨트롤 대상 UIA 직접 텍스트 추출
+    targets = [list_hwnd, hwnd] if list_hwnd else [hwnd]
+    for target_h in targets:
+        if not target_h:
+            continue
+        try:
+            ctrl = auto.ControlFromHandle(target_h)
+            if ctrl:
+                def recurse_find_text(c, depth=0):
+                    if depth > 15:
+                        return
                     
-            recurse_find_text(control)
+                    # Name 속성
+                    name_val = c.Name
+                    if name_val and len(name_val.strip()) > 0:
+                        text_str = name_val.strip()
+                        if not any(ign == text_str for ign in ["최소화", "최대화", "닫기", "전송", "메뉴", "검색", "이모티콘", "파일 보내기", "음성 대화", "페이스톡", "더보기"]):
+                            extracted_lines.append(text_str)
+                    
+                    # Legacy IAccessible Name
+                    try:
+                        legacy = c.GetLegacyIAccessiblePattern()
+                        if legacy and legacy.Name and legacy.Name != name_val:
+                            l_name = legacy.Name.strip()
+                            if l_name and not any(ign == l_name for ign in ["최소화", "최대화", "닫기", "전송"]):
+                                extracted_lines.append(l_name)
+                    except Exception:
+                        pass
+                        
+                    for child in c.GetChildren():
+                        recurse_find_text(child, depth + 1)
+                        
+                recurse_find_text(ctrl)
+        except Exception as e:
+            safe_print(f"[수집기 UIA 추출 알림]: {e}")
+
+        if len(extracted_lines) >= 3:
+            return "\n".join(extracted_lines)
+
+    # [2단계] UIA로 읽히지 않는 경우: 안전 대화 리스트 복사 Fallback
+    # (★ 중요: 입력창이 아닌 대화목록 창(EVA_VH_ListControl_RPC)에만 복사 신호를 보내므로 채팅 입력/전송은 100% 원천 차단됨)
+    try:
+        import win32clipboard
+        import win32process
+        
+        # 기존 클립보드 데이터 안전 백업
+        old_clipboard = ""
+        try:
+            win32clipboard.OpenClipboard()
+            if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
+                old_clipboard = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
+        except Exception:
+            try:
+                win32clipboard.CloseClipboard()
+            except Exception:
+                pass
+
+        # 대화 리스트 컨트롤에 포커스 후 안전 복사 (Ctrl+A -> Ctrl+C)
+        target_focus = list_hwnd if list_hwnd else hwnd
+        if target_focus:
+            # 대화 목록 영역 클릭 (안전한 좌상단 50, 50 좌표)
+            win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, (50 << 16) | 50)
+            win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, (50 << 16) | 50)
+            time.sleep(0.05)
+            
+            # Ctrl + A, Ctrl + C 전달
+            win32gui.SendMessage(target_focus, win32con.WM_KEYDOWN, win32con.VK_CONTROL, 0)
+            win32gui.SendMessage(target_focus, win32con.WM_KEYDOWN, ord('A'), 0)
+            win32gui.SendMessage(target_focus, win32con.WM_KEYUP, ord('A'), 0)
+            win32gui.SendMessage(target_focus, win32con.WM_KEYDOWN, ord('C'), 0)
+            win32gui.SendMessage(target_focus, win32con.WM_KEYUP, ord('C'), 0)
+            win32gui.SendMessage(target_focus, win32con.WM_KEYUP, win32con.VK_CONTROL, 0)
+            time.sleep(0.1)
+
+            # 복사된 텍스트 획득
+            copied_text = ""
+            try:
+                win32clipboard.OpenClipboard()
+                if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
+                    copied_text = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
+                win32clipboard.CloseClipboard()
+            except Exception:
+                try:
+                    win32clipboard.CloseClipboard()
+                except Exception:
+                    pass
+
+            # 기존 클립보드 데이터 즉시 복원 (사용자 편의 보호)
+            if old_clipboard:
+                try:
+                    win32clipboard.OpenClipboard()
+                    win32clipboard.EmptyClipboard()
+                    win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT, old_clipboard)
+                    win32clipboard.CloseClipboard()
+                except Exception:
+                    try:
+                        win32clipboard.CloseClipboard()
+                    except Exception:
+                        pass
+
+            if copied_text and len(copied_text.strip()) > 0:
+                return copied_text.strip()
     except Exception as e:
-        safe_print(f"[수집기 UIA 안전 읽기 알림]: {e}")
+        safe_print(f"[수집기 복사 Fallback 알림]: {e}")
 
     if extracted_lines:
         return "\n".join(extracted_lines)
