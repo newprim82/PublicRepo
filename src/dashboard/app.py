@@ -1382,10 +1382,8 @@ def main():
         if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True, help="Supabase 클라우드 DB에서 최신 동기화 데이터를 즉시 다시 불러옵니다."):
             st.cache_data.clear()
             st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
-            time.sleep(0.3)
-            st.rerun()
 
-        # 60초(1분) 무간섭 자동 화면 갱신 엔진 (세션 상태 & 핵심 조회 기준 100% 영구 유지)
+        # 60초(1분) 무간섭 자동 화면 갱신 엔진 (sessionStorage 기반 정확한 1분 1회 보장 & 필터 100% 유지)
         st.components.v1.html("""
         <!DOCTYPE html>
         <html>
@@ -1413,13 +1411,29 @@ def main():
                 🟢 1분 자동 실시간 동기화 (필터 설정 유지)
             </div>
             <script>
-                // 60초(1분)마다 Streamlit 내부 새로고침 버튼을 트리거하여 세션 필터 상태를 100% 보존하며 자동 갱신
-                let countdownSec = 60;
-                function updateSyncStatus() {
-                    let el = document.getElementById('auto-sync-status');
-                    if (!el) return;
-                    if (countdownSec <= 0) {
-                        el.innerText = "⚡ 실시간 동기화 갱신 중...";
+                const STORAGE_KEY = "last_worklog_auto_sync_ts";
+                const INTERVAL_SEC = 60; // 1분 (60초)
+
+                function getNowTs() {
+                    return Math.floor(Date.now() / 1000);
+                }
+
+                function checkAndTriggerSync() {
+                    const now = getNowTs();
+                    let lastSync = parseInt(sessionStorage.getItem(STORAGE_KEY) || "0");
+                    
+                    if (lastSync === 0) {
+                        sessionStorage.setItem(STORAGE_KEY, now.toString());
+                        lastSync = now;
+                    }
+
+                    const elapsed = now - lastSync;
+                    const remaining = Math.max(0, INTERVAL_SEC - elapsed);
+                    const el = document.getElementById("auto-sync-status");
+
+                    if (remaining <= 0) {
+                        sessionStorage.setItem(STORAGE_KEY, now.toString());
+                        if (el) el.innerText = "⚡ 실시간 동기화 갱신 중...";
                         try {
                             const buttons = window.parent.document.querySelectorAll('button');
                             for (let btn of buttons) {
@@ -1430,12 +1444,12 @@ def main():
                             }
                         } catch(e) {}
                     } else {
-                        el.innerText = "🟢 1분 자동 동기화 (" + countdownSec + "초 뒤 갱신 / 필터 유지)";
-                        countdownSec--;
+                        if (el) el.innerText = "🟢 1분 자동 동기화 (" + remaining + "초 뒤 갱신 / 필터 유지)";
                     }
                 }
-                setInterval(updateSyncStatus, 1000);
-                updateSyncStatus();
+
+                setInterval(checkAndTriggerSync, 1000);
+                checkAndTriggerSync();
             </script>
         </body>
         </html>
