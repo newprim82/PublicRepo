@@ -78,74 +78,37 @@ def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
 
 def extract_text_from_kakao_window(hwnd: int) -> str:
     """
-    열려 있는 카카오톡 창에서 텍스트 대화 내용을 무간섭 UIA 및 안전 복사로 추출
+    열려 있는 카카오톡 창에서 텍스트 대화 내용을 100% 순수 읽기 전용(Read-Only)으로 추출
+    (💡 채팅방에 글자가 입력되거나 키보드/마우스가 동작하는 일은 절대 없습니다.)
     """
     if not WIN32_AVAILABLE or not hwnd:
         return ""
 
     extracted_lines = []
 
-    # 1. UI Automation을 통한 직접 텍스트 요소 추출 (마우스/키보드 방해 없음)
+    # 100% 안전한 Windows UI Automation 직접 텍스트 읽기 (Read-Only)
     try:
         control = auto.ControlFromHandle(hwnd)
         if control:
             def recurse_find_text(ctrl, depth=0):
-                if depth > 8:
+                if depth > 10:
                     return
+                # 읽기 전용 속성(Name)만 조회 (키보드/마우스 이벤트 전혀 발생하지 않음)
                 name_val = ctrl.Name
                 if name_val and len(name_val.strip()) > 0:
                     text_str = name_val.strip()
-                    # 유효한 대화/메시지 라인 수집
-                    if any(kw in text_str for kw in ["/", "작업", "지원", "미팅", "기타", "완료", "예정", "답장", "2026", "2025", "오전", "오후"]):
-                        extracted_lines.append(text_str)
-                    elif len(text_str) > 2 and not any(ign in text_str for ign in ["최소화", "최대화", "닫기", "전송", "메뉴", "검색"]):
+                    # 메시지 전송 버튼이나 윈도우 제어 버튼 제외
+                    if not any(ign == text_str for ign in ["최소화", "최대화", "닫기", "전송", "메뉴", "검색", "이모티콘", "파일 보내기", "음성 대화", "페이스톡"]):
                         extracted_lines.append(text_str)
                 for child in ctrl.GetChildren():
                     recurse_find_text(child, depth + 1)
                     
             recurse_find_text(control)
     except Exception as e:
-        print(f"[수집기 UIA 추출 알림]: {e}")
+        safe_print(f"[수집기 UIA 안전 읽기 알림]: {e}")
 
     if extracted_lines:
         return "\n".join(extracted_lines)
-
-    # 2. 만약 UIA 추출이 비어있다면 클립보드 안전 복사 폴백
-    try:
-        # 클립보드 백업
-        win32clipboard.OpenClipboard()
-        old_clip = ""
-        try:
-            if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
-                old_clip = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
-        except Exception:
-            pass
-        win32clipboard.CloseClipboard()
-
-        # 메시지 창 컨트롤 찾기
-        chat_list_hwnd = win32gui.FindWindowEx(hwnd, None, "EVA_VH_ListControl_RPC", None)
-        if chat_list_hwnd:
-            win32gui.SendMessage(chat_list_hwnd, win32con.WM_KEYDOWN, ord('A'), 0)
-            win32gui.SendMessage(chat_list_hwnd, win32con.WM_KEYUP, ord('A'), 0)
-            
-        time.sleep(0.2)
-        
-        win32clipboard.OpenClipboard()
-        new_clip = ""
-        try:
-            if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
-                new_clip = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
-                # 원본 클립보드 복원
-                win32clipboard.EmptyClipboard()
-                win32clipboard.SetClipboardText(old_clip, win32con.CF_UNICODETEXT)
-        except Exception:
-            pass
-        win32clipboard.CloseClipboard()
-        
-        if new_clip:
-            return new_clip
-    except Exception as e:
-        print(f"[수집기 클립보드 폴백 알림]: {e}")
 
     return ""
 
