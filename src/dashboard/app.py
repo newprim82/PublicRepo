@@ -211,38 +211,59 @@ st.markdown("""
     .sidebar-section-header.green { border-left-color: #00E676; }
     .sidebar-section-header.amber { border-left-color: #FFAB00; }
     
-    /* 🚨 과중 근무 배너 전용 인라인 칩 버튼 스타일 (기존 뱃지 디자인 완벽 복원) */
-    button[key*="chip_ovw_caution"] {
+    /* 🚨 과중 근무 배너 전용 인라인 칩 버튼 스타일 (주황색 40h / 빨간색 52h) */
+    div.overwork-caution-btn button,
+    div.overwork-caution-btn button[data-testid="baseButton-secondary"] {
+        background: linear-gradient(135deg, #FF9800, #EF6C00) !important;
         background-color: #EF6C00 !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 2px 10px !important;
+        border-radius: 20px !important;
+        padding: 2px 14px !important;
         font-size: 12px !important;
         font-weight: 800 !important;
-        min-height: 26px !important;
-        height: 26px !important;
-        line-height: 20px !important;
-        box-shadow: 0 2px 6px rgba(239, 108, 0, 0.4) !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        box-shadow: 0 2px 8px rgba(239, 108, 0, 0.5) !important;
         white-space: nowrap !important;
     }
-    button[key*="chip_ovw_danger"] {
+    div.overwork-caution-btn button p,
+    div.overwork-caution-btn button span,
+    div.overwork-caution-btn button div {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+    }
+    div.overwork-caution-btn button:hover {
+        background: linear-gradient(135deg, #FFA726, #F57C00) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(239, 108, 0, 0.7) !important;
+    }
+
+    div.overwork-danger-btn button,
+    div.overwork-danger-btn button[data-testid="baseButton-secondary"] {
+        background: linear-gradient(135deg, #FF1744, #D50000) !important;
         background-color: #D32F2F !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 2px 10px !important;
+        border-radius: 20px !important;
+        padding: 2px 14px !important;
         font-size: 12px !important;
         font-weight: 800 !important;
-        min-height: 26px !important;
-        height: 26px !important;
-        line-height: 20px !important;
-        box-shadow: 0 2px 6px rgba(211, 47, 47, 0.4) !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        box-shadow: 0 2px 8px rgba(213, 0, 0, 0.5) !important;
         white-space: nowrap !important;
     }
-    button[key*="chip_ovw_"]:hover {
-        filter: brightness(1.2) !important;
+    div.overwork-danger-btn button p,
+    div.overwork-danger-btn button span,
+    div.overwork-danger-btn button div {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+    }
+    div.overwork-danger-btn button:hover {
+        background: linear-gradient(135deg, #FF5252, #FF1744) !important;
         transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(213, 0, 0, 0.7) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1414,11 +1435,15 @@ def main():
                 for idx, item in enumerate(overwork_items):
                     with chip_cols[idx]:
                         if item["is_52"]:
+                            st.markdown('<div class="overwork-danger-btn">', unsafe_allow_html=True)
                             if st.button(f"🚨 {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"chip_ovw_danger_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
                                 show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
+                            st.markdown('</div>', unsafe_allow_html=True)
                         else:
+                            st.markdown('<div class="overwork-caution-btn">', unsafe_allow_html=True)
                             if st.button(f"⚠️ {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"chip_ovw_caution_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
                                 show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
+                            st.markdown('</div>', unsafe_allow_html=True)
 
     st.divider()
 
