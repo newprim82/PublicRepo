@@ -9,22 +9,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 class Config:
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").strip()
-    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "").strip()
-    
+    # 카카오톡 연동 설정
     KAKAO_CHAT_TITLE: str = os.getenv("KAKAO_CHAT_TITLE", "[기술본부] 업무공유방").strip()
     COLLECTOR_INTERVAL_SECONDS: int = int(os.getenv("COLLECTOR_INTERVAL_SECONDS", "3600"))
     
+    # 로컬 SQLite 데이터베이스 경로
     LOCAL_DB_PATH: Path = BASE_DIR / os.getenv("LOCAL_DB_PATH", "data/worklog.db")
     SAMPLE_DATA_DIR: Path = BASE_DIR / "sample_data"
-    
-    @classmethod
-    def is_supabase_configured(cls) -> bool:
-        return bool(
-            cls.SUPABASE_URL 
-            and cls.SUPABASE_KEY 
-            and "your-project" not in cls.SUPABASE_URL
-            and "your-anon" not in cls.SUPABASE_KEY
-        )
 
 config = Config()
