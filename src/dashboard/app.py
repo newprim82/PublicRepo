@@ -1488,102 +1488,11 @@ def main():
     if title_mode != "전체 직급" and selected_titles:
         title_badge_str = f" | <b>직급 [{', '.join(selected_titles)}]</b>"
 
-    c_badge_left, c_badge_timer, c_badge_btn = st.columns([6.8, 1.8, 1.4])
-    with c_badge_left:
-        st.markdown(
-            f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
-            unsafe_allow_html=True
-        )
-    with c_badge_timer:
-        countdown = get_collector_countdown_info()
-        st.components.v1.html(f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{
-                    margin: 0;
-                    padding: 0;
-                    background: transparent;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    overflow: hidden;
-                }}
-                .timer-badge {{
-                    background: rgba(0, 229, 255, 0.1);
-                    border: 1px solid rgba(0, 229, 255, 0.4);
-                    border-radius: 8px;
-                    padding: 3px 6px;
-                    height: 38px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    text-align: center;
-                    box-sizing: border-box;
-                }}
-                .timer-main {{
-                    font-size: 11.5px;
-                    font-weight: 900;
-                    color: #00E5FF;
-                    line-height: 1.2;
-                    white-space: nowrap;
-                }}
-                .timer-sub {{
-                    font-size: 9.5px;
-                    color: #94A3B8;
-                    line-height: 1.2;
-                    white-space: nowrap;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="timer-badge">
-                <div class="timer-main" id="main-live-timer">⏳ {countdown['remaining_minutes']}분 뒤 자동수집</div>
-                <div class="timer-sub" id="main-live-sub">({countdown['next_run_str']} 예정)</div>
-            </div>
-            <script>
-                let targetTs = {countdown['target_timestamp']};
-                function updateMainTimer() {{
-                    let nowTs = Math.floor(Date.now() / 1000);
-                    let diff = targetTs - nowTs;
-                    let tEl = document.getElementById('main-live-timer');
-                    if (!tEl) return;
-                    if (diff <= 0) {{
-                        tEl.innerText = "⚡ 지금 수집 중...";
-                        tEl.style.color = "#00E676";
-                    }} else {{
-                        let m = Math.floor(diff / 60);
-                        let s = diff % 60;
-                        let sStr = s < 10 ? '0' + s : s;
-                        tEl.innerText = "⏳ " + (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
-                        tEl.style.color = "#00E5FF";
-                    }}
-                }}
-                setInterval(updateMainTimer, 1000);
-                updateMainTimer();
-            </script>
-        </body>
-        </html>
-        """, height=40)
-    with c_badge_btn:
-        if st.button("⚡ 즉시 수집", key="btn_manual_kakao_main", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
-            with st.spinner("💬 카톡에서 최신 대화 수집 중..."):
-                res = run_collection_cycle(is_manual=True)
-                if res.get("status") == "success":
-                    st.toast(f"🎉 즉시 수집 완료! (DB 갱신: {res['saved_records']}건)", icon="✅")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
-                elif res.get("status") == "window_not_found":
-                    st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
-                    st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 PC 카카오톡에서 해당 대화방 창을 열어둔 상태에서 다시 눌러주세요!")
-                elif res.get("status") == "no_text":
-                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
-                else:
-                    st.info(f"💡 {res.get('message', '수집 완료')}")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
+    # 메인 상단 집계 기준 배너 (가로 전체 너비로 시원하게 렌더링)
+    st.markdown(
+        f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
+        unsafe_allow_html=True
+    )
 
     # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링)
     kpi = StatsService.compute_kpis(df)
