@@ -66,28 +66,31 @@ _last_execution_timestamp = 0
 
 def get_collector_countdown_info() -> Dict[str, Any]:
     """
-    다음 자동 증분 수집까지 남은 시간(분) 및 예정 시각 정보를 반환
+    다음 자동 증분 수집까지 남은 시간(분) 및 예정 시각 정보를 실시간으로 계산하여 반환
     """
     now = datetime.now()
+    interval = max(600, config.COLLECTOR_INTERVAL_SECONDS) # 10분 (600초)
     next_time = COLLECTOR_STATUS.get("next_run_time")
     last_time = COLLECTOR_STATUS.get("last_run_time")
     
-    if not next_time:
-        next_time = now + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
+    # next_time이 없거나 현재 시각보다 과거인 경우 현재 시각 기준으로 미래 시각 재계산
+    if not next_time or next_time <= now:
+        next_time = now + timedelta(seconds=interval)
         COLLECTOR_STATUS["next_run_time"] = next_time
         
     remaining_seconds = max(0, int((next_time - now).total_seconds()))
     remaining_minutes = max(1, (remaining_seconds + 59) // 60)
     
     if remaining_seconds <= 0:
-        badge_text = "⚡ 증분 수집 대기 중..."
+        badge_text = "⚡ 증분 수집 진행 중..."
     else:
-        badge_text = f"⏳ {remaining_minutes}분 뒤 자동 증분 업데이트"
+        badge_text = f"⏳ {remaining_minutes}분 뒤 자동수집"
         
     return {
         "is_running": COLLECTOR_STATUS.get("is_running", False),
         "remaining_minutes": remaining_minutes,
         "remaining_seconds": remaining_seconds,
+        "target_timestamp": int(next_time.timestamp()),
         "next_run_str": next_time.strftime("%H:%M"),
         "last_run_str": last_time.strftime("%H:%M") if isinstance(last_time, datetime) else (str(last_time).split(" ")[-1][:5] if last_time else "없음"),
         "badge_text": badge_text
