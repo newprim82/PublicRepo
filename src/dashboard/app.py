@@ -211,59 +211,76 @@ st.markdown("""
     .sidebar-section-header.green { border-left-color: #00E676; }
     .sidebar-section-header.amber { border-left-color: #FFAB00; }
     
-    /* 🚨 과중 근무 배너 전용 인라인 칩 버튼 스타일 (주황색 40h / 빨간색 52h) */
-    div.overwork-caution-btn button,
-    div.overwork-caution-btn button[data-testid="baseButton-secondary"] {
+    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 (일체형 네모칸) */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(button[key*="btn_chip_"]) {
+        background: linear-gradient(90deg, rgba(211, 47, 47, 0.15), rgba(239, 108, 0, 0.15)) !important;
+        border: 1px solid rgba(255, 82, 82, 0.5) !important;
+        border-left: 6px solid #FF1744 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+        padding: 12px 18px !important;
+        margin-top: 14px !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* 🟧 40h 초과 주황색 버튼 스타일 (완전한 강제 적용) */
+    button[key*="btn_chip_caution_"],
+    button[data-testid="baseButton-secondary"]:has(p:contains("⚠️")),
+    button:has(p:contains("⚠️")) {
         background: linear-gradient(135deg, #FF9800, #EF6C00) !important;
         background-color: #EF6C00 !important;
         color: #FFFFFF !important;
-        border: none !important;
+        border: 1px solid #FFB74D !important;
         border-radius: 20px !important;
         padding: 2px 14px !important;
         font-size: 12px !important;
         font-weight: 800 !important;
         min-height: 28px !important;
         height: 28px !important;
-        box-shadow: 0 2px 8px rgba(239, 108, 0, 0.5) !important;
+        line-height: 20px !important;
+        box-shadow: 0 2px 8px rgba(239, 108, 0, 0.6) !important;
         white-space: nowrap !important;
     }
-    div.overwork-caution-btn button p,
-    div.overwork-caution-btn button span,
-    div.overwork-caution-btn button div {
+    button[key*="btn_chip_caution_"] *,
+    button:has(p:contains("⚠️")) * {
         color: #FFFFFF !important;
         font-weight: 800 !important;
     }
-    div.overwork-caution-btn button:hover {
+    button[key*="btn_chip_caution_"]:hover,
+    button:has(p:contains("⚠️")):hover {
         background: linear-gradient(135deg, #FFA726, #F57C00) !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(239, 108, 0, 0.7) !important;
+        box-shadow: 0 4px 12px rgba(239, 108, 0, 0.8) !important;
     }
 
-    div.overwork-danger-btn button,
-    div.overwork-danger-btn button[data-testid="baseButton-secondary"] {
+    /* 🟥 52h 초과 빨간색 버튼 스타일 (완전한 강제 적용) */
+    button[key*="btn_chip_danger_"],
+    button[data-testid="baseButton-secondary"]:has(p:contains("🚨")),
+    button:has(p:contains("🚨")) {
         background: linear-gradient(135deg, #FF1744, #D50000) !important;
         background-color: #D32F2F !important;
         color: #FFFFFF !important;
-        border: none !important;
+        border: 1px solid #FF5252 !important;
         border-radius: 20px !important;
         padding: 2px 14px !important;
         font-size: 12px !important;
         font-weight: 800 !important;
         min-height: 28px !important;
         height: 28px !important;
-        box-shadow: 0 2px 8px rgba(213, 0, 0, 0.5) !important;
+        line-height: 20px !important;
+        box-shadow: 0 2px 8px rgba(213, 0, 0, 0.6) !important;
         white-space: nowrap !important;
     }
-    div.overwork-danger-btn button p,
-    div.overwork-danger-btn button span,
-    div.overwork-danger-btn button div {
+    button[key*="btn_chip_danger_"] *,
+    button:has(p:contains("🚨")) * {
         color: #FFFFFF !important;
         font-weight: 800 !important;
     }
-    div.overwork-danger-btn button:hover {
+    button[key*="btn_chip_danger_"]:hover,
+    button:has(p:contains("🚨")):hover {
         background: linear-gradient(135deg, #FF5252, #FF1744) !important;
         transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(213, 0, 0, 0.7) !important;
+        box-shadow: 0 4px 12px rgba(213, 0, 0, 0.8) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1409,41 +1426,34 @@ def main():
             danger_items = [it for it in overwork_items if it["is_52"]]
             caution_items = [it for it in overwork_items if not it["is_52"]]
 
-            st.markdown("""
-            <div style="background: linear-gradient(90deg, rgba(211, 47, 47, 0.16), rgba(239, 108, 0, 0.16)); border: 1px solid rgba(255, 82, 82, 0.4); border-left: 6px solid #FF1744; border-radius: 12px; padding: 12px 18px 8px 18px; margin-top: 14px; margin-bottom: 4px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">
-                        🚨 <span style="color: #FF5252;">[과중 근무 발생 알림]</span> 선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!
-                    </div>
-                    <a href="#weekly-monitor-section" style="background: linear-gradient(135deg, #FF1744, #D50000); color: #FFFFFF; font-weight: 800; font-size: 12.5px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 10px rgba(255, 23, 68, 0.4); white-space: nowrap;">
-                        👇 주차별 모니터링 표로 바로가기
-                    </a>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # 배너 바로 밑에 뱃지 버튼들을 자연스러운 한 줄로 배치
-            col_lbl, col_chips = st.columns([1.6, 8.4])
-            with col_lbl:
-                if danger_items:
-                    st.markdown(f"<div style='padding-top:4px; font-size:12.5px; font-weight:800; color:#FF5252;'>주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<div style='padding-top:4px; font-size:12.5px; font-weight:800; color:#FFA726;'>주 40h 초과 주의 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
-            
-            with col_chips:
-                chip_cols = st.columns(max(len(overwork_items), 1) + 4)
-                for idx, item in enumerate(overwork_items):
-                    with chip_cols[idx]:
-                        if item["is_52"]:
-                            st.markdown('<div class="overwork-danger-btn">', unsafe_allow_html=True)
-                            if st.button(f"🚨 {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"chip_ovw_danger_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
-                                show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
-                            st.markdown('</div>', unsafe_allow_html=True)
-                        else:
-                            st.markdown('<div class="overwork-caution-btn">', unsafe_allow_html=True)
-                            if st.button(f"⚠️ {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"chip_ovw_caution_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
-                                show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
-                            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container(border=True):
+                # 1행: 상단 알림 제목 + 우측 퀵점프 바로가기 버튼
+                col_head_l, col_head_r = st.columns([7.8, 2.2])
+                with col_head_l:
+                    st.markdown('<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">🚨 <span style="color: #FF5252;">[과중 근무 발생 알림]</span> 선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</div>', unsafe_allow_html=True)
+                with col_head_r:
+                    st.markdown('<div style="text-align: right;"><a href="#weekly-monitor-section" style="background: linear-gradient(135deg, #FF1744, #D50000); color: #FFFFFF; font-weight: 800; font-size: 12px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 10px rgba(255, 23, 68, 0.4); white-space: nowrap;">👇 주차별 모니터링 표로 바로가기</a></div>', unsafe_allow_html=True)
+
+                st.markdown("<div style='margin-top: 6px; margin-bottom: 8px; border-top: 1px solid rgba(255, 82, 82, 0.25);'></div>", unsafe_allow_html=True)
+                
+                # 2행: 네모칸 안쪽에 완벽하게 위치하는 초과근무 라벨 & 주황/빨강 뱃지 버튼들
+                col_lbl, col_chips = st.columns([1.8, 8.2])
+                with col_lbl:
+                    if danger_items:
+                        st.markdown(f"<div style='padding-top:5px; font-size:12.5px; font-weight:800; color:#FF5252;'>주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<div style='padding-top:5px; font-size:12.5px; font-weight:800; color:#FFA726;'>주 40h 초과 주의 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
+                
+                with col_chips:
+                    chip_cols = st.columns(max(len(overwork_items), 1) + 4)
+                    for idx, item in enumerate(overwork_items):
+                        with chip_cols[idx]:
+                            if item["is_52"]:
+                                if st.button(f"🚨 {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"btn_chip_danger_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
+                                    show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
+                            else:
+                                if st.button(f"⚠️ {item['worker_name']}({item['short_w']}:{item['val']}h)", key=f"btn_chip_caution_{item['worker_name']}_{item['week_label']}", help=f"[{item['worker_name']}] 보상 휴가 팝업 열기"):
+                                    show_weekly_detail_dialog(item["worker_name"], df, default_week_name=item["week_label"])
 
     st.divider()
 
