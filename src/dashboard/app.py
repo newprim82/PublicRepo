@@ -1383,15 +1383,16 @@ def main():
             st.cache_data.clear()
             st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
 
-        # 60초(1분) 무간섭 자동 화면 갱신 엔진 (sessionStorage 기반 정확한 1분 1회 보장 & 필터 100% 유지)
-        st.components.v1.html("""
+        # ⏱️ 카카오톡 10분 수집 완료 시점 연동 자동 갱신 엔진 (수집 후 30초 뒤 자동 갱신 & 필터 100% 영구 유지)
+        auto_sync_delay_sec = countdown['remaining_seconds'] + 30
+        st.components.v1.html(f"""
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
             <style>
-                body { margin: 0; padding: 0; background: transparent; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-                .live-sync-bar {
+                body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+                .live-sync-bar {{
                     font-size: 10px;
                     color: #00E676;
                     font-weight: 800;
@@ -1403,53 +1404,43 @@ def main():
                     box-sizing: border-box;
                     margin-top: 4px;
                     letter-spacing: -0.2px;
-                }
+                }}
             </style>
         </head>
         <body>
             <div class="live-sync-bar" id="auto-sync-status">
-                🟢 1분 자동 실시간 동기화 (필터 설정 유지)
+                🟢 카톡 수집 30초 뒤 자동 동기화
             </div>
             <script>
-                const STORAGE_KEY = "last_worklog_auto_sync_ts";
-                const INTERVAL_SEC = 60; // 1분 (60초)
+                let remainingToSync = {auto_sync_delay_sec};
 
-                function getNowTs() {
-                    return Math.floor(Date.now() / 1000);
-                }
-
-                function checkAndTriggerSync() {
-                    const now = getNowTs();
-                    let lastSync = parseInt(sessionStorage.getItem(STORAGE_KEY) || "0");
-                    
-                    if (lastSync === 0) {
-                        sessionStorage.setItem(STORAGE_KEY, now.toString());
-                        lastSync = now;
-                    }
-
-                    const elapsed = now - lastSync;
-                    const remaining = Math.max(0, INTERVAL_SEC - elapsed);
+                function updateSyncCountdown() {{
                     const el = document.getElementById("auto-sync-status");
+                    if (!el) return;
 
-                    if (remaining <= 0) {
-                        sessionStorage.setItem(STORAGE_KEY, now.toString());
-                        if (el) el.innerText = "⚡ 실시간 동기화 갱신 중...";
-                        try {
+                    if (remainingToSync <= 0) {{
+                        el.innerText = "⚡ 카톡 최신 수집 데이터 동기화 중...";
+                        remainingToSync = 630;
+                        try {{
                             const buttons = window.parent.document.querySelectorAll('button');
-                            for (let btn of buttons) {
-                                if (btn.innerText.includes('실시간 Cloud DB 새로고침')) {
+                            for (let btn of buttons) {{
+                                if (btn.innerText.includes('실시간 Cloud DB 새로고침')) {{
                                     btn.click();
                                     return;
-                                }
-                            }
-                        } catch(e) {}
-                    } else {
-                        if (el) el.innerText = "🟢 1분 자동 동기화 (" + remaining + "초 뒤 갱신 / 필터 유지)";
-                    }
-                }
+                                }}
+                            }}
+                        }} catch(e) {{}}
+                    }} else {{
+                        let m = Math.floor(remainingToSync / 60);
+                        let s = remainingToSync % 60;
+                        let sStr = s < 10 ? '0' + s : s;
+                        el.innerText = "🟢 카톡 수집 30초 뒤 자동 동기화 (" + (m > 0 ? m + "분 " : "") + sStr + "초 뒤)";
+                        remainingToSync--;
+                    }}
+                }}
 
-                setInterval(checkAndTriggerSync, 1000);
-                checkAndTriggerSync();
+                setInterval(updateSyncCountdown, 1000);
+                updateSyncCountdown();
             </script>
         </body>
         </html>
