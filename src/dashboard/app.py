@@ -1297,7 +1297,7 @@ def main():
                     st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
                     st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
                 elif res.get("status") == "no_text":
-                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 창을 한 번 클릭(활성화)한 뒤 다시 시도해주세요.")
+                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
                 else:
                     st.info(f"💡 {res.get('message', '수집 완료')}")
                     st.cache_data.clear()
@@ -1424,7 +1424,7 @@ def main():
                     st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
                     st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 PC 카카오톡에서 해당 대화방 창을 열어둔 상태에서 다시 눌러주세요!")
                 elif res.get("status") == "no_text":
-                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 창을 한 번 클릭한 뒤 다시 시도해주세요.")
+                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
                 else:
                     st.info(f"💡 {res.get('message', '수집 완료')}")
                     st.cache_data.clear()
