@@ -8,10 +8,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # .env 파일 로드
 load_dotenv(BASE_DIR / ".env")
 
+# 프로젝트 공용 Supabase 클라우드 기본 접속 정보 (어떤 PC에서든 .env 없이도 즉시 자동 동기화)
+DEFAULT_SUPABASE_URL = "https://dzjvpagehccyluqrjyiq.supabase.co"
+DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6anZwYWdlaGNjeWx1cXJqeWlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MzA3MDUsImV4cCI6MjEwMTAwNjcwNX0.WXaCftnKX2hKfPCvybmXMddUPoODhxXURU0kUVoLeVQ"
+
 class Config:
-    # Supabase 클라우드 DB 설정
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").strip()
-    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "").strip()
+    # Supabase 클라우드 DB 설정 (.env 설정값 우선, 없으면 기본 공용 접속 정보 자동 사용)
+    SUPABASE_URL: str = (os.getenv("SUPABASE_URL", "").strip() or DEFAULT_SUPABASE_URL)
+    SUPABASE_KEY: str = (os.getenv("SUPABASE_KEY", "").strip() or DEFAULT_SUPABASE_KEY)
 
     # 카카오톡 연동 설정
     KAKAO_CHAT_TITLE: str = os.getenv("KAKAO_CHAT_TITLE", "[기술본부] 업무공유방").strip()
