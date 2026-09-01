@@ -7,17 +7,41 @@ from datetime import datetime
 from ..config import config
 from ..parser.reply_matcher import WorkLogRecord
 
+try:
+    from supabase import create_client, Client
+except ImportError:
+    Client = None
+
 
 class DatabaseManager:
     """
-    로컬 SQLite 기반 고성능 데이터베이스 매니저 (Supabase 의존성 완전 제거)
+    Supabase 클라우드 DB & 로컬 SQLite 하이브리드 데이터베이스 매니저
+    - Supabase 설정 시: 다중 PC 실시간 클라우드 동기화 (우선) + 로컬 백업
+    - Supabase 미설정 시: 로컬 SQLite 단독 모드
     """
     
     def __init__(self):
+        self.supabase: Optional[Client] = None
+        self.use_supabase = False
+        self._init_connection()
         self._init_local_db()
 
+    def _init_connection(self):
+        """Supabase 클라우드 연결 초기화"""
+        if config.is_supabase_configured() and Client is not None:
+            try:
+                self.supabase = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+                self.use_supabase = True
+                print("[DB] ☁️ Supabase 클라우드 DB에 성공적으로 연결되었습니다. (다중 PC 실시간 동기화 모드)")
+            except Exception as e:
+                print(f"[DB 경고] Supabase 연결 실패: {e}. 로컬 SQLite로 전환합니다.")
+                self.use_supabase = False
+        else:
+            print("[DB 알림] Supabase 미설정 상태입니다. 로컬 SQLite 모드로 동작합니다.")
+            self.use_supabase = False
+
     def _init_local_db(self):
-        """로컬 SQLite 테이블 초기화"""
+        """로컬 SQLite 테이블 초기화 (오프라인 백업 및 캐시용)"""
         db_path = config.LOCAL_DB_PATH
         db_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -51,26 +75,71 @@ class DatabaseManager:
 
     def clear_all_data(self) -> bool:
         """
-        데이터베이스 전체 초기화 (재적재 필요 시 사용)
+        데이터베이스 전체 초기화
         """
+        success = True
+        if self.use_supabase and self.supabase:
+            try:
+                self.supabase.table("work_logs").delete().neq("id", 0).execute()
+                print("[DB] ☁️ Supabase work_logs 데이터 전체 삭제 완료")
+            except Exception as e:
+                print(f"[DB 오류] Supabase 데이터 삭제 실패: {e}")
+                success = False
+
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cursor = conn.cursor()
             cursor.execute("DELETE FROM work_logs")
             conn.commit()
             conn.close()
-            return True
+            print("[DB] 💾 로컬 SQLite 데이터 전체 삭제 완료")
         except Exception as e:
             print(f"[DB 오류] 로컬 SQLite 데이터 삭제 실패: {e}")
-            return False
+            success = False
+
+        return success
 
     def save_work_logs(self, records: List[WorkLogRecord]) -> int:
         """
-        파싱된 WorkLogRecord 리스트를 로컬 SQLite DB에 Upsert 저장
+        파싱된 WorkLogRecord 리스트를 Supabase(클라우드) 및 로컬 SQLite에 동시 Upsert 저장
         """
         if not records:
             return 0
 
+        # 1. Supabase 클라우드 DB 저장
+        if self.use_supabase and self.supabase:
+            try:
+                payloads = []
+                for r in records:
+                    payloads.append({
+                        "msg_hash": r.msg_hash,
+                        "log_type": r.log_type,
+                        "worker_name": r.worker_name,
+                        "worker_company": r.worker_company,
+                        "worker_title": r.worker_title,
+                        "worker_team": r.worker_team,
+                        "client_name": r.client_name,
+                        "task_description": r.task_description,
+                        "estimated_minutes": r.estimated_minutes,
+                        "actual_minutes": r.actual_minutes,
+                        "start_time": r.start_time.isoformat(),
+                        "end_time": r.end_time.isoformat() if r.end_time else None,
+                        "status": r.status,
+                        "is_night_work": r.is_night_work,
+                        "is_weekend_work": r.is_weekend_work,
+                        "raw_start_message": r.raw_start_message,
+                        "raw_end_message": r.raw_end_message
+                    })
+                
+                # 100개 단위 배치 Upsert
+                for i in range(0, len(payloads), 100):
+                    batch = payloads[i:i+100]
+                    self.supabase.table("work_logs").upsert(batch, on_conflict="msg_hash").execute()
+                print(f"[DB] ☁️ Supabase에 {len(records)}건 Upsert 완료")
+            except Exception as e:
+                print(f"[DB 오류] Supabase 저장 실패 (로컬 DB 백업 유지): {e}")
+
+        # 2. 로컬 SQLite 백업 저장
         saved_count = 0
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
@@ -106,8 +175,32 @@ class DatabaseManager:
 
     def fetch_all_work_logs(self) -> pd.DataFrame:
         """
-        로컬 SQLite에서 전체 데이터 반환
+        Supabase 클라우드 DB에서 전체 데이터를 최우선 조회 (오프라인 시 로컬 SQLite 조회)
         """
+        if self.use_supabase and self.supabase:
+            try:
+                # Supabase 페이지네이션을 통해 10,000건 이상도 전수 조회
+                all_data = []
+                page_size = 1000
+                start = 0
+                while True:
+                    res = self.supabase.table("work_logs")\
+                        .select("*")\
+                        .order("start_time", desc=True)\
+                        .range(start, start + page_size - 1)\
+                        .execute()
+                    rows = res.data or []
+                    all_data.extend(rows)
+                    if len(rows) < page_size:
+                        break
+                    start += page_size
+                    
+                df = pd.DataFrame(all_data)
+                return self._process_dataframe(df)
+            except Exception as e:
+                print(f"[DB 오류] Supabase 조회 실패, 로컬 SQLite로 대체: {e}")
+
+        # 로컬 SQLite Fallback
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             df = pd.read_sql_query("SELECT * FROM work_logs ORDER BY start_time DESC", conn)

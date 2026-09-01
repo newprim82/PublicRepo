@@ -4,6 +4,7 @@ from datetime import datetime
 import pandas as pd
 
 from ..config import config
+from ..database.supabase_client import db_manager
 
 class RewardLeaveService:
     @staticmethod
@@ -30,6 +31,23 @@ class RewardLeaveService:
         RewardLeaveService.init_table()
         leaves = {}
 
+        # 1. Supabase 조회 시도
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                res = db_manager.supabase.table("reward_leave_logs").select("*").execute()
+                for row in (res.data or []):
+                    key = (row["worker_name"], row["week_label"])
+                    leaves[key] = {
+                        "leave_hours": float(row.get("leave_hours") or 0),
+                        "note": row.get("note") or "",
+                        "updated_at": row.get("updated_at") or ""
+                    }
+                if leaves:
+                    return leaves
+            except Exception as e:
+                print(f"[Supabase 보상휴가 조회 알림]: {e}")
+
+        # 2. 로컬 SQLite 조회
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("SELECT worker_name, week_label, leave_hours, note, updated_at FROM reward_leave_logs")
@@ -54,6 +72,19 @@ class RewardLeaveService:
         """보상 휴가 등록 또는 수정"""
         RewardLeaveService.init_table()
 
+        # 1. Supabase 저장
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                db_manager.supabase.table("reward_leave_logs").upsert({
+                    "worker_name": worker_name,
+                    "week_label": week_label,
+                    "leave_hours": leave_hours,
+                    "note": note
+                }).execute()
+            except Exception as e:
+                print(f"[Supabase 보상휴가 저장 알림]: {e}")
+
+        # 2. 로컬 SQLite 저장
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("""
@@ -72,6 +103,18 @@ class RewardLeaveService:
         """보상 휴가 삭제 (미부여 상태로 복구)"""
         RewardLeaveService.init_table()
 
+        # 1. Supabase 삭제
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                db_manager.supabase.table("reward_leave_logs")\
+                    .delete()\
+                    .eq("worker_name", worker_name)\
+                    .eq("week_label", week_label)\
+                    .execute()
+            except Exception as e:
+                print(f"[Supabase 보상휴가 삭제 알림]: {e}")
+
+        # 2. 로컬 SQLite 삭제
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("DELETE FROM reward_leave_logs WHERE worker_name=? AND week_label=?", (worker_name, week_label))

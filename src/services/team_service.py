@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Any
 import pandas as pd
 
 from ..config import config
+from ..database.supabase_client import db_manager
 
 DEFAULT_TEAMS = ["기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
 DEFAULT_TITLES = ["사원", "대리", "과장", "수석"]
@@ -39,6 +40,21 @@ class TeamService:
         TeamService.init_team_table()
         info_map = {}
 
+        # 1. Supabase 조회 시도
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                res = db_manager.supabase.table("team_members").select("*").execute()
+                for row in (res.data or []):
+                    info_map[row["worker_name"]] = {
+                        "team": row.get("team_name") or UNASSIGNED_TEAM,
+                        "title": row.get("job_title") or ""
+                    }
+                if info_map:
+                    return info_map
+            except Exception as e:
+                print(f"[Supabase 팀원 조회 알림]: {e}")
+
+        # 2. 로컬 SQLite 조회
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("SELECT worker_name, team_name, job_title FROM team_members")
@@ -69,9 +85,24 @@ class TeamService:
         target_team = UNASSIGNED_TEAM if "해제" in team_name or "미지정" in team_name else team_name.strip()
         target_title = job_title.strip()
 
+        # 1. Supabase 저장
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                db_manager.supabase.table("team_members").upsert({
+                    "worker_name": worker_name,
+                    "team_name": target_team,
+                    "job_title": target_title
+                }).execute()
+                db_manager.supabase.table("work_logs").update({
+                    "worker_team": target_team,
+                    "worker_title": target_title
+                }).eq("worker_name", worker_name).execute()
+            except Exception as e:
+                print(f"[Supabase 팀원 저장 알림]: {e}")
+
+        # 2. 로컬 SQLite 저장
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
-        
         cursor.execute("""
             INSERT INTO team_members (worker_name, team_name, job_title, updated_at)
             VALUES (?, ?, ?, datetime('now', 'localtime'))
@@ -95,26 +126,9 @@ class TeamService:
         target_team = UNASSIGNED_TEAM if "해제" in team_name or "미지정" in team_name else team_name
         current_info = TeamService.get_team_members_info()
 
-        conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
-        cursor = conn.cursor()
-        
         for w_name in worker_names:
             existing_title = current_info.get(w_name, {}).get("title", "")
-            if target_team == UNASSIGNED_TEAM:
-                cursor.execute("DELETE FROM team_members WHERE worker_name=?", (w_name,))
-                cursor.execute("UPDATE work_logs SET worker_team=? WHERE worker_name=?", (UNASSIGNED_TEAM, w_name))
-            else:
-                cursor.execute("""
-                    INSERT INTO team_members (worker_name, team_name, job_title, updated_at)
-                    VALUES (?, ?, ?, datetime('now', 'localtime'))
-                    ON CONFLICT(worker_name) DO UPDATE SET
-                        team_name=excluded.team_name,
-                        updated_at=excluded.updated_at
-                """, (w_name, target_team, existing_title))
-                cursor.execute("UPDATE work_logs SET worker_team=? WHERE worker_name=?", (target_team, w_name))
-
-        conn.commit()
-        conn.close()
+            TeamService.save_worker_info(w_name, target_team, existing_title)
 
     @staticmethod
     def update_worker_title(worker_name: str, job_title: str):
