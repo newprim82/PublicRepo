@@ -3,6 +3,7 @@ import time
 import warnings
 warnings.filterwarnings("ignore")
 
+import calendar
 import importlib
 import streamlit as st
 import pandas as pd
@@ -1104,6 +1105,172 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 st.markdown(comp_html, unsafe_allow_html=True)
 
 
+def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
+    """[📅 작업 캘린더 & 밀도 히트맵] 탭 렌더링 컴포넌트"""
+    if df.empty or "start_time" not in df.columns:
+        st.info("표시할 작업 데이터가 없습니다.")
+        return
+
+    st.markdown(f"### 📅 {selected_team} - 작업 밀도 히트맵 & 월간 캘린더")
+    st.caption("날짜별 작업량 집중도, 인터랙티브 월간 달력 및 요일/시간대별 피크타임 골든타임 분석을 제공합니다.")
+
+    # 대상 월 목록
+    available_months = sorted(df["start_time"].dt.strftime("%Y-%m").dropna().unique(), reverse=True)
+    if not available_months:
+        st.info("작업 기간 데이터가 없습니다.")
+        return
+
+    col_m_sel, _ = st.columns([1.5, 2.5])
+    with col_m_sel:
+        pick_month = st.selectbox("📅 조회 기준 월 선택:", options=available_months, index=0, key="cal_pick_month")
+
+    df_month = df[df["start_time"].dt.strftime("%Y-%m") == pick_month].copy()
+    if df_month.empty:
+        st.info(f"{pick_month}에 등록된 작업 데이터가 없습니다.")
+        return
+
+    year, month = map(int, pick_month.split("-"))
+
+    # 1. 상단 월간 핵심 요약 카드
+    tot_h = round(df_month["actual_hours"].sum(), 1)
+    tot_cnt = len(df_month)
+    tot_w = df_month["worker_name"].nunique()
+    active_days = df_month["start_time"].dt.date.nunique()
+
+    summary_cards_html = f"""<div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;"><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">📅 작업 일수</div><div style="font-size: 22px; font-weight: 800; color: #38BDF8;">{active_days}일 <span style="font-size: 13px; font-weight: 500; color: #64748B;">/ 월</span></div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 230, 118, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">⏱️ 총 투입 공수</div><div style="font-size: 22px; font-weight: 800; color: #00E676;">{tot_h}시간</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">📋 총 작업 건수</div><div style="font-size: 22px; font-weight: 800; color: #818CF8;">{tot_cnt}건</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">👥 투입 인원</div><div style="font-size: 22px; font-weight: 800; color: #FBBF24;">{tot_w}명</div></div></div>"""
+    st.markdown(summary_cards_html, unsafe_allow_html=True)
+
+    # ----------------------------------------------------
+    # 2. 🗓️ 인터랙티브 월간 캘린더 그리드 (Monthly Calendar)
+    # ----------------------------------------------------
+    st.markdown(f"#### 🗓️ {pick_month} 월간 작업 캘린더")
+    st.caption("달력의 각 날짜별 총 작업 시간과 참여 인원입니다.")
+
+    df_month["day_num"] = df_month["start_time"].dt.day
+    day_summary = df_month.groupby("day_num").agg(
+        total_hours=("actual_hours", "sum"),
+        total_cnt=("id", "count"),
+        workers=("worker_name", lambda x: list(x.unique()))
+    ).to_dict("index")
+
+    cal_matrix = calendar.monthcalendar(year, month)
+    weekdays = ["월 (Mon)", "화 (Tue)", "수 (Wed)", "목 (Thu)", "금 (Fri)", "토 (Sat)", "일 (Sun)"]
+
+    h_cols = st.columns(7)
+    for idx, wd in enumerate(weekdays):
+        with h_cols[idx]:
+            h_color = "#F43F5E" if idx == 6 else ("#38BDF8" if idx == 5 else "#E2E8F0")
+            st.markdown(f"<div style='text-align:center; font-weight:700; color:{h_color}; background:rgba(30,41,59,0.6); padding:6px; border-radius:6px; font-size:12px; margin-bottom:6px;'>{wd}</div>", unsafe_allow_html=True)
+
+    for week in cal_matrix:
+        w_cols = st.columns(7)
+        for idx, day in enumerate(week):
+            with w_cols[idx]:
+                if day == 0:
+                    st.markdown("<div style='height:76px; background:rgba(15,23,42,0.2); border-radius:8px; margin-bottom:6px;'></div>", unsafe_allow_html=True)
+                else:
+                    day_data = day_summary.get(day)
+                    num_color = "#F43F5E" if idx == 6 else ("#38BDF8" if idx == 5 else "#F8FAFC")
+
+                    if day_data:
+                        d_hours = round(day_data["total_hours"], 1)
+                        d_cnt = day_data["total_cnt"]
+                        d_workers = day_data["workers"][:2]
+                        w_str = ", ".join(d_workers) + (f" 외 {len(day_data['workers'])-2}명" if len(day_data["workers"]) > 2 else "")
+
+                        bg_opacity = min(0.85, 0.25 + (d_hours / 35.0) * 0.6)
+                        cell_html = f"""<div style="min-height:76px; background: rgba(16, 185, 129, {bg_opacity:.2f}); border: 1px solid rgba(16, 185, 129, 0.6); border-radius: 8px; padding: 5px 7px; margin-bottom: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="font-weight: 800; font-size: 13px; color: {num_color};">{day}</span><span style="background: rgba(0,0,0,0.4); color: #A7F3D0; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 10.5px; color: #FFFFFF; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
+                        st.markdown(cell_html, unsafe_allow_html=True)
+                    else:
+                        cell_html = f"""<div style="min-height:76px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 5px 7px; margin-bottom: 6px;"><div style="font-weight: 700; font-size: 12px; color: {num_color}; opacity: 0.5;">{day}</div><div style="font-size: 10px; color: #475569; margin-top: 8px; text-align: center;">-</div></div>"""
+                        st.markdown(cell_html, unsafe_allow_html=True)
+
+    st.write("")
+    st.divider()
+
+    # ----------------------------------------------------
+    # 3. ⏰ 요일별 × 시간대별 피크타임 골든타임 히트맵
+    # ----------------------------------------------------
+    st.markdown("#### ⏰ 요일별 × 시작 시간대별 작업 집중도 (골든타임 분석)")
+    st.caption("기술본부의 현장 지원이 주로 어느 요일, 몇 시에 시작되는지 한눈에 파악합니다.")
+
+    df_peak = df.copy()
+    weekday_map = {
+        "Monday": "1. 월요일", "Tuesday": "2. 화요일", "Wednesday": "3. 수요일",
+        "Thursday": "4. 목요일", "Friday": "5. 금요일", "Saturday": "6. 토요일", "Sunday": "7. 일요일"
+    }
+    df_peak["weekday_kr"] = df_peak["start_time"].dt.day_name().map(weekday_map)
+    df_peak["start_hour"] = df_peak["start_time"].dt.hour
+
+    pivot_df = df_peak.pivot_table(
+        index="weekday_kr",
+        columns="start_hour",
+        values="id",
+        aggfunc="count",
+        fill_value=0
+    ).reindex(["1. 월요일", "2. 화요일", "3. 수요일", "4. 목요일", "5. 금요일", "6. 토요일", "7. 일요일"]).fillna(0)
+
+    for h in range(24):
+        if h not in pivot_df.columns:
+            pivot_df[h] = 0
+    pivot_df = pivot_df[sorted(pivot_df.columns)]
+    pivot_df.columns = [f"{h:02d}시" for h in pivot_df.columns]
+
+    fig_peak = px.imshow(
+        pivot_df,
+        labels=dict(x="시작 시간대", y="요일", color="작업 건수"),
+        x=pivot_df.columns,
+        y=pivot_df.index,
+        color_continuous_scale="Viridis",
+        aspect="auto",
+        text_auto=True
+    )
+    fig_peak.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=20, r=20, t=20, b=20),
+        height=320
+    )
+    st.plotly_chart(fig_peak, use_container_width=True)
+
+    # ----------------------------------------------------
+    # 4. 🔍 특정 날짜 상세 작업 목록 탐색기
+    # ----------------------------------------------------
+    st.divider()
+    st.markdown(f"#### 🔍 {pick_month} 날짜별 상세 작업 목록 탐색기")
+    
+    active_day_list = sorted(df_month["day_num"].unique())
+    if active_day_list:
+        c_day_pick, _ = st.columns([1.5, 2.5])
+        with c_day_pick:
+            sel_day = st.selectbox(
+                "상세 조회할 일자(Day) 선택:",
+                options=active_day_list,
+                index=len(active_day_list) - 1,
+                format_func=lambda d: f"{year}년 {month:02d}월 {d:02d}일 ({len(df_month[df_month['day_num']==d])}건)",
+                key="sel_cal_day_detail"
+            )
+
+        day_detail_df = df_month[df_month["day_num"] == sel_day].sort_values("start_time")
+        st.markdown(f"**{year}년 {month:02d}월 {sel_day:02d}일** 작업 내역 (총 **{len(day_detail_df)}건** / **{round(day_detail_df['actual_hours'].sum(), 1)}시간**):")
+
+        d_cols = st.columns(2)
+        for idx, (_, r) in enumerate(day_detail_df.iterrows()):
+            with d_cols[idx % 2]:
+                w_name = r["worker_name"]
+                w_team = r["worker_team"] or ""
+                c_name = r["client_name"]
+                t_desc = r["task_description"]
+                st_t = r["start_time"].strftime("%H:%M") if pd.notna(r["start_time"]) else "?"
+                ed_t = r["end_time"].strftime("%H:%M") if pd.notna(r["end_time"]) else "진행"
+                act_h = r["actual_hours"]
+                status_badge = "✅ 완료" if r["status"] == "COMPLETED" else "⏳ 진행중"
+
+                st.markdown(f"""<div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 700; color: #FFFFFF;">👤 {w_name} <span style="font-size: 11px; color: #38BDF8;">[{w_team}]</span></span><span style="font-size: 11px; color: #94A3B8;">{status_badge} ({st_t} ~ {ed_t} | {act_h}h)</span></div><div style="font-size: 13px; color: #38BDF8; font-weight: 600; margin-bottom: 2px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #CBD5E1;">{t_desc}</div></div>""", unsafe_allow_html=True)
+
+
+
 
 def render_team_management_page(all_workers_list, team_mappings):
     """[⚙️ 팀원 소속 및 직급 관리] 전용 관리 페이지 (신규 팀 생성 + 소속팀 + 직급 완벽 지원)"""
@@ -1843,8 +2010,9 @@ def main():
     st.divider()
 
     # 탭 기반 분석 시각화
-    tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab0, tab_cal, tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🟢 오늘 실시간 라이브 현황 (Live)",
+        "📅 작업 캘린더 & 밀도 히트맵",
         "👤 팀원별 업무량 분석",
         "🏢 팀별 업무량 비교",
         "📈 월별/일별 추이",
@@ -1857,6 +2025,12 @@ def main():
     # ------------------------------------------
     with tab0:
         render_today_live_board(df_raw, team_mappings, selected_team)
+
+    # ------------------------------------------
+    # TAB CAL: 작업 캘린더 & 밀도 히트맵
+    # ------------------------------------------
+    with tab_cal:
+        render_calendar_and_heatmap_tab(df, df_raw, selected_team)
 
     # ------------------------------------------
     # TAB 1: 팀원별 업무량 분석
