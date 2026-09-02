@@ -1386,20 +1386,20 @@ def main():
             time.sleep(0.3)
             st.rerun()
 
-        # ⏱️ 60초(1분) 무간섭 자동 실시간 화면 갱신 (Streamlit 공식 WebSocket 프로토콜 엔진)
+        # ⏱️ 5분(300초) 무간섭 자동 실시간 화면 갱신 (Streamlit 공식 WebSocket 프로토콜 엔진)
         # iframe 보안 제약(cross-origin) 없이 어떤 PC/브라우저에서든 100% 확실하게 자동 갱신!
         # 사용자가 선택한 기간, 소속팀, 담당 팀원, 직급, 야간/주말 필터 설정 100% 완벽 보존!
         if st_autorefresh:
-            refresh_count = st_autorefresh(interval=60 * 1000, key="auto_refresh_counter")
+            refresh_count = st_autorefresh(interval=5 * 60 * 1000, key="auto_refresh_counter")
             st.markdown("""
             <div style="background: rgba(0, 230, 118, 0.08); border: 1px dashed rgba(0, 230, 118, 0.35); border-radius: 6px; padding: 5px 8px; text-align: center; margin-top: 4px;">
-                <span style="font-size: 11px; color: #00E676; font-weight: 700;">🟢 1분 자동 실시간 동기화 가동 중 (필터 유지)</span>
+                <span style="font-size: 11px; color: #00E676; font-weight: 700;">🟢 5분 자동 실시간 동기화 가동 중 (필터 유지)</span>
             </div>
             """, unsafe_allow_html=True)
         else:
             # Fallback
             st.markdown("""
-            <meta http-equiv="refresh" content="60">
+            <meta http-equiv="refresh" content="300">
             """, unsafe_allow_html=True)
 
         # 3. 데이터 수동 동기화 (대화 파일 업로드)
@@ -1411,7 +1411,7 @@ def main():
                     file_content = uploaded_file.getvalue().decode("utf-8", errors="ignore")
                     records = WorkLogMatcher.parse_and_match_text(file_content)
                     if records:
-                        clear_all_caches_and_db()
+                        clear_all_web_caches()
                         saved = db_manager.save_work_logs(records)
                         st.success(f"총 {len(records)}건 최신 엔진으로 완벽 동기화 완료!")
                         st.rerun()
