@@ -7,3 +7,6 @@ port = 8501
 
 [browser]
 gatherUsageStats = false
+
+[logger]
+level = "error"

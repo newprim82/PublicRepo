@@ -1,5 +1,8 @@
 import io
 import time
+import warnings
+warnings.filterwarnings("ignore")
+
 import importlib
 import streamlit as st
 import pandas as pd
