@@ -381,14 +381,13 @@ def load_data() -> pd.DataFrame:
     return df
 
 
-def clear_all_caches_and_db():
-    db_manager.clear_all_data()
+def clear_all_web_caches():
+    """DB 데이터는 절대 건드리지 않고, Streamlit 웹 메모리 캐시만 깨끗하게 초기화"""
     st.cache_data.clear()
     st.cache_resource.clear()
     for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    importlib.reload(kakao_parser)
-    importlib.reload(reply_matcher)
+        if key not in ["selected_menu"]:
+            del st.session_state[key]
 
 
 def format_raw_chat_display(row) -> str:
@@ -1429,10 +1428,9 @@ def main():
                 st.cache_data.clear()
                 st.rerun()
         with col_btn2:
-            if st.button("🗑️ 전체 초기화", use_container_width=True, help="기존 누적 데이터와 캐시를 모두 초기화합니다."):
-                clear_all_caches_and_db()
-                st.toast("🧹 DB 및 캐시가 완전히 초기화되었습니다!", icon="✅")
-                st.warning("DB 및 모든 캐시가 초기화되었습니다.")
+            if st.button("🧹 캐시 초기화", use_container_width=True, help="DB 데이터는 안전하게 보존하고, 웹 대시보드 임시 캐시만 새로고침합니다."):
+                clear_all_web_caches()
+                st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
                 st.rerun()
 
     # 데이터가 없을 때 안내 화면
