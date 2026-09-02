@@ -1,4 +1,4 @@
-﻿import re
+import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
@@ -213,8 +213,8 @@ class KakaoMessageParser:
     )
 
     START_PATTERNS = [
-        re.compile(r'^(?:\[(?P<b_type>[^\]]+)\]\s*)?(?P<type>[^/\n\r]+?)\s*/\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^/\n\r]+)$', re.MULTILINE),
-        re.compile(r'^\[(?P<type>[^\]]+)\]\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^/\n\r]+)$', re.MULTILINE),
+        re.compile(r'^(?:\[(?P<b_type>[^\]]+)\]\s*)?(?P<type>[^/\n\r]+?)\s*/\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
+        re.compile(r'^\[(?P<type>[^\]]+)\]\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
     ]
 
     END_WITH_TIME_PATTERNS = [
