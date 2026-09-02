@@ -118,25 +118,29 @@ st.markdown("""
         padding-right: 2rem !important;
         max-width: 100% !important;
     }
-    /* 타이틀 및 헤더 영역 컴팩트 최적화 */
+    /* 🌟 글래스모피즘 타이틀 박스 */
     .dashboard-title-box {
+        background: linear-gradient(90deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 12px 18px;
+        margin-bottom: 14px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
-        padding-top: 2px;
-        padding-bottom: 10px;
-        padding-right: 120px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     }
     .main-title-text {
-        font-size: 25px;
+        font-size: 23px;
         font-weight: 900;
         color: #FFFFFF;
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         gap: 8px;
+        letter-spacing: -0.3px;
     }
     .filter-badge {
         background-color: #1a233a;
@@ -156,37 +160,63 @@ st.markdown("""
         color: #1E88E5;
         margin-bottom: 8px;
     }
+    
+    /* 💊 Linear / Apple 스타일 프리미엄 캡슐(Pill) 탭 */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+        gap: 6px;
+        background: rgba(15, 23, 42, 0.7);
+        padding: 5px 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-bottom: 16px;
+        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
     }
     .stTabs [data-baseweb="tab"] {
-        height: 48px;
-        white-space: pre-wrap;
-        background-color: #181B22;
-        color: #A0AEC0;
-        border-radius: 8px 8px 0px 0px;
-        padding-top: 10px;
-        padding-bottom: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        height: 38px;
+        white-space: nowrap;
+        background: transparent;
+        color: #94A3B8;
+        border-radius: 8px;
+        padding: 6px 14px;
+        border: none !important;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: #F8FAFC;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #1E88E5 !important;
-        color: white !important;
-        font-weight: bold;
+        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+        color: #FFFFFF !important;
+        font-weight: 700;
+        box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4) !important;
+        border-radius: 8px !important;
     }
-    /* 🌟 프리미엄 네온 KPI 카드 스타일 */
+    .stTabs [data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    .stTabs [data-baseweb="tab-border"] {
+        display: none !important;
+    }
+    
+    /* 🌟 글래스모피즘 프리미엄 네온 KPI 카드 스타일 */
     .kpi-card {
-        background: linear-gradient(145deg, #1C212D, #131722);
-        border: 1px solid rgba(255, 255, 255, 0.07);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.09);
         border-radius: 14px;
-        padding: 18px 20px;
+        padding: 16px 18px;
         margin-bottom: 12px;
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
     }
     .kpi-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+        border-color: rgba(56, 189, 248, 0.5);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.2);
     }
     .kpi-title {
         font-size: 13px;
@@ -199,14 +229,14 @@ st.markdown("""
         letter-spacing: -0.2px;
     }
     .kpi-value {
-        font-size: 32px;
+        font-size: 30px;
         font-weight: 900;
         line-height: 1.1;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
     .kpi-unit {
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 600;
         color: #64748B;
         margin-left: 4px;
@@ -215,9 +245,9 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 4px 10px;
+        padding: 3px 9px;
         border-radius: 20px;
-        font-size: 11.5px;
+        font-size: 11px;
         font-weight: 700;
         letter-spacing: -0.2px;
     }
