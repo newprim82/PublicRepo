@@ -1531,8 +1531,8 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     # 상단 헤더 & 원클릭 인쇄/다운로드 툴바 (아담한 콤팩트 버튼 배치)
     h_col1, h_col2 = st.columns([3.2, 1.8])
     with h_col1:
-        st.markdown(f"### 📊 {selected_team} - 경영진 보고용 Executive Summary")
-        st.caption("주간/월간 실적 회의 및 임원 보고를 위한 핵심 경영 인사이트 브리핑과 A4 규격 출력 서식을 제공합니다.")
+        st.markdown(f"### 📊 {selected_team} - Summary")
+        st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑과 A4 출력 서식을 제공합니다.")
     with h_col2:
         btn_c1, btn_c2 = st.columns([1, 1])
         with btn_c1:
@@ -1569,7 +1569,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             st.download_button(
                 label="📥 엑셀 저장",
                 data=summary_csv,
-                file_name=f"경영진보고서_{datetime.now().strftime('%Y%m%d')}.csv",
+                file_name=f"작업실적_Summary_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
                 key="dl_exec_summary_csv"
             )
@@ -1616,7 +1616,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     risk_badge = "<span style='color:#00E676; font-weight:800;'>🟢 안정 (과중근무 없음)</span>" if danger_cnt == 0 and caution_cnt == 0 else f"<span style='color:#FFA726; font-weight:800;'>⚠️ 주의 요망 (52h 초과 {danger_cnt}건, 40h 초과 {caution_cnt}건)</span>"
 
-    briefing_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%); border: 1px solid rgba(0, 229, 255, 0.4); border-left: 6px solid #00E5FF; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.35);"><div style="font-size: 16px; font-weight: 800; color: #00E5FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><span>📑 [경영진 핵심 요약 브리핑]</span><span style="font-size: 12px; color: #94A3B8; font-weight: 500;">조회 기준: {selected_team}</span></div><div style="font-size: 14px; color: #E2E8F0; line-height: 1.8;"><div style="margin-bottom: 6px;">1️⃣ <b>총 투입 실적</b>: 총 <b>{tot_workers}명</b>의 인원이 <b>{tot_clients}개</b> 고객사를 대상으로 <b>{tot_cnt:,}건</b>의 작업을 수행하여 <b>총 {tot_hours:,}시간</b>의 현장 지원 공수를 투입했습니다.</div><div style="margin-bottom: 6px;">2️⃣ <b>고객사 집중도</b>: 주요 지원 고객사 Top 3는 {top_clients_str} 순으로 집계되었습니다.</div><div style="margin-bottom: 6px;">3️⃣ <b>부서별 기여 비중</b>: {team_share_str}</div><div>4️⃣ <b>근무 건전성 진단</b>: {risk_badge}</div></div></div>"""
+    briefing_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%); border: 1px solid rgba(0, 229, 255, 0.4); border-left: 6px solid #00E5FF; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.35);"><div style="font-size: 16px; font-weight: 800; color: #00E5FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><span>📑 [핵심 요약 브리핑 (Summary)]</span><span style="font-size: 12px; color: #94A3B8; font-weight: 500;">조회 기준: {selected_team}</span></div><div style="font-size: 14px; color: #E2E8F0; line-height: 1.8;"><div style="margin-bottom: 6px;">1️⃣ <b>총 투입 실적</b>: 총 <b>{tot_workers}명</b>의 인원이 <b>{tot_clients}개</b> 고객사를 대상으로 <b>{tot_cnt:,}건</b>의 작업을 수행하여 <b>총 {tot_hours:,}시간</b>의 현장 지원 공수를 투입했습니다.</div><div style="margin-bottom: 6px;">2️⃣ <b>고객사 집중도</b>: 주요 지원 고객사 Top 3는 {top_clients_str} 순으로 집계되었습니다.</div><div style="margin-bottom: 6px;">3️⃣ <b>부서별 기여 비중</b>: {team_share_str}</div><div>4️⃣ <b>근무 건전성 진단</b>: {risk_badge}</div></div></div>"""
     st.markdown(briefing_html, unsafe_allow_html=True)
 
     # ----------------------------------------------------
@@ -2446,7 +2446,7 @@ def main():
         "🟢 오늘 실시간 라이브 현황 (Live)",
         "📅 작업 캘린더 & 밀도 히트맵",
         "🔍 전체 작업 스마트 검색",
-        "📊 경영진 Executive Summary",
+        "📊 Summary",
         "👤 팀원별 업무량 분석",
         "🏢 팀별 업무량 비교",
         "📈 월별/일별 추이",
