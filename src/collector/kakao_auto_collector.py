@@ -232,17 +232,37 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
         except Exception as e:
             log_trace(f"[창 활성화 알림]: {e}")
 
-        # 2. 대화목록 영역 하단(최신 메시지 영역) 클릭하여 포커스 부여
+        # 2. 대화목록 영역 하단(최신 메시지 영역)에 실제 OS 마우스 클릭으로 포커스 완벽 부여
         target_focus = list_hwnd if list_hwnd else hwnd
         if target_focus:
+            orig_cursor = None
             try:
                 rect = win32gui.GetClientRect(target_focus)
                 click_x = max(10, rect[2] // 2)
                 click_y = max(10, rect[3] - 40)
+                
+                # 가상 메시지 + 실제 화면 좌표 클릭 병행 (키보드 포커스 100% 획득)
                 lparam = (click_y << 16) | click_x
                 win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
                 win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, lparam)
-                time.sleep(0.05)
+                
+                try:
+                    orig_cursor = win32api.GetCursorPos()
+                    screen_pt = win32gui.ClientToScreen(target_focus, (click_x, click_y))
+                    win32api.SetCursorPos(screen_pt)
+                    time.sleep(0.02)
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+                    time.sleep(0.02)
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                    time.sleep(0.04)
+                except Exception:
+                    pass
+                finally:
+                    if orig_cursor:
+                        try:
+                            win32api.SetCursorPos(orig_cursor)
+                        except Exception:
+                            pass
 
                 # 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END)
                 win32api.keybd_event(win32con.VK_END, 0, 0, 0)
@@ -272,7 +292,7 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                 if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
                     copied_text = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
                 win32clipboard.CloseClipboard()
-                if copied_text:
+                if copied_text and len(copied_text.strip()) > 10:
                     break
             except Exception:
                 try:
@@ -280,13 +300,6 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                 except Exception:
                     pass
                 time.sleep(0.05)
-
-        if copied_text and len(copied_text.strip()) > 10:
-            lines = copied_text.strip().split("\n")
-            log_trace(f"[✓ Win32 네이티브 복사 성공] 총 {len(lines)}줄 ({len(copied_text)}자) 획득")
-            return copied_text.strip()
-    except Exception as e:
-        log_trace(f"[네이티브 복사 예외]: {e}")
 
         if copied_text and len(copied_text.strip()) > 10:
             lines = copied_text.strip().split("\n")
