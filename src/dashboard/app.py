@@ -7,6 +7,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
+try:
+    from streamlit_autorefresh import st_autorefresh
+except ImportError:
+    st_autorefresh = None
+
 import sys
 from pathlib import Path
 
@@ -1382,69 +1387,24 @@ def main():
         if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True, help="Supabase 클라우드 DB에서 최신 동기화 데이터를 즉시 다시 불러옵니다."):
             st.cache_data.clear()
             st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
+            time.sleep(0.3)
+            st.rerun()
 
-        # ⏱️ 카카오톡 10분 수집 완료 시점 연동 자동 갱신 엔진 (수집 후 30초 뒤 자동 갱신 & 필터 100% 영구 유지)
-        auto_sync_delay_sec = countdown['remaining_seconds'] + 30
-        st.components.v1.html(f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-                .live-sync-bar {{
-                    font-size: 10px;
-                    color: #00E676;
-                    font-weight: 800;
-                    text-align: center;
-                    background: rgba(0, 230, 118, 0.08);
-                    border: 1px dashed rgba(0, 230, 118, 0.35);
-                    border-radius: 6px;
-                    padding: 4px 6px;
-                    box-sizing: border-box;
-                    margin-top: 4px;
-                    letter-spacing: -0.2px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="live-sync-bar" id="auto-sync-status">
-                🟢 카톡 수집 30초 뒤 자동 동기화
+        # ⏱️ 60초(1분) 무간섭 자동 실시간 화면 갱신 (Streamlit 공식 WebSocket 프로토콜 엔진)
+        # iframe 보안 제약(cross-origin) 없이 어떤 PC/브라우저에서든 100% 확실하게 자동 갱신!
+        # 사용자가 선택한 기간, 소속팀, 담당 팀원, 직급, 야간/주말 필터 설정 100% 완벽 보존!
+        if st_autorefresh:
+            refresh_count = st_autorefresh(interval=60 * 1000, key="auto_refresh_counter")
+            st.markdown("""
+            <div style="background: rgba(0, 230, 118, 0.08); border: 1px dashed rgba(0, 230, 118, 0.35); border-radius: 6px; padding: 5px 8px; text-align: center; margin-top: 4px;">
+                <span style="font-size: 11px; color: #00E676; font-weight: 700;">🟢 1분 자동 실시간 동기화 가동 중 (필터 유지)</span>
             </div>
-            <script>
-                let remainingToSync = {auto_sync_delay_sec};
-
-                function updateSyncCountdown() {{
-                    const el = document.getElementById("auto-sync-status");
-                    if (!el) return;
-
-                    if (remainingToSync <= 0) {{
-                        el.innerText = "⚡ 카톡 최신 수집 데이터 동기화 중...";
-                        remainingToSync = 630;
-                        try {{
-                            const buttons = window.parent.document.querySelectorAll('button');
-                            for (let btn of buttons) {{
-                                if (btn.innerText.includes('실시간 Cloud DB 새로고침')) {{
-                                    btn.click();
-                                    return;
-                                }}
-                            }}
-                        }} catch(e) {{}}
-                    }} else {{
-                        let m = Math.floor(remainingToSync / 60);
-                        let s = remainingToSync % 60;
-                        let sStr = s < 10 ? '0' + s : s;
-                        el.innerText = "🟢 카톡 수집 30초 뒤 자동 동기화 (" + (m > 0 ? m + "분 " : "") + sStr + "초 뒤)";
-                        remainingToSync--;
-                    }}
-                }}
-
-                setInterval(updateSyncCountdown, 1000);
-                updateSyncCountdown();
-            </script>
-        </body>
-        </html>
-        """, height=30)
+            """, unsafe_allow_html=True)
+        else:
+            # Fallback
+            st.markdown("""
+            <meta http-equiv="refresh" content="60">
+            """, unsafe_allow_html=True)
 
         # 3. 데이터 수동 동기화 (대화 파일 업로드)
         st.markdown('<div class="sidebar-section-header blue">📥 데이터 동기화 (파일 업로드)</div>', unsafe_allow_html=True)
