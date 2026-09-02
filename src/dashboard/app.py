@@ -1196,9 +1196,9 @@ def main():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 메뉴 분기 1: [⚙️ 팀원 소속 관리] 메뉴 선택 시
+    # 메뉴 분기 1: [⚙️ 팀원 소속 및 직급 관리] 메뉴 선택 시
     # ==========================================
-    if "팀원 소속 관리" in selected_menu:
+    if "팀원 소속" in selected_menu:
         render_team_management_page(all_workers_list, team_mappings)
         return
 
