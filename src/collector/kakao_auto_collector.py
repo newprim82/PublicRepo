@@ -15,6 +15,7 @@ from ..database.supabase_client import db_manager
 # Windows 전용 모듈 안전 임포트
 import ctypes
 import urllib.request
+import ssl
 
 try:
     import win32gui
@@ -48,13 +49,16 @@ def ping_streamlit_cloud_app():
     if not app_url:
         return
     try:
-        req = urllib.request.Request(
+        import requests
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        res = requests.get(
             app_url,
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WorkLogCollector KeepAlive/1.0"}
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WorkLogCollector KeepAlive/1.0"},
+            timeout=10,
+            verify=False
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            status = response.getcode()
-            log_trace(f"[🌐 Streamlit Cloud Keep-Alive] URL '{app_url}' 핑 성공 (상태 코드: {status})")
+        log_trace(f"[🌐 Streamlit Cloud Keep-Alive] URL '{app_url}' 핑 성공 (상태 코드: {res.status_code})")
     except Exception as e:
         log_trace(f"[🌐 Streamlit Cloud 핑 알림]: {e}")
 
