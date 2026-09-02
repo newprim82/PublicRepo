@@ -17,8 +17,13 @@ taskkill /F /IM streamlit.exe >nul 2>&1
 timeout /t 1 /nobreak > nul
 
 echo.
-echo [2/2] 필수 패키지 점검 및 대시보드 실행...
+echo [2/3] 필수 패키지 점검...
 pip install -r requirements.txt
+
+echo.
+echo [3/3] 파이썬 및 Streamlit 로컬 임시 캐시를 정리합니다...
+for /d /r . %%d in (__pycache__) do @if exist "%%d" rd /s /q "%%d" >nul 2>&1
+del /s /q *.pyc >nul 2>&1
 
 echo.
 echo -------------------------------------------------------------------

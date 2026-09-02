@@ -17,13 +17,18 @@ taskkill /F /IM streamlit.exe >nul 2>&1
 timeout /t 1 /nobreak > nul
 
 echo.
-echo [2/3] GitHub에서 최신 소스코드를 내려받습니다...
+echo [2/4] GitHub에서 최신 소스코드를 내려받습니다...
 git pull origin main
 pip install -r requirements.txt
 
 echo.
+echo [3/4] 파이썬 및 Streamlit 로컬 임시 캐시를 정리합니다...
+for /d /r . %%d in (__pycache__) do @if exist "%%d" rd /s /q "%%d" >nul 2>&1
+del /s /q *.pyc >nul 2>&1
+
+echo.
 echo -------------------------------------------------------------------
-echo   [3/3] 팀 지원 시간 & 업무량 분석 대시보드 구동 중...
+echo   [4/4] 팀 지원 시간 & 업무량 분석 대시보드 구동 중...
 echo -------------------------------------------------------------------
 python -m streamlit run src\dashboard\app.py
 pause
