@@ -219,52 +219,46 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     # [1단계 메인 엔진] 포커스 획득 & End 스크롤 & 네이티브 복사 (Ctrl+A -> Ctrl+C)
     log_trace("[1단계 고신뢰 Win32 네이티브 복사 엔진 가동]")
     try:
-        # Windows 포커스 강제 전환 기법 (AttachThreadInput)
+        # 1. 카카오톡 창 안전 활성화 (AttachThreadInput 데드락 제거)
         try:
-            fore_h = win32gui.GetForegroundWindow()
-            if fore_h and fore_h != hwnd:
-                fore_tid, _ = win32process.GetWindowThreadProcessId(fore_h)
-                kakao_tid, _ = win32process.GetWindowThreadProcessId(hwnd)
-                win32process.AttachThreadInput(fore_tid, kakao_tid, True)
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                win32gui.SetForegroundWindow(hwnd)
-                win32gui.BringWindowToTop(hwnd)
-                win32process.AttachThreadInput(fore_tid, kakao_tid, False)
-            else:
-                win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-                win32gui.SetForegroundWindow(hwnd)
-            time.sleep(0.1)
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
+            win32gui.BringWindowToTop(hwnd)
+            time.sleep(0.08)
         except Exception as e:
-            log_trace(f"[포커스 전환 알림]: {e}")
+            log_trace(f"[창 활성화 알림]: {e}")
 
-        # 대화목록 영역 하단(최신 메시지 영역) 클릭하여 포커스 부여
+        # 2. 대화목록 영역 하단(최신 메시지 영역) 클릭하여 포커스 부여
         target_focus = list_hwnd if list_hwnd else hwnd
         if target_focus:
-            rect = win32gui.GetClientRect(target_focus)
-            click_x = max(10, rect[2] // 2)
-            click_y = max(10, rect[3] - 40)
-            lparam = (click_y << 16) | click_x
-            win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
-            win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, lparam)
-            time.sleep(0.08)
+            try:
+                rect = win32gui.GetClientRect(target_focus)
+                click_x = max(10, rect[2] // 2)
+                click_y = max(10, rect[3] - 40)
+                lparam = (click_y << 16) | click_x
+                win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
+                win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, lparam)
+                time.sleep(0.05)
 
-            # 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END)
-            win32api.keybd_event(win32con.VK_END, 0, 0, 0)
-            time.sleep(0.03)
-            win32api.keybd_event(win32con.VK_END, 0, win32con.KEYEVENTF_KEYUP, 0)
-            time.sleep(0.08)
+                # 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END)
+                win32api.keybd_event(win32con.VK_END, 0, 0, 0)
+                time.sleep(0.02)
+                win32api.keybd_event(win32con.VK_END, 0, win32con.KEYEVENTF_KEYUP, 0)
+                time.sleep(0.05)
+            except Exception as e:
+                log_trace(f"[클릭/스크롤 알림]: {e}")
 
-        # 네이티브 키 이벤트로 Ctrl+A -> Ctrl+C 전송
+        # 3. 네이티브 키 이벤트로 Ctrl+A -> Ctrl+C 전송
         win32api.keybd_event(win32con.VK_CONTROL, 0, 0, 0)
         win32api.keybd_event(ord('A'), 0, 0, 0)
-        time.sleep(0.04)
+        time.sleep(0.03)
         win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
-        time.sleep(0.04)
+        time.sleep(0.03)
         win32api.keybd_event(ord('C'), 0, 0, 0)
-        time.sleep(0.04)
+        time.sleep(0.03)
         win32api.keybd_event(ord('C'), 0, win32con.KEYEVENTF_KEYUP, 0)
         win32api.keybd_event(win32con.VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
-        time.sleep(0.15)
+        time.sleep(0.1)
 
         # 안전한 클립보드 읽기 (최대 10회 재시도)
         copied_text = ""
