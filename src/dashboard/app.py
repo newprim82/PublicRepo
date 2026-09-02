@@ -33,6 +33,17 @@ import src.collector.kakao_auto_collector as kakao_auto_collector
 
 
 from src.services.team_service import TeamService, DEFAULT_TEAMS, UNASSIGNED_TEAM
+
+def get_all_teams_safe() -> list:
+    """Streamlit Cloud 핫 리로드 시 모듈 캐시 불일치를 100% 방어하는 안전한 팀 목록 반환 함수"""
+    try:
+        if hasattr(TeamService, "get_all_teams"):
+            return TeamService.get_all_teams()
+        if hasattr(team_service, "get_all_teams"):
+            return team_service.get_all_teams()
+    except Exception:
+        pass
+    return ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
 from src.services.reward_leave_service import RewardLeaveService
 from src.database.supabase_client import db_manager
 from src.analytics.stats_service import StatsService
@@ -965,7 +976,7 @@ def render_team_management_page(all_workers_list, team_mappings):
     st.markdown("부서/팀(`기술본부`, `기술 1팀`, `기술 2팀`, `기술 3팀`, `PI팀` 및 **직접 생성한 신규 팀**)별로 팀원의 **소속팀과 직급(`사원`, `대리`, `과장`, `수석`)**을 배정하고 자유롭게 생성/수정/해제할 수 있습니다.")
     st.divider()
 
-    all_teams = TeamService.get_all_teams()
+    all_teams = get_all_teams_safe()
     COMPANY_TITLES = ["사원", "대리", "과장", "수석"]
     members_info = TeamService.get_team_members_info()
 
@@ -1220,7 +1231,7 @@ def main():
                 selected_months = st.multiselect("조회할 월(다중):", options=available_months, default=available_months, label_visibility="collapsed", key="sb_filter_multi_months")
 
             # (2) 소속 팀 선택 (기본값: 기술 1팀)
-            all_teams_filter = TeamService.get_all_teams()
+            all_teams_filter = get_all_teams_safe()
             team_filter_options = ["전체 팀"] + all_teams_filter
             default_team_idx = team_filter_options.index("기술 1팀") if "기술 1팀" in team_filter_options else 0
             selected_team = st.selectbox("🏢 소속 팀:", options=team_filter_options, index=default_team_idx, key="sb_filter_team")

@@ -262,3 +262,18 @@ class TeamService:
                             
             if (found_team and found_team != UNASSIGNED_TEAM) or found_title:
                 TeamService.save_worker_info(w, found_team or UNASSIGNED_TEAM, found_title or "")
+
+
+def get_all_teams() -> List[str]:
+    """TeamService.get_all_teams() 모듈 레벨 안전 래퍼"""
+    return TeamService.get_all_teams()
+
+
+def add_custom_team(team_name: str) -> bool:
+    """TeamService.add_custom_team() 모듈 레벨 안전 래퍼"""
+    return TeamService.add_custom_team(team_name)
+
+
+def delete_custom_team(team_name: str) -> bool:
+    """TeamService.delete_custom_team() 모듈 레벨 안전 래퍼"""
+    return TeamService.delete_custom_team(team_name)
