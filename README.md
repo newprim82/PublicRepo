@@ -178,6 +178,27 @@ work-time-dashboard/
 
 ---
 
+### 🔌 Windows 원격 데스크톱(mstsc) 접속 시 주의사항 (화면 잠금 방지)
+
+Windows 원격 데스크톱(`mstsc`)으로 PC B에 접속했다가 **우측 상단 `X` 버튼을 눌러 그냥 닫으면, Windows 보안 정책상 PC B의 화면이 '잠금(Lock)' 상태로 전환되어 마우스/키보드 GUI 그래픽 렌더링이 중단**됩니다.
+
+이로 인해 카카오톡 창 자동 복사가 멈추는 것을 방지하기 위해 **전용 원격 종료 배치 파일**을 제공합니다:
+
+```mermaid
+flowchart TD
+    A["원격(mstsc) 접속 중인 PC B"] 
+    -->|"❌ X 버튼으로 그냥 닫기"| Bad["화면이 '잠금(Lock)' 상태로 변함\n-> 카카오톡 자동 수집 중단"]
+    A -->|"✅ disconnect_keep_gui.bat 더블 클릭"| Good["화면 잠금 없이 로컬 콘솔로 세션 전환\n-> 원격 창은 닫히고, 카톡 10분 수집 24시간 계속 가동!"]
+
+    style Bad fill:#ffebee,stroke:#c62828,stroke-width:2px
+    style Good fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+```
+
+- **사용법**: PC B 원격 화면에서 작업을 마치고 나오실 때, `X`를 누르지 마시고 폴더 안의 **`disconnect_keep_gui.bat`**을 더블 클릭합니다.
+- **효과**: 1초 만에 원격 창이 닫히면서 **PC B 내부는 화면이 잠기지 않고 살아있는 상태(Console Mode)를 유지하여 24시간 내내 10분 자동 수집이 100% 정상 가동**됩니다.
+
+---
+
 ### 💻 PC A & PC C (다른 팀원 PC / 모바일)
 
 1. **아무런 프로그램도 설치할 필요가 없습니다!**
@@ -194,7 +215,9 @@ work-time-dashboard/
 
 | 스크립트 | 설명 |
 | :--- | :--- |
-| **`update_and_run.bat`** | 기존 대시보드 프로세스를 안전하게 종료하고, GitHub에서 최신 코드를 pull 받아 새로 실행합니다. |
+| **`update_and_run.bat`** | 기존 대시보드 프로세스를 안전하게 종료하고, GitHub 최신 코드를 pull 받아 캐시를 정리한 뒤 새로 실행합니다. |
+| **`disconnect_keep_gui.bat`** | **[필수]** 원격 데스크톱(mstsc) 접속 후 화면 잠금(Lock) 없이 로컬 콘솔로 전환하며 원격 창을 닫습니다. |
+| **`run_test_kakao.bat`** | 카카오톡 창 탐색 ➔ 텍스트 복사 ➔ 파싱 ➔ Supabase 저장을 콘솔에서 1초 만에 단계별로 단독 테스트합니다. |
 | **`python sync_to_supabase.py`** | 로컬 SQLite에 있는 전체 데이터를 Supabase 클라우드로 즉시 일괄 업로드합니다. |
 | **`python verify_live_supabase.py`** | Supabase 클라우드와의 실시간 쓰기/읽기 양방향 연결 상태를 전수 검증합니다. |
 
