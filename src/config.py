@@ -20,9 +20,9 @@ class Config:
     # Streamlit Cloud 배포 URL (24시간 Keep-Alive 슬립 방지용)
     STREAMLIT_APP_URL: str = os.getenv("STREAMLIT_APP_URL", "").strip()
 
-    # 카카오톡 연동 설정 (디버깅용 1분 = 60초)
+    # 카카오톡 연동 설정 (정상 운영: 10분 = 600초)
     KAKAO_CHAT_TITLE: str = os.getenv("KAKAO_CHAT_TITLE", "[기술본부] 업무공유방").strip()
-    COLLECTOR_INTERVAL_SECONDS: int = 60
+    COLLECTOR_INTERVAL_SECONDS: int = 600
     
     # 로컬 SQLite 데이터베이스 경로
     LOCAL_DB_PATH: Path = BASE_DIR / os.getenv("LOCAL_DB_PATH", "data/worklog.db")

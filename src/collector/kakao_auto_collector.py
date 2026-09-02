@@ -115,7 +115,7 @@ def get_collector_countdown_info() -> Dict[str, Any]:
     다음 자동 증분 수집까지 남은 시간(분) 및 예정 시각 정보를 한국 표준시(KST) 기준으로 계산하여 반환
     """
     now = get_current_kst_time()
-    interval = max(60, config.COLLECTOR_INTERVAL_SECONDS) # 기본 1분 (60초)
+    interval = config.COLLECTOR_INTERVAL_SECONDS # 10분 (600초)
     next_time = COLLECTOR_STATUS.get("next_run_time")
     last_time = COLLECTOR_STATUS.get("last_run_time")
     
@@ -331,7 +331,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
 
     with _cycle_lock:
         now_ts = time.time()
-        if not is_manual and (now_ts - _last_execution_timestamp < 30):
+        if not is_manual and (now_ts - _last_execution_timestamp < 120):
             return {"status": "throttled", "message": "쿨다운 대기 중"}
             
         _last_execution_timestamp = now_ts
@@ -398,7 +398,7 @@ _COLLECTOR_THREAD_RUNNING = False
 
 def background_collector_loop():
     """
-    백그라운드에서 1분(60초)마다 1회씩 정확히 실행되는 영구 상시 데몬 루프
+    백그라운드에서 10분(600초)마다 1회씩 정확히 실행되는 영구 상시 데몬 루프
     """
     try:
         pythoncom.CoInitialize()
@@ -409,10 +409,10 @@ def background_collector_loop():
     enable_windows_keep_alive()
 
     COLLECTOR_STATUS["is_running"] = True
-    interval = max(60, config.COLLECTOR_INTERVAL_SECONDS)  # 기본 1분 (60초)
+    interval = config.COLLECTOR_INTERVAL_SECONDS  # 10분 (600초)
     COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=interval)
     
-    log_trace(f"🚀 [자동 수집 데몬 기동 완료] {interval}초 주기(1분)로 실행합니다.")
+    log_trace(f"🚀 [자동 수집 데몬 기동 완료] {interval}초 주기(10분)로 실행합니다.")
     ping_streamlit_cloud_app()
 
     # 1. 기동 즉시 1회 자동 수집 실행!
