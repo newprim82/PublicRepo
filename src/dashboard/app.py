@@ -1522,6 +1522,158 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             st.info(f"💡 결과가 많아 상위 60건의 카드만 표시 중입니다. 전체 {res_cnt:,}건은 [📋 인터랙티브 테이블 뷰]에서 모두 확인 및 다운로드하실 수 있습니다.")
 
 
+def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict):
+    """[📊 경영진 보고용 Executive Summary] 주간/월간 회의 및 임원 보고용 핵심 요약 & A4 인쇄 모드"""
+    if df.empty:
+        st.info("표시할 보고서 데이터가 없습니다.")
+        return
+
+    # 상단 헤더 & 원클릭 인쇄/다운로드 툴바
+    h_col1, h_col2 = st.columns([3, 2])
+    with h_col1:
+        st.markdown(f"### 📊 {selected_team} - 경영진 보고용 Executive Summary")
+        st.caption("주간/월간 실적 회의 및 임원 보고를 위한 핵심 경영 인사이트 브리핑과 A4 규격 출력 서식을 제공합니다.")
+    with h_col2:
+        btn_c1, btn_c2 = st.columns(2)
+        with btn_c1:
+            # 브라우저 원클릭 인쇄 실행
+            if st.button("🖨️ A4 인쇄 / PDF 저장", key="btn_exec_print", help="브라우저 인쇄 대화상자를 열어 A4 용지로 출력하거나 PDF로 저장합니다."):
+                st.components.v1.html("<script>window.print();</script>", height=0, width=0)
+        with btn_c2:
+            # 요약 데이터 엑셀 다운로드
+            summary_csv = StatsService.get_worker_summary(df).to_csv(index=False, encoding="utf-8-sig")
+            st.download_button(
+                label="📥 보고서 엑셀 다운로드",
+                data=summary_csv,
+                file_name=f"경영진보고서_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key="dl_exec_summary_csv"
+            )
+
+    st.write("")
+
+    # ----------------------------------------------------
+    # 1. 📋 3줄 핵심 경영 인사이트 브리핑 (Executive Key Briefing)
+    # ----------------------------------------------------
+    tot_hours = round(df["actual_hours"].sum(), 1)
+    tot_cnt = len(df)
+    tot_workers = df["worker_name"].nunique()
+    tot_clients = df["client_name"].nunique()
+
+    # 최다 지원 고객사 Top 3
+    client_agg = df.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False)
+    top_clients_text = []
+    for c_rank, (c_name, c_h) in enumerate(client_agg.head(3).items(), 1):
+        c_pct = round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
+        top_clients_text.append(f"<b>{c_rank}위 {c_name}</b>({c_h}h, {c_pct}%)")
+    top_clients_str = ", ".join(top_clients_text) if top_clients_text else "집계 중"
+
+    # 팀별 공수 비중
+    df_teams = df.copy()
+    if "worker_team" in df_teams.columns:
+        df_teams["worker_team"] = df_teams["worker_team"].fillna(df_teams["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
+    else:
+        df_teams["worker_team"] = df_teams["worker_name"].map(team_mappings).fillna(UNASSIGNED_TEAM)
+    
+    team_agg = df_teams.groupby("worker_team")["actual_hours"].sum().sort_values(ascending=False)
+    team_share_text = []
+    for t_n, t_h in team_agg.items():
+        t_pct = round((t_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
+        team_share_text.append(f"<b>{t_n}</b>: {t_h}h ({t_pct}%)")
+    team_share_str = " | ".join(team_share_text) if team_share_text else "집계 중"
+
+    # 과중근무 리스크 분석
+    weekly_stat = StatsService.get_weekly_worker_matrix(df)
+    danger_cnt = sum((weekly_stat[col] > 52).sum() for col in weekly_stat.columns if col not in ["worker_name", "worker_team", "worker_title"])
+    caution_cnt = sum(((weekly_stat[col] > 40) & (weekly_stat[col] <= 52)).sum() for col in weekly_stat.columns if col not in ["worker_name", "worker_team", "worker_title"])
+
+    risk_badge = "<span style='color:#00E676; font-weight:800;'>🟢 안정 (과중근무 없음)</span>" if danger_cnt == 0 and caution_cnt == 0 else f"<span style='color:#FFA726; font-weight:800;'>⚠️ 주의 요망 (52h 초과 {danger_cnt}건, 40h 초과 {caution_cnt}건)</span>"
+
+    briefing_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%); border: 1px solid rgba(0, 229, 255, 0.4); border-left: 6px solid #00E5FF; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.35);"><div style="font-size: 16px; font-weight: 800; color: #00E5FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><span>📑 [경영진 핵심 요약 브리핑]</span><span style="font-size: 12px; color: #94A3B8; font-weight: 500;">조회 기준: {selected_team}</span></div><div style="font-size: 14px; color: #E2E8F0; line-height: 1.8;"><div style="margin-bottom: 6px;">1️⃣ <b>총 투입 실적</b>: 총 <b>{tot_workers}명</b>의 인원이 <b>{tot_clients}개</b> 고객사를 대상으로 <b>{tot_cnt:,}건</b>의 작업을 수행하여 <b>총 {tot_hours:,}시간</b>의 현장 지원 공수를 투입했습니다.</div><div style="margin-bottom: 6px;">2️⃣ <b>고객사 집중도</b>: 주요 지원 고객사 Top 3는 {top_clients_str} 순으로 집계되었습니다.</div><div style="margin-bottom: 6px;">3️⃣ <b>부서별 기여 비중</b>: {team_share_str}</div><div>4️⃣ <b>근무 건전성 진단</b>: {risk_badge}</div></div></div>"""
+    st.markdown(briefing_html, unsafe_allow_html=True)
+
+    # ----------------------------------------------------
+    # 2. 🏢 부서(팀)별 실적 종합 요약표
+    # ----------------------------------------------------
+    st.markdown("#### 🏢 1. 부서(팀)별 실적 종합 집계표")
+    team_table_rows = []
+    for t_name in get_all_teams_safe() + [UNASSIGNED_TEAM]:
+        sub_t_df = df_teams[df_teams["worker_team"] == t_name]
+        if sub_t_df.empty:
+            continue
+        t_w_cnt = sub_t_df["worker_name"].nunique()
+        t_cnt = len(sub_t_df)
+        t_h = round(sub_t_df["actual_hours"].sum(), 1)
+        t_avg_h = round(t_h / t_w_cnt, 1) if t_w_cnt > 0 else 0
+        t_night = int(sub_t_df["is_night_work"].sum()) if "is_night_work" in sub_t_df.columns else 0
+        t_weekend = int(sub_t_df["is_weekend_work"].sum()) if "is_weekend_work" in sub_t_df.columns else 0
+        t_share = round((t_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
+
+        team_table_rows.append({
+            "부서/팀명": t_name,
+            "투입 인원": f"{t_w_cnt}명",
+            "총 작업건수": f"{t_cnt:,}건",
+            "총 공수": f"{t_h:,}h",
+            "1인당 평균공수": f"{t_avg_h}h",
+            "전체 비중": f"{t_share}%",
+            "🌙 야간작업": f"{t_night}건",
+            "🏖️ 주말작업": f"{t_weekend}건"
+        })
+
+    if team_table_rows:
+        st.dataframe(pd.DataFrame(team_table_rows), use_container_width=True, hide_index=True)
+
+    st.write("")
+    st.divider()
+
+    # ----------------------------------------------------
+    # 3. 🏢 주요 고객사별 공수 투입 Top 10 요약표
+    # ----------------------------------------------------
+    st.markdown("#### 🏢 2. 주요 고객사별 공수 투입 Top 10 집계표")
+    client_top10_rows = []
+    for c_rank, (c_name, c_h) in enumerate(client_agg.head(10).items(), 1):
+        sub_c_df = df[df["client_name"] == c_name]
+        c_w_cnt = sub_c_df["worker_name"].nunique()
+        c_cnt = len(sub_c_df)
+        c_share = round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
+        main_tasks = ", ".join(sub_c_df["task_description"].dropna().unique()[:2])
+
+        client_top10_rows.append({
+            "순위": f"{c_rank}위",
+            "고객사명": c_name,
+            "투입 인원": f"{c_w_cnt}명",
+            "작업 건수": f"{c_cnt}건",
+            "총 투입공수": f"{round(c_h, 1)}h",
+            "공수 비중": f"{c_share}%",
+            "주요 지원 작업": main_tasks
+        })
+
+    if client_top10_rows:
+        st.dataframe(pd.DataFrame(client_top10_rows), use_container_width=True, hide_index=True)
+
+    st.write("")
+    st.divider()
+
+    # ----------------------------------------------------
+    # 4. 👥 핵심 기여 팀원 Top 5
+    # ----------------------------------------------------
+    st.markdown("#### 👥 3. 최다 공수 투입 핵심 팀원 Top 5")
+    worker_summary = StatsService.get_worker_summary(df)
+    if not worker_summary.empty:
+        top5_workers = worker_summary.head(5).copy()
+        top5_display = top5_workers.rename(columns={
+            "worker_name": "팀원명",
+            "worker_team": "소속팀",
+            "worker_title": "직급",
+            "total_hours": "총 투입공수(h)",
+            "work_days": "근무일수",
+            "avg_hours_per_day": "일평균공수(h)",
+            "most_frequent_client": "주요 고객사"
+        })
+        st.dataframe(top5_display, use_container_width=True, hide_index=True)
+
+
+
 
 
 
@@ -2263,10 +2415,11 @@ def main():
     st.divider()
 
     # 탭 기반 분석 시각화
-    tab0, tab_cal, tab_search, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab0, tab_cal, tab_search, tab_exec, tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🟢 오늘 실시간 라이브 현황 (Live)",
         "📅 작업 캘린더 & 밀도 히트맵",
         "🔍 전체 작업 스마트 검색",
+        "📊 경영진 Executive Summary",
         "👤 팀원별 업무량 분석",
         "🏢 팀별 업무량 비교",
         "📈 월별/일별 추이",
@@ -2291,6 +2444,12 @@ def main():
     # ------------------------------------------
     with tab_search:
         render_smart_search_tab(df_raw, team_mappings)
+
+    # ------------------------------------------
+    # TAB EXEC: 경영진 보고용 Executive Summary
+    # ------------------------------------------
+    with tab_exec:
+        render_executive_summary_tab(df, df_raw, selected_team, team_mappings)
 
     # ------------------------------------------
     # TAB 1: 팀원별 업무량 분석
