@@ -1073,8 +1073,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
             if t_pend.empty:
                 continue
 
-            # 웅장하고 눈에 확 띄는 프리미엄 팀 섹션 헤더 배너
-            st.markdown(f"""<div style="margin-top: 22px; margin-bottom: 12px; background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.6) 100%); border-left: 6px solid #00E5FF; border-radius: 8px; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);"><span style="font-size: 20px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background: rgba(0, 230, 118, 0.2); color: #00E676; border: 1.5px solid #00E676; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; box-shadow: 0 0 12px rgba(0, 230, 118, 0.3);">🟢 {len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
+            # 웅장하고 눈에 확 띄는 프리미엄 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
+            st.markdown(f"""<div style="margin-top: 22px; margin-bottom: 12px; background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.6) 100%); border-left: 6px solid #00E5FF; border-radius: 8px; padding: 10px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);"><span style="font-size: 20px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background: rgba(0, 230, 118, 0.2); color: #00E676; border: 1.5px solid #00E676; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; box-shadow: 0 0 10px rgba(0, 230, 118, 0.25);">🟢 {len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
 
             p_cols = st.columns(3)
             for idx, (_, r) in enumerate(t_pend.iterrows()):
@@ -1135,8 +1135,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
             if t_comp.empty:
                 continue
 
-            # 웅장하고 눈에 확 띄는 프리미엄 완료 팀 섹션 헤더 배너
-            st.markdown(f"""<div style="margin-top: 20px; margin-bottom: 10px; background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.5) 100%); border-left: 6px solid #818CF8; border-radius: 8px; padding: 9px 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);"><span style="font-size: 19px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background: rgba(129, 140, 248, 0.2); color: #818CF8; border: 1.5px solid #818CF8; padding: 3px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
+            # 웅장하고 눈에 확 띄는 프리미엄 완료 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
+            st.markdown(f"""<div style="margin-top: 20px; margin-bottom: 10px; background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.5) 100%); border-left: 6px solid #818CF8; border-radius: 8px; padding: 9px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);"><span style="font-size: 19px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background: rgba(129, 140, 248, 0.2); color: #818CF8; border: 1.5px solid #818CF8; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
 
             c_cols = st.columns(3)
             for idx, (_, r) in enumerate(t_comp.iterrows()):
