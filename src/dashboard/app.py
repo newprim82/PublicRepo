@@ -1042,14 +1042,27 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 t_desc = r["task_description"]
                 st_dt = r["start_time"]
 
-                # KST 기준 경과 시간 계산 (음수 방지)
+                # KST 기준 경과 시간 계산
                 st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
                 diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
                 elapsed_mins = diff_sec // 60
                 elapsed_hours = round(elapsed_mins / 60, 1)
                 est_hours = float(r.get("estimated_hours") or 0)
-                ratio = min(1.0, max(0.05, elapsed_hours / est_hours)) if est_hours > 0 else 0.5
                 is_overtime = elapsed_hours > est_hours and est_hours > 0
+
+                raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
+                bar_width_pct = min(100, max(5, raw_pct))
+
+                if is_overtime:
+                    bar_bg = "linear-gradient(90deg, rgba(244, 63, 94, 0.45) 0%, rgba(225, 29, 72, 0.35) 100%)"
+                    bar_border = "1px solid rgba(244, 63, 94, 0.4)"
+                    pct_text_color = "#FFA4B2"
+                    pct_display = f"{raw_pct}% (초과)"
+                else:
+                    bar_bg = "linear-gradient(90deg, rgba(14, 165, 233, 0.5) 0%, rgba(56, 189, 248, 0.3) 100%)"
+                    bar_border = "1px solid rgba(56, 189, 248, 0.35)"
+                    pct_text_color = "#38BDF8"
+                    pct_display = f"{raw_pct}%"
 
                 time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
                 title_badge = f"<span style='background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
@@ -1058,9 +1071,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
 
                 border_color = "#F43F5E" if is_overtime else "#00E676"
-                card_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid {border_color}; border-radius: 12px; padding: 14px 16px; margin-bottom: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div><span style="font-size: 15px; font-weight: 700; color: #FFFFFF;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div><span style="background: rgba(0, 230, 118, 0.15); color: #00E676; border: 1px solid #00E676; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 700;">⏳ 진행 중 ({time_str} 시작)</span></div><div style="font-size: 14px; color: #F8FAFC; font-weight: 600; margin-bottom: 4px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="font-size: 13px; color: #CBD5E1; margin-bottom: 10px; line-height: 1.4; background: rgba(0,0,0,0.25); padding: 6px 10px; border-radius: 6px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 12px; color: #94A3B8; margin-bottom: 4px;"><span>⏱️ 예정: <b>{est_hours}시간</b></span><span style="color: {'#F43F5E; font-weight:700;' if is_overtime else '#00E676;'}">⏱️ 경과: <b>{elapsed_hours}시간</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
+                card_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid {border_color}; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div><span style="font-size: 15px; font-weight: 700; color: #FFFFFF;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div><span style="background: rgba(0, 230, 118, 0.15); color: #00E676; border: 1px solid #00E676; border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 700;">⏳ 진행 중 ({time_str} 시작)</span></div><div style="font-size: 14px; color: #F8FAFC; font-weight: 600; margin-bottom: 6px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="position: relative; overflow: hidden; background: rgba(0, 0, 0, 0.35); border-radius: 8px; border: {bar_border}; margin-bottom: 8px; min-height: 36px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 7px; transition: width 0.6s ease;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; font-size: 13px; font-weight: 600; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8); gap: 8px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80%;">{t_desc}</span><span style="font-weight: 700; color: {pct_text_color}; font-size: 12px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 12px; color: #94A3B8; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}시간</b></span><span style="color: {'#F43F5E; font-weight:700;' if is_overtime else '#00E676;'}">⏱️ 경과: <b>{elapsed_hours}시간</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
                 st.markdown(card_html, unsafe_allow_html=True)
-                st.progress(ratio)
 
     st.write("")
     st.divider()
