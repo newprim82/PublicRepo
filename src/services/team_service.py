@@ -6,14 +6,14 @@ import pandas as pd
 from ..config import config
 from ..database.supabase_client import db_manager
 
-DEFAULT_TEAMS = ["기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
+DEFAULT_TEAMS = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
 DEFAULT_TITLES = ["사원", "대리", "과장", "수석"]
 UNASSIGNED_TEAM = "미지정"
 
 class TeamService:
     @staticmethod
     def init_team_table():
-        """로컬 SQLite에 team_members 테이블 생성 및 컬럼 마이그레이션"""
+        """로컬 SQLite에 team_members 및 custom_teams 테이블 생성 및 컬럼 마이그레이션"""
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("""
@@ -25,6 +25,13 @@ class TeamService:
             )
         """)
         
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS custom_teams (
+                team_name TEXT PRIMARY KEY,
+                created_at TEXT DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+        
         # job_title 컬럼 존재 여부 체크 및 추가 (마이그레이션)
         cursor.execute("PRAGMA table_info(team_members)")
         cols = [c[1] for c in cursor.fetchall()]
@@ -33,6 +40,80 @@ class TeamService:
 
         conn.commit()
         conn.close()
+
+    @staticmethod
+    def get_all_teams() -> List[str]:
+        """기본 팀 및 사용자가 직접 생성한 커스텀 팀 전체 목록을 반환"""
+        TeamService.init_team_table()
+        teams = list(DEFAULT_TEAMS)
+        
+        # 1. 로컬 custom_teams 및 team_members에서 등록된 팀 조회
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("SELECT team_name FROM custom_teams")
+            for row in cursor.fetchall():
+                t = row[0].strip()
+                if t and t not in teams and t != UNASSIGNED_TEAM:
+                    teams.append(t)
+                    
+            cursor.execute("SELECT DISTINCT team_name FROM team_members")
+            for row in cursor.fetchall():
+                t = row[0].strip()
+                if t and t not in teams and t != UNASSIGNED_TEAM:
+                    teams.append(t)
+            conn.close()
+        except Exception:
+            pass
+            
+        # 2. Supabase team_members에서 등록된 팀도 병합
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                res = db_manager.supabase.table("worktime_team_members").select("team_name").execute()
+                for row in (res.data or []):
+                    t = (row.get("team_name") or "").strip()
+                    if t and t not in teams and t != UNASSIGNED_TEAM:
+                        teams.append(t)
+            except Exception:
+                pass
+                
+        return teams
+
+    @staticmethod
+    def add_custom_team(team_name: str) -> bool:
+        """신규 커스텀 팀 생성/추가"""
+        t = team_name.strip()
+        if not t or t == UNASSIGNED_TEAM:
+            return False
+            
+        TeamService.init_team_table()
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("INSERT OR IGNORE INTO custom_teams (team_name) VALUES (?)", (t,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception:
+            return False
+
+    @staticmethod
+    def delete_custom_team(team_name: str) -> bool:
+        """커스텀 팀 삭제 (소속된 인원은 '미지정'으로 전환)"""
+        t = team_name.strip()
+        if not t or t in DEFAULT_TEAMS:
+            return False
+            
+        TeamService.clear_team_all_members(t)
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM custom_teams WHERE team_name=?", (t,))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception:
+            return False
 
     @staticmethod
     def get_team_members_info() -> Dict[str, Dict[str, str]]:

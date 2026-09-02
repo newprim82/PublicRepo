@@ -960,13 +960,52 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
 
 
 def render_team_management_page(all_workers_list, team_mappings):
-    """[⚙️ 팀원 소속 및 직급 관리] 전용 관리 페이지 (소속팀 + 직급 완벽 지원)"""
-    st.header("⚙️ 팀원 소속 및 직급 관리")
-    st.markdown("회사 4대 팀(`기술 1팀`, `기술 2팀`, `기술 3팀`, `PI팀`)별로 팀원의 **소속팀과 4대 직급(`사원`, `대리`, `과장`, `수석`)**을 배정하고 자유롭게 수정/해제할 수 있습니다.")
+    """[⚙️ 팀원 소속 및 직급 관리] 전용 관리 페이지 (신규 팀 생성 + 소속팀 + 직급 완벽 지원)"""
+    st.header("⚙️ 팀원 소속 및 직급 관리 (팀 생성 & 배정)")
+    st.markdown("부서/팀(`기술본부`, `기술 1팀`, `기술 2팀`, `기술 3팀`, `PI팀` 및 **직접 생성한 신규 팀**)별로 팀원의 **소속팀과 직급(`사원`, `대리`, `과장`, `수석`)**을 배정하고 자유롭게 생성/수정/해제할 수 있습니다.")
     st.divider()
 
+    all_teams = TeamService.get_all_teams()
     COMPANY_TITLES = ["사원", "대리", "과장", "수석"]
     members_info = TeamService.get_team_members_info()
+
+    # 0. 신규 팀 생성 및 팀 관리 섹션
+    st.markdown("### 🏢 0. 신규 팀 생성 및 팀 목록 관리")
+    st.caption("기본 팀(`기술본부`, `기술 1팀`, `기술 2팀`, `기술 3팀`, `PI팀`) 외에 필요한 **새로운 팀을 자유롭게 생성하거나 삭제**할 수 있습니다.")
+    
+    col_t_create, col_t_del = st.columns([1.2, 0.8])
+    with col_t_create:
+        c_in1, c_in2 = st.columns([2.5, 1.2])
+        with c_in1:
+            new_team_input = st.text_input("새 팀 이름 입력", placeholder="예: 인프라팀, 보안팀, 솔루션사업팀 등", label_visibility="collapsed", key="input_new_custom_team")
+        with c_in2:
+            if st.button("➕ 새 팀 생성", use_container_width=True, type="primary"):
+                t_str = new_team_input.strip() if new_team_input else ""
+                if t_str:
+                    if t_str in all_teams:
+                        st.warning(f"이미 존재하는 팀 이름입니다: {t_str}")
+                    else:
+                        TeamService.add_custom_team(t_str)
+                        st.toast(f"🎉 [{t_str}] 팀이 성공적으로 생성되었습니다!", icon="✅")
+                        st.rerun()
+                else:
+                    st.warning("생성할 팀 이름을 입력해주세요.")
+
+    with col_t_del:
+        custom_teams = [t for t in all_teams if t not in DEFAULT_TEAMS]
+        if custom_teams:
+            c_d1, c_d2 = st.columns([2.0, 1.2])
+            with c_d1:
+                del_pick = st.selectbox("삭제할 커스텀 팀", options=custom_teams, label_visibility="collapsed", key="del_team_pick_sb")
+            with c_d2:
+                if st.button("🗑️ 팀 삭제", use_container_width=True, help=f"[{del_pick}] 팀을 삭제하고 소속 인원을 '미지정'으로 전환합니다."):
+                    TeamService.delete_custom_team(del_pick)
+                    st.toast(f"🗑️ [{del_pick}] 팀이 삭제되었습니다.", icon="✅")
+                    st.rerun()
+        else:
+            st.caption("💡 사용자가 직접 추가한 커스텀 팀이 있을 때 여기서 삭제할 수 있습니다.")
+
+    st.divider()
 
     col_assign, col_status = st.columns([1.1, 0.9])
 
@@ -981,11 +1020,11 @@ def render_team_management_page(all_workers_list, team_mappings):
             cur_worker_team = members_info.get(pick_worker, {}).get("team", "기술 1팀")
             cur_worker_title = members_info.get(pick_worker, {}).get("title", "")
             
-            team_idx = DEFAULT_TEAMS.index(cur_worker_team) if cur_worker_team in DEFAULT_TEAMS else 0
+            team_idx = all_teams.index(cur_worker_team) if cur_worker_team in all_teams else 0
             
             c_sel1, c_sel2 = st.columns(2)
             with c_sel1:
-                sel_team = st.selectbox("2️⃣ 소속 팀 지정:", options=DEFAULT_TEAMS + [UNASSIGNED_TEAM], index=team_idx if team_idx < len(DEFAULT_TEAMS) else 0, key="sel_team_manage")
+                sel_team = st.selectbox("2️⃣ 소속 팀 지정:", options=all_teams + [UNASSIGNED_TEAM], index=team_idx if team_idx < len(all_teams) else 0, key="sel_team_manage")
             with c_sel2:
                 avail_titles = COMPANY_TITLES + ["(미지정)"]
                 title_idx = COMPANY_TITLES.index(cur_worker_title) if cur_worker_title in COMPANY_TITLES else (len(avail_titles) - 1)
@@ -1003,8 +1042,8 @@ def render_team_management_page(all_workers_list, team_mappings):
     with col_status:
         st.markdown("### 🏢 2. 팀별 소속 인원 & 직급 현황")
         
-        # 4대 팀 현황
-        for t_name in DEFAULT_TEAMS:
+        # 전체 팀 현황 (동적 all_teams)
+        for t_name in all_teams:
             m_list = [w for w in all_workers_list if members_info.get(w, {}).get("team", "") == t_name]
             with st.expander(f"🔹 {t_name} (총 {len(m_list)}명)", expanded=True if len(m_list) > 0 else False):
                 if m_list:
@@ -1056,7 +1095,7 @@ def render_team_management_page(all_workers_list, team_mappings):
                 items_str = [f"`{name}`" for name in unassigned_list]
                 st.markdown("**미지정 인원:** " + ", ".join(items_str))
             else:
-                st.success("모든 팀원이 4대 팀에 배정되어 있습니다.")
+                st.success("모든 팀원이 소속 팀에 배정되어 있습니다.")
 
     st.divider()
 
@@ -1081,7 +1120,7 @@ def render_team_management_page(all_workers_list, team_mappings):
             "담당자": st.column_config.TextColumn("담당자", disabled=True),
             "소속팀": st.column_config.SelectboxColumn(
                 "소속팀",
-                options=DEFAULT_TEAMS + [UNASSIGNED_TEAM],
+                options=all_teams + [UNASSIGNED_TEAM],
                 required=True,
                 help="원하는 팀으로 변경하거나 '미지정'을 선택하여 소속을 삭제합니다."
             ),
@@ -1108,10 +1147,6 @@ def render_team_management_page(all_workers_list, team_mappings):
 
 
 def main():
-    importlib.reload(kakao_parser)
-    importlib.reload(reply_matcher)
-    importlib.reload(team_service)
-    importlib.reload(supabase_client)
     from src.parser.reply_matcher import WorkLogMatcher
 
     df_raw = load_data()
@@ -1127,7 +1162,7 @@ def main():
             "이동할 메뉴를 선택하세요:",
             [
                 "📊 실시간 분석 대시보드",
-                "⚙️ 팀원 소속 관리 (기술 1/2/3팀, PI팀)",
+                "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                 "📋 작업 기록 원장 & 엑셀"
             ],
             index=0,
@@ -1185,7 +1220,8 @@ def main():
                 selected_months = st.multiselect("조회할 월(다중):", options=available_months, default=available_months, label_visibility="collapsed", key="sb_filter_multi_months")
 
             # (2) 소속 팀 선택 (기본값: 기술 1팀)
-            team_filter_options = ["전체 팀"] + DEFAULT_TEAMS
+            all_teams_filter = TeamService.get_all_teams()
+            team_filter_options = ["전체 팀"] + all_teams_filter
             default_team_idx = team_filter_options.index("기술 1팀") if "기술 1팀" in team_filter_options else 0
             selected_team = st.selectbox("🏢 소속 팀:", options=team_filter_options, index=default_team_idx, key="sb_filter_team")
 
