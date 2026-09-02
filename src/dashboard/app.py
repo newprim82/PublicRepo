@@ -8,7 +8,13 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+KST_TIMEZONE = timezone(timedelta(hours=9))
+
+def get_current_kst_time() -> datetime:
+    """한국 표준시(KST, UTC+9) 현재 시각 반환"""
+    return datetime.now(KST_TIMEZONE)
 
 try:
     from streamlit_autorefresh import st_autorefresh
