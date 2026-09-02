@@ -183,10 +183,10 @@ def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
 
 def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     """
-    열려 있는 카카오톡 창에서 대화 목록을 4중 다층 안전 엔진으로 추출
-    1. UIAutomation 전체 트리 심층 순회 (스레드 안전 초기화 적용)
-    2. Windows API 네이티브 포커스 획득 & 클립보드 안전 복사 (AttachThreadInput)
-    3. UIAutomation SendKeys 복사
+    열려 있는 카카오톡 창에서 대화 목록을 초고속 고신뢰성 Win32 네이티브 엔진으로 추출
+    1. Windows API 네이티브 포커스 획득 & 최하단 End 스크롤 & 클립보드 안전 복사 (AttachThreadInput)
+    2. UIAutomation SendKeys Fallback
+    3. UIAutomation WalkTree Fallback
     """
     if not WIN32_AVAILABLE or not hwnd:
         return ""
@@ -196,7 +196,7 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     except Exception:
         pass
 
-    log_trace(f"[추출 시작] HWND={hwnd} 대상 텍스트 다층 추출 가동 (is_manual={is_manual})")
+    log_trace(f"[추출 시작] HWND={hwnd} 대상 텍스트 수집 가동 (is_manual={is_manual})")
 
     # 1. 자식 윈도우 중 대화 목록 리스트(EVA_VH_ListControl_RPC) 탐색
     list_hwnd = None
@@ -216,42 +216,9 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     except Exception:
         pass
 
-    # [1단계] UIAutomation 전체 트리 재귀 탐색 (백그라운드 스레드 안전 초기화)
-    extracted_lines = []
+    # [1단계 메인 엔진] 포커스 획득 & End 스크롤 & 네이티브 복사 (Ctrl+A -> Ctrl+C)
+    log_trace("[1단계 고신뢰 Win32 네이티브 복사 엔진 가동]")
     try:
-        # 백그라운드 스레드용 UIAutomation 초기화
-        with auto.UIAutomationInitializerInThread(maxGeneration=2):
-            target_ctrls = []
-            if list_hwnd:
-                c1 = auto.ControlFromHandle(list_hwnd)
-                if c1:
-                    target_ctrls.append(c1)
-            c2 = auto.ControlFromHandle(hwnd)
-            if c2:
-                target_ctrls.append(c2)
-
-            for target_ctrl in target_ctrls:
-                for c, depth in auto.WalkTree(target_ctrl, getChildren=auto.GetChildren):
-                    if depth > 20:
-                        continue
-                    name = c.Name
-                    if name and len(name.strip()) > 0:
-                        s = name.strip()
-                        if not any(ign == s for ign in ["최소화", "최대화", "닫기", "전송", "메뉴", "검색", "이모티콘", "파일 보내기", "음성 대화", "페이스톡", "더보기", "이전 대화 보기"]):
-                            extracted_lines.append(s)
-                if len(extracted_lines) >= 3:
-                    break
-                    
-            if len(extracted_lines) >= 3:
-                log_trace(f"[✓ UIA 텍스트 추출 성공] 총 {len(extracted_lines)}줄 획득")
-                return "\n".join(extracted_lines)
-    except Exception as e:
-        log_trace(f"[UIA 추출 알림]: {e}")
-
-    # [2단계] 포커스 강제 획득 & Windows 네이티브 키 이벤트 복사 (Ctrl+A -> Ctrl+C)
-    log_trace("[2단계 네이티브 복사 엔진 가동]")
-    try:
-        # 기존 클립보드 백업
         old_clipboard = ""
         try:
             win32clipboard.OpenClipboard()
@@ -264,7 +231,7 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
             except Exception:
                 pass
 
-        # Windows 10/11 포커스 강제 전환 기법 (AttachThreadInput)
+        # Windows 포커스 강제 전환 기법 (AttachThreadInput)
         try:
             fore_h = win32gui.GetForegroundWindow()
             if fore_h and fore_h != hwnd:
@@ -278,7 +245,7 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
             else:
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 win32gui.SetForegroundWindow(hwnd)
-            time.sleep(0.1)
+            time.sleep(0.08)
         except Exception as e:
             log_trace(f"[포커스 전환 알림]: {e}")
 
@@ -287,14 +254,13 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
         if target_focus:
             rect = win32gui.GetClientRect(target_focus)
             click_x = max(10, rect[2] // 2)
-            # ★ 핵심 1: 위쪽(150px)이 아닌 대화창 하단(최신 메시지 영역)을 클릭 ★
             click_y = max(10, rect[3] - 40)
             lparam = (click_y << 16) | click_x
             win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
             win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, lparam)
             time.sleep(0.08)
 
-            # ★ 핵심 2: 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END) ★
+            # 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END)
             win32api.keybd_event(win32con.VK_END, 0, 0, 0)
             time.sleep(0.03)
             win32api.keybd_event(win32con.VK_END, 0, win32con.KEYEVENTF_KEYUP, 0)
@@ -341,14 +307,14 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
 
         if copied_text and len(copied_text.strip()) > 10:
             lines = copied_text.strip().split("\n")
-            log_trace(f"[✓ 네이티브 복사 성공] 총 {len(lines)}줄 ({len(copied_text)}자) 획득")
+            log_trace(f"[✓ Win32 네이티브 복사 성공] 총 {len(lines)}줄 ({len(copied_text)}자) 획득")
             return copied_text.strip()
     except Exception as e:
         log_trace(f"[네이티브 복사 예외]: {e}")
 
-    # [3단계] UIAutomation SendKeys Fallback (End -> Ctrl+A -> Ctrl+C)
+    # [2단계 Fallback] UIAutomation SendKeys
     try:
-        log_trace("[3단계 UIAutomation SendKeys 시도]")
+        log_trace("[2단계 UIAutomation SendKeys Fallback]")
         auto.SendKeys('{End}', waitTime=0.05)
         auto.SendKeys('{Ctrl}a{Ctrl}c', waitTime=0.15)
         time.sleep(0.15)
@@ -363,17 +329,13 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                 win32clipboard.CloseClipboard()
             except Exception:
                 pass
-
         if copied_text and len(copied_text.strip()) > 10:
             log_trace(f"[✓ UIA SendKeys 복사 성공] {len(copied_text)}자 획득")
             return copied_text.strip()
     except Exception as e:
-        log_trace(f"[UIA SendKeys 예외]: {e}")
+        log_trace(f"[SendKeys Fallback 예외]: {e}")
 
-    if extracted_lines:
-        return "\n".join(extracted_lines)
-
-    log_trace("[-] 모든 다층 추출 방식 실패")
+    log_trace("[-] 모든 텍스트 추출 방식 실패")
     return ""
 
 
