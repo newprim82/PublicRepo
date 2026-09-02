@@ -22,7 +22,7 @@ class Config:
 
     # 카카오톡 연동 설정
     KAKAO_CHAT_TITLE: str = os.getenv("KAKAO_CHAT_TITLE", "[기술본부] 업무공유방").strip()
-    COLLECTOR_INTERVAL_SECONDS: int = int(os.getenv("COLLECTOR_INTERVAL_SECONDS", "600").split("#")[0].strip())
+    COLLECTOR_INTERVAL_SECONDS: int = int(os.getenv("COLLECTOR_INTERVAL_SECONDS", "60").split("#")[0].strip())
     
     # 로컬 SQLite 데이터베이스 경로
     LOCAL_DB_PATH: Path = BASE_DIR / os.getenv("LOCAL_DB_PATH", "data/worklog.db")

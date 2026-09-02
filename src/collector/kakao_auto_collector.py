@@ -352,7 +352,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
 
     with _cycle_lock:
         now_ts = time.time()
-        if not is_manual and (now_ts - _last_execution_timestamp < 120):
+        if not is_manual and (now_ts - _last_execution_timestamp < 30):
             return {"status": "throttled", "message": "쿨다운 대기 중"}
             
         _last_execution_timestamp = now_ts
@@ -428,10 +428,10 @@ def background_collector_loop(token: int):
     enable_windows_keep_alive()
 
     COLLECTOR_STATUS["is_running"] = True
-    interval = max(600, config.COLLECTOR_INTERVAL_SECONDS)  # 10분 (600초)
+    interval = max(60, config.COLLECTOR_INTERVAL_SECONDS)  # 기본 1분 (60초) 이상
     COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=interval)
     
-    log_trace(f"🚀 [10분 자동 수집 데몬 기동] 토큰={token} | {interval}초(10분)마다 1회씩 실행합니다.")
+    log_trace(f"🚀 [자동 수집 데몬 기동] 토큰={token} | {interval}초 주기(1분)로 실행합니다.")
     
     # 기동 시 즉시 Streamlit Cloud Keep-Alive 핑 1회 전송
     ping_streamlit_cloud_app()
