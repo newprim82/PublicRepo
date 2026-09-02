@@ -1027,82 +1027,104 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 실시간 작업 보고가 아직 없습니다. 카카오톡에 시작 보고가 올라오면 10분 내로 여기에 실시간으로 표시됩니다!")
         return
 
-    # 4. 실시간 진행 중(PENDING) 작업 섹션
+    # 4. 실시간 진행 중(PENDING) 작업 섹션 (팀 단위 그룹 렌더링)
     st.markdown(f"#### ⏳ 실시간 진행 중인 작업 (`{len(pend_df)}건`)")
     if pend_df.empty:
         st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
     else:
-        # 3열 그리드 배치 (한 줄에 3개씩 표시)
-        p_cols = st.columns(3)
-        for idx, (_, r) in enumerate(pend_df.iterrows()):
-            with p_cols[idx % 3]:
-                w_name = r["worker_name"]
-                w_team = r["worker_team"] or team_mappings.get(w_name, "기술 1팀")
-                w_title = r["worker_title"] or ""
-                c_name = r["client_name"]
-                t_desc = r["task_description"]
-                st_dt = r["start_time"]
+        all_teams_order = get_all_teams_safe() + [UNASSIGNED_TEAM]
+        active_teams = [t for t in all_teams_order if t in pend_df["worker_team"].values]
+        for extra_t in pend_df["worker_team"].unique():
+            if extra_t not in active_teams:
+                active_teams.append(extra_t)
 
-                # KST 기준 경과 시간 계산
-                st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
-                diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
-                elapsed_mins = diff_sec // 60
-                elapsed_hours = round(elapsed_mins / 60, 1)
-                est_hours = float(r.get("estimated_hours") or 0)
-                is_overtime = elapsed_hours > est_hours and est_hours > 0
+        for t_name in active_teams:
+            t_pend = pend_df[pend_df["worker_team"] == t_name]
+            if t_pend.empty:
+                continue
 
-                raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
-                bar_width_pct = min(100, max(5, raw_pct))
+            # 팀 섹션 헤더 (제목 달고 아래에 카드 주르륵)
+            st.markdown(f"""<div style="margin-top: 14px; margin-bottom: 8px; font-size: 15px; font-weight: 800; color: #38BDF8; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;">🏢 <b>{t_name}</b> <span style="font-size: 11.5px; font-weight: 700; color: #00E676; background: rgba(0, 230, 118, 0.12); border: 1px solid rgba(0, 230, 118, 0.3); padding: 1px 8px; border-radius: 10px;">{len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
 
-                if is_overtime:
-                    bar_bg = "linear-gradient(90deg, rgba(244, 63, 94, 0.45) 0%, rgba(225, 29, 72, 0.35) 100%)"
-                    bar_border = "1px solid rgba(244, 63, 94, 0.4)"
-                    pct_text_color = "#FFA4B2"
-                    pct_display = f"{raw_pct}% (초과)"
-                else:
-                    bar_bg = "linear-gradient(90deg, rgba(14, 165, 233, 0.5) 0%, rgba(56, 189, 248, 0.3) 100%)"
-                    bar_border = "1px solid rgba(56, 189, 248, 0.35)"
-                    pct_text_color = "#38BDF8"
-                    pct_display = f"{raw_pct}%"
+            p_cols = st.columns(3)
+            for idx, (_, r) in enumerate(t_pend.iterrows()):
+                with p_cols[idx % 3]:
+                    w_name = r["worker_name"]
+                    w_title = r["worker_title"] or ""
+                    c_name = r["client_name"]
+                    t_desc = r["task_description"]
+                    st_dt = r["start_time"]
 
-                time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
-                title_badge = f"<span style='background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
-                team_badge = f"<span style='background:rgba(56,189,248,0.15); color:#38BDF8; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>"
-                night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
-                weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+                    # KST 기준 경과 시간 계산
+                    st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
+                    diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
+                    elapsed_mins = diff_sec // 60
+                    elapsed_hours = round(elapsed_mins / 60, 1)
+                    est_hours = float(r.get("estimated_hours") or 0)
+                    is_overtime = elapsed_hours > est_hours and est_hours > 0
 
-                border_color = "#F43F5E" if is_overtime else "#00E676"
-                card_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid {border_color}; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div><span style="font-size: 14.5px; font-weight: 700; color: #FFFFFF;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div><span style="background: rgba(0, 230, 118, 0.15); color: #00E676; border: 1px solid #00E676; border-radius: 10px; padding: 2px 7px; font-size: 10.5px; font-weight: 700;">⏳ 진행 중 ({time_str})</span></div><div style="font-size: 13.5px; color: #F8FAFC; font-weight: 600; margin-bottom: 5px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="position: relative; overflow: hidden; background: rgba(0, 0, 0, 0.35); border-radius: 8px; border: {bar_border}; margin-bottom: 6px; min-height: 34px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 7px; transition: width 0.6s ease;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; font-size: 12.5px; font-weight: 600; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8); gap: 6px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 78%;">{t_desc}</span><span style="font-weight: 700; color: {pct_text_color}; font-size: 11.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 5px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #94A3B8; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#F43F5E; font-weight:700;' if is_overtime else '#00E676;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
-                st.markdown(card_html, unsafe_allow_html=True)
+                    raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
+                    bar_width_pct = min(100, max(5, raw_pct))
+
+                    if is_overtime:
+                        bar_bg = "linear-gradient(90deg, rgba(244, 63, 94, 0.45) 0%, rgba(225, 29, 72, 0.35) 100%)"
+                        bar_border = "1px solid rgba(244, 63, 94, 0.4)"
+                        pct_text_color = "#FFA4B2"
+                        pct_display = f"{raw_pct}% (초과)"
+                    else:
+                        bar_bg = "linear-gradient(90deg, rgba(14, 165, 233, 0.5) 0%, rgba(56, 189, 248, 0.3) 100%)"
+                        bar_border = "1px solid rgba(56, 189, 248, 0.35)"
+                        pct_text_color = "#38BDF8"
+                        pct_display = f"{raw_pct}%"
+
+                    time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
+                    title_badge = f"<span style='background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
+                    night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
+                    weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+
+                    border_color = "#F43F5E" if is_overtime else "#00E676"
+                    card_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid {border_color}; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><div><span style="font-size: 14.5px; font-weight: 700; color: #FFFFFF;">👤 {w_name}</span>{title_badge}{night_badge}{weekend_badge}</div><span style="background: rgba(0, 230, 118, 0.15); color: #00E676; border: 1px solid #00E676; border-radius: 10px; padding: 2px 7px; font-size: 10.5px; font-weight: 700;">⏳ 진행 중 ({time_str})</span></div><div style="font-size: 13.5px; color: #F8FAFC; font-weight: 600; margin-bottom: 5px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="position: relative; overflow: hidden; background: rgba(0, 0, 0, 0.35); border-radius: 8px; border: {bar_border}; margin-bottom: 6px; min-height: 34px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 7px; transition: width 0.6s ease;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; font-size: 12.5px; font-weight: 600; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8); gap: 6px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 78%;">{t_desc}</span><span style="font-weight: 700; color: {pct_text_color}; font-size: 11.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 5px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #94A3B8; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#F43F5E; font-weight:700;' if is_overtime else '#00E676;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
+                    st.markdown(card_html, unsafe_allow_html=True)
 
     st.write("")
     st.divider()
 
-    # 5. 오늘 완료된 작업(COMPLETED) 섹션
+    # 5. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)
     st.markdown(f"#### ✅ 오늘 완료된 작업 (`{len(comp_df)}건`)")
     if comp_df.empty:
         st.info("오늘 완료 보고된 작업이 아직 없습니다.")
     else:
-        c_cols = st.columns(3)
-        for idx, (_, r) in enumerate(comp_df.iterrows()):
-            with c_cols[idx % 3]:
-                w_name = r["worker_name"]
-                w_team = r["worker_team"] or team_mappings.get(w_name, "기술 1팀")
-                w_title = r["worker_title"] or ""
-                c_name = r["client_name"]
-                t_desc = r["task_description"]
-                st_dt = r["start_time"]
-                ed_dt = r["end_time"]
-                act_h = r["actual_hours"]
+        all_teams_order = get_all_teams_safe() + [UNASSIGNED_TEAM]
+        active_comp_teams = [t for t in all_teams_order if t in comp_df["worker_team"].values]
+        for extra_t in comp_df["worker_team"].unique():
+            if extra_t not in active_comp_teams:
+                active_comp_teams.append(extra_t)
 
-                st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
-                ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
+        for t_name in active_comp_teams:
+            t_comp = comp_df[comp_df["worker_team"] == t_name]
+            if t_comp.empty:
+                continue
 
-                title_badge = f"<span style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
-                team_badge = f"<span style='background:rgba(56,189,248,0.1); color:#38BDF8; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>"
+            st.markdown(f"""<div style="margin-top: 12px; margin-bottom: 6px; font-size: 14.5px; font-weight: 800; color: #818CF8; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(129, 140, 248, 0.2); padding-bottom: 3px;">🏢 <b>{t_name}</b> <span style="font-size: 11px; font-weight: 700; color: #818CF8; background: rgba(129, 140, 248, 0.12); border: 1px solid rgba(129, 140, 248, 0.3); padding: 1px 7px; border-radius: 10px;">{len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
 
-                comp_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.5) 100%); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #E2E8F0;">👤 {w_name}</span>{title_badge}{team_badge}</div><span style="background: rgba(129, 140, 248, 0.15); color: #818CF8; border: 1px solid rgba(129, 140, 248, 0.4); border-radius: 10px; padding: 2px 7px; font-size: 10.5px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #F1F5F9; font-weight: 600; margin-bottom: 3px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="font-size: 12px; color: #94A3B8; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
-                st.markdown(comp_html, unsafe_allow_html=True)
+            c_cols = st.columns(3)
+            for idx, (_, r) in enumerate(t_comp.iterrows()):
+                with c_cols[idx % 3]:
+                    w_name = r["worker_name"]
+                    w_title = r["worker_title"] or ""
+                    c_name = r["client_name"]
+                    t_desc = r["task_description"]
+                    st_dt = r["start_time"]
+                    ed_dt = r["end_time"]
+                    act_h = r["actual_hours"]
+
+                    st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
+                    ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
+
+                    title_badge = f"<span style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
+
+                    comp_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.5) 100%); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #E2E8F0;">👤 {w_name}</span>{title_badge}</div><span style="background: rgba(129, 140, 248, 0.15); color: #818CF8; border: 1px solid rgba(129, 140, 248, 0.4); border-radius: 10px; padding: 2px 7px; font-size: 10.5px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #F1F5F9; font-weight: 600; margin-bottom: 3px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="font-size: 12px; color: #94A3B8; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
+                    st.markdown(comp_html, unsafe_allow_html=True)
 
 
 def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
