@@ -152,16 +152,16 @@ def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
         return None
 
     found_hwnd = None
-    target_clean = chat_title_keyword.replace("🚩", "").replace("✨", "").replace("🏳️", "").strip().lower()
+    target_clean = chat_title_keyword.replace("🚩", "").replace("✨", "").replace("🏳️", "").replace("⚑", "").strip().lower()
 
     def enum_windows_callback(hwnd, _):
         nonlocal found_hwnd
-        if win32gui.IsWindowVisible(hwnd):
+        if win32gui.IsWindow(hwnd):
             title = win32gui.GetWindowText(hwnd)
             if not title:
                 return True
                 
-            title_clean = title.replace("🚩", "").replace("✨", "").replace("🏳️", "").strip().lower()
+            title_clean = title.replace("🚩", "").replace("✨", "").replace("🏳️", "").replace("⚑", "").strip().lower()
             
             if ("기술본부" in title_clean or "업무공유" in title_clean or target_clean in title_clean) and title != "카카오톡":
                 found_hwnd = hwnd
