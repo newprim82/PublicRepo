@@ -184,7 +184,7 @@ def find_kakao_chat_window(chat_title_keyword: str) -> Optional[int]:
 def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     """
     열려 있는 카카오톡 창에서 대화 목록을 4중 다층 안전 엔진으로 추출
-    1. UIAutomation 전체 트리 심층 순회
+    1. UIAutomation 전체 트리 심층 순회 (스레드 안전 초기화 적용)
     2. Windows API 네이티브 포커스 획득 & 클립보드 안전 복사 (AttachThreadInput)
     3. UIAutomation SendKeys 복사
     """
@@ -216,34 +216,35 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     except Exception:
         pass
 
-    # [1단계] UIAutomation 전체 트리 재귀 탐색 (화면 간섭 전혀 없음)
+    # [1단계] UIAutomation 전체 트리 재귀 탐색 (백그라운드 스레드 안전 초기화)
     extracted_lines = []
     try:
-        # list_hwnd 우선, 없으면 hwnd 전체 탐색
-        target_ctrls = []
-        if list_hwnd:
-            c1 = auto.ControlFromHandle(list_hwnd)
-            if c1:
-                target_ctrls.append(c1)
-        c2 = auto.ControlFromHandle(hwnd)
-        if c2:
-            target_ctrls.append(c2)
+        # 백그라운드 스레드용 UIAutomation 초기화
+        with auto.UIAutomationInitializerInThread(maxGeneration=2):
+            target_ctrls = []
+            if list_hwnd:
+                c1 = auto.ControlFromHandle(list_hwnd)
+                if c1:
+                    target_ctrls.append(c1)
+            c2 = auto.ControlFromHandle(hwnd)
+            if c2:
+                target_ctrls.append(c2)
 
-        for target_ctrl in target_ctrls:
-            for c, depth in auto.WalkTree(target_ctrl, getChildren=auto.GetChildren):
-                if depth > 20:
-                    continue
-                name = c.Name
-                if name and len(name.strip()) > 0:
-                    s = name.strip()
-                    if not any(ign == s for ign in ["최소화", "최대화", "닫기", "전송", "메뉴", "검색", "이모티콘", "파일 보내기", "음성 대화", "페이스톡", "더보기", "이전 대화 보기"]):
-                        extracted_lines.append(s)
+            for target_ctrl in target_ctrls:
+                for c, depth in auto.WalkTree(target_ctrl, getChildren=auto.GetChildren):
+                    if depth > 20:
+                        continue
+                    name = c.Name
+                    if name and len(name.strip()) > 0:
+                        s = name.strip()
+                        if not any(ign == s for ign in ["최소화", "최대화", "닫기", "전송", "메뉴", "검색", "이모티콘", "파일 보내기", "음성 대화", "페이스톡", "더보기", "이전 대화 보기"]):
+                            extracted_lines.append(s)
+                if len(extracted_lines) >= 3:
+                    break
+                    
             if len(extracted_lines) >= 3:
-                break
-                
-        if len(extracted_lines) >= 3:
-            log_trace(f"[✓ UIA 텍스트 추출 성공] 총 {len(extracted_lines)}줄 획득")
-            return "\n".join(extracted_lines)
+                log_trace(f"[✓ UIA 텍스트 추출 성공] 총 {len(extracted_lines)}줄 획득")
+                return "\n".join(extracted_lines)
     except Exception as e:
         log_trace(f"[UIA 추출 알림]: {e}")
 
