@@ -1323,6 +1323,182 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
                 st.markdown(f"""<div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 700; color: #FFFFFF;">👤 {w_name} <span style="font-size: 11px; color: #38BDF8;">[{w_team}]</span></span><span style="font-size: 11px; color: #94A3B8;">{status_badge} ({st_t} ~ {ed_t} | {act_h}h)</span></div><div style="font-size: 13px; color: #38BDF8; font-weight: 600; margin-bottom: 2px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #CBD5E1;">{t_desc}</div></div>""", unsafe_allow_html=True)
 
 
+def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
+    """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기"""
+    st.markdown("### 🔍 전체 작업 통합 스마트 검색 & 다중 필터")
+    st.caption("고객사명, 작업내용, 담당자, 소속팀, 야간/주말 여부 등 다중 조건을 조합하여 원하는 작업 이력을 0.1초 만에 실시간 검색합니다.")
+
+    if df_raw.empty:
+        st.info("검색할 작업 데이터가 존재하지 않습니다.")
+        return
+
+    search_df = df_raw.copy()
+    if "worker_team" in search_df.columns:
+        search_df["worker_team"] = search_df["worker_team"].fillna(search_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
+    else:
+        search_df["worker_team"] = search_df["worker_name"].map(team_mappings).fillna(UNASSIGNED_TEAM)
+
+    # 1. 다중 스마트 필터 컨트롤 패널
+    with st.expander("🛠️ 상세 검색 필터 설정 (여기를 클릭하여 조건 접기/펼치기)", expanded=True):
+        f_col1, f_col2, f_col3 = st.columns([2, 1.5, 1.5])
+        with f_col1:
+            keyword = st.text_input("📝 통합 키워드 검색 (작업내용, 비고, 고객사)", placeholder="예: 정기점검, 장애처리, DR, 하나은행, BGF...", key="smart_kw")
+        with f_col2:
+            team_options = ["전체 팀"] + get_all_teams_safe() + [UNASSIGNED_TEAM]
+            sel_team = st.selectbox("🏢 소속팀 필터:", options=team_options, index=0, key="smart_team")
+        with f_col3:
+            type_options = ["전체", "⏳ 실시간 진행중", "✅ 작업 완료", "🌙 야간 근무", "🏖️ 주말 근무", "🚨 예정시간 초과"]
+            sel_type = st.selectbox("🏷️ 근무/상태 유형:", options=type_options, index=0, key="smart_type")
+
+        f_col4, f_col5, f_col6 = st.columns([1.5, 1.5, 2])
+        with f_col4:
+            all_clients = sorted([c for c in search_df["client_name"].dropna().unique() if str(c).strip()])
+            sel_clients = st.multiselect("🏢 고객사 다중 선택:", options=all_clients, placeholder="고객사 선택 (전체)", key="smart_clients")
+        with f_col5:
+            all_workers = sorted([w for w in search_df["worker_name"].dropna().unique() if str(w).strip()])
+            sel_workers = st.multiselect("👤 작업자 다중 선택:", options=all_workers, placeholder="작업자 선택 (전체)", key="smart_workers")
+        with f_col6:
+            min_date = search_df["start_time"].dt.date.min() if pd.notna(search_df["start_time"].min()) else datetime.now().date()
+            max_date = search_df["start_time"].dt.date.max() if pd.notna(search_df["start_time"].max()) else datetime.now().date()
+            date_range = st.date_input("📅 작업 기간 범위:", value=(min_date, max_date), key="smart_date_range")
+
+    # 2. 필터링 로직 적용
+    filtered_df = search_df.copy()
+
+    # 키워드 검색
+    if keyword and keyword.strip():
+        kw = keyword.strip().lower()
+        filtered_df = filtered_df[
+            filtered_df["task_description"].fillna("").str.lower().str.contains(kw, na=False) |
+            filtered_df["client_name"].fillna("").str.lower().str.contains(kw, na=False) |
+            filtered_df["worker_name"].fillna("").str.lower().str.contains(kw, na=False) |
+            filtered_df["remarks"].fillna("").str.lower().str.contains(kw, na=False)
+        ]
+
+    # 팀 필터
+    if sel_team != "전체 팀":
+        filtered_df = filtered_df[filtered_df["worker_team"] == sel_team]
+
+    # 근무/상태 유형 필터
+    if sel_type == "⏳ 실시간 진행중":
+        filtered_df = filtered_df[filtered_df["status"] == "PENDING"]
+    elif sel_type == "✅ 작업 완료":
+        filtered_df = filtered_df[filtered_df["status"] == "COMPLETED"]
+    elif sel_type == "🌙 야간 근무":
+        filtered_df = filtered_df[filtered_df["is_night_work"] == True]
+    elif sel_type == "🏖️ 주말 근무":
+        filtered_df = filtered_df[filtered_df["is_weekend_work"] == True]
+    elif sel_type == "🚨 예정시간 초과":
+        filtered_df = filtered_df[
+            (filtered_df["estimated_hours"] > 0) & 
+            (filtered_df["actual_hours"] > filtered_df["estimated_hours"])
+        ]
+
+    # 고객사 필터
+    if sel_clients:
+        filtered_df = filtered_df[filtered_df["client_name"].isin(sel_clients)]
+
+    # 작업자 필터
+    if sel_workers:
+        filtered_df = filtered_df[filtered_df["worker_name"].isin(sel_workers)]
+
+    # 날짜 범위 필터
+    if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+        st_d, ed_d = date_range
+        filtered_df = filtered_df[
+            (filtered_df["start_time"].dt.date >= st_d) & 
+            (filtered_df["start_time"].dt.date <= ed_d)
+        ]
+
+    filtered_df = filtered_df.sort_values("start_time", ascending=False)
+
+    # 3. 실시간 결과 핵심 요약 카드
+    res_cnt = len(filtered_df)
+    res_hours = round(filtered_df["actual_hours"].sum(), 1)
+    res_workers = filtered_df["worker_name"].nunique()
+    res_clients = filtered_df["client_name"].nunique()
+
+    res_cards_html = f"""<div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 18px; flex-wrap: wrap;"><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">📋 검색된 작업</div><div style="font-size: 22px; font-weight: 800; color: #00E5FF;">{res_cnt:,}건</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 230, 118, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">⏱️ 총 투입 공수</div><div style="font-size: 22px; font-weight: 800; color: #00E676;">{res_hours:,}시간</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(179, 136, 255, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">👥 투입 인원</div><div style="font-size: 22px; font-weight: 800; color: #B388FF;">{res_workers}명</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">🏢 관련 고객사</div><div style="font-size: 22px; font-weight: 800; color: #FBBF24;">{res_clients}개사</div></div></div>"""
+    st.markdown(res_cards_html, unsafe_allow_html=True)
+
+    if filtered_df.empty:
+        st.warning("🔍 설정하신 검색 조건에 부합하는 작업 내역이 없습니다. 다른 키워드나 조건으로 검색해 보세요.")
+        return
+
+    # 4. 결과 표출 뷰 (테이블 vs 카드 뷰)
+    view_t1, view_t2 = st.tabs(["📋 인터랙티브 테이블 뷰", "📇 카드 상세 리스트 뷰"])
+
+    with view_t1:
+        # 다운로드 버튼
+        export_df = filtered_df[[
+            "id", "worker_name", "worker_team", "worker_title", "client_name", 
+            "task_description", "start_time", "end_time", "actual_hours", 
+            "estimated_hours", "status", "is_night_work", "is_weekend_work", "remarks"
+        ]].copy()
+        export_df["start_time"] = export_df["start_time"].dt.strftime("%Y-%m-%d %H:%M")
+        export_df["end_time"] = export_df["end_time"].dt.strftime("%Y-%m-%d %H:%M")
+        csv_data = export_df.to_csv(index=False, encoding="utf-8-sig")
+
+        st.download_button(
+            label="📥 검색 결과 엑셀(CSV) 다운로드",
+            data=csv_data,
+            file_name=f"작업검색결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+            key="dl_smart_search_csv"
+        )
+
+        display_df = export_df.rename(columns={
+            "worker_name": "작업자",
+            "worker_team": "소속팀",
+            "worker_title": "직급",
+            "client_name": "고객사",
+            "task_description": "작업 내용",
+            "start_time": "시작 시각",
+            "end_time": "종료 시각",
+            "actual_hours": "실제공수(h)",
+            "estimated_hours": "예정공수(h)",
+            "status": "상태",
+            "is_night_work": "야간",
+            "is_weekend_work": "주말",
+            "remarks": "비고"
+        })
+        st.dataframe(display_df, use_container_width=True, height=450)
+
+    with view_t2:
+        st.caption(f"최신 작업 순으로 정렬된 상세 카드 목록입니다. (총 {res_cnt}건)")
+        # 3열 그리드로 카드 표출 (최대 상위 60건)
+        card_sub_df = filtered_df.head(60)
+        c_cols = st.columns(3)
+        for idx, (_, r) in enumerate(card_sub_df.iterrows()):
+            with c_cols[idx % 3]:
+                w_name = r["worker_name"]
+                w_team = r["worker_team"] or ""
+                w_title = r.get("worker_title") or ""
+                c_name = r["client_name"]
+                t_desc = r["task_description"]
+                st_dt = r["start_time"]
+                ed_dt = r["end_time"]
+                act_h = r["actual_hours"]
+                est_h = r["estimated_hours"]
+                status = r["status"]
+
+                st_str = st_dt.strftime("%m/%d %H:%M") if pd.notna(st_dt) else "?"
+                ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
+
+                title_badge = f"<span style='background:rgba(255,255,255,0.08); padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_title}</span>" if w_title else ""
+                team_badge = f"<span style='background:rgba(56,189,248,0.12); color:#38BDF8; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_team}</span>"
+                night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🌙</span>" if r.get("is_night_work") else ""
+                weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🏖️</span>" if r.get("is_weekend_work") else ""
+
+                status_badge = "<span style='background:rgba(0,230,118,0.15); color:#00E676; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>⏳ 진행</span>" if status == "PENDING" else f"<span style='background:rgba(129,140,248,0.15); color:#818CF8; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>✅ {act_h}h</span>"
+
+                st.markdown(f"""<div style="background: linear-gradient(135deg, rgba(15,23,42,0.7) 0%, rgba(30,41,59,0.6) 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-weight: 700; color: #FFFFFF; font-size: 14px;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #38BDF8; font-weight: 600; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #E2E8F0; line-height: 1.3; margin-bottom: 6px; min-height: 32px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #94A3B8; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
+
+        if res_cnt > 60:
+            st.info(f"💡 결과가 많아 상위 60건의 카드만 표시 중입니다. 전체 {res_cnt:,}건은 [📋 인터랙티브 테이블 뷰]에서 모두 확인 및 다운로드하실 수 있습니다.")
+
+
+
 
 
 def render_team_management_page(all_workers_list, team_mappings):
@@ -2063,9 +2239,10 @@ def main():
     st.divider()
 
     # 탭 기반 분석 시각화
-    tab0, tab_cal, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab0, tab_cal, tab_search, tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "🟢 오늘 실시간 라이브 현황 (Live)",
         "📅 작업 캘린더 & 밀도 히트맵",
+        "🔍 전체 작업 스마트 검색",
         "👤 팀원별 업무량 분석",
         "🏢 팀별 업무량 비교",
         "📈 월별/일별 추이",
@@ -2084,6 +2261,12 @@ def main():
     # ------------------------------------------
     with tab_cal:
         render_calendar_and_heatmap_tab(df, df_raw, selected_team)
+
+    # ------------------------------------------
+    # TAB SEARCH: 전체 작업 스마트 검색
+    # ------------------------------------------
+    with tab_search:
+        render_smart_search_tab(df_raw, team_mappings)
 
     # ------------------------------------------
     # TAB 1: 팀원별 업무량 분석
