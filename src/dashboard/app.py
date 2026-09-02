@@ -969,6 +969,154 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
             st.divider()
 
 
+def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
+    """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 실시간 관제 대시보드 컴포넌트"""
+    now = datetime.now()
+    today_date = now.date()
+
+    # 1. 오늘 날짜 데이터 필터링
+    if df_raw.empty or "start_time" not in df_raw.columns:
+        st.info("현재 등록된 작업 로그 데이터가 없습니다.")
+        return
+
+    today_df = df_raw[df_raw["start_time"].dt.date == today_date].copy()
+
+    # 팀 필터링 적용
+    if selected_team != "전체 팀":
+        today_df = today_df[today_df["worker_team"] == selected_team]
+
+    # 2. 진행 중(PENDING) vs 오늘 완료(COMPLETED) 분리
+    pend_df = today_df[today_df["status"] == "PENDING"].sort_values("start_time", ascending=False)
+    comp_df = today_df[today_df["status"] == "COMPLETED"].sort_values("start_time", ascending=False)
+
+    tot_workers = today_df["worker_name"].nunique() if not today_df.empty else 0
+    tot_hours = round(comp_df["actual_hours"].sum() + pend_df["estimated_hours"].sum(), 1) if not today_df.empty else 0.0
+
+    # 3. 상단 실시간 요약 바 (Live Status Summary)
+    st.markdown(f"""
+    <div style="background: linear-gradient(90deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid rgba(0, 230, 118, 0.35); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.3);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="live-pulse-badge">● LIVE 관제 가동 중</span>
+            <span style="font-size: 16px; font-weight: 700; color: #FFFFFF;">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span>
+            <span style="font-size: 12px; color: #94A3B8; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">선택: {selected_team}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 18px; font-size: 13.5px; font-weight: 600;">
+            <span style="color: #E2E8F0;">👥 투입 인원: <b style="color: #38BDF8;">{tot_workers}명</b></span>
+            <span style="color: #E2E8F0;">⏳ 진행 중: <b style="color: #00E676;">{len(pend_df)}건</b></span>
+            <span style="color: #E2E8F0;">✅ 완료: <b style="color: #818CF8;">{len(comp_df)}건</b></span>
+            <span style="color: #E2E8F0;">⏱️ 총 지원 공수: <b style="color: #FBBF24;">{tot_hours}시간</b></span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if today_df.empty:
+        st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 실시간 작업 보고가 아직 없습니다. 카카오톡에 시작 보고가 올라오면 10분 내로 여기에 실시간으로 표시됩니다!")
+        return
+
+    # 4. 실시간 진행 중(PENDING) 작업 섹션
+    st.markdown(f"#### ⏳ 실시간 진행 중인 작업 (`{len(pend_df)}건`)")
+    if pend_df.empty:
+        st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
+    else:
+        # 2열 그리드 배치
+        p_cols = st.columns(2)
+        for idx, (_, r) in enumerate(pend_df.iterrows()):
+            with p_cols[idx % 2]:
+                w_name = r["worker_name"]
+                w_team = r["worker_team"] or team_mappings.get(w_name, "기술 1팀")
+                w_title = r["worker_title"] or ""
+                c_name = r["client_name"]
+                t_desc = r["task_description"]
+                st_dt = r["start_time"]
+
+                # 경과 시간 계산
+                elapsed_mins = int((now - st_dt.replace(tzinfo=None)).total_seconds() / 60) if pd.notna(st_dt) else 0
+                elapsed_hours = round(elapsed_mins / 60, 1)
+                est_hours = r["estimated_hours"]
+                ratio = min(1.0, max(0.05, elapsed_hours / est_hours)) if est_hours > 0 else 0.5
+                is_overtime = elapsed_hours > est_hours and est_hours > 0
+
+                title_badge = f"<span style='background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
+                team_badge = f"<span style='background:rgba(56,189,248,0.15); color:#38BDF8; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>"
+                night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
+                weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+
+                time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
+
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%); border: 1px solid {'#F43F5E' if is_overtime else '#00E676'}; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div>
+                            <span style="font-size: 15px; font-weight: 700; color: #FFFFFF;">👤 {w_name}</span>
+                            {title_badge}
+                            {team_badge}
+                            {night_badge}
+                            {weekend_badge}
+                        </div>
+                        <span class="live-pulse-badge">⏳ 진행 중 ({time_str} 시작)</span>
+                    </div>
+                    <div style="font-size: 14px; color: #F8FAFC; font-weight: 600; margin-bottom: 4px;">
+                        🏢 <span style="color: #38BDF8;">{c_name}</span>
+                    </div>
+                    <div style="font-size: 13px; color: #CBD5E1; margin-bottom: 10px; line-height: 1.4; background: rgba(0,0,0,0.25); padding: 6px 10px; border-radius: 6px;">
+                        {t_desc}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #94A3B8; margin-bottom: 4px;">
+                        <span>⏱️ 예정: <b>{est_hours}시간</b></span>
+                        <span style="color: {'#F43F5E; font-weight:700;' if is_overtime else '#00E676;'}">⏱️ 경과: <b>{elapsed_hours}시간</b> ({elapsed_mins}분) {'⚠️ 예정 초과' if is_overtime else ''}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                st.progress(ratio)
+
+    st.write("")
+    st.divider()
+
+    # 5. 오늘 완료된 작업(COMPLETED) 섹션
+    st.markdown(f"#### ✅ 오늘 완료된 작업 (`{len(comp_df)}건`)")
+    if comp_df.empty:
+        st.info("오늘 완료 보고된 작업이 아직 없습니다.")
+    else:
+        c_cols = st.columns(2)
+        for idx, (_, r) in enumerate(comp_df.iterrows()):
+            with c_cols[idx % 2]:
+                w_name = r["worker_name"]
+                w_team = r["worker_team"] or team_mappings.get(w_name, "기술 1팀")
+                w_title = r["worker_title"] or ""
+                c_name = r["client_name"]
+                t_desc = r["task_description"]
+                st_dt = r["start_time"]
+                ed_dt = r["end_time"]
+                act_h = r["actual_hours"]
+
+                st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
+                ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
+
+                title_badge = f"<span style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
+                team_badge = f"<span style='background:rgba(56,189,248,0.1); color:#38BDF8; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>"
+
+                st.markdown(f"""
+                <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.5) 100%); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <div>
+                            <span style="font-size: 14px; font-weight: 700; color: #E2E8F0;">👤 {w_name}</span>
+                            {title_badge}
+                            {team_badge}
+                        </div>
+                        <span style="background: rgba(129, 140, 248, 0.15); color: #818CF8; border: 1px solid rgba(129, 140, 248, 0.4); border-radius: 10px; padding: 2px 8px; font-size: 11px; font-weight: 700;">
+                            ✅ {st_str} ~ {ed_str} ({act_h}h 소요)
+                        </span>
+                    </div>
+                    <div style="font-size: 13.5px; color: #F1F5F9; font-weight: 600; margin-bottom: 3px;">
+                        🏢 <span style="color: #38BDF8;">{c_name}</span>
+                    </div>
+                    <div style="font-size: 12.5px; color: #94A3B8; line-height: 1.3;">
+                        {t_desc}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+
 
 def render_team_management_page(all_workers_list, team_mappings):
     """[⚙️ 팀원 소속 및 직급 관리] 전용 관리 페이지 (신규 팀 생성 + 소속팀 + 직급 완벽 지원)"""
@@ -1708,13 +1856,20 @@ def main():
     st.divider()
 
     # 탭 기반 분석 시각화
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab0, tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🟢 오늘 실시간 라이브 현황 (Live)",
         "👤 팀원별 업무량 분석",
         "🏢 팀별 업무량 비교",
         "📈 월별/일별 추이",
         "🏢 고객사별 공수 분포",
         "⏱️ 예정 vs 실제 소요시간"
     ])
+
+    # ------------------------------------------
+    # TAB 0: 오늘 실시간 작업 현황 라이브 보드
+    # ------------------------------------------
+    with tab0:
+        render_today_live_board(df_raw, team_mappings, selected_team)
 
     # ------------------------------------------
     # TAB 1: 팀원별 업무량 분석
