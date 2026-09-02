@@ -43,7 +43,7 @@ class TeamService:
         # 1. Supabase 조회 시도
         if db_manager.use_supabase and db_manager.supabase:
             try:
-                res = db_manager.supabase.table("team_members").select("*").execute()
+                res = db_manager.supabase.table("worktime_team_members").select("*").execute()
                 for row in (res.data or []):
                     info_map[row["worker_name"]] = {
                         "team": row.get("team_name") or UNASSIGNED_TEAM,
@@ -88,12 +88,12 @@ class TeamService:
         # 1. Supabase 저장
         if db_manager.use_supabase and db_manager.supabase:
             try:
-                db_manager.supabase.table("team_members").upsert({
+                db_manager.supabase.table("worktime_team_members").upsert({
                     "worker_name": worker_name,
                     "team_name": target_team,
                     "job_title": target_title
                 }).execute()
-                db_manager.supabase.table("work_logs").update({
+                db_manager.supabase.table("worktime_work_logs").update({
                     "worker_team": target_team,
                     "worker_title": target_title
                 }).eq("worker_name", worker_name).execute()

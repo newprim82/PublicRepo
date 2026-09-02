@@ -31,7 +31,7 @@ def run_verification():
 
     # 1. Supabase에서 최신 등록된 레코드 5건 조회
     print("\n5. ☁️ Supabase Cloud DB에서 직접 조회한 최신 데이터 5건:")
-    res = db_manager.supabase.table("work_logs")\
+    res = db_manager.supabase.table("worktime_work_logs")\
         .select("id, start_time, worker_name, client_name, task_description, status")\
         .order("start_time", desc=True)\
         .limit(5)\
@@ -69,7 +69,7 @@ def run_verification():
 
     # 3. 방금 쓴 데이터가 Supabase 클라우드에서 즉시 조회되는지 확인
     print("\n7. 🔍 방금 쓴 테스트 데이터를 Supabase 클라우드에서 직접 SELECT 확인:")
-    check_res = db_manager.supabase.table("work_logs").select("*").eq("msg_hash", test_hash).execute()
+    check_res = db_manager.supabase.table("worktime_work_logs").select("*").eq("msg_hash", test_hash).execute()
     if check_res.data:
         saved_row = check_res.data[0]
         print(f"   ✅ [검증 성공!] Supabase 클라우드에 실시간으로 정상 저장되었습니다!")
@@ -80,7 +80,7 @@ def run_verification():
         print(f"   - 등록일시: {saved_row['created_at']}")
         
         # 테스트 데이터 정리
-        db_manager.supabase.table("work_logs").delete().eq("msg_hash", test_hash).execute()
+        db_manager.supabase.table("worktime_work_logs").delete().eq("msg_hash", test_hash).execute()
         print("   🧹 검증용 임시 데이터 자동 삭제 완료.")
     else:
         print("   ❌ [검증 실패] Supabase에서 방금 쓴 레코드를 찾지 못했습니다!")

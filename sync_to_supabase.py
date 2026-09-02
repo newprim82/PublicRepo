@@ -74,7 +74,7 @@ def sync_local_to_supabase():
         for i in range(0, len(payloads), batch_size):
             batch = payloads[i:i+batch_size]
             try:
-                db_manager.supabase.table("work_logs").upsert(batch, on_conflict="msg_hash").execute()
+                db_manager.supabase.table("worktime_work_logs").upsert(batch, on_conflict="msg_hash").execute()
                 total_uploaded += len(batch)
                 print(f"  - [Uploading work logs...] {total_uploaded}/{len(payloads)} completed")
             except Exception as e:
@@ -94,7 +94,7 @@ def sync_local_to_supabase():
                 "job_title": r.get("job_title", "")
             })
         try:
-            db_manager.supabase.table("team_members").upsert(team_payloads, on_conflict="worker_name").execute()
+            db_manager.supabase.table("worktime_team_members").upsert(team_payloads, on_conflict="worker_name").execute()
             print(f"[SUCCESS] Synchronized {len(team_payloads)} team members to Supabase!")
         except Exception as e:
             print(f"[Warning] Team members sync error: {e}")
@@ -110,7 +110,7 @@ def sync_local_to_supabase():
                 "note": r["note"]
             })
         try:
-            db_manager.supabase.table("reward_leave_logs").upsert(reward_payloads).execute()
+            db_manager.supabase.table("worktime_reward_leave_logs").upsert(reward_payloads).execute()
             print(f"[SUCCESS] Synchronized {len(reward_payloads)} reward leaves to Supabase!")
         except Exception as e:
             print(f"[Warning] Reward leaves sync error: {e}")

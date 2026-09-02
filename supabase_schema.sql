@@ -1,10 +1,19 @@
 -- ==============================================================================
--- 카카오톡 작업/지원 보고 관리 시스템 Supabase 테이블 & 뷰 스키마
+-- 🚀 기술본부 업무 관리 시스템 Supabase 테이블 그룹핑 스키마 (worktime_ 접두사)
 -- Supabase 대시보드의 [SQL Editor]에 복사하여 붙여넣고 [Run]을 실행하세요.
 -- ==============================================================================
 
--- 1. 작업 로그 테이블 생성
-CREATE TABLE IF NOT EXISTS public.work_logs (
+-- [OPTION A: 기존 테이블이 있는 경우 -> 0.01초 만에 이름 변경 및 데이터 100% 보존]
+ALTER TABLE IF EXISTS public.work_logs RENAME TO worktime_work_logs;
+ALTER TABLE IF EXISTS public.team_members RENAME TO worktime_team_members;
+ALTER TABLE IF EXISTS public.reward_leave_logs RENAME TO worktime_reward_leave_logs;
+
+-- ==============================================================================
+-- [OPTION B: 신규 생성 (테이블이 없을 때 자동 생성)]
+-- ==============================================================================
+
+-- 1. 작업 로그 테이블 (worktime_work_logs)
+CREATE TABLE IF NOT EXISTS public.worktime_work_logs (
     id BIGSERIAL PRIMARY KEY,
     msg_hash TEXT UNIQUE NOT NULL,                       -- 중복 방지용 고유 해시
     log_type VARCHAR(50) DEFAULT '작업',                 -- 작업 / 지원 / 점검 / 장애대응 등
@@ -27,40 +36,35 @@ CREATE TABLE IF NOT EXISTS public.work_logs (
     updated_at TIMESTAMPTZ DEFAULT NOW()                 -- DB 수정 일시
 );
 
--- 2. 검색 최적화를 위한 인덱스 생성
-CREATE INDEX IF NOT EXISTS idx_work_logs_start_time ON public.work_logs (start_time);
-CREATE INDEX IF NOT EXISTS idx_work_logs_worker_name ON public.work_logs (worker_name);
-CREATE INDEX IF NOT EXISTS idx_work_logs_client_name ON public.work_logs (client_name);
-CREATE INDEX IF NOT EXISTS idx_work_logs_status ON public.work_logs (status);
+-- 검색 최적화 인덱스
+CREATE INDEX IF NOT EXISTS idx_worktime_logs_start_time ON public.worktime_work_logs (start_time);
+CREATE INDEX IF NOT EXISTS idx_worktime_logs_worker_name ON public.worktime_work_logs (worker_name);
+CREATE INDEX IF NOT EXISTS idx_worktime_logs_client_name ON public.worktime_work_logs (client_name);
+CREATE INDEX IF NOT EXISTS idx_worktime_logs_status ON public.worktime_work_logs (status);
 
--- 3. Row Level Security (RLS) 활성화 및 전체 읽기/쓰기 허용 정책
-ALTER TABLE public.work_logs ENABLE ROW LEVEL SECURITY;
+-- RLS 활성화 및 권한 정책
+ALTER TABLE public.worktime_work_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to worktime_work_logs" ON public.worktime_work_logs;
+CREATE POLICY "Allow all access to worktime_work_logs"
+ON public.worktime_work_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow all access to work_logs for anon and authenticated"
-ON public.work_logs
-FOR ALL
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
 
--- 4. 팀원 소속 관리 테이블 (기술 1/2/3팀, PI팀)
-CREATE TABLE IF NOT EXISTS public.team_members (
+-- 2. 팀원 소속 관리 테이블 (worktime_team_members)
+CREATE TABLE IF NOT EXISTS public.worktime_team_members (
     worker_name VARCHAR(100) PRIMARY KEY,
     team_name VARCHAR(100) NOT NULL,
+    job_title VARCHAR(50) DEFAULT '',
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.worktime_team_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to worktime_team_members" ON public.worktime_team_members;
+CREATE POLICY "Allow all access to worktime_team_members"
+ON public.worktime_team_members FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow all access to team_members for anon and authenticated"
-ON public.team_members
-FOR ALL
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
 
--- 5. 초과 근무 보상 휴가 관리 테이블 (대휴, 반차 등 지급 현황)
-CREATE TABLE IF NOT EXISTS public.reward_leave_logs (
+-- 3. 보상 휴가 관리 테이블 (worktime_reward_leave_logs)
+CREATE TABLE IF NOT EXISTS public.worktime_reward_leave_logs (
     worker_name VARCHAR(100) NOT NULL,
     week_label VARCHAR(100) NOT NULL,
     leave_hours NUMERIC DEFAULT 0,
@@ -69,11 +73,7 @@ CREATE TABLE IF NOT EXISTS public.reward_leave_logs (
     PRIMARY KEY (worker_name, week_label)
 );
 
-ALTER TABLE public.reward_leave_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow all access to reward_leave_logs for anon and authenticated"
-ON public.reward_leave_logs
-FOR ALL
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
+ALTER TABLE public.worktime_reward_leave_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to worktime_reward_leave_logs" ON public.worktime_reward_leave_logs;
+CREATE POLICY "Allow all access to worktime_reward_leave_logs"
+ON public.worktime_reward_leave_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);

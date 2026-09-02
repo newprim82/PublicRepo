@@ -34,7 +34,7 @@ class RewardLeaveService:
         # 1. Supabase 조회 시도
         if db_manager.use_supabase and db_manager.supabase:
             try:
-                res = db_manager.supabase.table("reward_leave_logs").select("*").execute()
+                res = db_manager.supabase.table("worktime_reward_leave_logs").select("*").execute()
                 for row in (res.data or []):
                     key = (row["worker_name"], row["week_label"])
                     leaves[key] = {
@@ -75,7 +75,7 @@ class RewardLeaveService:
         # 1. Supabase 저장
         if db_manager.use_supabase and db_manager.supabase:
             try:
-                db_manager.supabase.table("reward_leave_logs").upsert({
+                db_manager.supabase.table("worktime_reward_leave_logs").upsert({
                     "worker_name": worker_name,
                     "week_label": week_label,
                     "leave_hours": leave_hours,
@@ -106,7 +106,7 @@ class RewardLeaveService:
         # 1. Supabase 삭제
         if db_manager.use_supabase and db_manager.supabase:
             try:
-                db_manager.supabase.table("reward_leave_logs")\
+                db_manager.supabase.table("worktime_reward_leave_logs")\
                     .delete()\
                     .eq("worker_name", worker_name)\
                     .eq("week_label", week_label)\
