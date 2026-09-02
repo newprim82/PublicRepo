@@ -394,9 +394,11 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             return {"status": "error", "message": str(e), "time": now_str}
 
 
-def background_collector_loop(token: int):
+_COLLECTOR_THREAD_RUNNING = False
+
+def background_collector_loop():
     """
-    백그라운드에서 10분(600초)마다 1회씩만 정확히 실행되는 상시 데몬 루프
+    백그라운드에서 1분(60초)마다 1회씩 정확히 실행되는 영구 상시 데몬 루프
     """
     try:
         pythoncom.CoInitialize()
@@ -407,47 +409,45 @@ def background_collector_loop(token: int):
     enable_windows_keep_alive()
 
     COLLECTOR_STATUS["is_running"] = True
-    interval = max(60, config.COLLECTOR_INTERVAL_SECONDS)  # 기본 1분 (60초) 이상
+    interval = max(60, config.COLLECTOR_INTERVAL_SECONDS)  # 기본 1분 (60초)
     COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=interval)
     
-    log_trace(f"🚀 [자동 수집 데몬 기동] 토큰={token} | {interval}초 주기(1분)로 실행합니다.")
-    
-    # 기동 시 즉시 Streamlit Cloud Keep-Alive 핑 1회 전송
+    log_trace(f"🚀 [자동 수집 데몬 기동 완료] {interval}초 주기(1분)로 실행합니다.")
     ping_streamlit_cloud_app()
 
+    # 1. 기동 즉시 1회 자동 수집 실행!
+    try:
+        log_trace("[초기 즉시 수집 가동]")
+        run_collection_cycle(is_manual=False)
+    except Exception as e:
+        log_trace(f"[초기 수집 예외]: {e}")
+
+    # 2. 영구 1분 루프 반복 실행
     while True:
-        if token != _ACTIVE_THREAD_TOKEN:
-            log_trace(f"[스레드 종료] 이전 수집기 스레드(토큰={token})가 안전하게 종료되었습니다.")
-            break
-            
         time.sleep(interval)
-        
-        if token != _ACTIVE_THREAD_TOKEN:
-            break
-            
         try:
             enable_windows_keep_alive()
             run_collection_cycle(is_manual=False)
             ping_streamlit_cloud_app()
         except Exception as e:
-            log_trace(f"[수집기 데몬 대기 예외]: {e}")
+            log_trace(f"[수집기 데몬 주기 실행 예외]: {e}")
 
 
 def start_background_collector():
     """
-    프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 토큰 기반 싱글톤 보장
+    프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 싱글톤 보장
     """
-    global _ACTIVE_THREAD_TOKEN
+    global _COLLECTOR_THREAD_RUNNING
     
-    _ACTIVE_THREAD_TOKEN += 1
-    current_token = _ACTIVE_THREAD_TOKEN
-    
+    if _COLLECTOR_THREAD_RUNNING:
+        return True
+        
+    _COLLECTOR_THREAD_RUNNING = True
     thread = threading.Thread(
         target=background_collector_loop,
-        args=(current_token,),
         daemon=True,
-        name=f"KakaoAutoCollectorThread_{current_token}"
+        name="KakaoAutoCollectorDaemon"
     )
     thread.start()
-    log_trace(f"[✓] 카카오톡 10분 자동 수집 데몬(토큰={current_token})이 단독 기동되었습니다.")
+    log_trace("[✓] 카카오톡 1분 자동 수집 백그라운드 데몬이 단독 기동되었습니다.")
     return True
