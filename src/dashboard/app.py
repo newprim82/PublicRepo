@@ -1333,10 +1333,30 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         return
 
     search_df = df_raw.copy()
-    if "worker_team" in search_df.columns:
-        search_df["worker_team"] = search_df["worker_team"].fillna(search_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
-    else:
-        search_df["worker_team"] = search_df["worker_name"].map(team_mappings).fillna(UNASSIGNED_TEAM)
+    
+    # 누락될 수 있는 필수 컬럼 안전 기본값 초기화
+    default_columns = {
+        "id": 0,
+        "worker_name": "",
+        "worker_team": UNASSIGNED_TEAM,
+        "worker_title": "",
+        "client_name": "미지정",
+        "task_description": "",
+        "start_time": pd.NaT,
+        "end_time": pd.NaT,
+        "actual_hours": 0.0,
+        "estimated_hours": 0.0,
+        "status": "COMPLETED",
+        "is_night_work": False,
+        "is_weekend_work": False,
+        "remarks": ""
+    }
+    for col_key, def_val in default_columns.items():
+        if col_key not in search_df.columns:
+            search_df[col_key] = def_val
+
+    # 팀명 매핑 보정
+    search_df["worker_team"] = search_df["worker_team"].fillna(search_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
 
     # 1. 다중 스마트 필터 컨트롤 패널
     with st.expander("🛠️ 상세 검색 필터 설정 (여기를 클릭하여 조건 접기/펼치기)", expanded=True):
@@ -1369,10 +1389,10 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     if keyword and keyword.strip():
         kw = keyword.strip().lower()
         filtered_df = filtered_df[
-            filtered_df["task_description"].fillna("").str.lower().str.contains(kw, na=False) |
-            filtered_df["client_name"].fillna("").str.lower().str.contains(kw, na=False) |
-            filtered_df["worker_name"].fillna("").str.lower().str.contains(kw, na=False) |
-            filtered_df["remarks"].fillna("").str.lower().str.contains(kw, na=False)
+            filtered_df["task_description"].fillna("").astype(str).str.lower().str.contains(kw, na=False) |
+            filtered_df["client_name"].fillna("").astype(str).str.lower().str.contains(kw, na=False) |
+            filtered_df["worker_name"].fillna("").astype(str).str.lower().str.contains(kw, na=False) |
+            filtered_df["remarks"].fillna("").astype(str).str.lower().str.contains(kw, na=False)
         ]
 
     # 팀 필터
@@ -1430,13 +1450,17 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
 
     with view_t1:
         # 다운로드 버튼
-        export_df = filtered_df[[
+        target_cols = [
             "id", "worker_name", "worker_team", "worker_title", "client_name", 
             "task_description", "start_time", "end_time", "actual_hours", 
             "estimated_hours", "status", "is_night_work", "is_weekend_work", "remarks"
-        ]].copy()
-        export_df["start_time"] = export_df["start_time"].dt.strftime("%Y-%m-%d %H:%M")
-        export_df["end_time"] = export_df["end_time"].dt.strftime("%Y-%m-%d %H:%M")
+        ]
+        available_cols = [c for c in target_cols if c in filtered_df.columns]
+        export_df = filtered_df[available_cols].copy()
+        if "start_time" in export_df.columns:
+            export_df["start_time"] = export_df["start_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
+        if "end_time" in export_df.columns:
+            export_df["end_time"] = export_df["end_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
         csv_data = export_df.to_csv(index=False, encoding="utf-8-sig")
 
         st.download_button(
