@@ -219,18 +219,6 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     # [1단계 메인 엔진] 포커스 획득 & End 스크롤 & 네이티브 복사 (Ctrl+A -> Ctrl+C)
     log_trace("[1단계 고신뢰 Win32 네이티브 복사 엔진 가동]")
     try:
-        old_clipboard = ""
-        try:
-            win32clipboard.OpenClipboard()
-            if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
-                old_clipboard = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
-            win32clipboard.CloseClipboard()
-        except Exception:
-            try:
-                win32clipboard.CloseClipboard()
-            except Exception:
-                pass
-
         # Windows 포커스 강제 전환 기법 (AttachThreadInput)
         try:
             fore_h = win32gui.GetForegroundWindow()
@@ -245,7 +233,7 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
             else:
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
                 win32gui.SetForegroundWindow(hwnd)
-            time.sleep(0.08)
+            time.sleep(0.1)
         except Exception as e:
             log_trace(f"[포커스 전환 알림]: {e}")
 
@@ -269,41 +257,38 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
         # 네이티브 키 이벤트로 Ctrl+A -> Ctrl+C 전송
         win32api.keybd_event(win32con.VK_CONTROL, 0, 0, 0)
         win32api.keybd_event(ord('A'), 0, 0, 0)
-        time.sleep(0.05)
+        time.sleep(0.04)
         win32api.keybd_event(ord('A'), 0, win32con.KEYEVENTF_KEYUP, 0)
-        time.sleep(0.05)
+        time.sleep(0.04)
         win32api.keybd_event(ord('C'), 0, 0, 0)
-        time.sleep(0.05)
+        time.sleep(0.04)
         win32api.keybd_event(ord('C'), 0, win32con.KEYEVENTF_KEYUP, 0)
         win32api.keybd_event(win32con.VK_CONTROL, 0, win32con.KEYEVENTF_KEYUP, 0)
         time.sleep(0.15)
 
-        # 클립보드 읽기
+        # 안전한 클립보드 읽기 (최대 10회 재시도)
         copied_text = ""
-        try:
-            win32clipboard.OpenClipboard()
-            if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
-                copied_text = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
-            win32clipboard.CloseClipboard()
-        except Exception as e:
-            log_trace(f"[클립보드 읽기 오류]: {e}")
-            try:
-                win32clipboard.CloseClipboard()
-            except Exception:
-                pass
-
-        # 사용자 클립보드 원상 복구
-        if old_clipboard:
+        for retry in range(10):
             try:
                 win32clipboard.OpenClipboard()
-                win32clipboard.EmptyClipboard()
-                win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT, old_clipboard)
+                if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
+                    copied_text = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
                 win32clipboard.CloseClipboard()
+                if copied_text:
+                    break
             except Exception:
                 try:
                     win32clipboard.CloseClipboard()
                 except Exception:
                     pass
+                time.sleep(0.05)
+
+        if copied_text and len(copied_text.strip()) > 10:
+            lines = copied_text.strip().split("\n")
+            log_trace(f"[✓ Win32 네이티브 복사 성공] 총 {len(lines)}줄 ({len(copied_text)}자) 획득")
+            return copied_text.strip()
+    except Exception as e:
+        log_trace(f"[네이티브 복사 예외]: {e}")
 
         if copied_text and len(copied_text.strip()) > 10:
             lines = copied_text.strip().split("\n")
