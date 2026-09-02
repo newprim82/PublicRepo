@@ -196,6 +196,11 @@ class DatabaseManager:
                     start += page_size
                     
                 df = pd.DataFrame(all_data)
+
+                # 💾 로컬 SQLite 오프라인 백업 DB에도 최신 데이터 자동 동기화
+                if not df.empty:
+                    self._sync_to_local_sqlite(df)
+
                 return self._process_dataframe(df)
             except Exception as e:
                 print(f"[DB 오류] Supabase 조회 실패, 로컬 SQLite로 대체: {e}")
@@ -209,6 +214,45 @@ class DatabaseManager:
         except Exception as e:
             print(f"[DB 오류] SQLite 데이터 조회 실패: {e}")
             return self._process_dataframe(pd.DataFrame())
+
+    def _sync_to_local_sqlite(self, df: pd.DataFrame):
+        """Supabase에서 조회한 최신 데이터를 로컬 SQLite에 안전하게 동기화"""
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            for _, r in df.iterrows():
+                msg_hash = r.get("msg_hash", "")
+                if not msg_hash:
+                    continue
+                cursor.execute("""
+                    INSERT INTO work_logs (
+                        msg_hash, log_type, worker_name, worker_company, worker_title, worker_team,
+                        client_name, task_description, estimated_minutes, actual_minutes,
+                        start_time, end_time, status, is_night_work, is_weekend_work,
+                        raw_start_message, raw_end_message
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(msg_hash) DO UPDATE SET
+                        actual_minutes=excluded.actual_minutes,
+                        end_time=excluded.end_time,
+                        status=excluded.status,
+                        is_night_work=excluded.is_night_work,
+                        raw_end_message=excluded.raw_end_message
+                """, (
+                    str(msg_hash), str(r.get("log_type", "작업")), str(r.get("worker_name", "")),
+                    str(r.get("worker_company", "")), str(r.get("worker_title", "")), str(r.get("worker_team", "")),
+                    str(r.get("client_name", "")), str(r.get("task_description", "")),
+                    int(r.get("estimated_minutes", 0) or 0), int(r.get("actual_minutes", 0) or 0),
+                    str(r.get("start_time", "")), str(r.get("end_time", "") or ""),
+                    str(r.get("status", "COMPLETED")),
+                    1 if r.get("is_night_work") else 0,
+                    1 if r.get("is_weekend_work") else 0,
+                    str(r.get("raw_start_message", "") or ""),
+                    str(r.get("raw_end_message", "") or "")
+                ))
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
 
     def _process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty:
