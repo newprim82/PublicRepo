@@ -1536,9 +1536,8 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     with h_col2:
         btn_c1, btn_c2 = st.columns(2)
         with btn_c1:
-            # 브라우저 원클릭 인쇄 실행
-            if st.button("🖨️ A4 인쇄 / PDF 저장", key="btn_exec_print", help="브라우저 인쇄 대화상자를 열어 A4 용지로 출력하거나 PDF로 저장합니다."):
-                st.components.v1.html("<script>window.print();</script>", height=0, width=0)
+            # 브라우저 네이티브 원클릭 인쇄 실행 (클릭 즉시 Ctrl+P 인쇄 대화상자 호출)
+            st.markdown("""<button onclick="window.print()" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; width: 100%; justify-content: center; box-shadow: 0 2px 8px rgba(37,99,235,0.35); height: 38px;">🖨️ A4 인쇄 / PDF 저장</button>""", unsafe_allow_html=True)
         with btn_c2:
             # 요약 데이터 엑셀 다운로드
             summary_csv = StatsService.get_worker_summary(df).to_csv(index=False, encoding="utf-8-sig")
