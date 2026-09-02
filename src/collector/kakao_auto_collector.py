@@ -115,7 +115,7 @@ def get_collector_countdown_info() -> Dict[str, Any]:
     다음 자동 증분 수집까지 남은 시간(분) 및 예정 시각 정보를 한국 표준시(KST) 기준으로 계산하여 반환
     """
     now = get_current_kst_time()
-    interval = max(600, config.COLLECTOR_INTERVAL_SECONDS) # 10분 (600초)
+    interval = max(60, config.COLLECTOR_INTERVAL_SECONDS) # 기본 1분 (60초)
     next_time = COLLECTOR_STATUS.get("next_run_time")
     last_time = COLLECTOR_STATUS.get("last_run_time")
     

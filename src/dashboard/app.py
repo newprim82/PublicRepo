@@ -1338,7 +1338,7 @@ def main():
                 <div class="sb-main">
                     <span id="sb-live-timer">{countdown['remaining_minutes']}분 뒤</span> <span style="font-size: 11px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
                 </div>
-                <div class="sb-sub">최근 수집: {countdown['last_run_str']} | 10분 주기 자동</div>
+                <div class="sb-sub">최근 수집: {countdown['last_run_str']} | {max(1, config.COLLECTOR_INTERVAL_SECONDS // 60)}분 주기 자동</div>
             </div>
             <script>
                 let remaining = {countdown['remaining_seconds']};
