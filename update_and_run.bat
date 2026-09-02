@@ -9,7 +9,7 @@ echo ===================================================================
 cd /d "%~dp0"
 
 echo.
-echo [1/3] 기존에 실행 중인 대시보드 프로세스를 정리합니다...
+echo [1/4] 기존에 실행 중인 대시보드 프로세스를 정리합니다...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8501" ^| findstr "LISTENING"') do (
     taskkill /F /PID %%a >nul 2>&1
 )
@@ -18,6 +18,7 @@ timeout /t 1 /nobreak > nul
 
 echo.
 echo [2/4] GitHub에서 최신 소스코드를 내려받습니다...
+git fetch origin main
 git pull origin main
 pip install -r requirements.txt
 
