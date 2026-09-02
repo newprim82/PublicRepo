@@ -18,6 +18,7 @@ timeout /t 1 /nobreak > nul
 
 echo.
 echo [2/4] GitHub에서 최신 소스코드를 내려받습니다...
+git checkout -- data/worklog.db >nul 2>&1
 git fetch origin main
 git pull origin main
 pip install -r requirements.txt

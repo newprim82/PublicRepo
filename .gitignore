@@ -13,6 +13,11 @@ venv/
 .venv/
 env/
 
+# Local Database (Local backup only, synced via Supabase)
+data/*.db
+*.db
+@AutomationLog.txt
+
 # IDE
 .vscode/
 .idea/
