@@ -1582,10 +1582,13 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         team_share_text.append(f"<b>{t_n}</b>: {t_h}h ({t_pct}%)")
     team_share_str = " | ".join(team_share_text) if team_share_text else "집계 중"
 
-    # 과중근무 리스크 분석
-    weekly_stat = StatsService.get_weekly_worker_matrix(df)
-    danger_cnt = sum((weekly_stat[col] > 52).sum() for col in weekly_stat.columns if col not in ["worker_name", "worker_team", "worker_title"])
-    caution_cnt = sum(((weekly_stat[col] > 40) & (weekly_stat[col] <= 52)).sum() for col in weekly_stat.columns if col not in ["worker_name", "worker_team", "worker_title"])
+    # 과중근무 리스크 분석 (안전 계산)
+    danger_cnt = 0
+    caution_cnt = 0
+    if "week_label" in df.columns:
+        wk_agg = df.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
+        danger_cnt = int((wk_agg["actual_hours"] > 52).sum())
+        caution_cnt = int(((wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)).sum())
 
     risk_badge = "<span style='color:#00E676; font-weight:800;'>🟢 안정 (과중근무 없음)</span>" if danger_cnt == 0 and caution_cnt == 0 else f"<span style='color:#FFA726; font-weight:800;'>⚠️ 주의 요망 (52h 초과 {danger_cnt}건, 40h 초과 {caution_cnt}건)</span>"
 
