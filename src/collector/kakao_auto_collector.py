@@ -282,15 +282,22 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
         except Exception as e:
             log_trace(f"[포커스 전환 알림]: {e}")
 
-        # 대화목록 영역 클릭하여 포커스 부여
+        # 대화목록 영역 하단(최신 메시지 영역) 클릭하여 포커스 부여
         target_focus = list_hwnd if list_hwnd else hwnd
         if target_focus:
             rect = win32gui.GetClientRect(target_focus)
             click_x = max(10, rect[2] // 2)
-            click_y = max(10, min(150, rect[3] // 2))
+            # ★ 핵심 1: 위쪽(150px)이 아닌 대화창 하단(최신 메시지 영역)을 클릭 ★
+            click_y = max(10, rect[3] - 40)
             lparam = (click_y << 16) | click_x
             win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
             win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, lparam)
+            time.sleep(0.08)
+
+            # ★ 핵심 2: 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END) ★
+            win32api.keybd_event(win32con.VK_END, 0, 0, 0)
+            time.sleep(0.03)
+            win32api.keybd_event(win32con.VK_END, 0, win32con.KEYEVENTF_KEYUP, 0)
             time.sleep(0.08)
 
         # 네이티브 키 이벤트로 Ctrl+A -> Ctrl+C 전송
@@ -339,9 +346,10 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     except Exception as e:
         log_trace(f"[네이티브 복사 예외]: {e}")
 
-    # [3단계] UIAutomation SendKeys Fallback
+    # [3단계] UIAutomation SendKeys Fallback (End -> Ctrl+A -> Ctrl+C)
     try:
         log_trace("[3단계 UIAutomation SendKeys 시도]")
+        auto.SendKeys('{End}', waitTime=0.05)
         auto.SendKeys('{Ctrl}a{Ctrl}c', waitTime=0.15)
         time.sleep(0.15)
         copied_text = ""
@@ -394,49 +402,55 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
         COLLECTOR_STATUS["total_cycles"] += 1
         COLLECTOR_STATUS["next_run_time"] = kst_now + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
         
-        log_trace(f"==================================================")
-        log_trace(f"🤖 [카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 정기'})] 대상: '{target_chat}'")
-        
-        hwnd = find_kakao_chat_window(target_chat)
-        if not hwnd:
-            msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않습니다."
-            log_trace(f"[-] {msg}")
-            COLLECTOR_STATUS["last_status"] = "대화방 창 미열림"
-            COLLECTOR_STATUS["last_log_message"] = msg
-            return {"status": "window_not_found", "message": msg, "time": now_str}
+        try:
+            log_trace(f"==================================================")
+            log_trace(f"🤖 [카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 정기'})] 대상: '{target_chat}'")
             
-        raw_text = extract_text_from_kakao_window(hwnd, is_manual=is_manual)
-        if not raw_text or len(raw_text.strip()) == 0:
-            msg = "대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 클릭한 뒤 다시 시도해주세요."
-            log_trace(f"[-] {msg}")
-            COLLECTOR_STATUS["last_status"] = "텍스트 추출 실패"
-            COLLECTOR_STATUS["last_log_message"] = msg
-            return {"status": "no_text", "message": msg, "time": now_str}
+            hwnd = find_kakao_chat_window(target_chat)
+            if not hwnd:
+                msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않습니다."
+                log_trace(f"[-] {msg}")
+                COLLECTOR_STATUS["last_status"] = "대화방 창 미열림"
+                COLLECTOR_STATUS["last_log_message"] = msg
+                return {"status": "window_not_found", "message": msg, "time": now_str}
+                
+            raw_text = extract_text_from_kakao_window(hwnd, is_manual=is_manual)
+            if not raw_text or len(raw_text.strip()) == 0:
+                msg = "대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 클릭한 뒤 다시 시도해주세요."
+                log_trace(f"[-] {msg}")
+                COLLECTOR_STATUS["last_status"] = "텍스트 추출 실패"
+                COLLECTOR_STATUS["last_log_message"] = msg
+                return {"status": "no_text", "message": msg, "time": now_str}
+                
+            log_trace(f"[파싱 시작] 텍스트 크기: {len(raw_text)}자")
+            records = WorkLogMatcher.parse_and_match_text(raw_text)
+            if not records:
+                msg = "새로 등록/완료할 작업 보고 메시지가 없습니다."
+                log_trace(f"[✓] {msg}")
+                COLLECTOR_STATUS["last_status"] = "새 작업 없음"
+                COLLECTOR_STATUS["last_log_message"] = msg
+                return {"status": "no_records", "message": msg, "time": now_str}
+                
+            saved = db_manager.save_work_logs(records)
+            COLLECTOR_STATUS["last_status"] = f"정상 동기화 ({saved}건 저장/갱신)"
+            COLLECTOR_STATUS["last_result"] = {
+                "total_records": len(records),
+                "saved_records": saved
+            }
+            COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
             
-        log_trace(f"[파싱 시작] 텍스트 크기: {len(raw_text)}자")
-        records = WorkLogMatcher.parse_and_match_text(raw_text)
-        if not records:
-            msg = "새로 등록/완료할 작업 보고 메시지가 없습니다."
-            log_trace(f"[✓] {msg}")
-            COLLECTOR_STATUS["last_status"] = "새 작업 없음"
-            COLLECTOR_STATUS["last_log_message"] = msg
-            return {"status": "no_records", "message": msg, "time": now_str}
-            
-        saved = db_manager.save_work_logs(records)
-        COLLECTOR_STATUS["last_status"] = f"정상 동기화 ({saved}건 저장/갱신)"
-        COLLECTOR_STATUS["last_result"] = {
-            "total_records": len(records),
-            "saved_records": saved
-        }
-        COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
-        
-        log_trace(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
-        return {
-            "status": "success",
-            "total_records": len(records),
-            "saved_records": saved,
-            "time": now_str
-        }
+            log_trace(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
+            return {
+                "status": "success",
+                "total_records": len(records),
+                "saved_records": saved,
+                "time": now_str
+            }
+        except Exception as e:
+            log_trace(f"[수집 사이클 예외 발생]: {e}")
+            COLLECTOR_STATUS["last_status"] = f"예외 발생: {e}"
+            COLLECTOR_STATUS["last_log_message"] = str(e)
+            return {"status": "error", "message": str(e), "time": now_str}
 
 
 def background_collector_loop(token: int):
