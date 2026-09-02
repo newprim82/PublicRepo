@@ -1528,21 +1528,46 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         st.info("표시할 보고서 데이터가 없습니다.")
         return
 
-    # 상단 헤더 & 원클릭 인쇄/다운로드 툴바
-    h_col1, h_col2 = st.columns([3, 2])
+    # 상단 헤더 & 원클릭 인쇄/다운로드 툴바 (아담한 콤팩트 버튼 배치)
+    h_col1, h_col2 = st.columns([3.2, 1.8])
     with h_col1:
         st.markdown(f"### 📊 {selected_team} - 경영진 보고용 Executive Summary")
         st.caption("주간/월간 실적 회의 및 임원 보고를 위한 핵심 경영 인사이트 브리핑과 A4 규격 출력 서식을 제공합니다.")
     with h_col2:
-        btn_c1, btn_c2 = st.columns(2)
+        btn_c1, btn_c2 = st.columns([1, 1])
         with btn_c1:
-            # 브라우저 네이티브 원클릭 인쇄 실행 (클릭 즉시 Ctrl+P 인쇄 대화상자 호출)
-            st.markdown("""<button onclick="window.print()" style="background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%); color: #FFFFFF; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; width: 100%; justify-content: center; box-shadow: 0 2px 8px rgba(37,99,235,0.35); height: 38px;">🖨️ A4 인쇄 / PDF 저장</button>""", unsafe_allow_html=True)
+            # 브라우저 부모 윈도우 인쇄 대화상자 직접 호출 (window.parent.print())
+            st.components.v1.html(
+                """
+                <style>body { margin: 0; padding: 0; background: transparent; }</style>
+                <button onclick="window.parent.print()" style="
+                    background: rgba(37, 99, 235, 0.9);
+                    color: #FFFFFF;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    padding: 4px 8px;
+                    font-size: 11.5px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 4px;
+                    width: 100%;
+                    height: 32px;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                " onmouseover="this.style.background='#1D4ED8'" onmouseout="this.style.background='rgba(37, 99, 235, 0.9)'">
+                    🖨️ A4 인쇄
+                </button>
+                """,
+                height=36
+            )
         with btn_c2:
-            # 요약 데이터 엑셀 다운로드
+            # 요약 데이터 엑셀 다운로드 (아담한 크기)
             summary_csv = StatsService.get_worker_summary(df).to_csv(index=False, encoding="utf-8-sig")
             st.download_button(
-                label="📥 보고서 엑셀 다운로드",
+                label="📥 엑셀 저장",
                 data=summary_csv,
                 file_name=f"경영진보고서_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
