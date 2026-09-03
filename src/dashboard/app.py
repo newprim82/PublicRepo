@@ -2827,9 +2827,9 @@ def main():
                                     if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}"):
                                         show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
             else:
-                # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너
+                # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너 (상단 5개 카드와 간격 28px)
                 st.markdown("""
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 9px 18px; margin: 4px 0 2px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 28px 0 0 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
                     <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
                         <span style="font-size: 15px; line-height: 1;">🟢</span>
                         <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
@@ -2838,8 +2838,8 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
 
-        # 📌 과중 근무 배너와 LIVE 관제 사이를 구분하는 회색 실선 (상하 균형 여백 매칭)
-        st.markdown("<div style='margin-top: 14px; margin-bottom: 18px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
+        # 📌 과중 근무 배너와 회색선, 회색선과 LIVE 관제 사이 간격을 정확히 28px로 균일 배치
+        st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
 
         # 🟢 오늘 실시간 작업 현황 라이브 보드 (첫 화면에 단독 풀사이즈 표출)
         render_today_live_board(df_raw, team_mappings, selected_team)
