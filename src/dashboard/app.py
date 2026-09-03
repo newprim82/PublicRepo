@@ -2620,7 +2620,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     fig_pareto.update_layout(
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
-        font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42"),
+        font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42", size=12),
         height=350,
         margin=dict(l=20, r=20, t=35, b=30),
         legend=dict(
@@ -2629,27 +2629,27 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             y=1.02,
             xanchor="right",
             x=1,
-            font=dict(color="#002d42", size=12, family="Pretendard", weight="bold"),
+            font=dict(color="#002d42", size=12, family="Pretendard"),
             bgcolor="rgba(255, 255, 255, 0.95)",
             bordercolor="#e2e8f0",
             borderwidth=1
         ),
         yaxis=dict(
-            title=dict(text="투입 공수 (시간)", font=dict(color="#005073", size=12, family="Pretendard", weight="bold")),
-            tickfont=dict(color="#005073", size=11, family="Pretendard", weight="bold"),
+            title=dict(text="투입 공수 (시간)", font=dict(color="#005073", size=12, family="Pretendard")),
+            tickfont=dict(color="#005073", size=11, family="Pretendard"),
             gridcolor="#f1f5f9",
             zerolinecolor="#cbd5e1"
         ),
         yaxis2=dict(
-            title=dict(text="누적 점유율 (%)", font=dict(color="#ea580c", size=12, family="Pretendard", weight="bold")),
-            tickfont=dict(color="#ea580c", size=11, family="Pretendard", weight="bold"),
+            title=dict(text="누적 점유율 (%)", font=dict(color="#ea580c", size=12, family="Pretendard")),
+            tickfont=dict(color="#ea580c", size=11, family="Pretendard"),
             overlaying="y",
             side="right",
             range=[0, 105],
             gridcolor="transparent"
         ),
         xaxis=dict(
-            tickfont=dict(color="#002d42", size=12, family="Pretendard", weight="bold"),
+            tickfont=dict(color="#002d42", size=12, family="Pretendard"),
             linecolor="#cbd5e1"
         ),
         hovermode="x unified"
@@ -2745,7 +2745,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         fig_trend.update_layout(
             paper_bgcolor="#ffffff",
             plot_bgcolor="#ffffff",
-            font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42"),
+            font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42", size=12),
             height=300,
             margin=dict(l=15, r=15, t=30, b=20),
             legend=dict(
@@ -2754,17 +2754,17 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                 y=1.02,
                 xanchor="right",
                 x=1,
-                font=dict(color="#002d42", size=11.5, family="Pretendard", weight="bold"),
+                font=dict(color="#002d42", size=11.5, family="Pretendard"),
                 bgcolor="rgba(255, 255, 255, 0.95)"
             ),
             yaxis=dict(
-                title=dict(text="투입 공수(h)", font=dict(color="#002d42", size=12, family="Pretendard", weight="bold")),
-                tickfont=dict(color="#002d42", size=11, family="Pretendard", weight="bold"),
+                title=dict(text="투입 공수(h)", font=dict(color="#002d42", size=12, family="Pretendard")),
+                tickfont=dict(color="#002d42", size=11, family="Pretendard"),
                 gridcolor="#f1f5f9"
             ),
             xaxis=dict(
                 title=None,
-                tickfont=dict(color="#002d42", size=12, family="Pretendard", weight="bold"),
+                tickfont=dict(color="#002d42", size=12, family="Pretendard"),
                 linecolor="#cbd5e1"
             )
         )
