@@ -452,7 +452,7 @@ st.markdown("""
         color: #8eafc0 !important;
         background-color: transparent !important;
         border-radius: 0px !important;
-        border-bottom: 1px solid #003852 !important;
+        border-bottom: 1px solid #1a5a73 !important;
         padding: 8px 8px 6px 8px !important;
         min-height: 28px !important;
         display: flex !important;
@@ -528,6 +528,19 @@ st.markdown("""
         border-left: 3px solid #00b4d8 !important;
         border-radius: 0px !important;
         box-shadow: none !important;
+    }
+    /* 🏠 홈 버튼 빨간색 배경 (APIC 스타일 메인 네비게이션) */
+    [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button {
+        background-color: #b91c1c !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        border-left: 3px solid #ef4444 !important;
+        border-radius: 4px !important;
+        padding: 7px 12px !important;
+    }
+    [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button:hover {
+        background-color: #991b1b !important;
+        border-left: 3px solid #f87171 !important;
     }
 
     /* 🏛️ Cisco ACI 표준 테이블 스타일링 */
@@ -2388,13 +2401,14 @@ def main():
     with st.sidebar:
         # 🏛️ APIC 스타일 사이드바 헤더
         st.markdown("""
-        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px; border-bottom: 2px solid #00b4d8;">
+        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px; ">
             <div style="font-size: 15px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">기술본부 관제센터</div>
             <div style="font-size: 10px; color: #5a8a9e; margin-top: 2px; letter-spacing: 0.5px;">FIELD SUPPORT PORTAL</div>
         </div>
         """, unsafe_allow_html=True)
 
         # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드
+        st.markdown('<span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
         is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
         if st.button("🏠 실시간 분석 대시보드", key="btn_top_home_dashboard", type="primary" if is_main_active else "secondary", use_container_width=True):
             st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
