@@ -3140,10 +3140,16 @@ def main():
                             color: #ffffff !important;
                             font-weight: 700 !important;
                         }
-                        div.stButton > button[kind="secondary"]:hover,
-                        div.stButton > button:hover {
-                            background-color: #c2410c !important;
-                            border-color: #9a3412 !important;
+                        /* 텍스트 줄바꿈 방지 및 가독성 최적화 */
+                        div.stButton > button {
+                            white-space: nowrap !important;
+                            font-size: 12px !important;
+                            padding: 4px 8px !important;
+                        }
+                        div.stButton > button *,
+                        div.stButton > button p,
+                        div.stButton > button span {
+                            white-space: nowrap !important;
                         }
                     </style>
                     """, unsafe_allow_html=True)
@@ -3151,29 +3157,45 @@ def main():
                     st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
                     st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid #fecaca;'></div>", unsafe_allow_html=True)
                     
-                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경)
+                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경, 4개씩 넉넉하게 줄바꿈)
                     if danger_items:
-                        col_d_lbl, col_d_chips = st.columns([2.0, 8.0])
+                        col_d_lbl, col_d_chips = st.columns([1.4, 8.6])
                         with col_d_lbl:
-                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:800; color:#dc2626;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#dc2626;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
                         with col_d_chips:
-                            d_cols = st.columns(max(len(danger_items), 1) + 4)
-                            for d_idx, d_item in enumerate(danger_items):
-                                with d_cols[d_idx]:
-                                    if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}", type="primary"):
-                                        show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
+                            chunk_size = 4
+                            for i in range(0, len(danger_items), chunk_size):
+                                chunk = danger_items[i:i + chunk_size]
+                                d_cols = st.columns(chunk_size)
+                                for c_idx, d_item in enumerate(chunk):
+                                    with d_cols[c_idx]:
+                                        if st.button(
+                                            f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)",
+                                            key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}",
+                                            type="primary",
+                                            use_container_width=True
+                                        ):
+                                            show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
 
-                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경)
+                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경, 4개씩 넉넉하게 줄바꿈)
                     if caution_items:
-                        col_c_lbl, col_c_chips = st.columns([2.0, 8.0])
+                        col_c_lbl, col_c_chips = st.columns([1.4, 8.6])
                         with col_c_lbl:
-                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:800; color:#d97706;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#d97706;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
                         with col_c_chips:
-                            c_cols = st.columns(max(len(caution_items), 1) + 4)
-                            for c_idx, c_item in enumerate(caution_items):
-                                with c_cols[c_idx]:
-                                    if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}", type="secondary"):
-                                        show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
+                            chunk_size = 4
+                            for i in range(0, len(caution_items), chunk_size):
+                                chunk = caution_items[i:i + chunk_size]
+                                c_cols = st.columns(chunk_size)
+                                for c_idx, c_item in enumerate(chunk):
+                                    with c_cols[c_idx]:
+                                        if st.button(
+                                            f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)",
+                                            key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}",
+                                            type="secondary",
+                                            use_container_width=True
+                                        ):
+                                            show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
             else:
                 # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너 (상단 5개 카드와 간격 28px 정밀 일치)
                 st.markdown("""
