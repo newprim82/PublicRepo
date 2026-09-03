@@ -9,7 +9,7 @@ from datetime import datetime
 from .email_report_service import EmailReportService
 
 DEFAULT_SENDER = os.getenv("GMAIL_SENDER_EMAIL", "newprim82@gmail.com")
-DEFAULT_APP_PWD = os.getenv("GMAIL_APP_PASSWORD", "Rlarudgus1!")
+DEFAULT_APP_PWD = os.getenv("GMAIL_APP_PASSWORD", "dlugbvfuhgdozkgr")
 DEFAULT_RECIPIENT = os.getenv("DEFAULT_RECIPIENT_EMAIL", "ymmoon@sangsanginworld.co.kr")
 
 class EmailSender:
