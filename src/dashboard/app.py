@@ -1955,13 +1955,13 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        # Catalyst Center 로고 헤더
+        # 사이드바 헤더
         st.markdown("""
         <div style="padding: 6px 2px 14px 2px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 19px; font-weight: 800; color: #00BCEB; letter-spacing: -0.5px;">Catalyst Center</span>
+                <span style="font-size: 18px; font-weight: 800; color: #00E5FF; letter-spacing: -0.4px;">📊 기술본부 관제 시스템</span>
             </div>
-            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">기술본부 현장 관제 시스템</div>
+            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">실시간 현장 업무 모니터링</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2266,12 +2266,10 @@ def main():
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     st.markdown(f"""
-    <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 188, 235, 0.25);">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 19px; font-weight: 800; color: #00BCEB; letter-spacing: -0.4px;">Catalyst Center</span>
-            <span style="color: #48525B;">|</span>
-            <span style="font-size: 14px; color: #E2E8F0; font-weight: 600;">기술본부 현장 업무 관제 센터</span>
-            <span style="background: rgba(0, 188, 235, 0.15); color: #00BCEB; border: 1px solid rgba(0, 188, 235, 0.4); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; margin-left: 6px;">{page_tag}</span>
+    <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 229, 255, 0.25);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 18px; font-weight: 800; color: #00E5FF; letter-spacing: -0.4px;">📊 기술본부 현장 업무 관제 센터</span>
+            <span style="background: rgba(0, 229, 255, 0.15); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.4); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; margin-left: 6px;">{page_tag}</span>
         </div>
         <div style="font-size: 12px; color: #94A3B8; display: flex; align-items: center; gap: 12px;">
             <span>🟢 관제 시스템 정상 가동</span>
