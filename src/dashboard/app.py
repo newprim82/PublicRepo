@@ -1279,6 +1279,23 @@ def get_job_title_bar_style(title: str):
         return "linear-gradient(90deg, #0284c7, #0369a1)", "1px solid #bae6fd"
 
 
+def get_job_title_rank(title: str) -> int:
+    """직급 정렬 우선순위 점수 반환 (수석=1, 과장=2, 대리=3, 사원=4, 기타=99)"""
+    if not title:
+        return 99
+    t = str(title).strip()
+    if "수석" in t:
+        return 1
+    elif "과장" in t:
+        return 2
+    elif "대리" in t:
+        return 3
+    elif "사원" in t:
+        return 4
+    else:
+        return 99
+
+
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 실시간 관제 대시보드 컴포넌트"""
     kst_now = get_current_kst_time()
@@ -1332,6 +1349,11 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 t_pend = pend_df[pend_df["worker_team"] == t_name]
                 if t_pend.empty:
                     continue
+
+                # 🏆 직급 순서(수석 -> 과장 -> 대리 -> 사원)로 항상 정렬
+                t_pend = t_pend.copy()
+                t_pend["_rank_score"] = t_pend.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
+                t_pend = t_pend.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
 
                 # 웅장하고 눈에 확 띄는 프리미엄 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
                 st.markdown(f"""<div style="margin-top: 14px; margin-bottom: 12px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 6px solid #005073; border-radius: 8px; padding: 9px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><span style="font-size: 16.5px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
@@ -1395,6 +1417,11 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 t_comp = comp_df[comp_df["worker_team"] == t_name]
                 if t_comp.empty:
                     continue
+
+                # 🏆 직급 순서(수석 -> 과장 -> 대리 -> 사원)로 항상 정렬
+                t_comp = t_comp.copy()
+                t_comp["_rank_score"] = t_comp.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
+                t_comp = t_comp.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
 
                 # 웅장하고 눈에 확 띄는 프리미엄 완료 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
                 st.markdown(f"""<div style="margin-top: 14px; margin-bottom: 10px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 6px solid #4f46e5; border-radius: 8px; padding: 9px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><span style="font-size: 16.5px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background-color: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
