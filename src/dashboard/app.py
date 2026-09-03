@@ -3100,51 +3100,58 @@ def main():
                 caution_items = [it for it in overwork_items if not it["is_52"]]
 
                 with st.container(border=True):
-                    # 배너 내부 버튼/칩 글자 가독성 100% 강제 주입 (사람 이름 선명한 흰색 볼드 표출)
+                    # 배너 내부 버튼/칩 글자 가독성 (52h: 빨간색, 40h: 주황색 배경)
                     st.markdown("""
                     <style>
-                        div.stButton > button {
-                            background-color: #1e293b !important;
-                            border: 1px solid #475569 !important;
+                        /* 🚨 주 52시간 초과 버튼 (빨간색 배경) */
+                        div.stButton > button[kind="primary"] {
+                            background-color: #dc2626 !important;
+                            border: 1.5px solid #b91c1c !important;
                             border-radius: 6px !important;
                             color: #ffffff !important;
                             font-weight: 700 !important;
                             font-size: 13px !important;
                             padding: 4px 12px !important;
-                            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+                            box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3) !important;
                         }
+                        div.stButton > button[kind="primary"] * {
+                            color: #ffffff !important;
+                            font-weight: 700 !important;
+                        }
+                        div.stButton > button[kind="primary"]:hover {
+                            background-color: #b91c1c !important;
+                            border-color: #991b1b !important;
+                        }
+
+                        /* ⚠️ 주 40시간 초과 버튼 (주황색 배경) */
+                        div.stButton > button[kind="secondary"],
+                        div.stButton > button {
+                            background-color: #ea580c !important;
+                            border: 1.5px solid #c2410c !important;
+                            border-radius: 6px !important;
+                            color: #ffffff !important;
+                            font-weight: 700 !important;
+                            font-size: 13px !important;
+                            padding: 4px 12px !important;
+                            box-shadow: 0 2px 5px rgba(234, 88, 12, 0.3) !important;
+                        }
+                        div.stButton > button[kind="secondary"] *,
                         div.stButton > button * {
                             color: #ffffff !important;
                             font-weight: 700 !important;
                         }
-                        div.stButton > button p,
-                        div.stButton > button span,
-                        div.stButton > button div {
-                            color: #ffffff !important;
-                            font-weight: 700 !important;
-                        }
+                        div.stButton > button[kind="secondary"]:hover,
                         div.stButton > button:hover {
-                            background-color: #334155 !important;
-                            border-color: #94a3b8 !important;
-                            color: #ffffff !important;
-                        }
-                        div.stButton > button:hover * {
-                            color: #ffffff !important;
+                            background-color: #c2410c !important;
+                            border-color: #9a3412 !important;
                         }
                     </style>
                     """, unsafe_allow_html=True)
                     # 1행: 상단 알림 제목 (반짝반짝 애니메이션)
-                    col_head_l, col_head_r = st.columns([7.8, 2.2])
-                    with col_head_l:
-                        st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
-                    with col_head_r:
-                        if st.button("👉 팀원별 모니터링 표 보기", key="btn_jump_to_worker_page"):
-                            st.session_state["current_page"] = "👤 팀원별 업무량 분석"
-                            st.rerun()
-
+                    st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
                     st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid #fecaca;'></div>", unsafe_allow_html=True)
                     
-                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우)
+                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경)
                     if danger_items:
                         col_d_lbl, col_d_chips = st.columns([2.0, 8.0])
                         with col_d_lbl:
@@ -3153,10 +3160,10 @@ def main():
                             d_cols = st.columns(max(len(danger_items), 1) + 4)
                             for d_idx, d_item in enumerate(danger_items):
                                 with d_cols[d_idx]:
-                                    if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}"):
+                                    if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}", type="primary"):
                                         show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
 
-                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우)
+                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경)
                     if caution_items:
                         col_c_lbl, col_c_chips = st.columns([2.0, 8.0])
                         with col_c_lbl:
@@ -3165,7 +3172,7 @@ def main():
                             c_cols = st.columns(max(len(caution_items), 1) + 4)
                             for c_idx, c_item in enumerate(caution_items):
                                 with c_cols[c_idx]:
-                                    if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}"):
+                                    if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}", type="secondary"):
                                         show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
             else:
                 # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너 (상단 5개 카드와 간격 28px 정밀 일치)
