@@ -2268,6 +2268,139 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
 def render_team_management_page(all_workers_list, team_mappings):
     """[⚙️ 팀원 소속 및 직급 관리] 전용 관리 페이지 (신규 팀 생성 + 소속팀 + 직급 완벽 지원)"""
+    # 🎨 Cisco ACI Deep Cyan-Navy 전용 프리미엄 테마 주입
+    st.markdown("""
+    <style>
+        /* 🏢 관리 페이지 전용 Cisco ACI 테마 스타일링 */
+
+        /* 1. Primary 액션 버튼 (새 팀 생성, 소속팀 및 직급 즉시 저장, 표 수정 내용 전체 저장) -> Cisco ACI Deep Blue */
+        [data-testid="stMain"] div.stButton > button[kind="primary"] {
+            background-color: #005073 !important;
+            border: 1px solid #003852 !important;
+            border-radius: 6px !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 13.5px !important;
+            padding: 6px 14px !important;
+            box-shadow: 0 2px 5px rgba(0, 80, 115, 0.25) !important;
+            transition: all 0.2s ease !important;
+        }
+        [data-testid="stMain"] div.stButton > button[kind="primary"] * {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        [data-testid="stMain"] div.stButton > button[kind="primary"]:hover {
+            background-color: #003852 !important;
+            border-color: #002233 !important;
+            box-shadow: 0 3px 8px rgba(0, 80, 115, 0.4) !important;
+        }
+
+        /* 2. Secondary 버튼 (팀 삭제, ❌ 해제, 전체 일괄 해제) -> 소프트 레드 경고 버튼 */
+        [data-testid="stMain"] div.stButton > button[kind="secondary"],
+        [data-testid="stMain"] div.stButton > button:not([kind="primary"]) {
+            background-color: #fee2e2 !important;
+            border: 1.5px solid #fca5a5 !important;
+            border-radius: 6px !important;
+            color: #dc2626 !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            padding: 5px 12px !important;
+            transition: all 0.2s ease !important;
+        }
+        [data-testid="stMain"] div.stButton > button[kind="secondary"] *,
+        [data-testid="stMain"] div.stButton > button:not([kind="primary"]) * {
+            color: #dc2626 !important;
+            font-weight: 700 !important;
+        }
+        [data-testid="stMain"] div.stButton > button[kind="secondary"]:hover,
+        [data-testid="stMain"] div.stButton > button:not([kind="primary"]):hover {
+            background-color: #fecaca !important;
+            border-color: #f87171 !important;
+            color: #b91c1c !important;
+        }
+        [data-testid="stMain"] div.stButton > button[kind="secondary"]:hover *,
+        [data-testid="stMain"] div.stButton > button:not([kind="primary"]):hover * {
+            color: #b91c1c !important;
+        }
+
+        /* 3. 텍스트 입력창 (st.text_input) -> 화이트 필드 & 딥 시안 포커스 */
+        [data-testid="stMain"] [data-testid="stTextInput"] input {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+            padding: 6px 12px !important;
+        }
+        [data-testid="stMain"] [data-testid="stTextInput"] input:focus {
+            border-color: #00b4d8 !important;
+            box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.2) !important;
+        }
+        [data-testid="stMain"] [data-testid="stTextInput"] input::placeholder {
+            color: #94a3b8 !important;
+        }
+
+        /* 4. 셀렉트박스 (st.selectbox) -> 화이트 필드 & 네이비 텍스트 */
+        [data-testid="stMain"] [data-baseweb="select"] {
+            background-color: #ffffff !important;
+            border-radius: 6px !important;
+        }
+        [data-testid="stMain"] [data-baseweb="select"] > div {
+            background-color: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+        }
+        [data-testid="stMain"] [data-baseweb="select"] * {
+            color: #0f172a !important;
+            font-weight: 600 !important;
+        }
+        [data-testid="stMain"] [data-baseweb="select"] svg {
+            fill: #005073 !important;
+        }
+
+        /* 5. 코드 태그 (`코드`) -> ACI 소프트 시안 뱃지 */
+        [data-testid="stMain"] code {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+            font-weight: 700 !important;
+            border: 1px solid #bae6fd !important;
+            border-radius: 4px !important;
+            padding: 2px 6px !important;
+        }
+
+        /* 6. 아코디언 (st.expander) -> ACI 화이트 카드 & 좌측 딥 시안 라인 */
+        [data-testid="stMain"] [data-testid="stExpander"] {
+            background-color: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-left: 5px solid #005073 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+            margin-bottom: 12px !important;
+        }
+        [data-testid="stMain"] [data-testid="stExpander"] details {
+            background-color: #ffffff !important;
+            border-radius: 8px !important;
+        }
+        [data-testid="stMain"] [data-testid="stExpander"] summary {
+            background-color: #f8fafc !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 10px 16px !important;
+            border-radius: 6px 6px 0 0 !important;
+        }
+        [data-testid="stMain"] [data-testid="stExpander"] summary span,
+        [data-testid="stMain"] [data-testid="stExpander"] summary p {
+            color: #005073 !important;
+            font-weight: 800 !important;
+            font-size: 14px !important;
+        }
+        [data-testid="stMain"] [data-testid="stExpander"] summary:hover {
+            background-color: #f1f5f9 !important;
+        }
+        [data-testid="stMain"] [data-testid="stExpander"] summary svg {
+            fill: #005073 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     st.header("⚙️ 팀원 소속 및 직급 관리 (팀 생성 & 배정)")
     st.markdown("부서/팀(`기술본부`, `기술 1팀`, `기술 2팀`, `기술 3팀`, `PI팀` 및 **직접 생성한 신규 팀**)별로 팀원의 **소속팀과 직급(`사원`, `대리`, `과장`, `수석`)**을 배정하고 자유롭게 생성/수정/해제할 수 있습니다.")
     st.divider()
