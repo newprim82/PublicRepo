@@ -5,6 +5,7 @@ from typing import Dict, Any, Tuple, Optional
 
 from ..database.supabase_client import DatabaseManager
 from ..services.team_service import TeamService, UNASSIGNED_TEAM
+from ..services.client_normalizer import normalize_client_name
 
 KST = timezone(timedelta(hours=9))
 
@@ -24,6 +25,10 @@ class EmailReportService:
         df["start_time"] = pd.to_datetime(df["start_time"], errors="coerce")
         df["end_time"] = pd.to_datetime(df["end_time"], errors="coerce")
         
+        # 🏢 고객사명 대소문자/띄어쓰기 표준화
+        if "client_name" in df.columns:
+            df["client_name"] = df["client_name"].apply(normalize_client_name)
+            
         team_mappings = TeamService.get_team_mappings()
         df["worker_team"] = df["worker_name"].map(team_mappings).fillna(df["worker_team"]).fillna(UNASSIGNED_TEAM)
         

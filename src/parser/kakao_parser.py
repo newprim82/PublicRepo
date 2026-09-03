@@ -2,6 +2,7 @@ import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
+from ..services.client_normalizer import normalize_client_name
 
 @dataclass
 class RawKakaoMessage:
@@ -364,7 +365,7 @@ class KakaoMessageParser:
         group_dict = match.groupdict()
         log_type = (group_dict.get("b_type") or group_dict.get("type", "작업")).strip()
         raw_name_field = group_dict.get("name", "").strip()
-        client_name = group_dict.get("client", "").strip()
+        client_name = normalize_client_name(group_dict.get("client", "").strip())
         task_desc = group_dict.get("task", "").strip()
         est_str = group_dict.get("est", "").strip()
         

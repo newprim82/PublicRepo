@@ -74,6 +74,7 @@ def get_all_teams_safe() -> list:
 from src.services.reward_leave_service import RewardLeaveService
 from src.database.supabase_client import db_manager
 from src.services.email_sender import EmailSender
+from src.services.client_normalizer import normalize_client_name
 from src.analytics.stats_service import StatsService
 from src.collector.kakao_auto_collector import start_background_collector, run_collection_cycle, get_collector_countdown_info, COLLECTOR_STATUS
 
@@ -877,6 +878,10 @@ def load_data() -> pd.DataFrame:
         title_mappings = TeamService.get_title_mappings()
         if title_mappings:
             df["worker_title"] = df["worker_name"].map(title_mappings).fillna(df.get("worker_title", ""))
+            
+        # 🏢 고객사명 대소문자/띄어쓰기 표준화 (예: kb신용정보, KB 신용정보 -> KB신용정보)
+        if "client_name" in df.columns:
+            df["client_name"] = df["client_name"].apply(normalize_client_name)
             
         # week_str, week_label 안전 보장
         if "start_time" in df.columns:
