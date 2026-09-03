@@ -501,8 +501,12 @@ st.markdown("""
     [data-testid="stSidebar"] [data-baseweb="checkbox"] span {
         color: #bdcddc !important;
     }
-    /* 🌲 APIC 트리 아이템 (버튼 = 메뉴 항목) */
+    /* 🌲 APIC 트리 아이템 (버튼 = 메뉴 항목) - 완벽한 좌측 정렬 */
     [data-testid="stSidebar"] button {
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        text-align: left !important;
         border-radius: 0px !important;
         font-size: 12.5px !important;
         font-weight: 500 !important;
@@ -511,10 +515,33 @@ st.markdown("""
         border-left: 3px solid transparent !important;
         color: #bdcddc !important;
         transition: all 0.12s ease !important;
-        padding: 5px 8px 5px 14px !important;
-        text-align: left !important;
-        justify-content: flex-start !important;
+        padding: 6px 8px 6px 12px !important;
         min-height: 30px !important;
+        width: 100% !important;
+    }
+    /* 버튼 내부의 모든 컨테이너와 텍스트를 강제로 좌측 정렬 */
+    [data-testid="stSidebar"] button div,
+    [data-testid="stSidebar"] button span,
+    [data-testid="stSidebar"] button p {
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        text-align: left !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    [data-testid="stSidebar"] button [data-testid="stMarkdownContainer"] {
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        text-align: left !important;
+        width: 100% !important;
+    }
+    [data-testid="stSidebar"] button [data-testid="stMarkdownContainer"] p {
+        display: block !important;
+        text-align: left !important;
+        width: 100% !important;
+        margin: 0 !important;
     }
     [data-testid="stSidebar"] button:hover {
         background-color: rgba(0, 180, 216, 0.10) !important;
@@ -530,7 +557,7 @@ st.markdown("""
         border-radius: 0px !important;
         box-shadow: none !important;
     }
-    /* 🏠 홈 버튼 빨간색 배경 (APIC 스타일 메인 네비게이션) */
+    /* 🏠 홈 버튼 빨간색 배경 & 중앙 정렬 (APIC 스타일 메인 네비게이션) */
     [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button {
         background-color: #b91c1c !important;
         color: #ffffff !important;
@@ -538,6 +565,12 @@ st.markdown("""
         border-left: 3px solid #ef4444 !important;
         border-radius: 4px !important;
         padding: 7px 12px !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+    [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button * {
+        justify-content: center !important;
+        text-align: center !important;
     }
     [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button:hover {
         background-color: #991b1b !important;
@@ -2408,12 +2441,13 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드
-        st.markdown('<span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
+        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (위아래 30px 간격)
+        st.markdown('<div style="height: 30px;"></div><span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
         is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
         if st.button("🏠 실시간 분석 대시보드", key="btn_top_home_dashboard", type="primary" if is_main_active else "secondary", use_container_width=True):
             st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
             st.rerun()
+        st.markdown('<div style="height: 30px;"></div>', unsafe_allow_html=True)
 
         # 1. 📂 메인 메뉴
         with st.expander("⚙ 관리", expanded=False):
