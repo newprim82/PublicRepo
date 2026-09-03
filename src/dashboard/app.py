@@ -2383,27 +2383,118 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                 height=36
             )
         with btn_c2:
-            # 요약 데이터 엑셀 다운로드 (아담한 크기)
-            summary_csv = StatsService.get_worker_summary(df).to_csv(index=False, encoding="utf-8-sig")
+            # 요약 데이터 엑셀(.xlsx) 다운로드
+            import io
+            summary_df = StatsService.get_worker_summary(df)
+            excel_buffer = io.BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+                summary_df.to_excel(writer, index=False, sheet_name="팀원별실적요약")
+            excel_data = excel_buffer.getvalue()
             st.download_button(
-                label="📥 엑셀 저장",
-                data=summary_csv,
-                file_name=f"작업실적_Summary_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                key="dl_exec_summary_csv"
+                label="📥 엑셀(XLSX) 저장",
+                data=excel_data,
+                file_name=f"기술본부_작업실적_Summary_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="dl_exec_summary_xlsx"
             )
 
     st.write("")
 
-    # ----------------------------------------------------
-    # 1. 📋 3줄 핵심 경영 인사이트 브리핑 (Executive Key Briefing)
-    # ----------------------------------------------------
+    # =========================================================================
+    # 0. 핵심 지표 및 전기(MoM Delta) 자동 계산
+    # =========================================================================
     tot_hours = round(df["actual_hours"].sum(), 1)
     tot_cnt = len(df)
     tot_workers = df["worker_name"].nunique()
     tot_clients = df["client_name"].nunique()
+    avg_hours_per_worker = round(tot_hours / tot_workers, 1) if tot_workers > 0 else 0.0
 
-    # 최다 지원 고객사 Top 3
+    # 예정시간 준수율 계산
+    est_df = df[df["estimated_hours"] > 0]
+    if not est_df.empty:
+        on_time_cnt = (est_df["actual_hours"] <= est_df["estimated_hours"]).sum()
+        overdue_cnt = (est_df["actual_hours"] > est_df["estimated_hours"]).sum()
+        on_time_rate = round((on_time_cnt / len(est_df)) * 100, 1)
+    else:
+        overdue_cnt = 0
+        on_time_rate = 100.0
+
+    # 전기(직전 동일 기간) 비교 데이터 산출
+    prev_tot_hours = None
+    prev_tot_cnt = None
+    prev_tot_clients = None
+    prev_avg_hours = None
+
+    if "start_time" in df.columns and pd.notna(df["start_time"].min()) and pd.notna(df["start_time"].max()):
+        cur_min_dt = df["start_time"].min()
+        cur_max_dt = df["start_time"].max()
+        delta_days = max(1, (cur_max_dt.date() - cur_min_dt.date()).days + 1)
+        prev_start = cur_min_dt - pd.Timedelta(days=delta_days)
+        prev_end = cur_min_dt - pd.Timedelta(seconds=1)
+
+        prev_df = df_raw[(df_raw["start_time"] >= prev_start) & (df_raw["start_time"] <= prev_end)].copy()
+        if selected_team != "전체":
+            prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
+            prev_df = prev_df[prev_df["worker_team"] == selected_team]
+
+        if not prev_df.empty:
+            prev_tot_hours = round(prev_df["actual_hours"].sum(), 1)
+            prev_tot_cnt = len(prev_df)
+            prev_tot_clients = prev_df["client_name"].nunique()
+            prev_w_cnt = prev_df["worker_name"].nunique()
+            prev_avg_hours = round(prev_tot_hours / prev_w_cnt, 1) if prev_w_cnt > 0 else 0.0
+
+    def get_delta_badge(cur_val, prev_val, is_positive_good=True):
+        if prev_val is None or prev_val == 0 or pd.isna(prev_val):
+            return "<span style='color:#94a3b8; font-size:11.5px; font-weight:600;'>전기 비교불가</span>"
+        diff = cur_val - prev_val
+        pct = (diff / prev_val) * 100
+        if diff > 0:
+            color = "#0284c7" if is_positive_good else "#dc2626"
+            return f"<span style='color:{color}; font-size:11.5px; font-weight:800;'>▲ +{diff:.1f} (+{pct:.1f}%)</span>"
+        elif diff < 0:
+            color = "#16a34a" if is_positive_good else "#16a34a"
+            return f"<span style='color:{color}; font-size:11.5px; font-weight:800;'>▼ {diff:.1f} ({pct:.1f}%)</span>"
+        else:
+            return "<span style='color:#94a3b8; font-size:11.5px; font-weight:600;'>- 0.0% (변동없음)</span>"
+
+    d_hours_badge = get_delta_badge(tot_hours, prev_tot_hours, is_positive_good=True)
+    d_cnt_badge = get_delta_badge(tot_cnt, prev_tot_cnt, is_positive_good=True)
+    d_clients_badge = get_delta_badge(tot_clients, prev_tot_clients, is_positive_good=True)
+    d_avg_badge = get_delta_badge(avg_hours_per_worker, prev_avg_hours, is_positive_good=True)
+
+    # =========================================================================
+    # 1. 🏛️ 경영진 5초 펄스 카드 (4대 핵심 지표 with MoM Delta)
+    # =========================================================================
+    pulse_cards_html = f"""
+    <div style="display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 170px; background: #ffffff; border: 1px solid #e1e4e8; border-top: 5px solid #005073; border-radius: 10px; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,45,66,0.06);">
+            <div style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px;">⏱️ 총 투입 공수</div>
+            <div style="font-size: 26px; font-weight: 900; color: #005073; letter-spacing: -0.5px;">{tot_hours:,}h</div>
+            <div style="margin-top: 6px;">{d_hours_badge}</div>
+        </div>
+        <div style="flex: 1; min-width: 170px; background: #ffffff; border: 1px solid #e1e4e8; border-top: 5px solid #0284c7; border-radius: 10px; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,45,66,0.06);">
+            <div style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px;">👥 1인당 평균 공수</div>
+            <div style="font-size: 26px; font-weight: 900; color: #0284c7; letter-spacing: -0.5px;">{avg_hours_per_worker:,}h</div>
+            <div style="margin-top: 6px;">{d_avg_badge}</div>
+        </div>
+        <div style="flex: 1; min-width: 170px; background: #ffffff; border: 1px solid #e1e4e8; border-top: 5px solid #10b981; border-radius: 10px; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,45,66,0.06);">
+            <div style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px;">🏢 지원 고객사 수</div>
+            <div style="font-size: 26px; font-weight: 900; color: #10b981; letter-spacing: -0.5px;">{tot_clients}개사</div>
+            <div style="margin-top: 6px;">{d_clients_badge}</div>
+        </div>
+        <div style="flex: 1; min-width: 170px; background: #ffffff; border: 1px solid #e1e4e8; border-top: 5px solid #f59e0b; border-radius: 10px; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,45,66,0.06);">
+            <div style="font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 4px;">🎯 공수 예측 준수율</div>
+            <div style="font-size: 26px; font-weight: 900; color: #f59e0b; letter-spacing: -0.5px;">{on_time_rate}%</div>
+            <div style="margin-top: 6px; font-size: 11.5px; color: #64748b; font-weight: 600;">(초과 작업 {overdue_cnt}건)</div>
+        </div>
+    </div>
+    """
+    st.markdown(pulse_cards_html, unsafe_allow_html=True)
+
+    # =========================================================================
+    # 2. 📝 AI 경영 인사이트 & 액션 아이템 3단 브리핑 (화이트 테마)
+    # =========================================================================
     client_agg = df.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False)
     top_clients_text = []
     for c_rank, (c_name, c_h) in enumerate(client_agg.head(3).items(), 1):
@@ -2411,37 +2502,188 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         top_clients_text.append(f"<b>{c_rank}위 {c_name}</b>({c_h}h, {c_pct}%)")
     top_clients_str = ", ".join(top_clients_text) if top_clients_text else "집계 중"
 
-    # 팀별 공수 비중
+    # 야간/주말 공수 계산
+    night_mask = df["is_night_work"] == True
+    wknd_mask = df["is_weekend_work"] == True
+    tot_night_hours = round(df[night_mask]["actual_hours"].sum(), 1) if "is_night_work" in df.columns else 0.0
+    tot_wknd_hours = round(df[wknd_mask]["actual_hours"].sum(), 1) if "is_weekend_work" in df.columns else 0.0
+    night_pct = round((tot_night_hours / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
+    wknd_pct = round((tot_wknd_hours / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
+
+    # 과중근무 리스크 분석
+    danger_names = []
+    caution_names = []
+    if "week_label" in df.columns:
+        wk_agg = df.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
+        danger_workers = wk_agg[wk_agg["actual_hours"] > 52]["worker_name"].unique()
+        caution_workers = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]["worker_name"].unique()
+        danger_names = list(danger_workers)
+        caution_names = [w for w in caution_workers if w not in danger_names]
+
+    danger_cnt = len(danger_names)
+    caution_cnt = len(caution_names)
+    safe_cnt = max(0, tot_workers - danger_cnt - caution_cnt)
+
+    top3_share = round((client_agg.head(3).sum() / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
+
+    risk_status_html = "<span style='color:#16a34a; font-weight:800;'>🟢 법정 근로시간 안정 (주 52시간 초과 인원 없음)</span>" if danger_cnt == 0 else f"<span style='color:#dc2626; font-weight:800;'>🚨 주 52시간 초과 주의 ({danger_cnt}명: {', '.join(danger_names)})</span>"
+
+    briefing_html = f"""
+    <div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 6px solid #005073; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0, 45, 66, 0.06);">
+        <div style="font-size: 16px; font-weight: 800; color: #002d42; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span>📑 [경영진 핵심 요약 브리핑 & 액션 아이템]</span>
+                <span style="font-size: 12px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 700;">조회 기준: {selected_team}</span>
+            </div>
+            <div style="font-size: 12px; color: #64748b; font-weight: 600;">실시간 자동 분석 브리핑</div>
+        </div>
+        <div style="font-size: 13.5px; color: #1e293b; line-height: 1.85;">
+            <div style="margin-bottom: 8px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #0284c7;">
+                📌 <b>핵심 실적 총괄</b>: 총 <b>{tot_workers}명</b>의 인원이 <b>{tot_clients}개사</b>를 대상으로 <b>{tot_cnt:,}건</b>의 작업을 수행하여 <b>총 {tot_hours:,}시간</b>의 현장 지원 공수를 투입했습니다. 주요 집중 고객사 Top 3는 {top_clients_str} 순입니다.
+            </div>
+            <div style="margin-bottom: 8px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+                ⚠️ <b>운영 건전성 진단</b>: {risk_status_html} | 비정규 근무 비중은 <b>야간 {night_pct}% ({tot_night_hours}h)</b>, <b>주말 {wknd_pct}% ({tot_wknd_hours}h)</b>로 집계되었습니다.
+            </div>
+            <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #10b981;">
+                💡 <b>전략적 리소스 제언</b>: 상위 3개 고객사 공수 점유율이 <b>{top3_share}%</b>로 집중되어 있으므로, 차기 월간 계획 시 집중 고객사 전담 엔지니어 피로도 관리 및 인력 교차 지원(Cross-Support) 편성을 권장합니다.
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(briefing_html, unsafe_allow_html=True)
+
+    # =========================================================================
+    # 3. ⚖️ 인력 운영 건전성 & 법정 근로시간 거버넌스 (Workforce Governance)
+    # =========================================================================
+    st.markdown("#### ⚖️ 1. 인력 운영 건전성 & 법정 근로시간 거버넌스")
+    st.caption("주 52시간 근로시간 규정 준수 현황과 야간·주말 비정규 투입 비중을 진단합니다.")
+
+    gov_c1, gov_c2, gov_c3 = st.columns(3)
+    with gov_c1:
+        st.markdown(f"""
+        <div style="background: #ffffff; border: 1.5px solid {'#fca5a5' if danger_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#dc2626' if danger_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <div style="font-size: 12px; font-weight: 700; color: #64748b;">🚨 주 52시간 초과 위험군</div>
+            <div style="font-size: 22px; font-weight: 900; color: {'#dc2626' if danger_cnt > 0 else '#16a34a'}; margin-top: 2px;">{danger_cnt}명</div>
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">{', '.join(danger_names) if danger_names else '초과 인원 없음 (안전)'}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with gov_c2:
+        st.markdown(f"""
+        <div style="background: #ffffff; border: 1.5px solid {'#fde68a' if caution_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#d97706' if caution_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <div style="font-size: 12px; font-weight: 700; color: #64748b;">⚠️ 주 40~52시간 관리 주의군</div>
+            <div style="font-size: 22px; font-weight: 900; color: {'#d97706' if caution_cnt > 0 else '#16a34a'}; margin-top: 2px;">{caution_cnt}명</div>
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">집중 모니터링 대상</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with gov_c3:
+        st.markdown(f"""
+        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <div style="font-size: 12px; font-weight: 700; color: #64748b;">🟢 안정적 근로시간 준수군</div>
+            <div style="font-size: 22px; font-weight: 900; color: #16a34a; margin-top: 2px;">{safe_cnt}명</div>
+            <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">정상 범위 (주 40h 이하)</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("")
+    st.divider()
+
+    # =========================================================================
+    # 4. 🏢 고객사 포트폴리오 파레토 분석 & 주요 집계표
+    # =========================================================================
+    st.markdown("#### 🏢 2. 주요 고객사별 공수 투입 Top 10 및 파레토 분석")
+    
+    # 상위 10개 고객사 파레토 차트 렌더링
+    top10_clients = client_agg.head(10).reset_index()
+    top10_clients.columns = ["client_name", "actual_hours"]
+    top10_clients["cum_pct"] = (top10_clients["actual_hours"].cumsum() / tot_hours) * 100
+
+    fig_pareto = go.Figure()
+    fig_pareto.add_trace(go.Bar(
+        x=top10_clients["client_name"],
+        y=top10_clients["actual_hours"],
+        name="투입 공수(h)",
+        marker=dict(color="#005073", line=dict(color="#002d42", width=1)),
+        text=[f"{h:.1f}h" for h in top10_clients["actual_hours"]],
+        textposition="auto"
+    ))
+    fig_pareto.add_trace(go.Scatter(
+        x=top10_clients["client_name"],
+        y=top10_clients["cum_pct"],
+        name="누적 점유율(%)",
+        yaxis="y2",
+        mode="lines+markers+text",
+        line=dict(color="#ea580c", width=2.5),
+        marker=dict(size=7, color="#ea580c"),
+        text=[f"{p:.1f}%" for p in top10_clients["cum_pct"]],
+        textposition="top center"
+    ))
+    fig_pareto.update_layout(
+        template="plotly_white",
+        height=320,
+        margin=dict(l=10, r=10, t=20, b=10),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#002d42", size=11, family="Pretendard")),
+        yaxis=dict(title=dict(text="투입 공수 (시간)", font=dict(color="#002d42", size=11, family="Pretendard")), tickfont=dict(color="#0f172a", size=11)),
+        yaxis2=dict(title=dict(text="누적 비중 (%)", font=dict(color="#ea580c", size=11, family="Pretendard")), tickfont=dict(color="#ea580c", size=11), overlaying="y", side="right", range=[0, 105]),
+        xaxis=dict(tickfont=dict(color="#0f172a", size=11.5, family="Pretendard", weight="bold")),
+        hovermode="x unified"
+    )
+    st.plotly_chart(fig_pareto, use_container_width=True)
+
+    client_top10_rows = []
+    for c_rank, (c_name, c_h) in enumerate(client_agg.head(10).items(), 1):
+        sub_c_df = df[df["client_name"] == c_name]
+        c_w_cnt = sub_c_df["worker_name"].nunique()
+        c_cnt = len(sub_c_df)
+        c_share = round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
+        main_tasks = ", ".join(sub_c_df["task_description"].dropna().unique()[:2])
+
+        client_top10_rows.append({
+            "순위": f"{c_rank}위",
+            "고객사명": c_name,
+            "투입 인원": f"{c_w_cnt}명",
+            "작업 건수": f"{c_cnt}건",
+            "총 투입공수": f"{round(c_h, 1)}h",
+            "공수 비중": f"{c_share}%",
+            "주요 지원 작업": main_tasks
+        })
+
+    if client_top10_rows:
+        st.dataframe(pd.DataFrame(client_top10_rows), use_container_width=True, hide_index=True)
+
+    st.write("")
+    st.divider()
+
+    # =========================================================================
+    # 5. 📈 주차별 공수 변동 추이 & 부서별 종합 집계표
+    # =========================================================================
+    st.markdown("#### 📈 3. 주차별 공수 변동 추이 & 부서별 종합 집계표")
+
     df_teams = df.copy()
     if "worker_team" in df_teams.columns:
         df_teams["worker_team"] = df_teams["worker_team"].fillna(df_teams["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
     else:
         df_teams["worker_team"] = df_teams["worker_name"].map(team_mappings).fillna(UNASSIGNED_TEAM)
-    
-    team_agg = df_teams.groupby("worker_team")["actual_hours"].sum().sort_values(ascending=False)
-    team_share_text = []
-    for t_n, t_h in team_agg.items():
-        t_pct = round((t_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
-        team_share_text.append(f"<b>{t_n}</b>: {t_h}h ({t_pct}%)")
-    team_share_str = " | ".join(team_share_text) if team_share_text else "집계 중"
 
-    # 과중근무 리스크 분석 (안전 계산)
-    danger_cnt = 0
-    caution_cnt = 0
-    if "week_label" in df.columns:
-        wk_agg = df.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
-        danger_cnt = int((wk_agg["actual_hours"] > 52).sum())
-        caution_cnt = int(((wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)).sum())
+    if "week_label" in df_teams.columns and not df_teams["week_label"].dropna().empty:
+        wk_trend = df_teams.groupby(["week_label", "worker_team"])["actual_hours"].sum().reset_index()
+        fig_trend = px.bar(
+            wk_trend,
+            x="week_label",
+            y="actual_hours",
+            color="worker_team",
+            color_discrete_sequence=["#005073", "#0284c7", "#10b981", "#f59e0b", "#8b5cf6", "#64748b"],
+            labels={"week_label": "주차", "actual_hours": "투입 공수(시간)", "worker_team": "소속팀"}
+        )
+        fig_trend.update_layout(
+            template="plotly_white",
+            height=280,
+            margin=dict(l=10, r=10, t=10, b=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#002d42", size=11)),
+            yaxis=dict(title=dict(text="투입 공수(h)", font=dict(color="#002d42", size=11)), tickfont=dict(color="#0f172a", size=11)),
+            xaxis=dict(title=None, tickfont=dict(color="#0f172a", size=11.5, weight="bold"))
+        )
+        st.plotly_chart(fig_trend, use_container_width=True)
 
-    risk_badge = "<span style='color:#00E676; font-weight:800;'>🟢 안정 (과중근무 없음)</span>" if danger_cnt == 0 and caution_cnt == 0 else f"<span style='color:#FFA726; font-weight:800;'>⚠️ 주의 요망 (52h 초과 {danger_cnt}건, 40h 초과 {caution_cnt}건)</span>"
-
-    briefing_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.75) 100%); border: 1px solid rgba(0, 229, 255, 0.4); border-left: 6px solid #00E5FF; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 4px 20px rgba(0,0,0,0.35);"><div style="font-size: 16px; font-weight: 800; color: #00E5FF; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><span>📑 [핵심 요약 브리핑 (Summary)]</span><span style="font-size: 12px; color: #94A3B8; font-weight: 500;">조회 기준: {selected_team}</span></div><div style="font-size: 14px; color: #E2E8F0; line-height: 1.8;"><div style="margin-bottom: 6px;">1️⃣ <b>총 투입 실적</b>: 총 <b>{tot_workers}명</b>의 인원이 <b>{tot_clients}개</b> 고객사를 대상으로 <b>{tot_cnt:,}건</b>의 작업을 수행하여 <b>총 {tot_hours:,}시간</b>의 현장 지원 공수를 투입했습니다.</div><div style="margin-bottom: 6px;">2️⃣ <b>고객사 집중도</b>: 주요 지원 고객사 Top 3는 {top_clients_str} 순으로 집계되었습니다.</div><div style="margin-bottom: 6px;">3️⃣ <b>부서별 기여 비중</b>: {team_share_str}</div><div>4️⃣ <b>근무 건전성 진단</b>: {risk_badge}</div></div></div>"""
-    st.markdown(briefing_html, unsafe_allow_html=True)
-
-    # ----------------------------------------------------
-    # 2. 🏢 부서(팀)별 실적 종합 요약표
-    # ----------------------------------------------------
-    st.markdown("#### 🏢 1. 부서(팀)별 실적 종합 집계표")
     team_table_rows = []
     for t_name in get_all_teams_safe() + [UNASSIGNED_TEAM]:
         sub_t_df = df_teams[df_teams["worker_team"] == t_name]
@@ -2472,38 +2714,10 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     st.write("")
     st.divider()
 
-    # ----------------------------------------------------
-    # 3. 🏢 주요 고객사별 공수 투입 Top 10 요약표
-    # ----------------------------------------------------
-    st.markdown("#### 🏢 2. 주요 고객사별 공수 투입 Top 10 집계표")
-    client_top10_rows = []
-    for c_rank, (c_name, c_h) in enumerate(client_agg.head(10).items(), 1):
-        sub_c_df = df[df["client_name"] == c_name]
-        c_w_cnt = sub_c_df["worker_name"].nunique()
-        c_cnt = len(sub_c_df)
-        c_share = round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
-        main_tasks = ", ".join(sub_c_df["task_description"].dropna().unique()[:2])
-
-        client_top10_rows.append({
-            "순위": f"{c_rank}위",
-            "고객사명": c_name,
-            "투입 인원": f"{c_w_cnt}명",
-            "작업 건수": f"{c_cnt}건",
-            "총 투입공수": f"{round(c_h, 1)}h",
-            "공수 비중": f"{c_share}%",
-            "주요 지원 작업": main_tasks
-        })
-
-    if client_top10_rows:
-        st.dataframe(pd.DataFrame(client_top10_rows), use_container_width=True, hide_index=True)
-
-    st.write("")
-    st.divider()
-
-    # ----------------------------------------------------
-    # 4. 👥 핵심 기여 팀원 Top 5
-    # ----------------------------------------------------
-    st.markdown("#### 👥 3. 최다 공수 투입 핵심 팀원 Top 5")
+    # =========================================================================
+    # 6. 👥 핵심 기여 팀원 Top 5
+    # =========================================================================
+    st.markdown("#### 👥 4. 최다 공수 투입 핵심 팀원 Top 5")
     worker_summary = StatsService.get_worker_summary(df)
     if not worker_summary.empty:
         top5_workers = worker_summary.head(5).copy()
