@@ -2380,6 +2380,40 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         st.markdown(f"### 📊 {selected_team} - Summary")
         st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑 및 주간 정기 이메일 발송을 제공합니다.")
     with h_col2:
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stPopover"] > button {
+                background: linear-gradient(135deg, #002d42 0%, #004b6e 100%) !important;
+                color: #FFFFFF !important;
+                border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                border-radius: 8px !important;
+                padding: 6px 14px !important;
+                font-size: 13px !important;
+                font-weight: 700 !important;
+                height: 38px !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-shadow: 0 2px 8px rgba(0, 45, 66, 0.3) !important;
+                transition: all 0.2s ease-in-out !important;
+            }
+            div[data-testid="stPopover"] > button:hover {
+                background: linear-gradient(135deg, #003b56 0%, #0284c7 100%) !important;
+                border-color: #38bdf8 !important;
+                color: #FFFFFF !important;
+                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
+                transform: translateY(-1px) !important;
+            }
+            div[data-testid="stPopover"] > button p {
+                color: #FFFFFF !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         with st.popover("📧 메일 발송", use_container_width=True):
             st.markdown("##### 📧 주간 Executive Summary 메일 발송")
             st.caption("매주 월요일 08:00 자동 발송 리포트를 즉시 수동 발송/테스트합니다.")
