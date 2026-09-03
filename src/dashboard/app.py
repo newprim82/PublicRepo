@@ -82,7 +82,13 @@ st.markdown("""
     html {
         scroll-behavior: smooth;
     }
-    /* 🚀 타이틀 + 기준시각 & 우측 Deploy/점세개 최적화 */
+    /* 🏛️ Cisco Catalyst Center 글로벌 캔버스 (Light Enterprise Theme) */
+    .stApp {
+        background-color: #F4F6F9 !important;
+        color: #1E293B !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    }
+    
     header[data-testid="stHeader"] {
         background: transparent !important;
         height: 0px !important;
@@ -93,10 +99,11 @@ st.markdown("""
         position: fixed !important;
         top: 1.2rem !important;
         left: 1.5rem !important;
-        color: #90CAF9 !important;
-        background: #1C212D !important;
-        border-radius: 8px !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #0B72CC !important;
+        background: #FFFFFF !important;
+        border-radius: 6px !important;
+        border: 1px solid #CBD5E1 !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
         z-index: 102 !important;
     }
     [data-testid="stToolbar"] {
@@ -118,300 +125,152 @@ st.markdown("""
         padding-right: 2rem !important;
         max-width: 100% !important;
     }
-    /* 🌟 글래스모피즘 타이틀 박스 */
-    .dashboard-title-box {
-        background: linear-gradient(90deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 12px 18px;
-        margin-bottom: 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+
+    /* 🏛️ Cisco Catalyst Center 사이드바 (화이트 & 슬레이트) */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E2E8F0 !important;
+        box-shadow: 1px 0 6px rgba(0, 0, 0, 0.03) !important;
     }
-    .main-title-text {
-        font-size: 23px;
-        font-weight: 900;
-        color: #FFFFFF;
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        letter-spacing: -0.3px;
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        background: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 6px !important;
+        margin-bottom: 8px !important;
     }
-    .filter-badge {
-        background-color: #1a233a;
-        color: #90caf9;
-        padding: 10px 16px;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        display: inline-block;
-        margin-bottom: 18px;
-        border: 1px solid #283593;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
+        color: #1E293B !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
     }
-    .menu-header {
-        font-size: 16px;
-        font-weight: bold;
-        color: #1E88E5;
-        margin-bottom: 8px;
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
+        color: #0B72CC !important;
     }
-    
-    /* 💊 Linear / Apple 스타일 프리미엄 캡슐(Pill) 탭 */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
-        background: rgba(15, 23, 42, 0.7);
-        padding: 5px 6px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        margin-bottom: 16px;
-        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+    [data-testid="stSidebar"] button {
+        background: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        color: #334155 !important;
+        border-radius: 4px !important;
+        font-size: 12.5px !important;
+        font-weight: 600 !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+        transition: all 0.15s ease-in-out !important;
     }
-    .stTabs [data-baseweb="tab"] {
-        height: 38px;
-        white-space: nowrap;
-        background: transparent;
-        color: #94A3B8;
-        border-radius: 8px;
-        padding: 6px 14px;
-        border: none !important;
-        font-size: 13.5px;
-        font-weight: 600;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    [data-testid="stSidebar"] button:hover {
+        background: #F1F5F9 !important;
+        border-color: #94A3B8 !important;
+        color: #0F172A !important;
     }
-    .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(255, 255, 255, 0.06);
-        color: #F8FAFC;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
+    [data-testid="stSidebar"] button[kind="primary"],
+    [data-testid="stSidebar"] button[type="primary"] {
+        background: #0B72CC !important;
+        border-color: #0B72CC !important;
         color: #FFFFFF !important;
-        font-weight: 700;
-        box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4) !important;
-        border-radius: 8px !important;
+        font-weight: 700 !important;
     }
-    .stTabs [data-baseweb="tab-highlight"] {
-        display: none !important;
+
+    /* 🏛️ 현재 집계 기준 요약 배너 (Clean Enterprise Badge) */
+    .filter-badge {
+        background-color: #FFFFFF !important;
+        color: #334155 !important;
+        padding: 10px 16px !important;
+        border-radius: 6px !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        display: inline-block !important;
+        margin-bottom: 16px !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
     }
-    .stTabs [data-baseweb="tab-border"] {
-        display: none !important;
+    .filter-badge b {
+        color: #0B72CC !important;
     }
-    
-    /* 🌟 글래스모피즘 프리미엄 네온 KPI 카드 스타일 */
+
+    /* 🏛️ Cisco Catalyst Center 스타일 카드 (Dashlet) */
     .kpi-card {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.09);
-        border-radius: 14px;
-        padding: 16px 18px;
-        margin-bottom: 12px;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        background: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 6px !important;
+        padding: 16px 18px !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
     }
     .kpi-card:hover {
-        transform: translateY(-4px);
-        border-color: rgba(56, 189, 248, 0.5);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.2);
+        transform: translateY(-2px) !important;
+        border-color: #00BCEB !important;
+        box-shadow: 0 4px 12px rgba(0, 188, 235, 0.15) !important;
     }
     .kpi-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: #94A3B8;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        letter-spacing: -0.2px;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #475569 !important;
+        margin-bottom: 6px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        letter-spacing: -0.2px !important;
     }
     .kpi-value {
-        font-size: 30px;
-        font-weight: 900;
-        line-height: 1.1;
-        margin-bottom: 8px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 32px !important;
+        font-weight: 900 !important;
+        color: #0F172A !important;
+        line-height: 1.1 !important;
+        margin-bottom: 6px !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
     }
     .kpi-unit {
-        font-size: 15px;
-        font-weight: 600;
-        color: #64748B;
-        margin-left: 4px;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        color: #64748B !important;
+        margin-left: 4px !important;
     }
     .kpi-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 3px 9px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: -0.2px;
-    }
-    .badge-cyan { background: rgba(0, 229, 255, 0.12); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.25); }
-    .badge-green { background: rgba(0, 230, 118, 0.12); color: #00E676; border: 1px solid rgba(0, 230, 118, 0.25); }
-    .badge-purple { background: rgba(179, 136, 255, 0.12); color: #B388FF; border: 1px solid rgba(179, 136, 255, 0.25); }
-    .badge-amber { background: rgba(255, 171, 0, 0.12); color: #FFAB00; border: 1px solid rgba(255, 171, 0, 0.25); }
-    .badge-red { background: rgba(255, 82, 82, 0.12); color: #FF5252; border: 1px solid rgba(255, 82, 82, 0.25); }
-
-    @keyframes pulse-green {
-        0% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
-        70% { box-shadow: 0 0 0 8px rgba(0, 230, 118, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
-    }
-    .live-pulse-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0, 230, 118, 0.15);
-        color: #00E676;
-        border: 1px solid #00E676;
-        border-radius: 12px;
-        padding: 3px 10px;
-        font-size: 11px;
-        font-weight: 700;
-        animation: pulse-green 2s infinite;
-    }
-    
-    /* 🎯 사이드바 정돈된 섹션 카드 헤더 */
-    .sidebar-section-header {
-        font-size: 13.5px;
-        font-weight: 800;
-        color: #E2E8F0;
-        background: rgba(30, 41, 59, 0.7);
-        padding: 6px 12px;
-        border-radius: 8px;
-        border-left: 4px solid #00E5FF;
-        margin-top: 10px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        letter-spacing: -0.2px;
-    }
-    .sidebar-section-header.purple { border-left-color: #B388FF; }
-    .sidebar-section-header.green { border-left-color: #00E676; }
-    .sidebar-section-header.amber { border-left-color: #FFAB00; }
-    
-    /* ✨ [과중 근무 발생 알림] 흰색/빨간색 교차 반짝임(Blinking) 애니메이션 */
-    @keyframes alert-blink {
-        0% {
-            color: #FFFFFF;
-            border-color: #FF1744;
-            background-color: rgba(255, 23, 68, 0.4);
-            box-shadow: 0 0 14px rgba(255, 23, 68, 0.9), inset 0 0 8px rgba(255, 23, 68, 0.5);
-            text-shadow: 0 0 8px #FFFFFF;
-        }
-        50% {
-            color: #FF1744;
-            border-color: #FFFFFF;
-            background-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.6);
-            text-shadow: 0 0 10px #FF1744;
-        }
-        100% {
-            color: #FFFFFF;
-            border-color: #FF1744;
-            background-color: rgba(255, 23, 68, 0.4);
-            box-shadow: 0 0 14px rgba(255, 23, 68, 0.9), inset 0 0 8px rgba(255, 23, 68, 0.5);
-            text-shadow: 0 0 8px #FFFFFF;
-        }
-    }
-
-    @keyframes siren-pulse {
-        0% { transform: scale(1) rotate(0deg); }
-        20% { transform: scale(1.25) rotate(-12deg); }
-        40% { transform: scale(1.25) rotate(12deg); }
-        60% { transform: scale(1.25) rotate(-8deg); }
-        80% { transform: scale(1.25) rotate(8deg); }
-        100% { transform: scale(1) rotate(0deg); }
-    }
-
-    .alert-blink-badge {
-        animation: alert-blink 1.2s infinite ease-in-out !important;
-        padding: 3px 12px !important;
-        border-radius: 8px !important;
-        border: 2px solid #FF1744 !important;
-        font-weight: 900 !important;
-        font-size: 15px !important;
-        letter-spacing: -0.3px !important;
-        display: inline-block !important;
-    }
-
-    .siren-icon {
-        display: inline-block !important;
-        animation: siren-pulse 1.2s infinite ease-in-out !important;
-        font-size: 18px !important;
-    }
-
-    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 (일체형 네모칸) */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) {
-        background: linear-gradient(135deg, rgba(211, 47, 47, 0.22), rgba(239, 108, 0, 0.22)) !important;
-        border: 1.5px solid rgba(255, 82, 82, 0.6) !important;
-        border-left: 8px solid #FF1744 !important;
-        border-radius: 14px !important;
-        box-shadow: 0 6px 24px rgba(255, 23, 68, 0.3) !important;
-        padding: 14px 20px !important;
-        margin-top: 14px !important;
-        margin-bottom: 18px !important;
-    }
-
-    /* 🟢 과중 근무 없음 (정상 상태) 배너 컨테이너 테두리 & 배경 */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
-        background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 229, 255, 0.05)) !important;
-        border: 1.5px solid rgba(0, 230, 118, 0.35) !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 16px rgba(0, 230, 118, 0.12) !important;
-        padding: 12px 20px !important;
-        margin-top: 10px !important;
-        margin-bottom: 16px !important;
-        text-align: center !important;
-    }
-
-    .normal-status-badge {
-        background: rgba(0, 230, 118, 0.18) !important;
-        color: #00E676 !important;
-        border: 1.5px solid rgba(0, 230, 118, 0.6) !important;
-        padding: 3px 12px !important;
-        border-radius: 8px !important;
-        font-weight: 900 !important;
-        font-size: 13.5px !important;
-        letter-spacing: -0.3px !important;
         display: inline-flex !important;
         align-items: center !important;
+        gap: 4px !important;
+        padding: 3px 9px !important;
+        border-radius: 12px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.2px !important;
+    }
+    .badge-cyan { background: #E0F2FE !important; color: #0284C7 !important; border: 1px solid #BAE6FD !important; }
+    .badge-green { background: #DCFCE7 !important; color: #16A34A !important; border: 1px solid #BBF7D0 !important; }
+    .badge-purple { background: #F3E8FF !important; color: #9333EA !important; border: 1px solid #E9D5FF !important; }
+    .badge-amber { background: #FEF3C7 !important; color: #D97706 !important; border: 1px solid #FDE68A !important; }
+    .badge-red { background: #FEE2E2 !important; color: #DC2626 !important; border: 1px solid #FECACA !important; }
+
+    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) {
+        background: #FFF1F2 !important;
+        border: 1.5px solid #FECDD3 !important;
+        border-left: 6px solid #E11D48 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(225, 29, 72, 0.08) !important;
+        padding: 12px 18px !important;
+        margin-top: 10px !important;
+        margin-bottom: 16px !important;
+    }
+    .alert-blink-badge {
+        background: #FFE4E6 !important;
+        color: #E11D48 !important;
+        border: 1.5px solid #FDA4AF !important;
+        padding: 3px 10px !important;
+        border-radius: 6px !important;
+        font-weight: 900 !important;
+        font-size: 13px !important;
     }
 
-    /* 🟧 배너 내부 버튼 100% 강제 오렌지색 적용 */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button,
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button {
-        background: linear-gradient(135deg, #FF6D00, #FF9100) !important;
-        background-color: #FF6D00 !important;
-        color: #FFFFFF !important;
-        border: 1.5px solid #FFE082 !important;
-        border-radius: 20px !important;
-        padding: 4px 16px !important;
-        font-size: 13px !important;
-        font-weight: 900 !important;
-        min-height: 32px !important;
-        height: 32px !important;
-        line-height: 22px !important;
-        box-shadow: 0 4px 14px rgba(255, 109, 0, 0.6) !important;
-        white-space: nowrap !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button *,
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button * {
-        color: #FFFFFF !important;
-        font-weight: 900 !important;
-        font-size: 13px !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button:hover,
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button:hover {
-        background: linear-gradient(135deg, #FF9100, #FFAB00) !important;
-        transform: translateY(-2px) scale(1.04) !important;
-        box-shadow: 0 6px 20px rgba(255, 109, 0, 0.85) !important;
+    /* 🟢 과중 근무 없음 (정상 상태) 배너 컨테이너 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
+        background: #F0FDF4 !important;
+        border: 1.5px solid #BBF7D0 !important;
+        border-left: 6px solid #16A34A !important;
+        border-radius: 8px !important;
+        padding: 10px 18px !important;
+        margin-top: 10px !important;
+        margin-bottom: 14px !important;
     }
 
     /* 🚫 사이트 전체 마우스 호버 툴팁(Tooltip) 오버레이 완전 차단 */
@@ -424,27 +283,6 @@ st.markdown("""
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
-    /* 🏛️ Cisco Catalyst Center 사이드바 드로어 스타일링 */
-    [data-testid="stSidebar"] {
-        background-color: #0F172A !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stExpander"] {
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        border-radius: 6px !important;
-        background: rgba(30, 41, 59, 0.4) !important;
-        margin-bottom: 8px !important;
-    }
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
-        font-weight: 700 !important;
-        font-size: 13px !important;
-        color: #E2E8F0 !important;
-    }
-    [data-testid="stSidebar"] button {
-        border-radius: 4px !important;
-        font-size: 12.5px !important;
-        font-weight: 600 !important;
-        transition: all 0.15s ease-in-out !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1957,16 +1795,16 @@ def main():
     with st.sidebar:
         # Catalyst Center 로고 헤더
         st.markdown("""
-        <div style="padding: 6px 2px 14px 2px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;">
+        <div style="padding: 6px 2px 14px 2px; border-bottom: 1px solid #E2E8F0; margin-bottom: 12px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 19px; font-weight: 800; color: #00BCEB; letter-spacing: -0.5px;">Catalyst Center</span>
+                <span style="font-size: 19px; font-weight: 800; color: #0B72CC; letter-spacing: -0.5px;">Catalyst Center</span>
             </div>
-            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">기술본부 현장 관제 시스템</div>
+            <div style="font-size: 11.5px; color: #64748B; margin-top: 2px; font-weight: 500;">기술본부 현장 관제 시스템</div>
         </div>
         """, unsafe_allow_html=True)
 
         # 1. 📂 메인 메뉴
-        with st.expander("📂 메인 메뉴", expanded=True):
+        with st.expander("📂 메인 메뉴", expanded=False):
             main_menu_items = [
                 "🏠 실시간 분석 대시보드",
                 "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
@@ -1980,7 +1818,7 @@ def main():
                     st.rerun()
 
         # 2. 🔍 조회 기준
-        with st.expander("🔍 조회 기준", expanded=True):
+        with st.expander("🔍 조회 기준", expanded=False):
             # (1) 대상 월 선택
             available_months = sorted(df_raw["month_str"].dropna().unique(), reverse=True)
             month_mode = st.selectbox(
@@ -2096,7 +1934,7 @@ def main():
 
 
         # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
-        with st.expander("📊 작업 디테일", expanded=True):
+        with st.expander("📊 작업 디테일", expanded=False):
             detail_menu_items = [
                 "📅 작업 캘린더 & 밀도 히트맵",
                 "🔍 전체 작업 스마트 검색",
