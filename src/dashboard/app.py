@@ -266,8 +266,8 @@ st.markdown("""
 
     /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 (완벽 중앙 정렬 & 입체감) */
     .kpi-card {
-        background: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
         border-radius: 10px !important;
         padding: 16px 14px !important;
         margin-bottom: 0px !important;
@@ -2672,7 +2672,7 @@ def main():
         
         with kpi_col1:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 5px solid #005073;">
+            <div class="kpi-card" style="background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 85%) !important; border: 1px solid #bae6fd !important; border-top: 5px solid #005073 !important;">
                 <div class="kpi-title">⏱️ 총 지원 시간</div>
                 <div class="kpi-value" style="color: #005073;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
                 <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
@@ -2683,7 +2683,7 @@ def main():
             
         with kpi_col2:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 5px solid #0284c7;">
+            <div class="kpi-card" style="background: linear-gradient(180deg, #eff6ff 0%, #ffffff 85%) !important; border: 1px solid #bfdbfe !important; border-top: 5px solid #0284c7 !important;">
                 <div class="kpi-title">📋 총 작업 건수</div>
                 <div class="kpi-value" style="color: #0284c7;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-cyan">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#94a3b8;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
@@ -2694,7 +2694,7 @@ def main():
             
         with kpi_col3:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 5px solid #4f46e5;">
+            <div class="kpi-card" style="background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 85%) !important; border: 1px solid #ddd6fe !important; border-top: 5px solid #4f46e5 !important;">
                 <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
                 <div class="kpi-value" style="color: #4f46e5;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
                 <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
@@ -2706,7 +2706,7 @@ def main():
         with kpi_col4:
             total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 5px solid #ea580c;">
+            <div class="kpi-card" style="background: linear-gradient(180deg, #fffbeb 0%, #ffffff 85%) !important; border: 1px solid #fde68a !important; border-top: 5px solid #ea580c !important;">
                 <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
                 <div class="kpi-value" style="color: #ea580c;">{total_urg}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#94a3b8;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
@@ -2720,10 +2720,12 @@ def main():
             overdue_cnt = int(kpi.get('overdue_tasks_count', 0))
             is_danger = (overdue_val > 0) or (overdue_cnt > 0)
             overdue_color = "#dc2626" if is_danger else "#16a34a"
+            overdue_bg = "linear-gradient(180deg, #fef2f2 0%, #ffffff 85%)" if is_danger else "linear-gradient(180deg, #f0fdf4 0%, #ffffff 85%)"
+            overdue_border = "#fca5a5" if is_danger else "#bbf7d0"
             badge_cls = "badge-red" if is_danger else "badge-green"
             badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 5px solid {overdue_color};">
+            <div class="kpi-card" style="background: {overdue_bg} !important; border: 1px solid {overdue_border} !important; border-top: 5px solid {overdue_color} !important;">
                 <div class="kpi-title">⚠️ 예정 시간 초과율</div>
                 <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
                 <div class="kpi-badge {badge_cls}">{badge_text}</div>
