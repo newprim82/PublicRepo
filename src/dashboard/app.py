@@ -231,52 +231,86 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
     }
 
-    /* 🏛️ Cisco ACI 탭 바 완벽 가독성 보장 */
+    /* 🏛️ Cisco ACI 탭 바 완벽 카드형 배경 및 가독성 보장 */
+    div[data-testid="stTabs"] [role="tablist"],
     div[data-testid="stTabs"] [data-baseweb="tab-list"],
+    .stTabs [role="tablist"],
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px !important;
-        background: #f1f5f9 !important;
-        padding: 6px 8px !important;
-        border-radius: 8px !important;
-        border: 1px solid #cbd5e1 !important;
+        display: flex !important;
+        gap: 12px !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
         margin-bottom: 16px !important;
     }
-    div[data-testid="stTabs"] [data-baseweb="tab"],
-    .stTabs [data-baseweb="tab"] {
-        height: 38px !important;
-        white-space: nowrap !important;
-        background-color: #ffffff !important;
-        background: #ffffff !important;
-        border: 1.5px solid #94a3b8 !important;
-        border-radius: 6px !important;
-        padding: 6px 18px !important;
+    div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+    div[data-testid="stTabs"] [data-baseweb="tab-border"],
+    .stTabs [data-baseweb="tab-highlight"],
+    .stTabs [data-baseweb="tab-border"] {
+        display: none !important;
+        height: 0px !important;
+        background-color: transparent !important;
     }
-    div[data-testid="stTabs"] [data-baseweb="tab"]:not([aria-selected="true"]) *,
-    div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="false"] *,
-    .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {
+    div[data-testid="stTabs"] button[role="tab"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"],
+    .stTabs button[role="tab"],
+    .stTabs button[data-baseweb="tab"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        white-space: nowrap !important;
+        padding: 8px 20px !important;
+        border-radius: 8px !important;
+        font-size: 14px !important;
+        font-weight: 800 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+    }
+    /* 비선택 탭: 밝은 그레이 배경 + 선명한 다크네이비 글자 + 테두리 */
+    div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]),
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="false"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]),
+    .stTabs button[role="tab"]:not([aria-selected="true"]) {
+        background-color: #f1f5f9 !important;
+        background: #f1f5f9 !important;
+        border: 1.5px solid #cbd5e1 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]) *,
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="false"] *,
+    div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]) *,
+    .stTabs button[role="tab"]:not([aria-selected="true"]) * {
         color: #002d42 !important;
         font-weight: 800 !important;
-        font-size: 13.5px !important;
+        font-size: 14px !important;
         opacity: 1 !important;
         visibility: visible !important;
     }
-    div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"],
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+    div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]):hover,
+    .stTabs button[role="tab"]:not([aria-selected="true"]):hover {
+        background-color: #e2e8f0 !important;
+        border-color: #94a3b8 !important;
+    }
+    /* 선택된 활성 탭: Cisco ACI 딥블루 배경 + 볼드 화이트 글자 */
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
+    .stTabs button[role="tab"][aria-selected="true"] {
         background-color: #005073 !important;
         background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
         border: 1.5px solid #002233 !important;
-        box-shadow: 0 2px 6px rgba(0, 80, 115, 0.3) !important;
+        box-shadow: 0 3px 10px rgba(0, 80, 115, 0.35) !important;
     }
-    div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] *,
-    .stTabs [data-baseweb="tab"][aria-selected="true"] * {
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
+    .stTabs button[role="tab"][aria-selected="true"] * {
         color: #ffffff !important;
-        font-weight: 800 !important;
-        font-size: 13.5px !important;
+        font-weight: 900 !important;
+        font-size: 14px !important;
         opacity: 1 !important;
         visibility: visible !important;
     }
-    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
-    .stTabs [data-baseweb="tab-border"] { display: none !important; }
 
     /* 🏛️ 전역 다운로드 버튼 스타일링 (선명한 화이트 볼드 텍스트) */
     div[data-testid="stDownloadButton"] button,
@@ -2127,41 +2161,82 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         }
 
         /* 4. 탭 바 가독성 (미선택 탭 텍스트 100% 진한 다크네이비, 활성 탭 딥블루+화이트) */
-        div[data-testid="stMain"] .stTabs [data-baseweb="tab-list"] {
-            gap: 10px !important;
-            background: #e2e8f0 !important;
-            padding: 6px 8px !important;
+        div[data-testid="stTabs"] [role="tablist"],
+        div[data-testid="stTabs"] [data-baseweb="tab-list"],
+        .stTabs [role="tablist"],
+        .stTabs [data-baseweb="tab-list"] {
+            display: flex !important;
+            gap: 12px !important;
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin-bottom: 16px !important;
+        }
+        div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+        div[data-testid="stTabs"] [data-baseweb="tab-border"],
+        .stTabs [data-baseweb="tab-highlight"],
+        .stTabs [data-baseweb="tab-border"] {
+            display: none !important;
+            height: 0px !important;
+            background-color: transparent !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"],
+        div[data-testid="stTabs"] button[data-baseweb="tab"],
+        .stTabs button[role="tab"],
+        .stTabs button[data-baseweb="tab"] {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            white-space: nowrap !important;
+            padding: 8px 20px !important;
             border-radius: 8px !important;
-            border: 1px solid #cbd5e1 !important;
-        }
-        div[data-testid="stMain"] .stTabs [data-baseweb="tab"] {
-            background-color: #ffffff !important;
-            border: 1.5px solid #94a3b8 !important;
-            border-radius: 6px !important;
-            padding: 7px 18px !important;
-        }
-        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
-        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) p,
-        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) span,
-        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) div {
-            color: #0f172a !important;
+            font-size: 14px !important;
             font-weight: 800 !important;
-            font-size: 13.5px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]),
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="false"],
+        div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]),
+        .stTabs button[role="tab"]:not([aria-selected="true"]) {
+            background-color: #f1f5f9 !important;
+            background: #f1f5f9 !important;
+            border: 1.5px solid #cbd5e1 !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]) *,
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="false"] *,
+        div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]) *,
+        .stTabs button[role="tab"]:not([aria-selected="true"]) * {
+            color: #002d42 !important;
+            font-weight: 800 !important;
+            font-size: 14px !important;
             opacity: 1 !important;
+            visibility: visible !important;
         }
-        div[data-testid="stMain"] .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
+        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]):hover,
+        .stTabs button[role="tab"]:not([aria-selected="true"]):hover {
+            background-color: #e2e8f0 !important;
+            border-color: #94a3b8 !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+        div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
+        .stTabs button[role="tab"][aria-selected="true"] {
             background-color: #005073 !important;
-            border: 1px solid #002233 !important;
-            box-shadow: 0 2px 6px rgba(0, 80, 115, 0.3) !important;
+            background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
+            border: 1.5px solid #002233 !important;
+            box-shadow: 0 3px 10px rgba(0, 80, 115, 0.35) !important;
         }
-        div[data-testid="stMain"] .stTabs [aria-selected="true"] *,
-        div[data-testid="stMain"] .stTabs [aria-selected="true"] p,
-        div[data-testid="stMain"] .stTabs [aria-selected="true"] span,
-        div[data-testid="stMain"] .stTabs [aria-selected="true"] div {
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
+        div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
+        .stTabs button[role="tab"][aria-selected="true"] * {
             color: #ffffff !important;
             font-weight: 900 !important;
-            font-size: 13.5px !important;
+            font-size: 14px !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
     </style>
     """, unsafe_allow_html=True)
