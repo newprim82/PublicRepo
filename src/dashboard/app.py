@@ -2057,6 +2057,12 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
+        # 🏠 메인 대시보드가 아닐 때, 사이드바 최상단에 메인 복귀 버튼 배치
+        if st.session_state.get("current_page") != "🏠 실시간 분석 대시보드":
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_sidebar_top_back", type="primary", use_container_width=True):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
+
         # 1. 📂 메인 메뉴
         with st.expander("📂 메인 메뉴", expanded=False):
             main_menu_items = [
@@ -2485,21 +2491,11 @@ def main():
 
     # 1) 팀원 소속 및 직급 관리 페이지
     if curr_page == "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)":
-        col_back, _ = st.columns([1, 4])
-        with col_back:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_team"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         render_team_management_page(all_workers_list, team_mappings)
         return
 
     # 2) 작업 기록 원장 & 엑셀
     if curr_page == "📋 작업 기록 원장 & 엑셀":
-        col_back, _ = st.columns([1, 4])
-        with col_back:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_raw"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         st.subheader("📋 작업 지원 상세 기록 원장 & 엑셀 다운로드")
         
         output = io.BytesIO()
@@ -2727,35 +2723,15 @@ def main():
         render_today_live_board(df_raw, team_mappings, selected_team)
 
     elif curr_page == "📅 작업 캘린더 & 밀도 히트맵":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_cal"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         render_calendar_and_heatmap_tab(df, df_raw, selected_team)
 
     elif curr_page == "🔍 전체 작업 스마트 검색":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_search"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         render_smart_search_tab(df_raw, team_mappings)
 
     elif curr_page == "📊 Summary":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_summary"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         render_executive_summary_tab(df, df_raw, selected_team, team_mappings)
 
     elif curr_page == "👤 팀원별 업무량 분석":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_w1"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         st.subheader(f"👤 {selected_team} - 팀원별 총 작업 시간 및 업무 집중도 ({month_desc})")
         worker_summary = StatsService.get_worker_summary(df)
         
@@ -3169,11 +3145,6 @@ def main():
     # PAGE: 팀별 업무량 비교
     # ------------------------------------------
     elif curr_page == "🏢 팀별 업무량 비교":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t2"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         st.subheader("🏢 팀별(기술 1/2/3팀 + PI팀) 총 투입 시간 및 공수 비교")
         team_df = df_raw.copy()
         if selected_months:
@@ -3237,11 +3208,6 @@ def main():
     # PAGE: 월별 / 주별 / 일별 추이 분석
     # ------------------------------------------
     elif curr_page == "📈 월별/일별 추이":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t3"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         st.subheader("📈 월별 / 주별 / 일별 지원 시간 추이 및 시계열 분석")
         monthly_trend = StatsService.get_monthly_trend(df)
         
@@ -3293,11 +3259,6 @@ def main():
     # PAGE: 고객사별 공수 분포
     # ------------------------------------------
     elif curr_page == "🏢 고객사별 공수 분포":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t4"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         st.subheader("🏢 고객사별 지원 시간 및 공수 비중")
         client_summary = StatsService.get_client_summary(df)
         
@@ -3334,11 +3295,6 @@ def main():
     # PAGE: 예정 vs 실제 소요시간 분석
     # ------------------------------------------
     elif curr_page == "⏱️ 예정 vs 실제 소요시간":
-        col_b, _ = st.columns([1, 4])
-        with col_b:
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t5"):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
         st.subheader("⏱️ 예정 소요시간 대비 실제 시간 편차 분석")
         completed_df = df[df["status"] == "COMPLETED"].copy()
         
