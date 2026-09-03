@@ -513,6 +513,7 @@ st.markdown("""
         transition: all 0.12s ease !important;
         padding: 5px 8px 5px 14px !important;
         text-align: left !important;
+        justify-content: flex-start !important;
         min-height: 30px !important;
     }
     [data-testid="stSidebar"] button:hover {
