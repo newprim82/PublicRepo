@@ -2373,7 +2373,7 @@ def show_email_report_dialog(selected_team: str):
     """주간 리포트 이메일 발송 전용 팝업 모달"""
     st.markdown(
         """
-        <div style="font-size: 13.5px; color: #475569; margin-bottom: 14px; line-height: 1.6;">
+        <div style="background: rgba(0, 80, 115, 0.08); border-left: 4px solid #005073; padding: 10px 14px; border-radius: 6px; font-size: 13.5px; color: #1e293b; line-height: 1.6; margin-bottom: 15px;">
             매주 월요일 08:00에 자동 발송되는 <b>Executive Summary 반응형 HTML 리포트</b> 및 <b>상세 실적 엑셀 파일</b>을 지정한 메일 주소로 즉시 전송합니다.
         </div>
         """,
@@ -2385,7 +2385,7 @@ def show_email_report_dialog(selected_team: str):
         value="ymmoon@sangsanginworld.co.kr",
         key="dialog_recipient_email"
     )
-    st.caption("발신 계정: `newprim82@gmail.com` (Gmail SMTP 연동 완료)")
+    st.markdown("<div style='font-size: 12px; color: #64748b; margin-top: -6px; margin-bottom: 12px;'>발신 계정: <b>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
     st.write("")
     
     if st.button("🚀 주간 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
@@ -2406,12 +2406,48 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         st.info("표시할 보고서 데이터가 없습니다.")
         return
 
-    # 상단 헤더 & 주간 리포트 이메일 발송 툴바 (기존 엑셀 저장과 100% 동일한 표준 버튼 스타일)
+    # 상단 헤더 & 주간 리포트 이메일 발송 툴바 (고대비 선명한 버튼 스타일)
     h_col1, h_col2 = st.columns([3.8, 1.2])
     with h_col1:
         st.markdown(f"### 📊 {selected_team} - Summary")
         st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑 및 주간 정기 이메일 발송을 제공합니다.")
     with h_col2:
+        st.markdown(
+            """
+            <style>
+            div.st-key-btn_trigger_email_modal button {
+                background-color: #004060 !important;
+                background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
+                color: #FFFFFF !important;
+                border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                border-radius: 6px !important;
+                font-size: 13.5px !important;
+                font-weight: 700 !important;
+                height: 38px !important;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+                transition: all 0.2s ease !important;
+            }
+            div.st-key-btn_trigger_email_modal button p {
+                color: #FFFFFF !important;
+                font-weight: 700 !important;
+                font-size: 13.5px !important;
+                letter-spacing: -0.2px !important;
+            }
+            div.st-key-btn_trigger_email_modal button:hover {
+                background-color: #00608a !important;
+                background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
+                border-color: #38bdf8 !important;
+                color: #FFFFFF !important;
+                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+                transform: translateY(-1px) !important;
+            }
+            div.st-key-btn_trigger_email_modal button:hover p {
+                color: #FFFFFF !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
             show_email_report_dialog(selected_team)
 
