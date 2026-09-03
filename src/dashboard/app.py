@@ -88,28 +88,33 @@ st.markdown("""
         height: 0px !important;
         z-index: 100 !important;
     }
-    /* 🚀 좌측 사이드바 열기 버튼 */
-    [data-testid="stSidebarCollapsedControl"],
-    [data-testid="collapsedControl"] {
-        display: block !important;
+    /* 🚀 좌측 사이드바 열기 버튼 (Streamlit 1.62.0 stExpandSidebarButton) 항상 최상위 노출 */
+    [data-testid="stExpandSidebarButton"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
         position: fixed !important;
         top: 1.15rem !important;
         left: 1.2rem !important;
         z-index: 999999 !important;
-    }
-    [data-testid="stSidebarCollapsedControl"] button,
-    [data-testid="collapsedControl"] button {
         background-color: #0D2744 !important;
         color: #00E5FF !important;
         border: 1.5px solid #00E5FF !important;
         border-radius: 6px !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
-    /* 🚀 상단 우측 불필요한 Streamlit 툴바(Share, Star, Edit, GitHub, 점세개 등) 완전 차단 */
-    [data-testid="stToolbar"],
+    [data-testid="stExpandSidebarButton"] svg {
+        fill: #00E5FF !important;
+        color: #00E5FF !important;
+    }
+    /* 🚀 우측 불필요한 Streamlit 툴바만 정밀 숨김 (Share, Deploy, 점세개 등) */
+    [data-testid="stAppDeployButton"],
+    [data-testid="stMainMenuButton"],
+    [data-testid="stToolbarActions"],
+    [data-testid="stToolbarActionButton"],
     .stDeployButton,
-    #MainMenu,
-    [data-testid="stToolbarActions"] {
+    #MainMenu {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
@@ -2274,10 +2279,10 @@ def main():
         <div style="display: flex; align-items: center; gap: 12px;">
             <button onclick="
                 const doc = window.parent.document || document;
-                const btn = doc.querySelector('[data-testid=stSidebarCollapsedControl] button') 
-                         || doc.querySelector('[data-testid=collapsedControl] button')
-                         || doc.querySelector('button[aria-label*=\'sidebar\']')
-                         || doc.querySelector('button[aria-label*=\'Sidebar\']');
+                const btn = doc.querySelector('[data-testid=stExpandSidebarButton]')
+                         || doc.querySelector('[data-testid=stSidebarCollapseButton]')
+                         || doc.querySelector('[data-testid=stSidebarCollapsedControl] button') 
+                         || doc.querySelector('[data-testid=collapsedControl] button');
                 if (btn) btn.click();
             " style="background: rgba(0, 229, 255, 0.2); border: 1.5px solid #00E5FF; color: #00E5FF; padding: 5px 12px; border-radius: 6px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(0, 229, 255, 0.3); transition: all 0.2s ease;">
                 ☰ 대메뉴
