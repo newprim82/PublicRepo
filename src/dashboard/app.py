@@ -315,11 +315,18 @@ st.markdown("""
         border-color: rgba(56, 189, 248, 0.8) !important;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.35) !important;
     }
-    button[aria-label=" "] {
+    /* 🌟 5대 KPI 카드 투명 오버레이: 버튼 컨테이너 자체를 카드 위로 완벽하게 덮어버림 */
+    div.element-container:has(.kpi-card) + div.element-container {
+        margin-top: -140px !important;
+        height: 140px !important;
         position: relative !important;
-        margin-top: -136px !important;
-        height: 136px !important;
-        min-height: 136px !important;
+        z-index: 20 !important;
+    }
+    div.element-container:has(.kpi-card) + div.element-container .stButton,
+    div.element-container:has(.kpi-card) + div.element-container button,
+    button[aria-label=" "] {
+        height: 140px !important;
+        min-height: 140px !important;
         width: 100% !important;
         background: transparent !important;
         background-color: transparent !important;
@@ -328,8 +335,8 @@ st.markdown("""
         color: transparent !important;
         opacity: 0 !important;
         cursor: pointer !important;
-        z-index: 10 !important;
         padding: 0 !important;
+        margin: 0 !important;
     }
     .kpi-title {
         font-size: 15.5px !important;
@@ -2667,6 +2674,45 @@ def main():
             """, unsafe_allow_html=True)
             if st.button(" ", key="kpi_btn_overdue", use_container_width=True, help="클릭하여 예정 시간 초과 내역 팝업 열기"):
                 show_kpi_overdue_dialog(df)
+
+        # 🌟 카드 상자 1:1 오버레이 위치 보정 (하단 네모칸 0% 완전 박멸)
+        import streamlit.components.v1 as components
+        components.html("""
+        <script>
+            (function() {
+                function fixOverlay() {
+                    const pDoc = window.parent.document;
+                    const cards = pDoc.querySelectorAll('.kpi-card');
+                    cards.forEach(card => {
+                        let cContainer = card.closest('.element-container');
+                        if (cContainer && cContainer.nextElementSibling) {
+                            let bContainer = cContainer.nextElementSibling;
+                            bContainer.style.marginTop = '-140px';
+                            bContainer.style.height = '140px';
+                            bContainer.style.position = 'relative';
+                            bContainer.style.zIndex = '20';
+                            let btn = bContainer.querySelector('button');
+                            if (btn) {
+                                btn.style.height = '140px';
+                                btn.style.minHeight = '140px';
+                                btn.style.width = '100%';
+                                btn.style.background = 'transparent';
+                                btn.style.backgroundColor = 'transparent';
+                                btn.style.border = 'none';
+                                btn.style.boxShadow = 'none';
+                                btn.style.opacity = '0';
+                                btn.style.cursor = 'pointer';
+                            }
+                        }
+                    });
+                }
+                fixOverlay();
+                setTimeout(fixOverlay, 100);
+                setTimeout(fixOverlay, 300);
+                setTimeout(fixOverlay, 800);
+            })();
+        </script>
+        """, height=0)
 
         # ----------------------------------------------------
         # 🚨 상단 과중 근무 실시간 감지 & 원클릭 보상휴가 팝업 배너
