@@ -848,6 +848,27 @@ st.markdown("""
 def load_data() -> pd.DataFrame:
     df = db_manager.fetch_all_work_logs()
     if not df.empty:
+        # 🛡️ 멀티데이 분할 레코드(1/3일차 등) 존재 시 분할 전 원본 레코드 자동 중복 배제
+        if "task_description" in df.columns and "start_time" in df.columns and "end_time" in df.columns:
+            split_mask = df["task_description"].astype(str).str.contains(r"\(\d+/\d+일차\)", regex=True)
+            if split_mask.any():
+                splits = df[split_mask]
+                dup_origin_indices = []
+                for idx, r in df[~split_mask].iterrows():
+                    st_t = pd.to_datetime(r.get("start_time"), errors="coerce")
+                    et_t = pd.to_datetime(r.get("end_time"), errors="coerce")
+                    if pd.notna(st_t) and pd.notna(et_t) and st_t.date() != et_t.date():
+                        m_splits = splits[
+                            (splits["worker_name"] == r["worker_name"]) &
+                            (splits["client_name"] == r["client_name"]) &
+                            (pd.to_datetime(splits["start_time"]) >= st_t.floor("D")) &
+                            (pd.to_datetime(splits["start_time"]) <= et_t.ceil("D"))
+                        ]
+                        if not m_splits.empty:
+                            dup_origin_indices.append(idx)
+                if dup_origin_indices:
+                    df = df.drop(index=dup_origin_indices).reset_index(drop=True)
+
         mappings = TeamService.get_team_mappings()
         if mappings:
             df["worker_team"] = df["worker_name"].map(mappings).fillna(df["worker_team"]).fillna(UNASSIGNED_TEAM)
@@ -2949,19 +2970,30 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     # 7. 👥 핵심 기여 팀원 Top 5
     # =========================================================================
     st.markdown("#### 👥 5. 최다 공수 투입 핵심 팀원 Top 5")
-    worker_summary = StatsService.get_worker_summary(df_active)
-    if not worker_summary.empty:
-        top5_workers = worker_summary.head(5).copy()
-        top5_display = top5_workers.rename(columns={
-            "worker_name": "팀원명",
-            "worker_team": "소속팀",
-            "worker_title": "직급",
-            "total_hours": "총 투입공수(h)",
-            "work_days": "근무일수",
-            "avg_hours_per_day": "일평균공수(h)",
-            "most_frequent_client": "주요 고객사"
-        })
-        st.dataframe(top5_display, use_container_width=True, hide_index=True)
+    if not df_active.empty:
+        worker_agg = df_active.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False).head(5)
+        top5_rows = []
+        for rank, (w_name, w_hours) in enumerate(worker_agg.items(), 1):
+            w_sub = df_active[df_active["worker_name"] == w_name]
+            w_team = w_sub["worker_team"].iloc[0] if "worker_team" in w_sub.columns and pd.notna(w_sub["worker_team"].iloc[0]) else team_mappings.get(w_name, UNASSIGNED_TEAM)
+            w_title = w_sub["worker_title"].iloc[0] if "worker_title" in w_sub.columns and pd.notna(w_sub["worker_title"].iloc[0]) else ""
+            w_cnt = len(w_sub)
+            
+            # 주요 고객사 Top 2
+            top_c = w_sub.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(2)
+            top_c_str = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in top_c.items()]) if not top_c.empty else "-"
+            
+            top5_rows.append({
+                "순위": f"{rank}위",
+                "팀원명": w_name,
+                "소속팀": w_team,
+                "직급": w_title,
+                "작업 건수": f"{w_cnt:,}건",
+                "총 투입공수": f"{round(w_hours, 1)}h",
+                "주요 지원 고객사": top_c_str
+            })
+        if top5_rows:
+            st.dataframe(pd.DataFrame(top5_rows), use_container_width=True, hide_index=True)
 
 
 
