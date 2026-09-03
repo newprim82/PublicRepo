@@ -1991,6 +1991,43 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
 
 def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기"""
+    # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입
+    st.markdown("""
+    <style>
+        /* 상세 검색 필터 expander 헤더 */
+        div[data-testid="stMain"] div[data-testid="stExpander"] details summary {
+            background: linear-gradient(135deg, #002233 0%, #004d71 100%) !important;
+            border: 1px solid #005f8a !important;
+            border-radius: 8px !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            padding: 10px 14px !important;
+            box-shadow: 0 2px 6px rgba(0, 34, 51, 0.15) !important;
+        }
+        div[data-testid="stMain"] div[data-testid="stExpander"] details summary * {
+            color: #ffffff !important;
+            font-weight: 800 !important;
+        }
+        /* 다운로드 버튼 */
+        div[data-testid="stMain"] div.stDownloadButton > button {
+            background-color: #005073 !important;
+            color: #ffffff !important;
+            border: 1px solid #003852 !important;
+            font-weight: 800 !important;
+            border-radius: 6px !important;
+            padding: 6px 14px !important;
+            box-shadow: 0 2px 5px rgba(0, 80, 115, 0.2) !important;
+        }
+        div[data-testid="stMain"] div.stDownloadButton > button * {
+            color: #ffffff !important;
+            font-weight: 800 !important;
+        }
+        div[data-testid="stMain"] div.stDownloadButton > button:hover {
+            background-color: #003852 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown("### 🔍 전체 작업 통합 스마트 검색 & 다중 필터")
     st.caption("고객사명, 작업내용, 담당자, 소속팀, 야간/주말 여부 등 다중 조건을 조합하여 원하는 작업 이력을 0.1초 만에 실시간 검색합니다.")
 
@@ -2024,29 +2061,35 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     # 팀명 매핑 보정
     search_df["worker_team"] = search_df["worker_team"].fillna(search_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
 
-    # 1. 다중 스마트 필터 컨트롤 패널
+    # 1. 다중 스마트 필터 컨트롤 패널 (라벨을 선명한 딥 네이비로 표출)
     with st.expander("🛠️ 상세 검색 필터 설정 (여기를 클릭하여 조건 접기/펼치기)", expanded=True):
         f_col1, f_col2, f_col3 = st.columns([2, 1.5, 1.5])
         with f_col1:
-            keyword = st.text_input("📝 통합 키워드 검색 (작업내용, 비고, 고객사)", placeholder="예: 정기점검, 장애처리, DR, 하나은행, BGF...", key="smart_kw")
+            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📝 통합 키워드 검색:</div>', unsafe_allow_html=True)
+            keyword = st.text_input("통합 키워드 검색", placeholder="예: 정기점검, 장애처리, DR, 하나은행, BGF...", key="smart_kw", label_visibility="collapsed")
         with f_col2:
+            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏢 소속팀 필터:</div>', unsafe_allow_html=True)
             team_options = ["전체 팀"] + get_all_teams_safe() + [UNASSIGNED_TEAM]
-            sel_team = st.selectbox("🏢 소속팀 필터:", options=team_options, index=0, key="smart_team")
+            sel_team = st.selectbox("소속팀 필터:", options=team_options, index=0, key="smart_team", label_visibility="collapsed")
         with f_col3:
+            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏷️ 근무/상태 유형:</div>', unsafe_allow_html=True)
             type_options = ["전체", "⏳ 실시간 진행중", "✅ 작업 완료", "🌙 야간 근무", "🏖️ 주말 근무", "🚨 예정시간 초과"]
-            sel_type = st.selectbox("🏷️ 근무/상태 유형:", options=type_options, index=0, key="smart_type")
+            sel_type = st.selectbox("근무/상태 유형:", options=type_options, index=0, key="smart_type", label_visibility="collapsed")
 
         f_col4, f_col5, f_col6 = st.columns([1.5, 1.5, 2])
         with f_col4:
+            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏢 고객사 다중 선택:</div>', unsafe_allow_html=True)
             all_clients = sorted([c for c in search_df["client_name"].dropna().unique() if str(c).strip()])
-            sel_clients = st.multiselect("🏢 고객사 다중 선택:", options=all_clients, placeholder="고객사 선택 (전체)", key="smart_clients")
+            sel_clients = st.multiselect("고객사 다중 선택:", options=all_clients, placeholder="고객사 선택 (전체)", key="smart_clients", label_visibility="collapsed")
         with f_col5:
+            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">👤 작업자 다중 선택:</div>', unsafe_allow_html=True)
             all_workers = sorted([w for w in search_df["worker_name"].dropna().unique() if str(w).strip()])
-            sel_workers = st.multiselect("👤 작업자 다중 선택:", options=all_workers, placeholder="작업자 선택 (전체)", key="smart_workers")
+            sel_workers = st.multiselect("작업자 다중 선택:", options=all_workers, placeholder="작업자 선택 (전체)", key="smart_workers", label_visibility="collapsed")
         with f_col6:
+            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📅 작업 기간 범위:</div>', unsafe_allow_html=True)
             min_date = search_df["start_time"].dt.date.min() if pd.notna(search_df["start_time"].min()) else datetime.now().date()
             max_date = search_df["start_time"].dt.date.max() if pd.notna(search_df["start_time"].max()) else datetime.now().date()
-            date_range = st.date_input("📅 작업 기간 범위:", value=(min_date, max_date), key="smart_date_range")
+            date_range = st.date_input("작업 기간 범위:", value=(min_date, max_date), key="smart_date_range", label_visibility="collapsed")
 
     # 2. 필터링 로직 적용
     filtered_df = search_df.copy()
@@ -2098,13 +2141,13 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
 
     filtered_df = filtered_df.sort_values("start_time", ascending=False)
 
-    # 3. 실시간 결과 핵심 요약 카드
+    # 3. 실시간 결과 핵심 요약 카드 (메인 대시보드와 통일된 세련된 화이트 카드)
     res_cnt = len(filtered_df)
     res_hours = round(filtered_df["actual_hours"].sum(), 1)
     res_workers = filtered_df["worker_name"].nunique()
     res_clients = filtered_df["client_name"].nunique()
 
-    res_cards_html = f"""<div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 18px; flex-wrap: wrap;"><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 229, 255, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">📋 검색된 작업</div><div style="font-size: 22px; font-weight: 800; color: #00E5FF;">{res_cnt:,}건</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 230, 118, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">⏱️ 총 투입 공수</div><div style="font-size: 22px; font-weight: 800; color: #00E676;">{res_hours:,}시간</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(179, 136, 255, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">👥 투입 인원</div><div style="font-size: 22px; font-weight: 800; color: #B388FF;">{res_workers}명</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.35); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">🏢 관련 고객사</div><div style="font-size: 22px; font-weight: 800; color: #FBBF24;">{res_clients}개사</div></div></div>"""
+    res_cards_html = f"""<div style="display: flex; gap: 14px; margin-top: 14px; margin-bottom: 20px; flex-wrap: wrap;"><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #005073; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">📋 검색된 작업</div><div style="font-size: 24px; font-weight: 900; color: #005073; letter-spacing: -0.5px;">{res_cnt:,}건</div></div><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #0284c7; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">⏱️ 총 투입 공수</div><div style="font-size: 24px; font-weight: 900; color: #0284c7; letter-spacing: -0.5px;">{res_hours:,}시간</div></div><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #10b981; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">👥 투입 인원</div><div style="font-size: 24px; font-weight: 900; color: #10b981; letter-spacing: -0.5px;">{res_workers}명</div></div><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">🏢 관련 고객사</div><div style="font-size: 24px; font-weight: 900; color: #f59e0b; letter-spacing: -0.5px;">{res_clients}개사</div></div></div>"""
     st.markdown(res_cards_html, unsafe_allow_html=True)
 
     if filtered_df.empty:
