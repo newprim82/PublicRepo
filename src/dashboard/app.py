@@ -289,7 +289,19 @@ st.markdown("""
         display: none !important;
     }
     
-    /* 🌟 글래스모피즘 프리미엄 네온 KPI 카드 스타일 */
+    /* 🌟 글래스모피즘 프리미엄 네온 KPI 카드 링크 스타일 */
+    .kpi-card-link {
+        text-decoration: none !important;
+        color: inherit !important;
+        display: block !important;
+        cursor: pointer !important;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .kpi-card-link:hover {
+        text-decoration: none !important;
+        color: inherit !important;
+        transform: translateY(-4px);
+    }
     .kpi-card {
         background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
         backdrop-filter: blur(12px);
@@ -299,47 +311,12 @@ st.markdown("""
         padding: 16px 18px;
         margin-bottom: 0px !important;
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
         cursor: pointer !important;
     }
-    .kpi-card:hover {
-        transform: translateY(-4px);
-        border-color: rgba(56, 189, 248, 0.6);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.25);
-    }
-    /* 🌟 KPI 카드 전체를 클릭 가능하게 덮는 투명 버튼 오버레이 */
-    div[data-testid="column"]:has(.kpi-card) {
-        position: relative !important;
-        cursor: pointer !important;
-    }
-    div[data-testid="column"]:has(.kpi-card) .stButton {
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        z-index: 20 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    div[data-testid="column"]:has(.kpi-card) .stButton button {
-        width: 100% !important;
-        height: 100% !important;
-        min-height: 100% !important;
-        background: transparent !important;
-        background-color: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: transparent !important;
-        opacity: 0 !important;
-        cursor: pointer !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    div[data-testid="column"]:has(.kpi-card):hover .kpi-card {
-        transform: translateY(-4px) !important;
-        border-color: rgba(56, 189, 248, 0.7) !important;
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.3) !important;
+    .kpi-card-link:hover .kpi-card {
+        border-color: rgba(56, 189, 248, 0.8) !important;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.35) !important;
     }
     .kpi-title {
         font-size: 15.5px !important;
@@ -2618,48 +2595,48 @@ def main():
         
         with kpi_col1:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #00E5FF;">
-                <div class="kpi-title">⏱️ 총 지원 시간</div>
-                <div class="kpi-value" style="color: #00E5FF;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
-                <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
-            </div>
+            <a href="?kpi_popup=hours" target="_self" class="kpi-card-link" title="클릭하여 총 지원 시간 상세 내역 팝업 열기">
+                <div class="kpi-card" style="border-top: 4px solid #00E5FF;">
+                    <div class="kpi-title">⏱️ 총 지원 시간</div>
+                    <div class="kpi-value" style="color: #00E5FF;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
+                    <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
+                </div>
+            </a>
             """, unsafe_allow_html=True)
-            if st.button("", key="btn_kpi_hours", use_container_width=True, help="클릭하여 총 지원 시간 상세 내역 팝업 열기"):
-                show_kpi_total_hours_dialog(df)
             
         with kpi_col2:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #00E676;">
-                <div class="kpi-title">📋 총 작업 건수</div>
-                <div class="kpi-value" style="color: #FFFFFF;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
-                <div class="kpi-badge badge-green">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#64748B;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
-            </div>
+            <a href="?kpi_popup=tasks" target="_self" class="kpi-card-link" title="클릭하여 총 작업 건수 상세 팝업 열기">
+                <div class="kpi-card" style="border-top: 4px solid #00E676;">
+                    <div class="kpi-title">📋 총 작업 건수</div>
+                    <div class="kpi-value" style="color: #FFFFFF;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
+                    <div class="kpi-badge badge-green">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#64748B;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
+                </div>
+            </a>
             """, unsafe_allow_html=True)
-            if st.button("", key="btn_kpi_tasks", use_container_width=True, help="클릭하여 총 작업 건수 상세 팝업 열기"):
-                show_kpi_total_tasks_dialog(df)
             
         with kpi_col3:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #B388FF;">
-                <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
-                <div class="kpi-value" style="color: #FFFFFF;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
-                <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
-            </div>
+            <a href="?kpi_popup=workers" target="_self" class="kpi-card-link" title="클릭하여 팀원별 공수 팝업 열기">
+                <div class="kpi-card" style="border-top: 4px solid #B388FF;">
+                    <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
+                    <div class="kpi-value" style="color: #FFFFFF;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
+                    <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
+                </div>
+            </a>
             """, unsafe_allow_html=True)
-            if st.button("", key="btn_kpi_workers", use_container_width=True, help="클릭하여 팀원별 공수 팝업 열기"):
-                show_kpi_workers_dialog(df)
             
         with kpi_col4:
             total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #FFAB00;">
-                <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
-                <div class="kpi-value" style="color: #FFAB00;">{total_urg}<span class="kpi-unit">건</span></div>
-                <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#64748B;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
-            </div>
+            <a href="?kpi_popup=urgent" target="_self" class="kpi-card-link" title="클릭하여 야간/주말 긴급 작업 팝업 열기">
+                <div class="kpi-card" style="border-top: 4px solid #FFAB00;">
+                    <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
+                    <div class="kpi-value" style="color: #FFAB00;">{total_urg}<span class="kpi-unit">건</span></div>
+                    <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#64748B;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
+                </div>
+            </a>
             """, unsafe_allow_html=True)
-            if st.button("", key="btn_kpi_urgent", use_container_width=True, help="클릭하여 야간/주말 긴급 작업 팝업 열기"):
-                show_kpi_urgent_dialog(df)
             
         with kpi_col5:
             overdue_val = float(kpi.get('overdue_rate', 0))
@@ -2669,13 +2646,28 @@ def main():
             badge_cls = "badge-red" if is_danger else "badge-green"
             badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid {overdue_color};">
-                <div class="kpi-title">⚠️ 예정 시간 초과율</div>
-                <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
-                <div class="kpi-badge {badge_cls}">{badge_text}</div>
-            </div>
+            <a href="?kpi_popup=overdue" target="_self" class="kpi-card-link" title="클릭하여 예정 시간 초과 내역 팝업 열기">
+                <div class="kpi-card" style="border-top: 4px solid {overdue_color};">
+                    <div class="kpi-title">⚠️ 예정 시간 초과율</div>
+                    <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
+                    <div class="kpi-badge {badge_cls}">{badge_text}</div>
+                </div>
+            </a>
             """, unsafe_allow_html=True)
-            if st.button("", key="btn_kpi_overdue", use_container_width=True, help="클릭하여 초과 내역 팝업 열기"):
+
+        # 🌟 KPI 카드 클릭 팝업 다이얼로그 즉시 실행
+        kpi_popup = st.query_params.get("kpi_popup")
+        if kpi_popup:
+            del st.query_params["kpi_popup"]
+            if kpi_popup == "hours":
+                show_kpi_total_hours_dialog(df)
+            elif kpi_popup == "tasks":
+                show_kpi_total_tasks_dialog(df)
+            elif kpi_popup == "workers":
+                show_kpi_workers_dialog(df)
+            elif kpi_popup == "urgent":
+                show_kpi_urgent_dialog(df)
+            elif kpi_popup == "overdue":
                 show_kpi_overdue_dialog(df)
 
         # ----------------------------------------------------
