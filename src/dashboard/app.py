@@ -79,30 +79,16 @@ st.set_page_config(
 # 커스텀 CSS
 st.markdown("""
 <style>
-    /* 🔤 페이퍼로지 (Paperlogy) 웹 폰트 정의 및 CDN 연동 */
-    @font-face {
-        font-family: 'Paperlogy-Regular';
-        src: local('Paperlogy 4 Regular'), local('Paperlogy-4Regular'),
-             url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2');
-        font-weight: normal;
-        font-style: normal;
-        font-display: swap;
-    }
-    @font-face {
-        font-family: 'Paperlogy-ExtraBold';
-        src: local('Paperlogy 8 ExtraBold'), local('Paperlogy-8ExtraBold'),
-             url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
-        font-weight: normal;
-        font-style: normal;
-        font-display: swap;
-    }
+    /* 🔤 토스(Toss) 표준 프리미엄 웹 폰트: Pretendard (프리텐다드) */
+    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
-    /* 1. 사이트 전체 기본 본문 -> 페이퍼로지 4 Regular (로컬 폰트명 직접 매핑) */
+    /* 1. 사이트 전체 기본 본문 -> Pretendard (최고의 화면 가독성 & 선명도) */
     html, body, .stApp, .stApp *:not([data-testid*="Icon"]):not([data-testid*="icon"]):not(span[translate="no"]):not(svg) {
-        font-family: 'Paperlogy 4 Regular', 'Paperlogy-4Regular', 'Paperlogy-Regular', 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Segoe UI", sans-serif;
+        letter-spacing: -0.2px;
     }
 
-    /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> 페이퍼로지 8 ExtraBold (로컬 폰트명 직접 매핑) */
+    /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> Pretendard 800 (ExtraBold) */
     h1, h2, h3, h4, h5, h6, 
     .kpi-value, 
     .kpi-value *,
@@ -114,8 +100,9 @@ st.markdown("""
     .alert-blink-badge,
     [data-testid="stMetricValue"],
     [data-testid="stMetricValue"] * {
-        font-family: 'Paperlogy 8 ExtraBold', 'Paperlogy-8ExtraBold', 'Paperlogy-ExtraBold', 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Segoe UI", sans-serif !important;
         font-weight: 800 !important;
+        letter-spacing: -0.4px;
     }
 
     /* 🚀 Streamlit 머티리얼 아이콘 폰트 (Material Symbols / Icons) 100% 온전하게 보존 */
@@ -319,7 +306,7 @@ st.markdown("""
         font-weight: 900;
         line-height: 1.1;
         margin-bottom: 8px;
-        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     .kpi-unit {
         font-size: 15px;
