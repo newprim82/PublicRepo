@@ -621,6 +621,33 @@ st.markdown("""
         margin-top: 10px !important;
         margin-bottom: 6px !important;
     }
+    /* 🚨 과중 근무 알림 배너 내부 버튼 및 사람 이름 칩 글자 선명한 흰색 볼드 표출 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button {
+        background-color: #1e293b !important;
+        border: 1px solid #475569 !important;
+        border-radius: 6px !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        padding: 4px 12px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button *,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button * {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button:hover,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button:hover {
+        background-color: #334155 !important;
+        border-color: #94a3b8 !important;
+        color: #ffffff !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button:hover *,
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button:hover * {
+        color: #ffffff !important;
+    }
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
         background: #f0fdf4 !important;
         border: 1.5px solid #bbf7d0 !important;
