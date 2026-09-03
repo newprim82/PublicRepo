@@ -2420,7 +2420,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             color: #002d42 !important;
             font-size: 14px !important;
             font-weight: 800 !important;
-            margin-bottom: 6px !important;
+            margin-bottom: 8px !important;
         }
         div[data-testid="stRadio"] > label p {
             color: #002d42 !important;
@@ -2428,39 +2428,47 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             font-weight: 800 !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] {
-            background: #ffffff !important;
-            border: 1.5px solid #005f8a !important;
-            border-radius: 8px !important;
-            padding: 8px 14px !important;
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
             display: flex !important;
             flex-wrap: wrap !important;
             gap: 10px !important;
-            box-shadow: 0 2px 6px rgba(0,45,66,0.06) !important;
-            margin-bottom: 12px !important;
+            box-shadow: none !important;
+            margin-bottom: 16px !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label {
-            background: #f1f5f9 !important;
-            border: 1.2px solid #cbd5e1 !important;
-            border-radius: 6px !important;
-            padding: 5px 12px !important;
+            flex: 1 1 140px !important;
+            min-width: 140px !important;
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
             margin: 0 !important;
             cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
             transition: all 0.15s ease-in-out !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
-            background: #e2e8f0 !important;
+            background: #f8fafc !important;
             border-color: #0284c7 !important;
+            box-shadow: 0 2px 6px rgba(2,132,199,0.1) !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label p,
         div[data-testid="stRadio"] div[role="radiogroup"] label span {
             color: #002d42 !important;
             font-size: 13px !important;
             font-weight: 800 !important;
+            white-space: nowrap !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
         div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
             background: #005073 !important;
             border-color: #002d42 !important;
+            box-shadow: 0 2px 8px rgba(0,80,115,0.2) !important;
         }
         div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p,
         div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
