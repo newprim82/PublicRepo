@@ -79,59 +79,43 @@ st.set_page_config(
 # 커스텀 CSS
 st.markdown("""
 <style>
-    /* 🔤 페이퍼로지 (Paperlogy) 웹 폰트 정의 (로컬 윈도우 폰트 우선 + 웹폰트 CDN 백업) */
+    /* 🔤 페이퍼로지 (Paperlogy) 웹 폰트 정의 및 CDN 연동 */
     @font-face {
-        font-family: 'Paperlogy';
-        src: local('Paperlogy-4Regular'), local('Paperlogy 4 Regular'), local('Paperlogy 4'),
+        font-family: 'Paperlogy-Regular';
+        src: local('Paperlogy 4 Regular'), local('Paperlogy-4Regular'),
              url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2');
-        font-weight: 400;
+        font-weight: normal;
         font-style: normal;
         font-display: swap;
     }
     @font-face {
-        font-family: 'Paperlogy';
-        src: local('Paperlogy-8ExtraBold'), local('Paperlogy 8 ExtraBold'), local('Paperlogy 8'),
+        font-family: 'Paperlogy-ExtraBold';
+        src: local('Paperlogy 8 ExtraBold'), local('Paperlogy-8ExtraBold'),
              url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
-        font-weight: 800;
+        font-weight: normal;
         font-style: normal;
         font-display: swap;
     }
 
-    /* 1. 사이트 전체 기본 본문 -> 페이퍼로지 4 Regular (아이콘 제외 텍스트 요소에만 적용) */
-    .stApp {
-        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        font-weight: 400;
-    }
-    .stApp p, 
-    .stApp input, 
-    .stApp select, 
-    .stApp textarea, 
-    .stApp button:not(:has(svg)):not([data-testid*="Icon"]), 
-    .stApp label, 
-    .stApp .stMarkdown, 
-    .stApp .stText, 
-    .stApp td, 
-    .stApp th {
-        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        font-weight: 400;
+    /* 1. 사이트 전체 기본 본문 -> 페이퍼로지 4 Regular (로컬 폰트명 직접 매핑) */
+    html, body, .stApp, .stApp *:not([data-testid*="Icon"]):not([data-testid*="icon"]):not(span[translate="no"]):not(svg) {
+        font-family: 'Paperlogy 4 Regular', 'Paperlogy-4Regular', 'Paperlogy-Regular', 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> 페이퍼로지 8 ExtraBold */
+    /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> 페이퍼로지 8 ExtraBold (로컬 폰트명 직접 매핑) */
     h1, h2, h3, h4, h5, h6, 
     .kpi-value, 
+    .kpi-value *,
     .kpi-title, 
     .main-title-text, 
+    .main-title-text *,
     .sidebar-section-header,
     .filter-badge b,
-    .alert-blink-badge {
-        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    .alert-blink-badge,
+    [data-testid="stMetricValue"],
+    [data-testid="stMetricValue"] * {
+        font-family: 'Paperlogy 8 ExtraBold', 'Paperlogy-8ExtraBold', 'Paperlogy-ExtraBold', 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
         font-weight: 800 !important;
-    }
-
-    /* 3. 사이드바 expander summary 텍스트에 페이퍼로지 적용 */
-    [data-testid="stExpander"] summary {
-        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        font-weight: 700;
     }
 
     /* 🚀 Streamlit 머티리얼 아이콘 폰트 (Material Symbols / Icons) 100% 온전하게 보존 */
@@ -155,7 +139,8 @@ st.markdown("""
         height: 0px !important;
         z-index: 100 !important;
     }
-    /* 🚀 좌측 사이드바 열기 버튼 (Streamlit 1.62.0 stExpandSidebarButton) 항상 최상위 노출 */
+
+    /* 🚀 좌측 사이드바 열기 버튼 (stExpandSidebarButton: >>) 확실하게 최상위 노출 */
     [data-testid="stExpandSidebarButton"] {
         display: flex !important;
         visibility: visible !important;
@@ -172,6 +157,29 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
     [data-testid="stExpandSidebarButton"] svg {
+        fill: #00E5FF !important;
+        color: #00E5FF !important;
+    }
+
+    /* 🚀 좌측 사이드바 닫기 버튼 (stSidebarCollapseButton: <<) 사이드바 상단에 선명하게 노출 */
+    [data-testid="stSidebarCollapseButton"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+    [data-testid="stSidebarCollapseButton"] button {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #00E5FF !important;
+        background: rgba(0, 229, 255, 0.12) !important;
+        border: 1.5px solid #00E5FF !important;
+        border-radius: 6px !important;
+        box-shadow: 0 2px 8px rgba(0, 229, 255, 0.25) !important;
+    }
+    [data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="stSidebarCollapseButton"] span {
         fill: #00E5FF !important;
         color: #00E5FF !important;
     }
