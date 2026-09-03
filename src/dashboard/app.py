@@ -284,14 +284,43 @@ st.markdown("""
     .kpi-card:hover {
         transform: translateY(-4px) !important;
         box-shadow: 0 10px 25px rgba(0, 45, 66, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-        border-color: #00b4d8 !important;
+    }
+    /* 🎨 5대 KPI 카드별 소프트 파스텔 그라데이션 및 상단 5px 컬러 바 */
+    .kpi-card-hours {
+        background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 85%) !important;
+        border: 1px solid #bae6fd !important;
+        border-top: 5px solid #005073 !important;
+    }
+    .kpi-card-tasks {
+        background: linear-gradient(180deg, #eff6ff 0%, #ffffff 85%) !important;
+        border: 1px solid #bfdbfe !important;
+        border-top: 5px solid #0284c7 !important;
+    }
+    .kpi-card-workers {
+        background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 85%) !important;
+        border: 1px solid #ddd6fe !important;
+        border-top: 5px solid #4f46e5 !important;
+    }
+    .kpi-card-urgent {
+        background: linear-gradient(180deg, #fffbeb 0%, #ffffff 85%) !important;
+        border: 1px solid #fde68a !important;
+        border-top: 5px solid #ea580c !important;
+    }
+    .kpi-card-overdue-danger {
+        background: linear-gradient(180deg, #fef2f2 0%, #ffffff 85%) !important;
+        border: 1px solid #fca5a5 !important;
+        border-top: 5px solid #dc2626 !important;
+    }
+    .kpi-card-overdue-safe {
+        background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 85%) !important;
+        border: 1px solid #bbf7d0 !important;
+        border-top: 5px solid #16a34a !important;
     }
     /* 🌟 5대 KPI 카드 투명 오버레이 버튼: 카드를 완벽하게 덮어서 원클릭 모달 오픈 유지 */
     div[data-testid="column"]:hover .kpi-card,
     div[data-testid="stColumn"]:hover .kpi-card {
         transform: translateY(-4px) !important;
         box-shadow: 0 10px 25px rgba(0, 45, 66, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
-        border-color: #00b4d8 !important;
     }
     div.element-container:has(.kpi-card) + div.element-container {
         margin-top: -138px !important;
@@ -2747,7 +2776,7 @@ def main():
         
         with kpi_col1:
             st.markdown(f"""
-            <div class="kpi-card" style="background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 85%) !important; border: 1px solid #bae6fd !important; border-top: 5px solid #005073 !important;">
+            <div class="kpi-card kpi-card-hours">
                 <div class="kpi-title">⏱️ 총 지원 시간</div>
                 <div class="kpi-value" style="color: #005073;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
                 <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
@@ -2758,7 +2787,7 @@ def main():
             
         with kpi_col2:
             st.markdown(f"""
-            <div class="kpi-card" style="background: linear-gradient(180deg, #eff6ff 0%, #ffffff 85%) !important; border: 1px solid #bfdbfe !important; border-top: 5px solid #0284c7 !important;">
+            <div class="kpi-card kpi-card-tasks">
                 <div class="kpi-title">📋 총 작업 건수</div>
                 <div class="kpi-value" style="color: #0284c7;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-cyan">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#94a3b8;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
@@ -2769,7 +2798,7 @@ def main():
             
         with kpi_col3:
             st.markdown(f"""
-            <div class="kpi-card" style="background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 85%) !important; border: 1px solid #ddd6fe !important; border-top: 5px solid #4f46e5 !important;">
+            <div class="kpi-card kpi-card-workers">
                 <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
                 <div class="kpi-value" style="color: #4f46e5;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
                 <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
@@ -2781,7 +2810,7 @@ def main():
         with kpi_col4:
             total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
             st.markdown(f"""
-            <div class="kpi-card" style="background: linear-gradient(180deg, #fffbeb 0%, #ffffff 85%) !important; border: 1px solid #fde68a !important; border-top: 5px solid #ea580c !important;">
+            <div class="kpi-card kpi-card-urgent">
                 <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
                 <div class="kpi-value" style="color: #ea580c;">{total_urg}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#94a3b8;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
@@ -2795,12 +2824,11 @@ def main():
             overdue_cnt = int(kpi.get('overdue_tasks_count', 0))
             is_danger = (overdue_val > 0) or (overdue_cnt > 0)
             overdue_color = "#dc2626" if is_danger else "#16a34a"
-            overdue_bg = "linear-gradient(180deg, #fef2f2 0%, #ffffff 85%)" if is_danger else "linear-gradient(180deg, #f0fdf4 0%, #ffffff 85%)"
-            overdue_border = "#fca5a5" if is_danger else "#bbf7d0"
+            overdue_cls = "kpi-card-overdue-danger" if is_danger else "kpi-card-overdue-safe"
             badge_cls = "badge-red" if is_danger else "badge-green"
             badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
             st.markdown(f"""
-            <div class="kpi-card" style="background: {overdue_bg} !important; border: 1px solid {overdue_border} !important; border-top: 5px solid {overdue_color} !important;">
+            <div class="kpi-card {overdue_cls}">
                 <div class="kpi-title">⚠️ 예정 시간 초과율</div>
                 <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
                 <div class="kpi-badge {badge_cls}">{badge_text}</div>
