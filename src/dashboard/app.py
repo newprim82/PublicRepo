@@ -1891,13 +1891,13 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
         workers=("worker_name", lambda x: list(x.unique()))
     ).to_dict("index")
 
-    cal_matrix = calendar.monthcalendar(year, month)
-    weekdays = ["월 (Mon)", "화 (Tue)", "수 (Wed)", "목 (Thu)", "금 (Fri)", "토 (Sat)", "일 (Sun)"]
+    cal_matrix = calendar.Calendar(firstweekday=6).monthdayscalendar(year, month)
+    weekdays = ["일 (Sun)", "월 (Mon)", "화 (Tue)", "수 (Wed)", "목 (Thu)", "금 (Fri)", "토 (Sat)"]
 
     h_cols = st.columns(7)
     for idx, wd in enumerate(weekdays):
         with h_cols[idx]:
-            h_color = "#fca5a5" if idx == 6 else ("#7dd3fc" if idx == 5 else "#ffffff")
+            h_color = "#fca5a5" if idx == 0 else ("#7dd3fc" if idx == 6 else "#ffffff")
             st.markdown(f"<div style='text-align:center; font-weight:800; color:{h_color}; background: linear-gradient(135deg, #002233 0%, #004d71 100%); border: 1px solid #005f8a; padding:7px 4px; border-radius:7px; font-size:12.5px; margin-bottom:8px; box-shadow: 0 2px 5px rgba(0,34,51,0.15);'>{wd}</div>", unsafe_allow_html=True)
 
     for week in cal_matrix:
@@ -1908,7 +1908,7 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
                     st.markdown("<div style='height:92px; background:rgba(241, 245, 249, 0.4); border: 1px dashed #e2e8f0; border-radius:8px; margin-bottom:8px;'></div>", unsafe_allow_html=True)
                 else:
                     day_data = day_summary.get(day)
-                    num_color = "#dc2626" if idx == 6 else ("#0284c7" if idx == 5 else "#0f172a")
+                    num_color = "#dc2626" if idx == 0 else ("#0284c7" if idx == 6 else "#0f172a")
 
                     if day_data:
                         d_hours = round(day_data["total_hours"], 1)
