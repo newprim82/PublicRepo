@@ -233,8 +233,8 @@ st.markdown("""
 
     /* 🏛️ Cisco ACI 탭 바 */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
-        background: #ffffff;
+        gap: 8px;
+        background: #f8fafc;
         padding: 6px 8px;
         border-radius: 8px;
         border: 1px solid #e1e4e8;
@@ -244,25 +244,41 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] {
         height: 38px;
         white-space: nowrap;
-        background: transparent;
-        color: #64748b;
+        background: #ffffff;
+        color: #334155 !important;
         border-radius: 6px;
         padding: 6px 16px;
-        border: none !important;
+        border: 1px solid #cbd5e1 !important;
         font-size: 13.5px;
-        font-weight: 600;
+        font-weight: 700 !important;
         transition: all 0.2s ease;
+    }
+    .stTabs [data-baseweb="tab"] *,
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span {
+        color: #334155 !important;
+        font-weight: 700 !important;
     }
     .stTabs [data-baseweb="tab"]:hover {
         background: #f1f5f9;
-        color: #002d42;
+        color: #002d42 !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover * {
+        color: #002d42 !important;
     }
     .stTabs [aria-selected="true"] {
         background: #005073 !important;
         color: #ffffff !important;
-        font-weight: 700;
+        font-weight: 800 !important;
         box-shadow: 0 2px 6px rgba(0, 80, 115, 0.25) !important;
+        border: 1px solid #003852 !important;
         border-radius: 6px !important;
+    }
+    .stTabs [aria-selected="true"] *,
+    .stTabs [aria-selected="true"] p,
+    .stTabs [aria-selected="true"] span {
+        color: #ffffff !important;
+        font-weight: 800 !important;
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
     .stTabs [data-baseweb="tab-border"] { display: none !important; }
@@ -1991,39 +2007,98 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
 
 def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기"""
-    # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입
+    # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입 (모든 버전의 Streamlit expander 및 input 완벽 호환)
     st.markdown("""
     <style>
-        /* 상세 검색 필터 expander 헤더 */
-        div[data-testid="stMain"] div[data-testid="stExpander"] details summary {
+        /* 1. 상세 검색 필터 expander 헤더 (Cisco 딥 네이비 바 + 볼드 화이트 글자) */
+        [data-testid="stExpander"] details summary,
+        [data-testid="stExpander"] summary,
+        [data-testid="stExpanderSummary"],
+        .streamlit-expanderHeader,
+        div.streamlit-expanderHeader,
+        details[data-testid="stExpander"] summary {
             background: linear-gradient(135deg, #002233 0%, #004d71 100%) !important;
+            background-color: #002d42 !important;
             border: 1px solid #005f8a !important;
             border-radius: 8px !important;
             color: #ffffff !important;
             font-weight: 800 !important;
-            padding: 10px 14px !important;
+            padding: 10px 16px !important;
             box-shadow: 0 2px 6px rgba(0, 34, 51, 0.15) !important;
         }
-        div[data-testid="stMain"] div[data-testid="stExpander"] details summary * {
+        [data-testid="stExpander"] details summary *,
+        [data-testid="stExpander"] summary *,
+        [data-testid="stExpanderSummary"] *,
+        .streamlit-expanderHeader *,
+        details[data-testid="stExpander"] summary * {
             color: #ffffff !important;
             font-weight: 800 !important;
+            font-size: 13.5px !important;
         }
-        /* 다운로드 버튼 */
+
+        /* 2. 검색 입력 폼 (화이트 배경, 짙은 텍스트, 선명한 테두리) */
+        div[data-testid="stMain"] div[data-testid="stExpander"] input,
+        div[data-testid="stMain"] div[data-testid="stExpander"] select,
+        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="input"],
+        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="select"] > div,
+        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="base-input"],
+        div[data-testid="stMain"] div[data-testid="stExpander"] div[data-testid="stDateInput"] input {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+        }
+        div[data-testid="stMain"] div[data-testid="stExpander"] input::placeholder {
+            color: #94a3b8 !important;
+            font-weight: 500 !important;
+        }
+        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="select"] span,
+        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="select"] div {
+            color: #0f172a !important;
+            font-weight: 600 !important;
+        }
+        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="tag"] {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+            border: 1px solid #bae6fd !important;
+            border-radius: 4px !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="tag"] * {
+            color: #0369a1 !important;
+        }
+
+        /* 3. 다운로드 버튼 (Cisco ACI Deep Blue + 볼드 화이트 글자) */
+        div[data-testid="stMain"] .stDownloadButton button,
+        div[data-testid="stMain"] [data-testid="stDownloadButton"] button,
+        div[data-testid="stMain"] button[data-testid="baseButton-secondary"]:has(p:contains("다운로드")),
         div[data-testid="stMain"] div.stDownloadButton > button {
+            background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
             background-color: #005073 !important;
             color: #ffffff !important;
-            border: 1px solid #003852 !important;
+            border: 1px solid #002233 !important;
             font-weight: 800 !important;
             border-radius: 6px !important;
-            padding: 6px 14px !important;
-            box-shadow: 0 2px 5px rgba(0, 80, 115, 0.2) !important;
+            padding: 8px 18px !important;
+            box-shadow: 0 2px 5px rgba(0, 80, 115, 0.25) !important;
         }
+        div[data-testid="stMain"] .stDownloadButton button *,
+        div[data-testid="stMain"] [data-testid="stDownloadButton"] button *,
         div[data-testid="stMain"] div.stDownloadButton > button * {
             color: #ffffff !important;
             font-weight: 800 !important;
+            font-size: 13px !important;
         }
-        div[data-testid="stMain"] div.stDownloadButton > button:hover {
+        div[data-testid="stMain"] .stDownloadButton button:hover,
+        div[data-testid="stMain"] [data-testid="stDownloadButton"] button:hover {
             background-color: #003852 !important;
+            border-color: #001824 !important;
+        }
+        div[data-testid="stMain"] .stDownloadButton button:hover *,
+        div[data-testid="stMain"] [data-testid="stDownloadButton"] button:hover * {
+            color: #38bdf8 !important;
         }
     </style>
     """, unsafe_allow_html=True)
