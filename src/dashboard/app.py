@@ -2650,6 +2650,28 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     if client_top10_rows:
         st.dataframe(pd.DataFrame(client_top10_rows), use_container_width=True, hide_index=True)
 
+        # 💡 파레토(80/20) 핵심 인사이트 동적 산출 및 친절한 브리핑 박스
+        cum_80_idx = len(top10_clients)
+        for idx, pct in enumerate(top10_clients["cum_pct"]):
+            if pct >= 80.0:
+                cum_80_idx = idx + 1
+                break
+
+        top_pareto_names = ", ".join(top10_clients.iloc[:cum_80_idx]["client_name"].tolist())
+        top_pareto_pct = top10_clients.iloc[cum_80_idx - 1]["cum_pct"]
+
+        pareto_insight_html = f"""
+        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-left: 5px solid #16a34a; border-radius: 8px; padding: 13px 18px; margin-top: 10px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+            <div style="font-size: 13.5px; color: #14532d; font-weight: 700; line-height: 1.65;">
+                💡 <b>파레토(80/20) 핵심 분석</b>: 
+                <b>{selected_team}</b>이(가) 지원하는 고객사는 총 <b>{tot_clients}개사</b>이지만, 
+                전체 업무 공수(<b>{tot_hours:,}시간</b>)의 무려 <b>{top_pareto_pct:.1f}%</b>가 
+                상위 <b>{cum_80_idx}개 고객사({top_pareto_names})</b>에 집중되어 있습니다.
+            </div>
+        </div>
+        """
+        st.markdown(pareto_insight_html, unsafe_allow_html=True)
+
     st.write("")
     st.divider()
 
