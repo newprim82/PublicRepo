@@ -1807,31 +1807,34 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     # 🎨 캘린더 탭 전용 선명한 UI 스타일링 주입 (버튼 및 셀렉트박스 고대비 강제)
     st.markdown("""
     <style>
-        /* 캘린더 날짜별 상세 버튼 (Cisco ACI Deep Blue + 볼드 화이트 텍스트) */
-        div[data-testid="stMain"] div.stButton > button[key*="btn_cal_pop_"] {
+        /* 캘린더 날짜별 상세 버튼 (Cisco ACI Deep Blue + 볼드 화이트 텍스트 상시 노출) */
+        div.element-container:has(.cal-day-box) + div.element-container button,
+        div.element-container:has(.cal-day-box) + div.element-container .stButton > button,
+        div.element-container:has(.cal-day-box) + div.element-container button[kind="primary"],
+        div.element-container:has(.cal-day-box) + div.element-container button[kind="secondary"] {
             background-color: #005073 !important;
             color: #ffffff !important;
             border: 1px solid #003852 !important;
             border-radius: 0px 0px 8px 8px !important;
             font-weight: 800 !important;
-            font-size: 11px !important;
-            padding: 3px 6px !important;
+            font-size: 11.5px !important;
+            padding: 4px 6px !important;
             margin-top: -1px !important;
             box-shadow: 0 1px 3px rgba(0, 80, 115, 0.2) !important;
         }
-        div[data-testid="stMain"] div.stButton > button[key*="btn_cal_pop_"] *,
-        div[data-testid="stMain"] div.stButton > button[key*="btn_cal_pop_"] p,
-        div[data-testid="stMain"] div.stButton > button[key*="btn_cal_pop_"] span {
+        div.element-container:has(.cal-day-box) + div.element-container button *,
+        div.element-container:has(.cal-day-box) + div.element-container button p,
+        div.element-container:has(.cal-day-box) + div.element-container button span {
             color: #ffffff !important;
             font-weight: 800 !important;
-            font-size: 11px !important;
+            font-size: 11.5px !important;
         }
-        div[data-testid="stMain"] div.stButton > button[key*="btn_cal_pop_"]:hover {
+        div.element-container:has(.cal-day-box) + div.element-container button:hover {
             background-color: #003852 !important;
             border-color: #002233 !important;
         }
-        div[data-testid="stMain"] div.stButton > button[key*="btn_cal_pop_"]:hover * {
-            color: #38bdf8 !important;
+        div.element-container:has(.cal-day-box) + div.element-container button:hover * {
+            color: #ffffff !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -1904,11 +1907,11 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
                         d_workers = day_data["workers"][:2]
                         w_str = ", ".join(d_workers) + (f" 외 {len(day_data['workers'])-2}명" if len(day_data["workers"]) > 2 else "")
 
-                        cell_html = f"""<div style="background: #ffffff; border: 1.5px solid #10b981; border-bottom: none; border-radius: 8px 8px 0px 0px; padding: 6px 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;"><span style="font-weight: 800; font-size: 13.5px; color: {num_color};">{day}</span><span style="background: #d1fae5; color: #065f46; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; border: 1px solid #a7f3d0;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 11px; color: #334155; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
+                        cell_html = f"""<div class="cal-day-box" style="background: #ffffff; border: 1.5px solid #10b981; border-bottom: none; border-radius: 8px 8px 0px 0px; padding: 6px 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;"><span style="font-weight: 800; font-size: 13.5px; color: {num_color};">{day}</span><span style="background: #d1fae5; color: #065f46; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; border: 1px solid #a7f3d0;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 11px; color: #334155; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
                         st.markdown(cell_html, unsafe_allow_html=True)
                         
-                        # 클릭 시 상세 팝업 오픈 버튼
-                        if st.button(f"🔍 {day}일 상세 ({d_cnt}건)", key=f"btn_cal_pop_{year}_{month}_{day}", use_container_width=True):
+                        # 클릭 시 상세 팝업 오픈 버튼 (type=primary + cal-day-box 연동으로 상시 선명한 화이트 표시)
+                        if st.button(f"🔍 {day}일 상세 ({d_cnt}건)", key=f"btn_cal_pop_{year}_{month}_{day}", type="primary", use_container_width=True):
                             day_target_df = df_month[df_month["day_num"] == day]
                             show_calendar_day_dialog(f"{year}년 {month:02d}월 {day:02d}일", day_target_df)
                     else:
