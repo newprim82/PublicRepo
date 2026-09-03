@@ -604,27 +604,21 @@ st.markdown("""
         pointer-events: none !important;
     }
 
-    /* 🏛️ Cisco ACI 모달 다이얼로그 (@st.dialog) 엔터프라이즈 화이트 스타일링 */
-    div[role="dialog"] {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid #e1e4e8 !important;
-        border-radius: 10px !important;
-        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15) !important;
-    }
+    /* 🏛️ 팝업 모달 다이얼로그 (@st.dialog) 제목 및 닫기 버튼 흰색 스타일링 */
     div[role="dialog"] h1,
     div[role="dialog"] h2,
-    div[role="dialog"] h3,
-    div[role="dialog"] h4 {
-        color: #002d42 !important;
+    div[role="dialog"] [data-testid="stHeadingWithActionElements"] h2,
+    div[role="dialog"] header h2 {
+        color: #ffffff !important;
+        font-weight: 800 !important;
     }
-    div[role="dialog"] p,
-    div[role="dialog"] span,
-    div[role="dialog"] label {
-        color: #334155 !important;
+    div[role="dialog"] h1 *,
+    div[role="dialog"] h2 * {
+        color: #ffffff !important;
     }
-    div[role="dialog"] button[aria-label="Close"] {
-        color: #64748b !important;
+    div[role="dialog"] button[aria-label="Close"],
+    div[role="dialog"] button[data-testid="stBaseButton-header"] {
+        color: #ffffff !important;
     }
 
     /* 🏛️ 드롭다운 팝오버 및 셀렉트박스 옵션 가독성 */
