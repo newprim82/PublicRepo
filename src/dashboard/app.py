@@ -3100,6 +3100,39 @@ def main():
                 caution_items = [it for it in overwork_items if not it["is_52"]]
 
                 with st.container(border=True):
+                    # 배너 내부 버튼/칩 글자 가독성 100% 강제 주입 (사람 이름 선명한 흰색 볼드 표출)
+                    st.markdown("""
+                    <style>
+                        div.stButton > button {
+                            background-color: #1e293b !important;
+                            border: 1px solid #475569 !important;
+                            border-radius: 6px !important;
+                            color: #ffffff !important;
+                            font-weight: 700 !important;
+                            font-size: 13px !important;
+                            padding: 4px 12px !important;
+                            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+                        }
+                        div.stButton > button * {
+                            color: #ffffff !important;
+                            font-weight: 700 !important;
+                        }
+                        div.stButton > button p,
+                        div.stButton > button span,
+                        div.stButton > button div {
+                            color: #ffffff !important;
+                            font-weight: 700 !important;
+                        }
+                        div.stButton > button:hover {
+                            background-color: #334155 !important;
+                            border-color: #94a3b8 !important;
+                            color: #ffffff !important;
+                        }
+                        div.stButton > button:hover * {
+                            color: #ffffff !important;
+                        }
+                    </style>
+                    """, unsafe_allow_html=True)
                     # 1행: 상단 알림 제목 (반짝반짝 애니메이션)
                     col_head_l, col_head_r = st.columns([7.8, 2.2])
                     with col_head_l:
