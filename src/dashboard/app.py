@@ -2981,7 +2981,7 @@ def main():
                 border: 1px solid rgba(255, 255, 255, 0.16);
             }}
             #live-bora-clock {{
-                color: #38bdf8;
+                color: #ffffff;
                 font-weight: 700;
                 font-family: 'Segoe UI', Pretendard, sans-serif;
                 letter-spacing: -0.2px;
