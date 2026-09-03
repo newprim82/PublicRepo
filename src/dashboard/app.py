@@ -2368,73 +2368,52 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     st.dataframe(display_df, use_container_width=True, height=520)
 
 
+@st.dialog("📧 주간 Executive Summary 메일 발송", width="medium")
+def show_email_report_dialog(selected_team: str):
+    """주간 리포트 이메일 발송 전용 팝업 모달"""
+    st.markdown(
+        """
+        <div style="font-size: 13.5px; color: #475569; margin-bottom: 14px; line-height: 1.6;">
+            매주 월요일 08:00에 자동 발송되는 <b>Executive Summary 반응형 HTML 리포트</b> 및 <b>상세 실적 엑셀 파일</b>을 지정한 메일 주소로 즉시 전송합니다.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    mail_rcpt = st.text_input(
+        "수신자 이메일 (쉼표로 복수 지정 가능)",
+        value="ymmoon@sangsanginworld.co.kr",
+        key="dialog_recipient_email"
+    )
+    st.caption("발신 계정: `newprim82@gmail.com` (Gmail SMTP 연동 완료)")
+    st.write("")
+    
+    if st.button("🚀 주간 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
+        with st.spinner("📧 보고서 생성 및 이메일 전송 중..."):
+            success, send_msg = EmailSender.send_weekly_report(
+                recipient_emails=mail_rcpt,
+                selected_team=selected_team
+            )
+            if success:
+                st.success(send_msg)
+            else:
+                st.error(send_msg)
+
+
 def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict):
-    """[📊 경영진 보고용 Executive Summary] 주간/월간 회의 및 임원 보고용 핵심 요약 & A4 인쇄 모드"""
+    """[📊 경영진 보고용 Executive Summary] 주간/월간 회의 및 임원 보고용 핵심 요약 & 메일 발송"""
     if df.empty:
         st.info("표시할 보고서 데이터가 없습니다.")
         return
 
-    # 상단 헤더 & 주간 리포트 이메일 발송 툴바
-    h_col1, h_col2 = st.columns([3.6, 1.4])
+    # 상단 헤더 & 주간 리포트 이메일 발송 툴바 (기존 엑셀 저장과 100% 동일한 표준 버튼 스타일)
+    h_col1, h_col2 = st.columns([3.8, 1.2])
     with h_col1:
         st.markdown(f"### 📊 {selected_team} - Summary")
         st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑 및 주간 정기 이메일 발송을 제공합니다.")
     with h_col2:
-        st.markdown(
-            """
-            <style>
-            div[data-testid="stPopover"] > button {
-                background: linear-gradient(135deg, #002d42 0%, #004b6e 100%) !important;
-                color: #FFFFFF !important;
-                border: 1px solid rgba(255, 255, 255, 0.2) !important;
-                border-radius: 8px !important;
-                padding: 6px 14px !important;
-                font-size: 13px !important;
-                font-weight: 700 !important;
-                height: 38px !important;
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                box-shadow: 0 2px 8px rgba(0, 45, 66, 0.3) !important;
-                transition: all 0.2s ease-in-out !important;
-            }
-            div[data-testid="stPopover"] > button:hover {
-                background: linear-gradient(135deg, #003b56 0%, #0284c7 100%) !important;
-                border-color: #38bdf8 !important;
-                color: #FFFFFF !important;
-                box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4) !important;
-                transform: translateY(-1px) !important;
-            }
-            div[data-testid="stPopover"] > button p {
-                color: #FFFFFF !important;
-                font-weight: 700 !important;
-                font-size: 13px !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        with st.popover("📧 메일 발송", use_container_width=True):
-            st.markdown("##### 📧 주간 Executive Summary 메일 발송")
-            st.caption("매주 월요일 08:00 자동 발송 리포트를 즉시 수동 발송/테스트합니다.")
-            
-            mail_rcpt = st.text_input(
-                "수신자 이메일 (쉼표로 복수 지정 가능)",
-                value="ymmoon@sangsanginworld.co.kr",
-                key="popover_recipient_email"
-            )
-            st.caption("발신 계정: `newprim82@gmail.com` (Gmail SMTP)")
-            
-            if st.button("🚀 주간 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_send_popover_report"):
-                with st.spinner("📧 주간 HTML 보고서 및 엑셀 첨부파일 생성 후 전송 중..."):
-                    success, send_msg = EmailSender.send_weekly_report(
-                        recipient_emails=mail_rcpt,
-                        selected_team=selected_team
-                    )
-                    if success:
-                        st.success(send_msg)
-                    else:
-                        st.error(send_msg)
+        if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
+            show_email_report_dialog(selected_team)
 
     st.write("")
 
