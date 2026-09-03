@@ -2347,10 +2347,23 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         st.info("표시할 보고서 데이터가 없습니다.")
         return
 
+    # 조회 기간 날짜 포맷 산출
+    date_range_badge = ""
+    if "start_time" in df.columns and pd.notna(df["start_time"].min()) and pd.notna(df["start_time"].max()):
+        d_min = df["start_time"].min().strftime("%Y.%m.%d")
+        d_max = df["start_time"].max().strftime("%Y.%m.%d")
+        date_range_badge = f'<span style="background: #e0f2fe; color: #0369a1; border: 1.2px solid #7dd3fc; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 6px; letter-spacing: -0.2px;">📅 {d_min} ~ {d_max}</span>'
+
     # 상단 헤더 & 원클릭 인쇄/다운로드 툴바 (아담한 콤팩트 버튼 배치)
     h_col1, h_col2 = st.columns([3.2, 1.8])
     with h_col1:
-        st.markdown(f"### 📊 {selected_team} - Summary")
+        st.markdown(
+            f'<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 2px;">'
+            f'<span style="font-size: 22px; font-weight: 900; color: #002d42; letter-spacing: -0.5px;">📊 {selected_team} - Summary</span>'
+            f'{date_range_badge}'
+            f'</div>',
+            unsafe_allow_html=True
+        )
         st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑과 A4 출력 서식을 제공합니다.")
     with h_col2:
         btn_c1, btn_c2 = st.columns([1, 1])
