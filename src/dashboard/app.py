@@ -1842,18 +1842,27 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     st.markdown(f"### 📅 {selected_team} - 작업 밀도 히트맵 & 월간 캘린더")
     st.caption("날짜별 작업량 집중도, 인터랙티브 월간 달력 및 요일/시간대별 피크타임 골든타임 분석을 제공합니다.")
 
-    # 대상 월 목록
-    available_months = sorted(df["start_time"].dt.strftime("%Y-%m").dropna().unique(), reverse=True)
-    if not available_months:
-        st.info("작업 기간 데이터가 없습니다.")
+    # 🌟 [요구사항 반영] 사이드바 기간 필터에 구애받지 않고, 전체 DB(df_raw)에서 선택된 팀의 모든 조회 가능 월 추출
+    base_cal_df = df_raw.copy()
+    if selected_team != "전체 팀" and "worker_team" in base_cal_df.columns:
+        base_cal_df = base_cal_df[base_cal_df["worker_team"] == selected_team]
+
+    if base_cal_df.empty or "start_time" not in base_cal_df.columns:
+        st.info("조회 가능한 작업 데이터가 없습니다.")
         return
 
-    col_m_sel, _ = st.columns([1.5, 2.5])
+    available_months = sorted(base_cal_df["start_time"].dt.strftime("%Y-%m").dropna().unique(), reverse=True)
+    if not available_months:
+        st.info("조회 가능한 작업 기간 데이터가 없습니다.")
+        return
+
+    # 가로 길이 축소 (1:3.5 비율로 컴팩트하게 배치)
+    col_m_sel, _ = st.columns([1.2, 3.8])
     with col_m_sel:
         st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 5px;">📅 조회 기준 월 선택:</div>', unsafe_allow_html=True)
         pick_month = st.selectbox("조회 기준 월 선택:", options=available_months, index=0, key="cal_pick_month", label_visibility="collapsed")
 
-    df_month = df[df["start_time"].dt.strftime("%Y-%m") == pick_month].copy()
+    df_month = base_cal_df[base_cal_df["start_time"].dt.strftime("%Y-%m") == pick_month].copy()
     if df_month.empty:
         st.info(f"{pick_month}에 등록된 작업 데이터가 없습니다.")
         return
@@ -1927,7 +1936,7 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     st.markdown("#### ⏰ 요일별 × 시작 시간대별 작업 집중도 (골든타임 분석)")
     st.caption("기술본부의 현장 지원이 주로 어느 요일, 몇 시에 시작되는지 한눈에 파악합니다.")
 
-    df_peak = df.copy()
+    df_peak = base_cal_df.copy()
     weekday_map = {
         "Monday": "1. 월요일", "Tuesday": "2. 화요일", "Wednesday": "3. 수요일",
         "Thursday": "4. 목요일", "Friday": "5. 금요일", "Saturday": "6. 토요일", "Sunday": "7. 일요일"
