@@ -294,16 +294,16 @@ st.markdown("""
         border-color: #00b4d8 !important;
     }
     div.element-container:has(.kpi-card) + div.element-container {
-        margin-top: -155px !important;
-        height: 155px !important;
+        margin-top: -138px !important;
+        height: 138px !important;
         position: relative !important;
         z-index: 20 !important;
     }
     div.element-container:has(.kpi-card) + div.element-container .stButton,
     div.element-container:has(.kpi-card) + div.element-container button,
     button[aria-label=" "] {
-        height: 155px !important;
-        min-height: 155px !important;
+        height: 138px !important;
+        min-height: 138px !important;
         width: 100% !important;
         background: transparent !important;
         background-color: transparent !important;
@@ -314,6 +314,14 @@ st.markdown("""
         cursor: pointer !important;
         padding: 0 !important;
         margin: 0 !important;
+    }
+    /* iframe 스크립트 래퍼 잔여 높이/여백 완전 제거 */
+    div[data-testid="stCustomComponentV1"],
+    div.element-container:has(iframe) {
+        display: none !important;
+        height: 0px !important;
+        margin: 0px !important;
+        padding: 0px !important;
     }
 
     .kpi-title {
@@ -2736,14 +2744,14 @@ def main():
                         let cContainer = card.closest('.element-container');
                         if (cContainer && cContainer.nextElementSibling) {
                             let bContainer = cContainer.nextElementSibling;
-                            bContainer.style.marginTop = '-155px';
-                            bContainer.style.height = '155px';
+                            bContainer.style.marginTop = '-138px';
+                            bContainer.style.height = '138px';
                             bContainer.style.position = 'relative';
                             bContainer.style.zIndex = '20';
                             let btn = bContainer.querySelector('button');
                             if (btn) {
-                                btn.style.height = '155px';
-                                btn.style.minHeight = '155px';
+                                btn.style.height = '138px';
+                                btn.style.minHeight = '138px';
                                 btn.style.width = '100%';
                                 btn.style.background = 'transparent';
                                 btn.style.backgroundColor = 'transparent';
@@ -2827,9 +2835,9 @@ def main():
                                     if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}"):
                                         show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
             else:
-                # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너 (상단 5개 카드와 간격 28px)
+                # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너 (상단 5개 카드와 간격 28px 정밀 일치)
                 st.markdown("""
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 28px 0 0 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 12px 0 0 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
                     <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
                         <span style="font-size: 15px; line-height: 1;">🟢</span>
                         <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
