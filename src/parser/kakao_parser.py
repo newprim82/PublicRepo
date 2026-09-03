@@ -84,13 +84,14 @@ def parse_duration_to_minutes(text: str) -> int:
         total_minutes += int(minute_match.group(1))
         
     if total_minutes == 0:
-        num_match = re.search(r'(\d+)(?:\s*예정|\s*소요|\s*완료|\Z)', text)
+        # 단위가 생략된 숫자 (예: "5.5", "5.5완료", "3 완료")
+        num_match = re.search(r'(\d+(?:\.\d+)?)(?:\s*예정|\s*소요|\s*완료|\Z)', text)
         if num_match:
-            val = int(num_match.group(1))
-            if 1 <= val <= 24:
-                total_minutes = val * 60
+            val = float(num_match.group(1))
+            if 0 < val <= 24:
+                total_minutes = int(val * 60)
             else:
-                total_minutes = val
+                total_minutes = int(val)
                 
     return total_minutes
 
@@ -220,7 +221,9 @@ class KakaoMessageParser:
 
     END_WITH_TIME_PATTERNS = [
         re.compile(r'(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H|hours?)\s*)?(?:\d+\s*(?:분|m|M|mins?)\s*)?)\s*(?:소요\s*)?(?:작업\s*)?(?:지원\s*)?완료', re.IGNORECASE),
+        re.compile(r'(?P<time>\d+(?:\.\d+)?)\s*(?:소요\s*)?(?:작업\s*)?(?:지원\s*)?완료', re.IGNORECASE),
         re.compile(r'(?:작업\s*|지원\s*)?완료\s*[\/:,\(\[\s]+\s*(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H|hours?)\s*)?(?:\d+\s*(?:분|m|M|mins?)\s*)?)', re.IGNORECASE),
+        re.compile(r'(?:작업\s*|지원\s*)?완료\s*[\/:,\(\[\s]+\s*(?P<time>\d+(?:\.\d+)?)', re.IGNORECASE),
         re.compile(r'(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H)\s*)?(?:\d+\s*(?:분|m|M)\s*)?)\s*소요', re.IGNORECASE),
     ]
     
