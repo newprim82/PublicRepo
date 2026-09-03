@@ -264,41 +264,41 @@ st.markdown("""
     .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
     .stTabs [data-baseweb="tab-border"] { display: none !important; }
 
-    /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 */
+    /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 (선명한 입체감 & 구분선) */
     .kpi-card {
         background: #ffffff !important;
-        border: 1px solid #e1e4e8 !important;
-        border-radius: 8px !important;
-        padding: 18px 20px !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        padding: 16px 18px !important;
         margin-bottom: 0px !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 4px 16px rgba(0, 45, 66, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         cursor: pointer !important;
         user-select: none;
     }
     .kpi-card:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 25px rgba(0, 45, 66, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
         border-color: #00b4d8 !important;
     }
     /* 🌟 5대 KPI 카드 투명 오버레이 버튼: 카드를 완벽하게 덮어서 원클릭 모달 오픈 유지 */
     div[data-testid="column"]:hover .kpi-card,
     div[data-testid="stColumn"]:hover .kpi-card {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 25px rgba(0, 45, 66, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
         border-color: #00b4d8 !important;
     }
     div.element-container:has(.kpi-card) + div.element-container {
-        margin-top: -140px !important;
-        height: 140px !important;
+        margin-top: -155px !important;
+        height: 155px !important;
         position: relative !important;
         z-index: 20 !important;
     }
     div.element-container:has(.kpi-card) + div.element-container .stButton,
     div.element-container:has(.kpi-card) + div.element-container button,
     button[aria-label=" "] {
-        height: 140px !important;
-        min-height: 140px !important;
+        height: 155px !important;
+        min-height: 155px !important;
         width: 100% !important;
         background: transparent !important;
         background-color: transparent !important;
@@ -312,28 +312,29 @@ st.markdown("""
     }
 
     .kpi-title {
-        font-size: 13px !important;
-        font-weight: 700 !important;
-        color: #64748b !important;
+        font-size: 15px !important;
+        font-weight: 800 !important;
+        color: #002d42 !important;
         text-transform: uppercase !important;
-        padding-bottom: 6px !important;
-        margin-bottom: 8px !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 10px !important;
+        border-bottom: 1.5px solid #e2e8f0 !important;
         display: flex !important;
         align-items: center !important;
         gap: 6px !important;
-        letter-spacing: -0.2px !important;
+        letter-spacing: -0.3px !important;
     }
     .kpi-value {
-        font-size: 32px !important;
-        font-weight: 800 !important;
+        font-size: 34px !important;
+        font-weight: 900 !important;
         line-height: 1.1 !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 10px !important;
         font-family: 'Segoe UI', Pretendard, sans-serif !important;
         color: #0f172a !important;
     }
     .kpi-unit {
-        font-size: 14px !important;
-        font-weight: 600 !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
         color: #64748b !important;
         margin-left: 4px !important;
     }
@@ -341,32 +342,17 @@ st.markdown("""
         display: inline-flex !important;
         align-items: center !important;
         gap: 4px !important;
-        padding: 3px 10px !important;
-        border-radius: 4px !important;
-        font-size: 11.5px !important;
-        font-weight: 700 !important;
+        padding: 4px 10px !important;
+        border-radius: 6px !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
         letter-spacing: -0.2px !important;
     }
-    .badge-cyan { background-color: #e0f2fe !important; color: #0369a1 !important; }
-    .badge-green { background-color: #d1e7dd !important; color: #0f5132 !important; }
-    .badge-purple { background-color: #ede9fe !important; color: #5b21b6 !important; }
-    .badge-amber { background-color: #fef3c7 !important; color: #d97706 !important; }
-    .badge-red { background-color: #fee2e2 !important; color: #dc2626 !important; }
-
-    /* 🏛️ Cisco ACI 사이드바 스타일링 (#002d42 딥 네이비) */
-    [data-testid="stSidebar"] {
-        background-color: #002d42 !important;
-        border-right: 1px solid #003852 !important;
-    }
-    [data-testid="stSidebar"] * {
-        color: #bdcddc !important;
-    }
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3 {
-        color: #00b4d8 !important;
-    }
-    [data-testid="stSidebar"] .block-container,
+    .badge-cyan { background-color: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd !important; }
+    .badge-green { background-color: #d1e7dd !important; color: #0f5132 !important; border: 1px solid #a3cfbb !important; }
+    .badge-purple { background-color: #ede9fe !important; color: #5b21b6 !important; border: 1px solid #c4b5fd !important; }
+    .badge-amber { background-color: #fef3c7 !important; color: #d97706 !important; border: 1px solid #fde68a !important; }
+    .badge-red { background-color: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; }
     /* 🏛️ Cisco ACI 사이드바 스타일링 (#002d42 딥 네이비 완벽 일체형) */
     [data-testid="stSidebar"] {
         background-color: #002d42 !important;
@@ -2649,7 +2635,7 @@ def main():
         
         with kpi_col1:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #005073;">
+            <div class="kpi-card" style="border-top: 5px solid #005073;">
                 <div class="kpi-title">⏱️ 총 지원 시간</div>
                 <div class="kpi-value" style="color: #005073;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
                 <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
@@ -2660,7 +2646,7 @@ def main():
             
         with kpi_col2:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #0284c7;">
+            <div class="kpi-card" style="border-top: 5px solid #0284c7;">
                 <div class="kpi-title">📋 총 작업 건수</div>
                 <div class="kpi-value" style="color: #0284c7;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-cyan">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#94a3b8;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
@@ -2671,7 +2657,7 @@ def main():
             
         with kpi_col3:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #4f46e5;">
+            <div class="kpi-card" style="border-top: 5px solid #4f46e5;">
                 <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
                 <div class="kpi-value" style="color: #4f46e5;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
                 <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
@@ -2683,7 +2669,7 @@ def main():
         with kpi_col4:
             total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #ea580c;">
+            <div class="kpi-card" style="border-top: 5px solid #ea580c;">
                 <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
                 <div class="kpi-value" style="color: #ea580c;">{total_urg}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#94a3b8;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
@@ -2700,7 +2686,7 @@ def main():
             badge_cls = "badge-red" if is_danger else "badge-green"
             badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid {overdue_color};">
+            <div class="kpi-card" style="border-top: 5px solid {overdue_color};">
                 <div class="kpi-title">⚠️ 예정 시간 초과율</div>
                 <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
                 <div class="kpi-badge {badge_cls}">{badge_text}</div>
@@ -2721,14 +2707,14 @@ def main():
                         let cContainer = card.closest('.element-container');
                         if (cContainer && cContainer.nextElementSibling) {
                             let bContainer = cContainer.nextElementSibling;
-                            bContainer.style.marginTop = '-140px';
-                            bContainer.style.height = '140px';
+                            bContainer.style.marginTop = '-155px';
+                            bContainer.style.height = '155px';
                             bContainer.style.position = 'relative';
                             bContainer.style.zIndex = '20';
                             let btn = bContainer.querySelector('button');
                             if (btn) {
-                                btn.style.height = '140px';
-                                btn.style.minHeight = '140px';
+                                btn.style.height = '155px';
+                                btn.style.minHeight = '155px';
                                 btn.style.width = '100%';
                                 btn.style.background = 'transparent';
                                 btn.style.backgroundColor = 'transparent';
