@@ -1575,8 +1575,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     tot_workers = today_df["worker_name"].nunique() if not today_df.empty else 0
     tot_hours = round(comp_df["actual_hours"].sum() + pend_df["estimated_hours"].sum(), 1) if not today_df.empty else 0.0
 
-    # 3. 상단 실시간 요약 바 (Live Status Summary)
-    summary_html = f"""<div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 13px 20px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 8px rgba(0,45,66,0.05);"><div style="display: flex; align-items: center; gap: 10px;"><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 700;">● LIVE 관제 중</span><span style="font-size: 16px; font-weight: 700; color: #002d42;">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #0369a1; background-color: #e0f2fe; padding: 3px 8px; border-radius: 6px; font-weight: 600;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 18px; font-size: 13.5px; font-weight: 600;"><span style="color: #334155;">👥 오늘 투입: <b style="color: #0284c7;">{tot_workers}명</b></span><span style="color: #334155;">⏳ 진행 중: <b style="color: #0f5132;">{len(pend_df)}건</b></span><span style="color: #334155;">✅ 완료: <b style="color: #4f46e5;">{len(comp_df)}건</b></span><span style="color: #334155;">⏱️ 총 지원 공수: <b style="color: #d97706;">{tot_hours}시간</b></span></div></div>"""
+    # 3. 상단 실시간 요약 바 (Live Status Summary - 다크모드 NOC 커맨드 센터 스타일)
+    summary_html = f"""<div style="background: linear-gradient(135deg, #0a192f 0%, #112240 50%, #1e3a5f 100%); border: 1px solid #1e3a5f; border-left: 6px solid #00b4d8; border-radius: 9px; padding: 13px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 16px rgba(10, 25, 47, 0.22);"><div style="display: flex; align-items: center; gap: 11px;"><span style="background-color: #dc2626; color: #ffffff; border: 1px solid #ef4444; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);">● LIVE 관제 중</span><span style="font-size: 16.5px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #38bdf8; background-color: rgba(2, 132, 199, 0.25); border: 1px solid #0284c7; padding: 3px 9px; border-radius: 6px; font-weight: 700;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; font-weight: 600;"><span style="color: #cbd5e1;">👥 오늘 투입: <b style="color: #38bdf8; font-size: 14.5px; font-weight: 800;">{tot_workers}명</b></span><span style="color: #cbd5e1;">⏳ 진행 중: <b style="color: #fbbf24; font-size: 14.5px; font-weight: 800;">{len(pend_df)}건</b></span><span style="color: #cbd5e1;">✅ 완료: <b style="color: #4ade80; font-size: 14.5px; font-weight: 800;">{len(comp_df)}건</b></span><span style="color: #cbd5e1;">⏱️ 총 지원 공수: <b style="color: #f472b6; font-size: 14.5px; font-weight: 800;">{tot_hours}시간</b></span></div></div>"""
     st.markdown(summary_html, unsafe_allow_html=True)
 
     if today_df.empty:
@@ -2930,31 +2930,32 @@ def main():
                 overflow: hidden;
             }}
             .header-bar {{
-                background: #ffffff;
-                color: #0f172a;
-                padding: 10px 20px 10px 16px;
-                border-radius: 8px;
+                background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%);
+                color: #ffffff;
+                padding: 11px 20px 11px 18px;
+                border-radius: 9px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-                border: 1px solid #e1e4e8;
+                box-shadow: 0 4px 14px rgba(0, 34, 51, 0.25);
+                border: 1px solid #005f8a;
             }}
             .header-left {{
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 12px;
             }}
             .header-title {{
-                font-size: 18px;
+                font-size: 18.5px;
                 font-weight: 800;
-                color: #002d42;
+                color: #ffffff;
                 letter-spacing: -0.4px;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.5);
             }}
             .header-tag {{
-                background: #e0f2fe;
-                color: #0369a1;
-                border: 1px solid #bae6fd;
+                background: rgba(0, 180, 216, 0.22);
+                color: #38bdf8;
+                border: 1px solid rgba(56, 189, 248, 0.5);
                 padding: 2px 8px;
                 border-radius: 6px;
                 font-size: 11.5px;
@@ -2963,24 +2964,24 @@ def main():
             }}
             .header-right {{
                 font-size: 12.5px;
-                color: #64748b;
+                color: #94a3b8;
                 display: flex;
                 align-items: center;
-                gap: 12px;
+                gap: 14px;
             }}
             .clock-box {{
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                background-color: #e0f2fe;
-                color: #0369a1;
-                padding: 4px 12px;
+                background-color: rgba(15, 23, 42, 0.55);
+                color: #e2e8f0;
+                padding: 4px 13px;
                 border-radius: 20px;
                 font-weight: bold;
-                border: 1px solid #bae6fd;
+                border: 1px solid rgba(255, 255, 255, 0.16);
             }}
             #live-bora-clock {{
-                color: #0369a1;
+                color: #38bdf8;
                 font-weight: 700;
                 font-family: 'Segoe UI', Pretendard, sans-serif;
                 letter-spacing: -0.2px;
@@ -3002,8 +3003,8 @@ def main():
                 <span class="header-tag">{page_tag}</span>
             </div>
             <div class="header-right">
-                <span style="font-weight: 600; color: #0f5132;"><span style="color: #16a34a;">●</span> 관제 포털 정상 가동</span>
-                <span style="color: #cbd5e1;">|</span>
+                <span style="font-weight: 700; color: #4ade80;"><span style="color: #22c55e; text-shadow: 0 0 8px #22c55e;">●</span> 관제 포털 정상 가동</span>
+                <span style="color: rgba(255,255,255,0.25);">|</span>
                 <div class="clock-box">
                     <span>🕒</span>
                     <span id="live-bora-clock">로딩 중...</span>
