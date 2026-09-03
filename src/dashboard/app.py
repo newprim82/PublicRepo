@@ -2645,7 +2645,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     top_pareto_pct = top10_clients.iloc[cum_80_idx - 1]["cum_pct"]
 
     pareto_insight_html = f"""
-    <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-left: 5px solid #16a34a; border-radius: 8px; padding: 13px 18px; margin-top: 6px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+    <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-left: 5px solid #16a34a; border-radius: 8px; padding: 13px 18px; margin-top: 6px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
         <div style="font-size: 13.5px; color: #14532d; font-weight: 700; line-height: 1.65;">
             💡 <b>고객사 공수 집중도 분석</b>: 
             <b>{selected_team}</b>이(가) 지원하는 고객사는 총 <b>{tot_clients}개사</b>이며, 
@@ -2655,6 +2655,20 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     </div>
     """
     st.markdown(pareto_insight_html, unsafe_allow_html=True)
+
+    # ⚠️ 단일 고객사 30% 초과 편중 워닝 감지
+    over_30_clients = [(c_n, c_h, (c_h / tot_hours) * 100) for c_n, c_h in client_agg.items() if tot_hours > 0 and ((c_h / tot_hours) * 100) >= 30.0]
+    if over_30_clients:
+        over_30_details = ", ".join([f"<b>{cn}</b>({pct:.1f}%, {ch:,}h)" for cn, ch, pct in over_30_clients])
+        warning_html = f"""
+        <div style="background: #fffbeb; border: 1.5px solid #fcd34d; border-left: 5px solid #f59e0b; border-radius: 8px; padding: 12px 18px; margin-top: 0px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="font-size: 13.5px; color: #b45309; font-weight: 700; line-height: 1.6;">
+                ⚠️ <b>고객사 의존도 주의 경보</b>: 
+                단일 고객사 {over_30_details}의 비중이 전체의 <b>30% 이상</b>을 차지하여 특정 고객사 업무 편중 리스크가 감지되었습니다. (전담 엔지니어 피로도 관리 및 대체 백업 인력 편성 권장)
+            </div>
+        </div>
+        """
+        st.markdown(warning_html, unsafe_allow_html=True)
 
     client_top10_rows = []
     for c_rank, (c_name, c_h) in enumerate(client_agg.head(10).items(), 1):
