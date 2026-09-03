@@ -390,15 +390,28 @@ st.markdown("""
         padding-top: 0.4rem !important;
         padding-bottom: 0.1rem !important;
     }
-    /* 사이드바 아코디언 일체화 */
-    [data-testid="stSidebar"] [data-testid="stExpander"],
+    /* 🚀 사이드바 내부 엘리먼트 위아래 밀착 (gap 4px) */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"],
+    [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] > div {
+        gap: 4px !important;
+    }
+    [data-testid="stSidebar"] div.element-container {
+        margin-top: 0px !important;
+        margin-bottom: 0px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+    }
+    /* 사이드바 아코디언 일체화 & 상하 초밀착 */
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        margin-top: 0px !important;
+        margin-bottom: 4px !important;
+    }
     [data-testid="stSidebar"] details,
     [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] {
         border: 1px solid #003852 !important;
         border-radius: 6px !important;
         background-color: #001e2d !important;
         background: #001e2d !important;
-        margin-bottom: 8px !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
         font-weight: 700 !important;
@@ -406,7 +419,10 @@ st.markdown("""
         color: #ffffff !important;
         background-color: #001e2d !important;
         border-radius: 6px !important;
-        padding: 8px 12px !important;
+        padding: 5px 12px !important;
+        min-height: 32px !important;
+        display: flex !important;
+        align-items: center !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
         color: #00b4d8 !important;
@@ -2109,8 +2125,6 @@ def main():
         if st.button("🏠 실시간 분석 대시보드", key="btn_top_home_dashboard", type="primary" if is_main_active else "secondary", use_container_width=True):
             st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
             st.rerun()
-
-        st.markdown("<div style='margin-bottom: 6px;'></div>", unsafe_allow_html=True)
 
         # 1. 📂 메인 메뉴
         with st.expander("📂 메인 메뉴", expanded=False):
