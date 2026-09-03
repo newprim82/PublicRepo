@@ -2646,7 +2646,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             overlaying="y",
             side="right",
             range=[0, 105],
-            gridcolor="transparent"
+            showgrid=False
         ),
         xaxis=dict(
             tickfont=dict(color="#002d42", size=12, family="Pretendard"),
