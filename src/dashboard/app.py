@@ -73,6 +73,7 @@ def get_all_teams_safe() -> list:
     return ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
 from src.services.reward_leave_service import RewardLeaveService
 from src.database.supabase_client import db_manager
+from src.services.email_sender import EmailSender
 from src.analytics.stats_service import StatsService
 from src.collector.kakao_auto_collector import start_background_collector, run_collection_cycle, get_collector_countdown_info, COLLECTOR_STATUS
 
@@ -2368,13 +2369,13 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         st.info("표시할 보고서 데이터가 없습니다.")
         return
 
-    # 상단 헤더 & 원클릭 인쇄/다운로드 툴바 (아담한 콤팩트 버튼 배치)
-    h_col1, h_col2 = st.columns([3.2, 1.8])
+    # 상단 헤더 & 원클릭 인쇄/다운로드/이메일 툴바 (아담한 콤팩트 버튼 배치)
+    h_col1, h_col2 = st.columns([2.8, 2.2])
     with h_col1:
         st.markdown(f"### 📊 {selected_team} - Summary")
-        st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑과 A4 출력 서식을 제공합니다.")
+        st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑과 A4 출력 및 이메일 발송을 제공합니다.")
     with h_col2:
-        btn_c1, btn_c2 = st.columns([1, 1])
+        btn_c1, btn_c2, btn_c3 = st.columns([1, 1, 1.2])
         with btn_c1:
             # 브라우저 부모 윈도우 인쇄 대화상자 직접 호출 (window.parent.print())
             st.components.v1.html(
@@ -2412,12 +2413,35 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                 summary_df.to_excel(writer, index=False, sheet_name="팀원별실적요약")
             excel_data = excel_buffer.getvalue()
             st.download_button(
-                label="📥 엑셀(XLSX) 저장",
+                label="📥 엑셀 저장",
                 data=excel_data,
                 file_name=f"기술본부_작업실적_Summary_{datetime.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="dl_exec_summary_xlsx"
+                key="dl_exec_summary_xlsx",
+                use_container_width=True
             )
+        with btn_c3:
+            with st.popover("📧 메일 발송", use_container_width=True):
+                st.markdown("##### 📧 주간 Executive Summary 메일 발송")
+                st.caption("매주 월요일 08:00 자동 발송 리포트를 즉시 수동 발송/테스트합니다.")
+                
+                mail_rcpt = st.text_input(
+                    "수신자 이메일 (쉼표로 복수 지정 가능)",
+                    value="ymmoon@sangsanginworld.co.kr",
+                    key="popover_recipient_email"
+                )
+                st.caption("발신 계정: `newprim82@gmail.com` (Gmail SMTP)")
+                
+                if st.button("🚀 주간 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_send_popover_report"):
+                    with st.spinner("📧 주간 HTML 보고서 및 엑셀 첨부파일 생성 후 전송 중..."):
+                        success, send_msg = EmailSender.send_weekly_report(
+                            recipient_emails=mail_rcpt,
+                            selected_team=selected_team
+                        )
+                        if success:
+                            st.success(send_msg)
+                        else:
+                            st.error(send_msg)
 
     st.write("")
 
