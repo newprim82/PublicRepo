@@ -129,7 +129,7 @@ def run_migration():
                     db_manager.supabase.table("worktime_work_logs").update({
                         "is_night_work": u["is_night_work"],
                         "is_weekend_work": u["is_weekend_work"]
-                    }).eq("msg_hash", u["msg_hash"]).execute()
+                    }).eq("id", int(u["id"])).execute()
                     success_sb += 1
                 except Exception as e:
                     print(f"[!] Supabase 업데이트 에러 ({u['msg_hash']}): {e}")
