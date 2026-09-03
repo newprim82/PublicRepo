@@ -2637,16 +2637,20 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     # 과중근무 리스크 분석
     danger_names = []
     caution_names = []
-    if "week_label" in df_active.columns:
-        wk_agg = df_active.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
-        danger_workers = wk_agg[wk_agg["actual_hours"] > 52]["worker_name"].unique()
-        caution_workers = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]["worker_name"].unique()
-        danger_names = list(danger_workers)
-        caution_names = [w for w in caution_workers if w not in danger_names]
+    safe_names = []
+    if "worker_name" in df_active.columns and not df_active.empty:
+        all_active_workers = list(df_active["worker_name"].dropna().unique())
+        if "week_label" in df_active.columns:
+            wk_agg = df_active.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
+            danger_workers = wk_agg[wk_agg["actual_hours"] > 52]["worker_name"].unique()
+            caution_workers = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]["worker_name"].unique()
+            danger_names = list(danger_workers)
+            caution_names = [w for w in caution_workers if w not in danger_names]
+        safe_names = [w for w in all_active_workers if w not in danger_names and w not in caution_names]
 
     danger_cnt = len(danger_names)
     caution_cnt = len(caution_names)
-    safe_cnt = max(0, tot_workers - danger_cnt - caution_cnt)
+    safe_cnt = len(safe_names)
 
     top3_share = round((client_agg.head(3).sum() / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
 
@@ -2726,27 +2730,30 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     gov_c1, gov_c2, gov_c3 = st.columns(3)
     with gov_c1:
+        danger_text = ', '.join(danger_names) if danger_names else '초과 인원 없음 (안전)'
         st.markdown(f"""
         <div style="background: #ffffff; border: 1.5px solid {'#fca5a5' if danger_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#dc2626' if danger_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">🚨 주 52시간 초과 위험군</div>
             <div style="font-size: 22px; font-weight: 900; color: {'#dc2626' if danger_cnt > 0 else '#16a34a'}; margin-top: 2px;">{danger_cnt}명</div>
-            <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">{', '.join(danger_names) if danger_names else '초과 인원 없음 (안전)'}</div>
+            <div style="font-size: 11.5px; color: {'#dc2626' if danger_cnt > 0 else '#64748b'}; margin-top: 4px; word-break: break-word; font-weight: 600;">{danger_text}</div>
         </div>
         """, unsafe_allow_html=True)
     with gov_c2:
+        caution_text = ', '.join(caution_names) if caution_names else '주의 대상자 없음 (안전)'
         st.markdown(f"""
         <div style="background: #ffffff; border: 1.5px solid {'#fde68a' if caution_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#d97706' if caution_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">⚠️ 주 40~52시간 관리 주의군</div>
             <div style="font-size: 22px; font-weight: 900; color: {'#d97706' if caution_cnt > 0 else '#16a34a'}; margin-top: 2px;">{caution_cnt}명</div>
-            <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">집중 모니터링 대상</div>
+            <div style="font-size: 11.5px; color: {'#d97706' if caution_cnt > 0 else '#64748b'}; margin-top: 4px; word-break: break-word; font-weight: 600;">{caution_text}</div>
         </div>
         """, unsafe_allow_html=True)
     with gov_c3:
+        safe_text = ', '.join(safe_names) if safe_names else '해당 인원 없음'
         st.markdown(f"""
         <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">🟢 안정적 근로시간 준수군</div>
             <div style="font-size: 22px; font-weight: 900; color: #16a34a; margin-top: 2px;">{safe_cnt}명</div>
-            <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">정상 범위 (주 40h 이하)</div>
+            <div style="font-size: 11.5px; color: #16a34a; margin-top: 4px; word-break: break-word; font-weight: 600;">{safe_text}</div>
         </div>
         """, unsafe_allow_html=True)
 
