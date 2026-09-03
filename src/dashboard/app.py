@@ -2372,39 +2372,7 @@ def main():
                 <span style="background: rgba(0, 229, 255, 0.12); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.3); font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px;" title="LGU+ time.bora.net NTP 타임서버 동기화">BORA·KST</span>
             </span>
         </div>
-    </div>
-    <img src="data:image/svg+xml;utf8,<svg></svg>" style="display:none;" onload="
-        (function() {{
-            let serverTime = {initial_ms};
-            let clientStart = performance.now();
-            function tickBoraClock() {{
-                let current = new Date(serverTime + (performance.now() - clientStart));
-                let formatter = new Intl.DateTimeFormat('ko-KR', {{
-                    timeZone: 'Asia/Seoul',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                    hour12: false
-                }});
-                let parts = formatter.formatToParts(current);
-                let p = {{}};
-                parts.forEach(x => p[x.type] = x.value);
-                let timeStr = p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ':' + p.second;
-                
-                const doc = window.parent.document || document;
-                const el = doc.getElementById('live-bora-clock') || document.getElementById('live-bora-clock');
-                if (el) {{
-                    el.innerText = timeStr;
-                }}
-            }}
-            if (window._boraClockInterval) clearInterval(window._boraClockInterval);
-            window._boraClockInterval = setInterval(tickBoraClock, 1000);
-            tickBoraClock();
-        }})();
-    ">
+    </div><img src="data:image/svg+xml;utf8,<svg></svg>" style="display:none;" onload="(function(){{let s={initial_ms},c=performance.now();function t(){{let n=new Date(s+(performance.now()-c)),f=new Intl.DateTimeFormat('ko-KR',{{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}}),p={{}};f.formatToParts(n).forEach(x=>p[x.type]=x.value);let str=p.year+'-'+p.month+'-'+p.day+' '+p.hour+':'+p.minute+':'+p.second,d=window.parent.document||document,e=d.getElementById('live-bora-clock');if(e)e.innerText=str;}}if(window._bInt)clearInterval(window._bInt);window._bInt=setInterval(t,1000);t();}})();">
     """, unsafe_allow_html=True)
 
     # 1) 팀원 소속 및 직급 관리 페이지
