@@ -28,7 +28,7 @@ def main():
         recipient_emails=recipients,
         sender_email=sender,
         sender_password=pwd,
-        selected_team="전체"
+        selected_team="기술 1팀"
     )
     
     print(message)

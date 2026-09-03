@@ -35,7 +35,7 @@ class EmailSender:
         sender_email: Optional[str] = None,
         sender_password: Optional[str] = None,
         target_week_label: Optional[str] = None,
-        selected_team: str = "전체"
+        selected_team: str = "기술 1팀"
     ) -> Tuple[bool, str]:
         """
         Gmail SMTP를 통해 주간 Executive Summary 보고서를 발송합니다.
