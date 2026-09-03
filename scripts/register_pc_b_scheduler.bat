@@ -5,7 +5,7 @@ echo [WorkTime] PC B 매일 새벽 04:00 자동 업데이트 스케줄러 등록
 echo =======================================================
 
 set TASK_NAME=WorkTime_AutoUpdate_Collector
-set SCRIPT_PATH=C:\Python\work-time-dashboard\scripts\update_and_restart_collector.bat
+set SCRIPT_PATH=%~dp0update_and_restart_collector.bat
 
 :: 기존 동일 작업 존재 시 삭제
 schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1

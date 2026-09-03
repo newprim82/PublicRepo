@@ -5,7 +5,8 @@ echo =======================================================
 echo [WorkTime] 카카오톡 수집기 자동 업데이트 및 재시작 (매일 04:00)
 echo =======================================================
 
-cd /d C:\Python\work-time-dashboard
+:: 프로젝트 루트 디렉토리(scripts 폴더의 상위)로 자동 이동 (PublicRepo 등 폴더명 자동 대응)
+cd /d "%~dp0.."
 
 echo [*] 1. 기존 실행 중인 수집기 프로세스 안전 종료 중...
 taskkill /F /FI "WINDOWTITLE eq KakaoCollector*" /T >nul 2>&1
