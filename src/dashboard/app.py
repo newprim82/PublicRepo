@@ -3096,21 +3096,13 @@ def main():
             clean_df.to_excel(writer, index=False, sheet_name="지원시간통계")
         excel_data = output.getvalue()
         
-        btn_col1, btn_col2, _ = st.columns([1.5, 1.5, 4.0])
-        with btn_col1:
+        btn_col, _ = st.columns([2.0, 5.0])
+        with btn_col:
             st.download_button(
-                label="📥 엑셀(.xlsx) 다운로드",
+                label="📥 엑셀(.xlsx) 원장 다운로드",
                 data=excel_data,
                 file_name=f"작업지원시간_통계_{datetime.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        with btn_col2:
-            st.download_button(
-                label="📥 CSV 다운로드",
-                data=clean_df.to_csv(index=False, encoding='utf-8-sig'),
-                file_name=f"작업지원시간_통계_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
                 use_container_width=True
             )
 
