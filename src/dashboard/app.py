@@ -2057,16 +2057,17 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        # 🏠 메인 대시보드가 아닐 때, 사이드바 최상단에 메인 복귀 버튼 배치
-        if st.session_state.get("current_page") != "🏠 실시간 분석 대시보드":
-            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_sidebar_top_back", type="primary", use_container_width=True):
-                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                st.rerun()
+        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드
+        is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
+        if st.button("🏠 실시간 분석 대시보드", key="btn_top_home_dashboard", type="primary" if is_main_active else "secondary", use_container_width=True):
+            st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+            st.rerun()
+
+        st.markdown("<div style='margin-bottom: 6px;'></div>", unsafe_allow_html=True)
 
         # 1. 📂 메인 메뉴
         with st.expander("📂 메인 메뉴", expanded=False):
             main_menu_items = [
-                "🏠 실시간 분석 대시보드",
                 "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                 "📋 작업 기록 원장 & 엑셀"
             ]
