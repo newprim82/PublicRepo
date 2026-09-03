@@ -1262,6 +1262,23 @@ def get_job_title_color(title: str) -> str:
         return "#00b4d8"
 
 
+def get_job_title_bar_style(title: str):
+    """직급별 프로그래스 바 그라데이션 및 보더 스타일 반환"""
+    if not title:
+        return "linear-gradient(90deg, #0284c7, #0369a1)", "1px solid #bae6fd"
+    t = str(title).strip()
+    if "수석" in t:
+        return "linear-gradient(90deg, #8b5cf6, #5b21b6)", "1px solid #c4b5fd"
+    elif "과장" in t:
+        return "linear-gradient(90deg, #0284c7, #0369a1)", "1px solid #bae6fd"
+    elif "대리" in t:
+        return "linear-gradient(90deg, #10b981, #0f5132)", "1px solid #a3cfbb"
+    elif "사원" in t:
+        return "linear-gradient(90deg, #f59e0b, #d97706)", "1px solid #fde68a"
+    else:
+        return "linear-gradient(90deg, #0284c7, #0369a1)", "1px solid #bae6fd"
+
+
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 실시간 관제 대시보드 컴포넌트"""
     kst_now = get_current_kst_time()
@@ -1346,9 +1363,10 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             pct_text_color = "#dc2626"
                             pct_display = f"{raw_pct}% (초과)"
                         else:
-                            bar_bg = "linear-gradient(90deg, #0284c7, #0369a1)"
-                            bar_border = "1px solid #bae6fd"
-                            pct_text_color = "#0369a1"
+                            rank_bar_bg, rank_bar_border = get_job_title_bar_style(w_title)
+                            bar_bg = rank_bar_bg
+                            bar_border = rank_bar_border
+                            pct_text_color = get_job_title_color(w_title)
                             pct_display = f"{raw_pct}%"
 
                         time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
@@ -1357,7 +1375,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 
                         rank_color = get_job_title_color(w_title)
                         border_color = "#dc2626" if is_overtime else rank_color
-                        card_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-right: 4px solid {border_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700;">시작 보고 시간 : {time_str}</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 4px;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; font-size: 11.5px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">{t_desc}</span><span style="font-weight: 700; color: #ffffff; font-size: 10.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#dc2626; font-weight:700;' if is_overtime else '#0f5132;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
+                        card_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700;">시작 보고 시간 : {time_str}</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 4px;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; font-size: 11.5px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">{t_desc}</span><span style="font-weight: 700; color: #ffffff; font-size: 10.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#dc2626; font-weight:700;' if is_overtime else '#0f5132;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
                         st.markdown(card_html, unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
@@ -1397,7 +1415,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                         ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
 
                         comp_border = get_job_title_color(w_title)
-                        comp_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {comp_border}; border-right: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
+                        comp_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
                         st.markdown(comp_html, unsafe_allow_html=True)
 
 
