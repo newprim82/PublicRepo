@@ -231,57 +231,81 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
     }
 
-    /* 🏛️ Cisco ACI 탭 바 */
+    /* 🏛️ Cisco ACI 탭 바 완벽 가독성 보장 */
+    div[data-testid="stTabs"] [data-baseweb="tab-list"],
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: #f8fafc;
-        padding: 6px 8px;
-        border-radius: 8px;
-        border: 1px solid #e1e4e8;
-        margin-bottom: 16px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    }
-    .stTabs [data-baseweb="tab"] {
-        height: 38px;
-        white-space: nowrap;
-        background: #ffffff;
-        color: #334155 !important;
-        border-radius: 6px;
-        padding: 6px 16px;
+        gap: 8px !important;
+        background: #f1f5f9 !important;
+        padding: 6px 8px !important;
+        border-radius: 8px !important;
         border: 1px solid #cbd5e1 !important;
-        font-size: 13.5px;
-        font-weight: 700 !important;
-        transition: all 0.2s ease;
+        margin-bottom: 16px !important;
     }
-    .stTabs [data-baseweb="tab"] *,
-    .stTabs [data-baseweb="tab"] p,
-    .stTabs [data-baseweb="tab"] span {
-        color: #334155 !important;
-        font-weight: 700 !important;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background: #f1f5f9;
-        color: #002d42 !important;
-    }
-    .stTabs [data-baseweb="tab"]:hover * {
-        color: #002d42 !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background: #005073 !important;
-        color: #ffffff !important;
-        font-weight: 800 !important;
-        box-shadow: 0 2px 6px rgba(0, 80, 115, 0.25) !important;
-        border: 1px solid #003852 !important;
+    div[data-testid="stTabs"] [data-baseweb="tab"],
+    .stTabs [data-baseweb="tab"] {
+        height: 38px !important;
+        white-space: nowrap !important;
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 1.5px solid #94a3b8 !important;
         border-radius: 6px !important;
+        padding: 6px 18px !important;
     }
-    .stTabs [aria-selected="true"] *,
-    .stTabs [aria-selected="true"] p,
-    .stTabs [aria-selected="true"] span {
+    div[data-testid="stTabs"] [data-baseweb="tab"]:not([aria-selected="true"]) *,
+    div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="false"] *,
+    .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) * {
+        color: #002d42 !important;
+        font-weight: 800 !important;
+        font-size: 13.5px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"],
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: #005073 !important;
+        background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
+        border: 1.5px solid #002233 !important;
+        box-shadow: 0 2px 6px rgba(0, 80, 115, 0.3) !important;
+    }
+    div[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] *,
+    .stTabs [data-baseweb="tab"][aria-selected="true"] * {
         color: #ffffff !important;
         font-weight: 800 !important;
+        font-size: 13.5px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
     }
     .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
     .stTabs [data-baseweb="tab-border"] { display: none !important; }
+
+    /* 🏛️ 전역 다운로드 버튼 스타일링 (선명한 화이트 볼드 텍스트) */
+    div[data-testid="stDownloadButton"] button,
+    [data-testid="stDownloadButton"] button,
+    .stDownloadButton button {
+        background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
+        background-color: #005073 !important;
+        color: #ffffff !important;
+        border: 1px solid #002233 !important;
+        border-radius: 6px !important;
+        padding: 8px 18px !important;
+        box-shadow: 0 2px 5px rgba(0, 80, 115, 0.3) !important;
+    }
+    div[data-testid="stDownloadButton"] button *,
+    [data-testid="stDownloadButton"] button *,
+    .stDownloadButton button * {
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        font-size: 13.5px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+    div[data-testid="stDownloadButton"] button:hover,
+    [data-testid="stDownloadButton"] button:hover {
+        background-color: #003852 !important;
+    }
+    div[data-testid="stDownloadButton"] button:hover * {
+        color: #38bdf8 !important;
+    }
 
     /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 (완벽 중앙 정렬 & 입체감) */
     .kpi-card {
