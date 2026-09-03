@@ -2618,13 +2618,40 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         textposition="top center"
     ))
     fig_pareto.update_layout(
-        template="plotly_white",
-        height=320,
-        margin=dict(l=10, r=10, t=20, b=10),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#002d42", size=11, family="Pretendard")),
-        yaxis=dict(title=dict(text="투입 공수 (시간)", font=dict(color="#002d42", size=11, family="Pretendard")), tickfont=dict(color="#0f172a", size=11)),
-        yaxis2=dict(title=dict(text="누적 비중 (%)", font=dict(color="#ea580c", size=11, family="Pretendard")), tickfont=dict(color="#ea580c", size=11), overlaying="y", side="right", range=[0, 105]),
-        xaxis=dict(tickfont=dict(color="#0f172a", size=11.5, family="Pretendard", weight="bold")),
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42"),
+        height=350,
+        margin=dict(l=20, r=20, t=35, b=30),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(color="#002d42", size=12, family="Pretendard", weight="bold"),
+            bgcolor="rgba(255, 255, 255, 0.95)",
+            bordercolor="#e2e8f0",
+            borderwidth=1
+        ),
+        yaxis=dict(
+            title=dict(text="투입 공수 (시간)", font=dict(color="#005073", size=12, family="Pretendard", weight="bold")),
+            tickfont=dict(color="#005073", size=11, family="Pretendard", weight="bold"),
+            gridcolor="#f1f5f9",
+            zerolinecolor="#cbd5e1"
+        ),
+        yaxis2=dict(
+            title=dict(text="누적 점유율 (%)", font=dict(color="#ea580c", size=12, family="Pretendard", weight="bold")),
+            tickfont=dict(color="#ea580c", size=11, family="Pretendard", weight="bold"),
+            overlaying="y",
+            side="right",
+            range=[0, 105],
+            gridcolor="transparent"
+        ),
+        xaxis=dict(
+            tickfont=dict(color="#002d42", size=12, family="Pretendard", weight="bold"),
+            linecolor="#cbd5e1"
+        ),
         hovermode="x unified"
     )
     st.plotly_chart(fig_pareto, use_container_width=True)
@@ -2716,12 +2743,30 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             labels={"week_label": "주차", "actual_hours": "투입 공수(시간)", "worker_team": "소속팀"}
         )
         fig_trend.update_layout(
-            template="plotly_white",
-            height=280,
-            margin=dict(l=10, r=10, t=10, b=10),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(color="#002d42", size=11)),
-            yaxis=dict(title=dict(text="투입 공수(h)", font=dict(color="#002d42", size=11)), tickfont=dict(color="#0f172a", size=11)),
-            xaxis=dict(title=None, tickfont=dict(color="#0f172a", size=11.5, weight="bold"))
+            paper_bgcolor="#ffffff",
+            plot_bgcolor="#ffffff",
+            font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42"),
+            height=300,
+            margin=dict(l=15, r=15, t=30, b=20),
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1,
+                font=dict(color="#002d42", size=11.5, family="Pretendard", weight="bold"),
+                bgcolor="rgba(255, 255, 255, 0.95)"
+            ),
+            yaxis=dict(
+                title=dict(text="투입 공수(h)", font=dict(color="#002d42", size=12, family="Pretendard", weight="bold")),
+                tickfont=dict(color="#002d42", size=11, family="Pretendard", weight="bold"),
+                gridcolor="#f1f5f9"
+            ),
+            xaxis=dict(
+                title=None,
+                tickfont=dict(color="#002d42", size=12, family="Pretendard", weight="bold"),
+                linecolor="#cbd5e1"
+            )
         )
         st.plotly_chart(fig_trend, use_container_width=True)
 
