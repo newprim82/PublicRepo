@@ -14,6 +14,7 @@ import struct
 from datetime import datetime, timedelta, timezone
 
 from src.auth.auth_manager import AuthManager
+from src.parser.reply_matcher import check_is_night_work, check_is_weekend_work
 
 KST_TIMEZONE = timezone(timedelta(hours=9))
 
@@ -801,6 +802,37 @@ def load_data() -> pd.DataFrame:
         else:
             df["week_str"] = ""
             df["week_label"] = ""
+
+        # 🌙 야간 작업(18시~06시 시작 & 1시간 이상) 및 🏖️ 주말 작업(1시간 이상 포함) 실시간 일관성 보장
+        def _eval_night(row):
+            st_val = row.get("start_time")
+            if pd.isna(st_val):
+                return False
+            if hasattr(st_val, "to_pydatetime"):
+                st_val = st_val.to_pydatetime()
+            if hasattr(st_val, "tzinfo") and st_val.tzinfo is not None:
+                st_val = st_val.replace(tzinfo=None)
+            act_m = int(row.get("actual_minutes") or 0)
+            est_m = int(row.get("estimated_minutes") or 0)
+            raw_msg = str(row.get("raw_start_message") or "") + " " + str(row.get("task_description") or "")
+            return check_is_night_work(st_val, None, raw_msg, est_m, act_m)
+
+        def _eval_weekend(row):
+            st_val = row.get("start_time")
+            if pd.isna(st_val):
+                return False
+            if hasattr(st_val, "to_pydatetime"):
+                st_val = st_val.to_pydatetime()
+            if hasattr(st_val, "tzinfo") and st_val.tzinfo is not None:
+                st_val = st_val.replace(tzinfo=None)
+            act_m = int(row.get("actual_minutes") or 0)
+            est_m = int(row.get("estimated_minutes") or 0)
+            raw_msg = str(row.get("raw_start_message") or "") + " " + str(row.get("task_description") or "")
+            return check_is_weekend_work(st_val, None, raw_msg, est_m, act_m)
+
+        df["is_night_work"] = df.apply(_eval_night, axis=1)
+        df["is_weekend_work"] = df.apply(_eval_weekend, axis=1)
+
     return df
 
 
