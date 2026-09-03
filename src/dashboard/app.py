@@ -308,15 +308,20 @@ st.markdown("""
         border-color: rgba(56, 189, 248, 0.8) !important;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.35) !important;
     }
-    /* 🌟 무깜빡임 숨김 버튼 컨테이너 (화면 밖 -9999px) */
-    .kpi-hidden-anchor {
+    /* 🌟 무깜빡임 숨김 버튼 컨테이너 (화면 밖 -9999px 완전 퇴장) */
+    button[aria-label^="__kpi_"],
+    div.element-container:has(button[aria-label^="__kpi_"]),
+    div[data-testid="stVerticalBlock"] > div:has(button[aria-label^="__kpi_"]) {
         position: fixed !important;
         top: -9999px !important;
         left: -9999px !important;
+        width: 1px !important;
+        height: 0px !important;
         opacity: 0 !important;
         pointer-events: none !important;
-        height: 0 !important;
-        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
         overflow: hidden !important;
     }
     .kpi-title {
@@ -2646,20 +2651,12 @@ def main():
             </div>
             """, unsafe_allow_html=True)
 
-        # 🌟 무깜빡임(Zero-Blink) 네이티브 WebSocket 모달 트리거 (화면 밖 -9999px 숨김 버튼)
-        st.markdown('<div class="kpi-hidden-anchor">', unsafe_allow_html=True)
-        col_h = st.columns(5)
-        with col_h[0]:
-            act_h = st.button("H", key="kpi_act_hours")
-        with col_h[1]:
-            act_t = st.button("T", key="kpi_act_tasks")
-        with col_h[2]:
-            act_w = st.button("W", key="kpi_act_workers")
-        with col_h[3]:
-            act_u = st.button("U", key="kpi_act_urgent")
-        with col_h[4]:
-            act_o = st.button("O", key="kpi_act_overdue")
-        st.markdown('</div>', unsafe_allow_html=True)
+        # 🌟 무깜빡임(Zero-Blink) 네이티브 WebSocket 모달 트리거 (화면 밖 -9999px 완전 은폐)
+        act_h = st.button("__kpi_h__", key="kpi_act_hours")
+        act_t = st.button("__kpi_t__", key="kpi_act_tasks")
+        act_w = st.button("__kpi_w__", key="kpi_act_workers")
+        act_u = st.button("__kpi_u__", key="kpi_act_urgent")
+        act_o = st.button("__kpi_o__", key="kpi_act_overdue")
 
         if act_h:
             show_kpi_total_hours_dialog(df)
@@ -2677,33 +2674,53 @@ def main():
         components.html("""
         <script>
             (function() {
-                function bindKpiCards() {
+                function setupBridges() {
                     const pDoc = window.parent.document;
-                    const mappings = [
-                        { cardId: 'kpi-card-hours', idx: 0 },
-                        { cardId: 'kpi-card-tasks', idx: 1 },
-                        { cardId: 'kpi-card-workers', idx: 2 },
-                        { cardId: 'kpi-card-urgent', idx: 3 },
-                        { cardId: 'kpi-card-overdue', idx: 4 }
-                    ];
-                    const allBtns = pDoc.querySelectorAll('.kpi-hidden-anchor button');
-                    mappings.forEach(m => {
-                        const card = pDoc.getElementById(m.cardId);
-                        if (!card) return;
-                        card.style.cursor = 'pointer';
-                        card.onclick = function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (allBtns && allBtns[m.idx]) {
-                                allBtns[m.idx].click();
-                            }
-                        };
+                    // 숨김 버튼들을 화면 밖으로 완벽 추방 (JS 인라인 스타일 보강)
+                    const btns = Array.from(pDoc.querySelectorAll('button')).filter(b => b.innerText.includes('__kpi_') || (b.getAttribute('aria-label') && b.getAttribute('aria-label').startsWith('__kpi_')));
+                    btns.forEach(b => {
+                        b.style.position = 'fixed';
+                        b.style.top = '-9999px';
+                        b.style.left = '-9999px';
+                        b.style.opacity = '0';
+                        b.style.pointerEvents = 'none';
+                        let p = b.parentElement;
+                        while (p && p !== pDoc.body && !p.classList.contains('element-container')) {
+                            p = p.parentElement;
+                        }
+                        if (p && p.classList.contains('element-container')) {
+                            p.style.position = 'fixed';
+                            p.style.top = '-9999px';
+                            p.style.height = '0px';
+                            p.style.margin = '0px';
+                            p.style.padding = '0px';
+                            p.style.overflow = 'hidden';
+                        }
                     });
+
+                    function clickBtn(label) {
+                        const target = btns.find(b => b.innerText.includes(label) || b.getAttribute('aria-label') === label);
+                        if (target) {
+                            target.click();
+                        }
+                    }
+
+                    const c1 = pDoc.getElementById('kpi-card-hours');
+                    const c2 = pDoc.getElementById('kpi-card-tasks');
+                    const c3 = pDoc.getElementById('kpi-card-workers');
+                    const c4 = pDoc.getElementById('kpi-card-urgent');
+                    const c5 = pDoc.getElementById('kpi-card-overdue');
+
+                    if (c1) c1.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_h__'); };
+                    if (c2) c2.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_t__'); };
+                    if (c3) c3.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_w__'); };
+                    if (c4) c4.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_u__'); };
+                    if (c5) c5.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_o__'); };
                 }
-                bindKpiCards();
-                setTimeout(bindKpiCards, 100);
-                setTimeout(bindKpiCards, 300);
-                setTimeout(bindKpiCards, 700);
+
+                setupBridges();
+                const timer = setInterval(setupBridges, 200);
+                setTimeout(() => clearInterval(timer), 3000);
             })();
         </script>
         """, height=0)
