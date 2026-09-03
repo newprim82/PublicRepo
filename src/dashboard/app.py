@@ -2538,7 +2538,16 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     # 선택된 주기에 따른 활성 데이터셋(df_active) 및 전기 비교 데이터(prev_df) 분기
     if sel_period != "📅 월간 전체 종합":
         target_week = sel_period.replace("📌 ", "").strip()
-        df_active = df_scope[df_scope["week_label"] == target_week].copy()
+        # 💡 월 경계(예: 8/31~9/6)에 걸친 주차도 7일 전체 데이터가 누락 없이 온전히 조회되도록 df_raw에서 주간 데이터 추출
+        if "week_label" in df_raw.columns:
+            df_active = df_raw[df_raw["week_label"] == target_week].copy()
+        else:
+            df_active = df_scope[df_scope["week_label"] == target_week].copy()
+
+        if selected_team != "전체" and not df_active.empty:
+            df_active["worker_team"] = df_active["worker_team"].fillna(df_active["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
+            df_active = df_active[df_active["worker_team"] == selected_team]
+
         current_period_label = f"{selected_team} - {target_week}"
         is_weekly_view = True
 
@@ -2547,7 +2556,13 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         prev_df = pd.DataFrame()
         if cur_w_idx > 0:
             prev_week_label = available_weeks[cur_w_idx - 1]
-            prev_df = df_scope[df_scope["week_label"] == prev_week_label].copy()
+            if "week_label" in df_raw.columns:
+                prev_df = df_raw[df_raw["week_label"] == prev_week_label].copy()
+            else:
+                prev_df = df_scope[df_scope["week_label"] == prev_week_label].copy()
+            if selected_team != "전체" and not prev_df.empty:
+                prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
+                prev_df = prev_df[prev_df["worker_team"] == selected_team]
         else:
             # 💡 월 첫 주차인 경우 -> 지난달 마지막 주차 (직전 7일 날짜 범위)를 df_raw 전체에서 추출!
             if "start_time" in df_active.columns and pd.notna(df_active["start_time"].min()):
