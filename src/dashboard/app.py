@@ -137,6 +137,13 @@ st.markdown("""
     html {
         scroll-behavior: smooth;
     }
+    /* 🏛️ Cisco ACI Enterprise 관제 포털 테마 (Light & Deep Cyan-Navy Hybrid) */
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        background-color: #f4f6f9 !important;
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Pretendard, sans-serif !important;
+        color: #0f172a !important;
+    }
+
     /* 🚀 타이틀 + 기준시각 & 우측 Deploy/점세개 최적화 */
     header[data-testid="stHeader"] {
         background: transparent !important;
@@ -144,7 +151,7 @@ st.markdown("""
         z-index: 100 !important;
     }
 
-    /* 🚀 좌측 사이드바 열기 버튼 (stExpandSidebarButton: >>) 확실하게 최상위 노출 */
+    /* 🚀 좌측 사이드바 열기 버튼 (stExpandSidebarButton: >>) */
     [data-testid="stExpandSidebarButton"] {
         display: flex !important;
         visibility: visible !important;
@@ -154,18 +161,18 @@ st.markdown("""
         top: 1.15rem !important;
         left: 1.2rem !important;
         z-index: 999999 !important;
-        background-color: #0D2744 !important;
-        color: #00E5FF !important;
-        border: 1.5px solid #00E5FF !important;
+        background-color: #001e2d !important;
+        color: #00b4d8 !important;
+        border: 1.5px solid #00b4d8 !important;
         border-radius: 6px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
     }
     [data-testid="stExpandSidebarButton"] svg {
-        fill: #00E5FF !important;
-        color: #00E5FF !important;
+        fill: #00b4d8 !important;
+        color: #00b4d8 !important;
     }
 
-    /* 🚀 좌측 사이드바 닫기 버튼 (stSidebarCollapseButton: <<) 사이드바 상단에 선명하게 노출 */
+    /* 🚀 좌측 사이드바 닫기 버튼 (stSidebarCollapseButton: <<) */
     [data-testid="stSidebarCollapseButton"] {
         display: flex !important;
         visibility: visible !important;
@@ -176,18 +183,18 @@ st.markdown("""
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        color: #00E5FF !important;
-        background: rgba(0, 229, 255, 0.12) !important;
-        border: 1.5px solid #00E5FF !important;
+        color: #00b4d8 !important;
+        background: rgba(0, 180, 216, 0.12) !important;
+        border: 1.5px solid #00b4d8 !important;
         border-radius: 6px !important;
-        box-shadow: 0 2px 8px rgba(0, 229, 255, 0.25) !important;
     }
     [data-testid="stSidebarCollapseButton"] svg,
     [data-testid="stSidebarCollapseButton"] span {
-        fill: #00E5FF !important;
-        color: #00E5FF !important;
+        fill: #00b4d8 !important;
+        color: #00b4d8 !important;
     }
-    /* 🚀 우측 불필요한 Streamlit 툴바만 정밀 숨김 (Share, Deploy, 점세개 등) */
+
+    /* 🚀 우측 불필요한 Streamlit 툴바만 정밀 숨김 */
     [data-testid="stAppDeployButton"],
     [data-testid="stMainMenuButton"],
     [data-testid="stToolbarActions"],
@@ -206,116 +213,81 @@ st.markdown("""
         padding-right: 2rem !important;
         max-width: 100% !important;
     }
-    /* 🌟 글래스모피즘 타이틀 박스 */
-    .dashboard-title-box {
-        background: linear-gradient(90deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 12px;
-        padding: 12px 18px;
-        margin-bottom: 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-    }
-    .main-title-text {
-        font-size: 23px;
-        font-weight: 900;
-        color: #FFFFFF;
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        letter-spacing: -0.3px;
-    }
+
+    /* 🏛️ Cisco ACI 스타일 필터 배지 */
     .filter-badge {
-        background-color: #1a233a;
-        color: #90caf9;
-        padding: 10px 16px;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        display: inline-block;
-        margin-bottom: 18px;
-        border: 1px solid #283593;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        background-color: #e0f2fe !important;
+        color: #0369a1 !important;
+        padding: 9px 16px !important;
+        border-radius: 8px !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        display: inline-block !important;
+        margin-bottom: 18px !important;
+        border: 1px solid #bae6fd !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
     }
-    .menu-header {
-        font-size: 16px;
-        font-weight: bold;
-        color: #1E88E5;
-        margin-bottom: 8px;
-    }
-    
-    /* 💊 Linear / Apple 스타일 프리미엄 캡슐(Pill) 탭 */
+
+    /* 🏛️ Cisco ACI 탭 바 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
-        background: rgba(15, 23, 42, 0.7);
-        padding: 5px 6px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: #ffffff;
+        padding: 6px 8px;
+        border-radius: 8px;
+        border: 1px solid #e1e4e8;
         margin-bottom: 16px;
-        box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     }
     .stTabs [data-baseweb="tab"] {
         height: 38px;
         white-space: nowrap;
         background: transparent;
-        color: #94A3B8;
-        border-radius: 8px;
-        padding: 6px 14px;
+        color: #64748b;
+        border-radius: 6px;
+        padding: 6px 16px;
         border: none !important;
         font-size: 13.5px;
         font-weight: 600;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(255, 255, 255, 0.06);
-        color: #F8FAFC;
+        background: #f1f5f9;
+        color: #002d42;
     }
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
-        color: #FFFFFF !important;
+        background: #005073 !important;
+        color: #ffffff !important;
         font-weight: 700;
-        box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4) !important;
-        border-radius: 8px !important;
+        box-shadow: 0 2px 6px rgba(0, 80, 115, 0.25) !important;
+        border-radius: 6px !important;
     }
-    .stTabs [data-baseweb="tab-highlight"] {
-        display: none !important;
-    }
-    .stTabs [data-baseweb="tab-border"] {
-        display: none !important;
-    }
-    
-    /* 🌟 글래스모피즘 프리미엄 네온 KPI 카드 스타일 */
+    .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
+    .stTabs [data-baseweb="tab-border"] { display: none !important; }
+
+    /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 */
     .kpi-card {
-        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.09);
-        border-radius: 14px;
-        padding: 16px 18px;
+        background: #ffffff !important;
+        border: 1px solid #e1e4e8 !important;
+        border-radius: 8px !important;
+        padding: 18px 20px !important;
         margin-bottom: 0px !important;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
-        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         cursor: pointer !important;
         user-select: none;
     }
     .kpi-card:hover {
-        transform: translateY(-4px);
-        border-color: rgba(56, 189, 248, 0.8) !important;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.35) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+        border-color: #00b4d8 !important;
     }
-    /* 🌟 5대 KPI 카드 투명 오버레이 버튼: 카드를 완벽하게 덮어서 원클릭 모달 오픈 */
+    /* 🌟 5대 KPI 카드 투명 오버레이 버튼: 카드를 완벽하게 덮어서 원클릭 모달 오픈 유지 */
     div[data-testid="column"]:hover .kpi-card,
     div[data-testid="stColumn"]:hover .kpi-card {
-        transform: translateY(-4px) !important;
-        border-color: rgba(56, 189, 248, 0.8) !important;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.35) !important;
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+        border-color: #00b4d8 !important;
     }
-    /* 🌟 5대 KPI 카드 투명 오버레이: 버튼 컨테이너 자체를 카드 위로 완벽하게 덮어버림 */
     div.element-container:has(.kpi-card) + div.element-container {
         margin-top: -140px !important;
         height: 140px !important;
@@ -338,220 +310,61 @@ st.markdown("""
         padding: 0 !important;
         margin: 0 !important;
     }
+
     .kpi-title {
-        font-size: 15.5px !important;
-        font-weight: 800 !important;
-        color: #F1F5F9 !important;
-        padding-bottom: 8px !important;
-        margin-bottom: 12px !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        text-transform: uppercase !important;
+        padding-bottom: 6px !important;
+        margin-bottom: 8px !important;
         display: flex !important;
         align-items: center !important;
         gap: 6px !important;
-        letter-spacing: -0.3px !important;
+        letter-spacing: -0.2px !important;
     }
     .kpi-value {
-        font-size: 30px;
-        font-weight: 900;
-        line-height: 1.1;
-        margin-bottom: 8px;
-        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 32px !important;
+        font-weight: 800 !important;
+        line-height: 1.1 !important;
+        margin-bottom: 8px !important;
+        font-family: 'Segoe UI', Pretendard, sans-serif !important;
+        color: #0f172a !important;
     }
     .kpi-unit {
-        font-size: 15px;
-        font-weight: 600;
-        color: #64748B;
-        margin-left: 4px;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+        margin-left: 4px !important;
     }
     .kpi-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        padding: 3px 9px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: -0.2px;
-    }
-    .badge-cyan { background: rgba(0, 229, 255, 0.12); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.25); }
-    .badge-green { background: rgba(0, 230, 118, 0.12); color: #00E676; border: 1px solid rgba(0, 230, 118, 0.25); }
-    .badge-purple { background: rgba(179, 136, 255, 0.12); color: #B388FF; border: 1px solid rgba(179, 136, 255, 0.25); }
-    .badge-amber { background: rgba(255, 171, 0, 0.12); color: #FFAB00; border: 1px solid rgba(255, 171, 0, 0.25); }
-    .badge-red { background: rgba(255, 82, 82, 0.12); color: #FF5252; border: 1px solid rgba(255, 82, 82, 0.25); }
-
-    @keyframes pulse-green {
-        0% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
-        70% { box-shadow: 0 0 0 8px rgba(0, 230, 118, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
-    }
-    .live-pulse-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0, 230, 118, 0.15);
-        color: #00E676;
-        border: 1px solid #00E676;
-        border-radius: 12px;
-        padding: 3px 10px;
-        font-size: 11px;
-        font-weight: 700;
-        animation: pulse-green 2s infinite;
-    }
-    
-    /* 🎯 사이드바 정돈된 섹션 카드 헤더 */
-    .sidebar-section-header {
-        font-size: 13.5px;
-        font-weight: 800;
-        color: #E2E8F0;
-        background: rgba(30, 41, 59, 0.7);
-        padding: 6px 12px;
-        border-radius: 8px;
-        border-left: 4px solid #00E5FF;
-        margin-top: 10px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        letter-spacing: -0.2px;
-    }
-    .sidebar-section-header.purple { border-left-color: #B388FF; }
-    .sidebar-section-header.green { border-left-color: #00E676; }
-    .sidebar-section-header.amber { border-left-color: #FFAB00; }
-    
-    /* ✨ [과중 근무 발생 알림] 흰색/빨간색 교차 반짝임(Blinking) 애니메이션 */
-    @keyframes alert-blink {
-        0% {
-            color: #FFFFFF;
-            border-color: #FF1744;
-            background-color: rgba(255, 23, 68, 0.4);
-            box-shadow: 0 0 14px rgba(255, 23, 68, 0.9), inset 0 0 8px rgba(255, 23, 68, 0.5);
-            text-shadow: 0 0 8px #FFFFFF;
-        }
-        50% {
-            color: #FF1744;
-            border-color: #FFFFFF;
-            background-color: rgba(255, 255, 255, 0.25);
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.95), inset 0 0 10px rgba(255, 255, 255, 0.6);
-            text-shadow: 0 0 10px #FF1744;
-        }
-        100% {
-            color: #FFFFFF;
-            border-color: #FF1744;
-            background-color: rgba(255, 23, 68, 0.4);
-            box-shadow: 0 0 14px rgba(255, 23, 68, 0.9), inset 0 0 8px rgba(255, 23, 68, 0.5);
-            text-shadow: 0 0 8px #FFFFFF;
-        }
-    }
-
-    @keyframes siren-pulse {
-        0% { transform: scale(1) rotate(0deg); }
-        20% { transform: scale(1.25) rotate(-12deg); }
-        40% { transform: scale(1.25) rotate(12deg); }
-        60% { transform: scale(1.25) rotate(-8deg); }
-        80% { transform: scale(1.25) rotate(8deg); }
-        100% { transform: scale(1) rotate(0deg); }
-    }
-
-    .alert-blink-badge {
-        animation: alert-blink 1.2s infinite ease-in-out !important;
-        padding: 3px 12px !important;
-        border-radius: 8px !important;
-        border: 2px solid #FF1744 !important;
-        font-weight: 900 !important;
-        font-size: 15px !important;
-        letter-spacing: -0.3px !important;
-        display: inline-block !important;
-    }
-
-    .siren-icon {
-        display: inline-block !important;
-        animation: siren-pulse 1.2s infinite ease-in-out !important;
-        font-size: 18px !important;
-    }
-
-    /* 🚨 과중 근무 배너 컨테이너 테두리 & 배경 (일체형 네모칸) */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) {
-        background: linear-gradient(135deg, rgba(211, 47, 47, 0.22), rgba(239, 108, 0, 0.22)) !important;
-        border: 1.5px solid rgba(255, 82, 82, 0.6) !important;
-        border-left: 8px solid #FF1744 !important;
-        border-radius: 14px !important;
-        box-shadow: 0 6px 24px rgba(255, 23, 68, 0.3) !important;
-        padding: 14px 20px !important;
-        margin-top: 14px !important;
-        margin-bottom: 18px !important;
-    }
-
-    /* 🟢 과중 근무 없음 (정상 상태) 배너 컨테이너 테두리 & 배경 */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
-        background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 229, 255, 0.05)) !important;
-        border: 1.5px solid rgba(0, 230, 118, 0.35) !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 16px rgba(0, 230, 118, 0.12) !important;
-        padding: 12px 20px !important;
-        margin-top: 10px !important;
-        margin-bottom: 16px !important;
-        text-align: center !important;
-    }
-
-    .normal-status-badge {
-        background: rgba(0, 230, 118, 0.18) !important;
-        color: #00E676 !important;
-        border: 1.5px solid rgba(0, 230, 118, 0.6) !important;
-        padding: 3px 12px !important;
-        border-radius: 8px !important;
-        font-weight: 900 !important;
-        font-size: 13.5px !important;
-        letter-spacing: -0.3px !important;
         display: inline-flex !important;
         align-items: center !important;
+        gap: 4px !important;
+        padding: 3px 10px !important;
+        border-radius: 4px !important;
+        font-size: 11.5px !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.2px !important;
     }
+    .badge-cyan { background-color: #e0f2fe !important; color: #0369a1 !important; }
+    .badge-green { background-color: #d1e7dd !important; color: #0f5132 !important; }
+    .badge-purple { background-color: #ede9fe !important; color: #5b21b6 !important; }
+    .badge-amber { background-color: #fef3c7 !important; color: #d97706 !important; }
+    .badge-red { background-color: #fee2e2 !important; color: #dc2626 !important; }
 
-    /* 🟧 배너 내부 버튼 100% 강제 오렌지색 적용 */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button,
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button {
-        background: linear-gradient(135deg, #FF6D00, #FF9100) !important;
-        background-color: #FF6D00 !important;
-        color: #FFFFFF !important;
-        border: 1.5px solid #FFE082 !important;
-        border-radius: 20px !important;
-        padding: 4px 16px !important;
-        font-size: 13px !important;
-        font-weight: 900 !important;
-        min-height: 32px !important;
-        height: 32px !important;
-        line-height: 22px !important;
-        box-shadow: 0 4px 14px rgba(255, 109, 0, 0.6) !important;
-        white-space: nowrap !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button *,
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button * {
-        color: #FFFFFF !important;
-        font-weight: 900 !important;
-        font-size: 13px !important;
-    }
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton button:hover,
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button:hover {
-        background: linear-gradient(135deg, #FF9100, #FFAB00) !important;
-        transform: translateY(-2px) scale(1.04) !important;
-        box-shadow: 0 6px 20px rgba(255, 109, 0, 0.85) !important;
-    }
-
-    /* 🚫 사이트 전체 마우스 호버 툴팁(Tooltip) 오버레이 완전 차단 */
-    div[data-baseweb="tooltip"],
-    div[role="tooltip"],
-    .stTooltipContent,
-    [data-testid="stTooltipContent"],
-    [data-testid="stTooltipHoverTarget"] div[data-baseweb="tooltip"] {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-    }
-
-    /* 🏛️ Cisco Catalyst Center 사이드바 드로어 스타일링 (메뉴 최상단 밀착) */
+    /* 🏛️ Cisco ACI 사이드바 스타일링 (#002d42 딥 네이비) */
     [data-testid="stSidebar"] {
-        background-color: #0F172A !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+        background-color: #002d42 !important;
+        border-right: 1px solid #003852 !important;
+    }
+    [data-testid="stSidebar"] * {
+        color: #bdcddc !important;
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #00b4d8 !important;
     }
     [data-testid="stSidebar"] .block-container,
     [data-testid="stSidebarUserContent"] {
@@ -564,21 +377,167 @@ st.markdown("""
         padding-bottom: 0.1rem !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] {
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid #003852 !important;
         border-radius: 6px !important;
-        background: rgba(30, 41, 59, 0.4) !important;
+        background: #001e2d !important;
         margin-bottom: 8px !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
         font-weight: 700 !important;
         font-size: 13px !important;
-        color: #E2E8F0 !important;
+        color: #ffffff !important;
     }
     [data-testid="stSidebar"] button {
         border-radius: 4px !important;
         font-size: 12.5px !important;
         font-weight: 600 !important;
+        background-color: transparent !important;
+        border: 1px solid transparent !important;
+        color: #bdcddc !important;
         transition: all 0.15s ease-in-out !important;
+    }
+    [data-testid="stSidebar"] button:hover {
+        background-color: #003852 !important;
+        color: #ffffff !important;
+        border-color: #00b4d8 !important;
+    }
+    [data-testid="stSidebar"] button[kind="primary"] {
+        background-color: #004566 !important;
+        color: #ffffff !important;
+        border-left: 4px solid #00b4d8 !important;
+        border-radius: 0 4px 4px 0 !important;
+    }
+
+    /* 🏛️ Cisco ACI 표준 테이블 스타일링 */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        background: #ffffff !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+        margin-bottom: 25px !important;
+    }
+    th {
+        background-color: #005073 !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        padding: 12px 16px !important;
+        text-align: left !important;
+        font-size: 13.5px !important;
+    }
+    td {
+        padding: 12px 16px !important;
+        border-bottom: 1px solid #e1e4e8 !important;
+        color: #334155 !important;
+        font-size: 13.5px !important;
+    }
+
+    /* 🏛️ 과중 근무 알림 배너 */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) {
+        background: #fff5f5 !important;
+        border: 1.5px solid #fecaca !important;
+        border-left: 8px solid #dc2626 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        padding: 14px 20px !important;
+        margin-top: 14px !important;
+        margin-bottom: 18px !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
+        background: #f0fdf4 !important;
+        border: 1.5px solid #bbf7d0 !important;
+        border-left: 8px solid #16a34a !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        padding: 12px 20px !important;
+        margin-top: 10px !important;
+        margin-bottom: 16px !important;
+        text-align: center !important;
+    }
+    .normal-status-badge {
+        background: #d1e7dd !important;
+        color: #0f5132 !important;
+        border: 1px solid #a3cfbb !important;
+        padding: 3px 12px !important;
+        border-radius: 4px !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+    .alert-blink-badge {
+        background: #fee2e2 !important;
+        color: #dc2626 !important;
+        border: 1px solid #fca5a5 !important;
+        padding: 3px 12px !important;
+        border-radius: 4px !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+
+    /* 🚫 툴팁 오버레이 완전 차단 */
+    div[data-baseweb="tooltip"],
+    div[role="tooltip"],
+    .stTooltipContent,
+    [data-testid="stTooltipContent"],
+    [data-testid="stTooltipHoverTarget"] div[data-baseweb="tooltip"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
+
+    /* 🏛️ Cisco ACI 모달 다이얼로그 (@st.dialog) 엔터프라이즈 화이트 스타일링 */
+    div[role="dialog"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #e1e4e8 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15) !important;
+    }
+    div[role="dialog"] h1,
+    div[role="dialog"] h2,
+    div[role="dialog"] h3,
+    div[role="dialog"] h4 {
+        color: #002d42 !important;
+    }
+    div[role="dialog"] p,
+    div[role="dialog"] span,
+    div[role="dialog"] label {
+        color: #334155 !important;
+    }
+    div[role="dialog"] button[aria-label="Close"] {
+        color: #64748b !important;
+    }
+
+    /* 🏛️ 드롭다운 팝오버 및 셀렉트박스 옵션 가독성 */
+    div[data-baseweb="popover"] {
+        background-color: #ffffff !important;
+        border: 1px solid #e1e4e8 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+    div[data-baseweb="popover"] *,
+    ul[role="listbox"] * {
+        color: #0f172a !important;
+    }
+
+    /* 🏛️ 사이드바 인풋 및 라벨 가독성 */
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] .stMarkdown p {
+        color: #e2e8f0 !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background-color: #001e2d !important;
+        border-color: #003852 !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] span {
+        color: #ffffff !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1221,7 +1180,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     tot_hours = round(comp_df["actual_hours"].sum() + pend_df["estimated_hours"].sum(), 1) if not today_df.empty else 0.0
 
     # 3. 상단 실시간 요약 바 (Live Status Summary)
-    summary_html = f"""<div style="background: linear-gradient(90deg, #0F172A 0%, #1E293B 100%); border: 1px solid rgba(0, 230, 118, 0.4); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.3);"><div style="display: flex; align-items: center; gap: 10px;"><span style="background: rgba(0, 230, 118, 0.15); color: #00E676; border: 1px solid #00E676; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 700;">● LIVE 관제 중</span><span style="font-size: 16px; font-weight: 700; color: #FFFFFF;">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #94A3B8; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 6px;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 18px; font-size: 13.5px; font-weight: 600;"><span style="color: #E2E8F0;">👥 오늘 투입: <b style="color: #38BDF8;">{tot_workers}명</b></span><span style="color: #E2E8F0;">⏳ 진행 중: <b style="color: #00E676;">{len(pend_df)}건</b></span><span style="color: #E2E8F0;">✅ 완료: <b style="color: #818CF8;">{len(comp_df)}건</b></span><span style="color: #E2E8F0;">⏱️ 총 지원 공수: <b style="color: #FBBF24;">{tot_hours}시간</b></span></div></div>"""
+    summary_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; align-items: center; gap: 10px;"><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 700;">● LIVE 관제 중</span><span style="font-size: 16px; font-weight: 700; color: #002d42;">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #0369a1; background-color: #e0f2fe; padding: 3px 8px; border-radius: 6px; font-weight: 600;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 18px; font-size: 13.5px; font-weight: 600;"><span style="color: #334155;">👥 오늘 투입: <b style="color: #0284c7;">{tot_workers}명</b></span><span style="color: #334155;">⏳ 진행 중: <b style="color: #0f5132;">{len(pend_df)}건</b></span><span style="color: #334155;">✅ 완료: <b style="color: #4f46e5;">{len(comp_df)}건</b></span><span style="color: #334155;">⏱️ 총 지원 공수: <b style="color: #d97706;">{tot_hours}시간</b></span></div></div>"""
     st.markdown(summary_html, unsafe_allow_html=True)
 
     if today_df.empty:
@@ -1247,14 +1206,14 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 continue
 
             # 웅장하고 눈에 확 띄는 프리미엄 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
-            st.markdown(f"""<div style="margin-top: 22px; margin-bottom: 12px; background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.6) 100%); border-left: 6px solid #00E5FF; border-radius: 8px; padding: 10px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);"><span style="font-size: 20px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background: rgba(0, 230, 118, 0.2); color: #00E676; border: 1.5px solid #00E676; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; box-shadow: 0 0 10px rgba(0, 230, 118, 0.25);">🟢 {len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div style="margin-top: 20px; margin-bottom: 12px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 6px solid #005073; border-radius: 8px; padding: 10px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);"><span style="font-size: 18px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
 
             p_cols = st.columns(4)
             for idx, (_, r) in enumerate(t_pend.iterrows()):
                 with p_cols[idx % 4]:
                     w_name = r["worker_name"]
                     w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                    title_str = f"<span style='font-size: 12.5px; font-weight: 600; color: #94A3B8; margin-left: 3px;'>{w_title}</span>" if w_title else ""
+                    title_str = f"<span style='font-size: 12px; font-weight: 600; color: #64748b; margin-left: 3px;'>{w_title}</span>" if w_title else ""
                     c_name = r["client_name"]
                     t_desc = r["task_description"]
                     st_dt = r["start_time"]
@@ -1271,22 +1230,22 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     bar_width_pct = min(100, max(5, raw_pct))
 
                     if is_overtime:
-                        bar_bg = "linear-gradient(90deg, rgba(244, 63, 94, 0.45) 0%, rgba(225, 29, 72, 0.35) 100%)"
-                        bar_border = "1px solid rgba(244, 63, 94, 0.4)"
-                        pct_text_color = "#FFA4B2"
+                        bar_bg = "linear-gradient(90deg, #f87171 0%, #dc2626 100%)"
+                        bar_border = "1px solid #f87171"
+                        pct_text_color = "#dc2626"
                         pct_display = f"{raw_pct}% (초과)"
                     else:
-                        bar_bg = "linear-gradient(90deg, rgba(14, 165, 233, 0.5) 0%, rgba(56, 189, 248, 0.3) 100%)"
-                        bar_border = "1px solid rgba(56, 189, 248, 0.35)"
-                        pct_text_color = "#38BDF8"
+                        bar_bg = "linear-gradient(90deg, #0284c7, #0369a1)"
+                        bar_border = "1px solid #bae6fd"
+                        pct_text_color = "#0369a1"
                         pct_display = f"{raw_pct}%"
 
                     time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
-                    night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:1px 5px; border-radius:4px; font-size:10.5px; margin-left:3px;'>🌙 야간</span>" if r.get("is_night_work") else ""
-                    weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:1px 5px; border-radius:4px; font-size:10.5px; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+                    night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if r.get("is_night_work") else ""
+                    weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
 
-                    border_color = "#F43F5E" if is_overtime else "#00E676"
-                    card_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%); border: 1px solid {border_color}; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14px; font-weight: 700; color: #FFFFFF;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background: rgba(0, 230, 118, 0.15); color: #00E676; border: 1px solid #00E676; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">⏳ {time_str}</span></div><div style="font-size: 13px; color: #F8FAFC; font-weight: 600; margin-bottom: 4px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="position: relative; overflow: hidden; background: rgba(0, 0, 0, 0.35); border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 30px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; font-size: 12px; font-weight: 600; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.8); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">{t_desc}</span><span style="font-weight: 700; color: {pct_text_color}; font-size: 11px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #94A3B8; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#F43F5E; font-weight:700;' if is_overtime else '#00E676;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
+                    border_color = "#dc2626" if is_overtime else "#00b4d8"
+                    card_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">⏳ {time_str}</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 4px;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; font-size: 11.5px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">{t_desc}</span><span style="font-weight: 700; color: #ffffff; font-size: 10.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#dc2626; font-weight:700;' if is_overtime else '#0f5132;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
                     st.markdown(card_html, unsafe_allow_html=True)
 
     st.write("")
@@ -1309,14 +1268,14 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 continue
 
             # 웅장하고 눈에 확 띄는 프리미엄 완료 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
-            st.markdown(f"""<div style="margin-top: 20px; margin-bottom: 10px; background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.5) 100%); border-left: 6px solid #818CF8; border-radius: 8px; padding: 9px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);"><span style="font-size: 19px; font-weight: 900; color: #FFFFFF; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background: rgba(129, 140, 248, 0.2); color: #818CF8; border: 1.5px solid #818CF8; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div style="margin-top: 20px; margin-bottom: 10px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 6px solid #4f46e5; border-radius: 8px; padding: 9px 18px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);"><span style="font-size: 18px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background-color: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
 
             c_cols = st.columns(4)
             for idx, (_, r) in enumerate(t_comp.iterrows()):
                 with c_cols[idx % 4]:
                     w_name = r["worker_name"]
                     w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                    title_str = f"<span style='font-size: 12.5px; font-weight: 600; color: #94A3B8; margin-left: 4px;'>{w_title}</span>" if w_title else ""
+                    title_str = f"<span style='font-size: 12px; font-weight: 600; color: #64748b; margin-left: 3px;'>{w_title}</span>" if w_title else ""
                     c_name = r["client_name"]
                     t_desc = r["task_description"]
                     st_dt = r["start_time"]
@@ -1326,7 +1285,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
                     ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
 
-                    comp_html = f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.6) 0%, rgba(30, 41, 59, 0.5) 100%); border: 1px solid rgba(129, 140, 248, 0.25); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #E2E8F0;">👤 {w_name}{title_str}</span></div><span style="background: rgba(129, 140, 248, 0.15); color: #818CF8; border: 1px solid rgba(129, 140, 248, 0.4); border-radius: 10px; padding: 2px 7px; font-size: 10.5px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #F1F5F9; font-weight: 600; margin-bottom: 3px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="font-size: 12px; color: #94A3B8; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
+                    comp_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #10b981; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
                     st.markdown(comp_html, unsafe_allow_html=True)
 
 
@@ -1346,7 +1305,7 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
     pend_cnt = int((day_df["status"] == "PENDING").sum())
 
     # 상단 요약 미니 배너
-    st.markdown(f"""<div style="display: flex; gap: 10px; margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; padding: 10px 14px; flex-wrap: wrap;"><span style="color: #00E5FF; font-weight: 700;">⏱️ 총 공수: <b>{tot_h}h</b></span><span style="color: #64748B;">|</span><span style="color: #B388FF; font-weight: 700;">👥 투입 인원: <b>{tot_w}명</b></span><span style="color: #64748B;">|</span><span style="color: #FBBF24; font-weight: 700;">🏢 고객사: <b>{tot_c}개사</b></span><span style="color: #64748B;">|</span><span style="color: #00E676; font-weight: 700;">✅ 완료 {comp_cnt}건 / ⏳ 진행 {pend_cnt}건</span></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div style="display: flex; gap: 10px; margin-bottom: 16px; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 10px 14px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><span style="color: #005073; font-weight: 700;">⏱️ 총 공수: <b>{tot_h}h</b></span><span style="color: #cbd5e1;">|</span><span style="color: #4f46e5; font-weight: 700;">👥 투입 인원: <b>{tot_w}명</b></span><span style="color: #cbd5e1;">|</span><span style="color: #d97706; font-weight: 700;">🏢 고객사: <b>{tot_c}개사</b></span><span style="color: #cbd5e1;">|</span><span style="color: #0f5132; font-weight: 700;">✅ 완료 {comp_cnt}건 / ⏳ 진행 {pend_cnt}건</span></div>""", unsafe_allow_html=True)
 
     # 2열 상세 카드 그리드
     day_df_sorted = day_df.sort_values("start_time")
@@ -1367,14 +1326,14 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
             st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
             ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
 
-            title_badge = f"<span style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
-            team_badge = f"<span style='background:rgba(56,189,248,0.12); color:#38BDF8; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>" if w_team else ""
-            night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
-            weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+            title_badge = f"<span style='background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
+            team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>" if w_team else ""
+            night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
+            weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
 
-            status_badge = "<span style='background:rgba(0,230,118,0.15); color:#00E676; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>⏳ 진행 중</span>" if status == "PENDING" else f"<span style='background:rgba(129,140,248,0.15); color:#818CF8; border:1px solid rgba(129,140,248,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>✅ {act_h}h 완료</span>"
+            status_badge = "<span style='background:#d1e7dd; color:#0f5132; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>⏳ 진행 중</span>" if status == "PENDING" else f"<span style='background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>✅ {act_h}h 완료</span>"
 
-            st.markdown(f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.7) 100%); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14.5px; font-weight: 700; color: #FFFFFF;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #38BDF8; font-weight: 600; margin-bottom: 3px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="font-size: 12.5px; color: #CBD5E1; line-height: 1.4; margin-bottom: 6px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #94A3B8; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 5px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #005073; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14.5px; font-weight: 700; color: #0f172a;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #334155; line-height: 1.4; margin-bottom: 6px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 5px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
 
 
 def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
@@ -1697,14 +1656,14 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
                 st_str = st_dt.strftime("%m/%d %H:%M") if pd.notna(st_dt) else "?"
                 ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
 
-                title_badge = f"<span style='background:rgba(255,255,255,0.08); padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_title}</span>" if w_title else ""
-                team_badge = f"<span style='background:rgba(56,189,248,0.12); color:#38BDF8; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_team}</span>"
-                night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🌙</span>" if r.get("is_night_work") else ""
-                weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🏖️</span>" if r.get("is_weekend_work") else ""
+                title_badge = f"<span style='background:#f1f5f9; color:#475569; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_title}</span>" if w_title else ""
+                team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_team}</span>"
+                night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🌙</span>" if r.get("is_night_work") else ""
+                weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🏖️</span>" if r.get("is_weekend_work") else ""
 
-                status_badge = "<span style='background:rgba(0,230,118,0.15); color:#00E676; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>⏳ 진행</span>" if status == "PENDING" else f"<span style='background:rgba(129,140,248,0.15); color:#818CF8; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>✅ {act_h}h</span>"
+                status_badge = "<span style='background:#d1e7dd; color:#0f5132; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>⏳ 진행</span>" if status == "PENDING" else f"<span style='background:#ede9fe; color:#5b21b6; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>✅ {act_h}h</span>"
 
-                st.markdown(f"""<div style="background: linear-gradient(135deg, rgba(15,23,42,0.7) 0%, rgba(30,41,59,0.6) 100%); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-weight: 700; color: #FFFFFF; font-size: 14px;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #38BDF8; font-weight: 600; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #E2E8F0; line-height: 1.3; margin-bottom: 6px; min-height: 32px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #94A3B8; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 4px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #005073; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-weight: 700; color: #0f172a; font-size: 14px;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #334155; line-height: 1.3; margin-bottom: 6px; min-height: 32px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 4px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
 
         if res_cnt > 60:
             st.info(f"💡 결과가 많아 상위 60건의 카드만 표시 중입니다. 전체 {res_cnt:,}건은 [📋 인터랙티브 테이블 뷰]에서 모두 확인 및 다운로드하실 수 있습니다.")
@@ -2094,6 +2053,14 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
+        # 🏛️ Cisco ACI 스타일 사이드바 헤더 배너
+        st.markdown("""
+        <div style="background-color: #001e2d; padding: 16px 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #003852; border-left: 4px solid #00b4d8;">
+            <div style="font-size: 16px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">🏢 기술본부 관제센터</div>
+            <div style="font-size: 11px; color: #a3b8cc; margin-top: 3px;">Field Support & Monitoring Portal</div>
+        </div>
+        """, unsafe_allow_html=True)
+
         # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드
         is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
         if st.button("🏠 실시간 분석 대시보드", key="btn_top_home_dashboard", type="primary" if is_main_active else "secondary", use_container_width=True):
@@ -2421,15 +2388,15 @@ def main():
                 overflow: hidden;
             }}
             .header-bar {{
-                background: #0D2744;
-                color: #FFFFFF;
-                padding: 11px 20px 11px 16px;
+                background: #ffffff;
+                color: #0f172a;
+                padding: 10px 20px 10px 16px;
                 border-radius: 8px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-                border: 1px solid rgba(0, 229, 255, 0.25);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                border: 1px solid #e1e4e8;
             }}
             .header-left {{
                 display: flex;
@@ -2439,13 +2406,13 @@ def main():
             .header-title {{
                 font-size: 18px;
                 font-weight: 800;
-                color: #00E5FF;
+                color: #002d42;
                 letter-spacing: -0.4px;
             }}
             .header-tag {{
-                background: rgba(0, 229, 255, 0.15);
-                color: #00E5FF;
-                border: 1px solid rgba(0, 229, 255, 0.4);
+                background: #e0f2fe;
+                color: #0369a1;
+                border: 1px solid #bae6fd;
                 padding: 2px 8px;
                 border-radius: 6px;
                 font-size: 11.5px;
@@ -2453,8 +2420,8 @@ def main():
                 margin-left: 4px;
             }}
             .header-right {{
-                font-size: 12px;
-                color: #94A3B8;
+                font-size: 12.5px;
+                color: #64748b;
                 display: flex;
                 align-items: center;
                 gap: 12px;
@@ -2462,22 +2429,27 @@ def main():
             .clock-box {{
                 display: inline-flex;
                 align-items: center;
-                gap: 5px;
+                gap: 6px;
+                background-color: #e0f2fe;
+                color: #0369a1;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-weight: bold;
+                border: 1px solid #bae6fd;
             }}
             #live-bora-clock {{
-                color: #F1F5F9;
-                font-weight: 600;
-                font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+                color: #0369a1;
+                font-weight: 700;
+                font-family: 'Segoe UI', Pretendard, sans-serif;
                 letter-spacing: -0.2px;
             }}
             .badge-bora {{
-                background: rgba(0, 229, 255, 0.12);
-                color: #00E5FF;
-                border: 1px solid rgba(0, 229, 255, 0.3);
+                background: #0284c7;
+                color: #ffffff;
                 font-size: 10px;
                 font-weight: 800;
-                padding: 1px 5px;
-                border-radius: 4px;
+                padding: 1px 6px;
+                border-radius: 10px;
             }}
         </style>
     </head>
@@ -2488,8 +2460,8 @@ def main():
                 <span class="header-tag">{page_tag}</span>
             </div>
             <div class="header-right">
-                <span>🟢 관제 시스템 정상 가동</span>
-                <span style="color: #48525B;">|</span>
+                <span style="font-weight: 600; color: #0f5132;"><span style="color: #16a34a;">●</span> 관제 포털 정상 가동</span>
+                <span style="color: #cbd5e1;">|</span>
                 <div class="clock-box">
                     <span>🕒</span>
                     <span id="live-bora-clock">로딩 중...</span>
@@ -2620,9 +2592,9 @@ def main():
         
         with kpi_col1:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #00E5FF;">
+            <div class="kpi-card" style="border-top: 4px solid #005073;">
                 <div class="kpi-title">⏱️ 총 지원 시간</div>
-                <div class="kpi-value" style="color: #00E5FF;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
+                <div class="kpi-value" style="color: #005073;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
                 <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
             </div>
             """, unsafe_allow_html=True)
@@ -2631,10 +2603,10 @@ def main():
             
         with kpi_col2:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #00E676;">
+            <div class="kpi-card" style="border-top: 4px solid #0284c7;">
                 <div class="kpi-title">📋 총 작업 건수</div>
-                <div class="kpi-value" style="color: #FFFFFF;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
-                <div class="kpi-badge badge-green">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#64748B;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
+                <div class="kpi-value" style="color: #0284c7;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
+                <div class="kpi-badge badge-cyan">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#94a3b8;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
             </div>
             """, unsafe_allow_html=True)
             if st.button(" ", key="kpi_btn_tasks", use_container_width=True, help="클릭하여 총 작업 건수 상세 팝업 열기"):
@@ -2642,9 +2614,9 @@ def main():
             
         with kpi_col3:
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #B388FF;">
+            <div class="kpi-card" style="border-top: 4px solid #4f46e5;">
                 <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
-                <div class="kpi-value" style="color: #FFFFFF;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
+                <div class="kpi-value" style="color: #4f46e5;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
                 <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
             </div>
             """, unsafe_allow_html=True)
@@ -2654,10 +2626,10 @@ def main():
         with kpi_col4:
             total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
             st.markdown(f"""
-            <div class="kpi-card" style="border-top: 4px solid #FFAB00;">
+            <div class="kpi-card" style="border-top: 4px solid #ea580c;">
                 <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
-                <div class="kpi-value" style="color: #FFAB00;">{total_urg}<span class="kpi-unit">건</span></div>
-                <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#64748B;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
+                <div class="kpi-value" style="color: #ea580c;">{total_urg}<span class="kpi-unit">건</span></div>
+                <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#94a3b8;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
             </div>
             """, unsafe_allow_html=True)
             if st.button(" ", key="kpi_btn_urgent", use_container_width=True, help="클릭하여 야간/주말 긴급 작업 팝업 열기"):
@@ -2667,7 +2639,7 @@ def main():
             overdue_val = float(kpi.get('overdue_rate', 0))
             overdue_cnt = int(kpi.get('overdue_tasks_count', 0))
             is_danger = (overdue_val > 0) or (overdue_cnt > 0)
-            overdue_color = "#FF5252" if is_danger else "#00E676"
+            overdue_color = "#dc2626" if is_danger else "#16a34a"
             badge_cls = "badge-red" if is_danger else "badge-green"
             badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
             st.markdown(f"""
@@ -2751,19 +2723,19 @@ def main():
                     # 1행: 상단 알림 제목 (반짝반짝 애니메이션)
                     col_head_l, col_head_r = st.columns([7.8, 2.2])
                     with col_head_l:
-                        st.markdown('<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #FFFFFF;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
+                        st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
                     with col_head_r:
                         if st.button("👉 팀원별 모니터링 표 보기", key="btn_jump_to_worker_page"):
                             st.session_state["current_page"] = "👤 팀원별 업무량 분석"
                             st.rerun()
 
-                    st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid rgba(255, 82, 82, 0.3);'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid #fecaca;'></div>", unsafe_allow_html=True)
                     
                     # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우)
                     if danger_items:
                         col_d_lbl, col_d_chips = st.columns([2.0, 8.0])
                         with col_d_lbl:
-                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FF5252;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:800; color:#dc2626;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
                         with col_d_chips:
                             d_cols = st.columns(max(len(danger_items), 1) + 4)
                             for d_idx, d_item in enumerate(danger_items):
@@ -2775,7 +2747,7 @@ def main():
                     if caution_items:
                         col_c_lbl, col_c_chips = st.columns([2.0, 8.0])
                         with col_c_lbl:
-                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FFA726;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
+                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:800; color:#d97706;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
                         with col_c_chips:
                             c_cols = st.columns(max(len(caution_items), 1) + 4)
                             for c_idx, c_item in enumerate(caution_items):
@@ -2785,11 +2757,11 @@ def main():
             else:
                 # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너
                 st.markdown("""
-                <div style="background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 229, 255, 0.05)); border: 1.5px solid rgba(0, 230, 118, 0.35); border-radius: 10px; padding: 10px 18px; margin: 10px 0 14px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0, 230, 118, 0.12);">
-                    <div style="font-size: 14.5px; font-weight: 700; color: #E2E8F0; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
-                        <span style="font-size: 16px; line-height: 1;">🟢</span>
-                        <span style="background: rgba(0, 230, 118, 0.18); color: #00E676; border: 1.5px solid rgba(0, 230, 118, 0.6); padding: 3px 10px; border-radius: 6px; font-weight: 900; font-size: 13px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
-                        <span style="color: #94A3B8; font-size: 13.5px; line-height: 1;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 10px 0 14px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                    <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
+                        <span style="font-size: 15px; line-height: 1;">🟢</span>
+                        <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
+                        <span style="color: #334155; font-size: 13px; line-height: 1; font-weight: 500;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)

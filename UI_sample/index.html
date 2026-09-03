@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cisco ACI 웹 자동화 & 모니터링 관제 포털</title>
+    <style>
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; overflow: hidden; }
+        .wrapper { display: flex; width: 100%; height: 100%; }
+        .sidebar { width: 260px; background-color: #002d42; color: #ffffff; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 25px 20px; background-color: #001e2d; border-bottom: 1px solid #003852; }
+        .sidebar-header h2 { margin: 0; font-size: 18px; color: #00b4d8; }
+        .sidebar-header p { margin: 5px 0 0 0; font-size: 11px; color: #a3b8cc; }
+        .tabs { list-style: none; padding: 20px 0; margin: 0; flex-grow: 1; }
+        .tab-item { padding: 15px 20px; cursor: pointer; font-weight: 600; color: #bdcddc; border-left: 4px solid transparent; display: flex; align-items: center; }
+        .tab-item:hover { background-color: #003852; color: #ffffff; }
+        .tab-item.active { background-color: #004566; color: #ffffff; border-left-color: #00b4d8; }
+        .main-content { flex-grow: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+        .topbar { background-color: #ffffff; height: 70px; display: flex; align-items: center; padding: 0 30px; border-bottom: 1px solid #e1e4e8; flex-shrink: 0; }
+        .topbar .info-badge { background-color: #e0f2fe; color: #0369a1; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        .content-body { padding: 30px; flex-grow: 1; overflow-y: auto; box-sizing: border-box; }
+        .tab-content { display: none; animation: fadeIn 0.2s ease; width: 100%; }
+        .tab-content.active { display: block; }
+        h3 { color: #002d42; margin-top: 0; margin-bottom: 20px; font-size: 20px; border-left: 4px solid #00b4d8; padding-left: 10px; }
+        h4 { color: #005073; margin-top: 20px; margin-bottom: 15px; font-size: 16px; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        th, td { padding: 14px 18px; text-align: left; font-size: 14px; }
+        th { background-color: #005073; color: white; font-weight: 600; }
+        td { border-bottom: 1px solid #e1e4e8; color: #444; }
+        
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .card { background: white; padding: 22px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-top: 4px solid #005073; }
+        .card-title { font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: bold; text-transform: uppercase; }
+        .card-value { font-size: 32px; font-weight: bold; color: #0f172a; }
+        
+        .resource-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; margin-bottom: 30px; }
+        .resource-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-left: 4px solid #00b4d8; }
+        .progress-group { margin-bottom: 14px; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+        .progress-container { width: 100%; height: 14px; background-color: #e9ecef; border-radius: 7px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #0284c7, #0369a1); border-radius: 7px; }
+        .progress-bar.mem { background: linear-gradient(90deg, #0f766e, #115e59); }
+
+        .form-box { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-width: 600px; margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #333; }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        button { padding: 12px 20px; background-color: #005073; color: white; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; font-weight: bold; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-active { background-color: #d1e7dd; color: #0f5132; }
+        .badge-avg { background-color: #fef3c7; color: #d97706; margin-left: 6px; font-size: 11px; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Cisco ACI 관제센터</h2>
+            <p>Automation & Monitoring Portal</p>
+        </div>
+        <ul class="tabs">
+            <li class="tab-item active" onclick="switchTab(event, 'dashboard')">📊 대시보드 상태</li>
+            <li class="tab-item" onclick="switchTab(event, 'tenants')">🏢 테넌트 정보 & 생성</li>
+            <li class="tab-item" onclick="switchTab(event, 'fabric')">🌐 Fabric 인벤토리</li>
+            <li class="tab-item" onclick="switchTab(event, 'admin')">⚙️ Admin (펌웨어 정보)</li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <div class="info-badge">연결된 APIC 호스트 주소: <strong>{{ host }}</strong></div>
+        </div>
+
+        <div class="content-body">
+            <div id="dashboard" class="tab-content active">
+                <h3>전체 패브릭 실시간 알람 상태 <span style="font-size: 13px; color: #0284c7; font-weight: normal;">(APIC System Dashboard 동기화 완료)</span></h3>
+                
+                <div class="card-grid">
+                    <div class="card" style="border-top-color: #dc2626;">
+                        <div class="card-title" style="color: #dc2626;">🚨 Critical Faults</div>
+                        <div class="card-value" style="color: #dc2626;">{{ faults.critical }}</div>
+                    </div>
+                    <div class="card" style="border-top-color: #ea580c;">
+                        <div class="card-title" style="color: #ea580c;">⚠️ Major Faults</div>
+                        <div class="card-value" style="color: #ea580c;">{{ faults.major }}</div>
+                    </div>
+                    <div class="card" style="border-top-color: #eab308;">
+                        <div class="card-title" style="color: #ca8a04;">⚡ Minor Faults</div>
+                        <div class="card-value" style="color: #ca8a04;">{{ faults.minor }}</div>
+                    </div>
+                    <div class="card" style="border-top-color: #3b82f6;">
+                        <div class="card-title" style="color: #2563eb;">ℹ️ Warning Faults</div>
+                        <div class="card-value" style="color: #2563eb;">{{ faults.warning }}</div>
+                    </div>
+                </div>
+
+                <h3>스위치 노드별 자원 사용률 <span style="font-size: 14px; color: #ea580c; font-weight: normal;">(⏱️ 5분 평균 이동평균 통계)</span></h3>
+                <div class="resource-section">
+                    {% if nodes %}
+                        {% for node in nodes %}
+                        <div class="resource-box" {% if node.role == 'controller' %}style="border-left-color: #0284c7;"{% endif %}>
+                            <h4 style="margin-top:0; color:#0f172a;">
+                                {{ node.name }} 
+                                <span style="font-size:12px; color:#64748b;">(ID: {{ node.id }} / {{ node.role }})</span>
+                                <span class="badge badge-avg">5분 평균치</span>
+                            </h4>
+                            <div class="progress-group">
+                                <div class="progress-label"><span>5분 평균 CPU 사용률</span><span>{{ node.cpu_5min }}%</span></div>
+                                <div class="progress-container"><div class="progress-bar" style="width: {{ node.cpu_5min }}%;"></div></div>
+                            </div>
+                            <div class="progress-group">
+                                <div class="progress-label"><span>5분 평균 메모리 사용률</span><span>{{ node.memory_5min }}%</span></div>
+                                <div class="progress-container"><div class="progress-bar mem" style="width: {{ node.memory_5min }}%;"></div></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p style="color:#999; padding:10px;">스위치 노드 5분 통계 지표를 로드할 수 없습니다.</p>
+                    {% endif %}
+                </div>
+
+                <h4>인프라 환경 요소 현황</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>실제 스위치 이름 (Name)</th>
+                            <th>파워 서플라이 1</th>
+                            <th>파워 서플라이 2</th>
+                            <th>업링크 대역폭 평균 가동율</th>
+                            <th>다운링크 대역폭 평균 가동율</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if nodes %}
+                            {% for node in nodes %}
+                            <tr>
+                                <td style="color:#005073; font-weight:bold;">{{ node.name }}</td>
+                                <td><span class="badge badge-active">Active</span></td>
+                                <td><span class="badge badge-active">Active</span></td>
+                                <td>14.2 Gbps</td>
+                                <td>{{ '18.5 Gbps' if node.role == 'leaf' else '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" style="text-align: center; color: #999;">장비 연동이 필요합니다.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="tenants" class="tab-content">
+                <h3>ACI Tenants 및 자동화 프로비저닝</h3>
+                <div class="form-box">
+                    <div class="form-group">
+                        <label for="tenant_name">새로운 Tenant 자원 자동 생성</label>
+                        <input type="text" id="tenant_name" placeholder="예: Production_Tenant_Zone">
+                    </div>
+                    <button onclick="submitAutomation()">ACI 자원 생성 실행</button>
+                    <p id="action_status" style="margin-top:15px; font-weight:bold; display:none;"></p>
+                </div>
+
+                <h4>실시간 인프라 테넌트 가동 현황 (Current Tenants Context)</h4>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tenant 명칭 (Name)</th>
+                            <th>Distinguished Name (DN)</th>
+                            <th>상세 설명 (Description)</th>
+                            <th>운영 상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if tenants %}
+                            {% for tenant in tenants %}
+                            <tr>
+                                <td style="font-weight: bold; color: #0369a1;">{{ tenant.name }}</td>
+                                <td><code style="background: #f1f5f9; padding: 3px 6px; border-radius: 4px;">{{ tenant.dn }}</code></td>
+                                <td style="color: #64748b;">{{ tenant.descr }}</td>
+                                <td><span class="badge badge-active">{{ tenant.status }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" style="text-align: center; color: #999; padding: 20px;">APIC로부터 조회된 테넌트 정보가 존재하지 않습니다.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="fabric" class="tab-content">
+                <h3>패브릭 토폴로지 인벤토리 (실시간 백본 스위치 실측 현황)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fabric ID (Node ID)</th>
+                            <th>실제 스위치 이름 (Name)</th>
+                            <th>인프라 역할 (Role)</th>
+                            <th>인프라 TEP IP 주소</th>
+                            <th>장비 모델명</th>
+                            <th>일련번호 (Serial)</th>
+                            <th>운영 상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if nodes %}
+                            {% for node in nodes %}
+                            <tr>
+                                <td><strong>{{ node.id }}</strong></td>
+                                <td style="color:#005073; font-weight:bold;">{{ node.name }}</td>
+                                <td>{{ node.role }}</td>
+                                <td><code>{{ node.ip }}</code></td>
+                                <td>{{ node.model }}</td>
+                                <td style="font-family: monospace;">{{ node.serial }}</td>
+                                <td><span class="badge badge-active">{{ node.status }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="7" style="text-align: center; color: #e63946;">데이터가 없습니다.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="admin" class="tab-content">
+                <h3>APIC 및 스위치 노드 실시간 펌웨어 정보</h3>
+                <p style="color: #64748b; margin-bottom: 20px;">형상 관리를 위해 APIC 백엔드 소프트웨어 클래스에서 연동된 실시간 릴리즈 정보입니다.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>장비 위치 고유 DN (Distinguished Name)</th>
+                            <th>인프라 노드 ID</th>
+                            <th>현재 가동 운영체제 펌웨어 버젼 (Version)</th>
+                            <th>장비 타입 (Type)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if firmwares %}
+                            {% for fw in firmwares %}
+                            <tr>
+                                <td><code style="color: #0f172a;">{{ fw.dn }}</code></td>
+                                <td><strong>{{ fw.nodeId }}</strong></td>
+                                <td><span class="badge" style="background-color: #e0f2fe; color: #0369a1; font-size:13px;">{{ fw.version }}</span></td>
+                                <td style="text-transform: capitalize;">{{ fw.type }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="4" style="text-align: center; color: #999; padding: 25px;">APIC 시스템으로부터 가동 소프트웨어 명세를 조회하지 못했습니다.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function switchTab(event, tabId) {
+    const tabItems = document.querySelectorAll('.tab-item');
+    tabItems.forEach(item => item.classList.remove('active'));
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+}
+
+function submitAutomation() {
+    const tenantName = document.getElementById('tenant_name').value;
+    const statusText = document.getElementById('action_status');
+    if(!tenantName) { alert('테넌트 이름을 입력해주세요.'); return; }
+    statusText.style.display = 'block'; statusText.style.color = '#005073'; statusText.innerText = '>> APIC에 REST API 요청을 전송 중입니다...';
+    const formData = new FormData(); formData.append('tenant_name', tenantName);
+    fetch('/api/create_tenant', { method: 'POST', body: formData })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') { statusText.style.color = '#0f5132'; statusText.innerText = '성공: ' + data.message; window.location.reload(); }
+        else { statusText.style.color = '#842029'; statusText.innerText = '실패: ' + data.message; }
+    }).catch(error => { statusText.style.color = '#842029'; statusText.innerText = '오류: ' + error; });
+}
+</script>
+</body>
+</html>
