@@ -82,35 +82,38 @@ st.markdown("""
     html {
         scroll-behavior: smooth;
     }
-    /* 🚀 타이틀 + 기준시각 & 우측 Deploy/점세개 최적화 */
+    /* 🚀 헤더 배경을 투명하게 하여 검은 줄을 없애고, 사이드바 열기 버튼이 항상 완벽히 작동하도록 보장 */
     header[data-testid="stHeader"] {
+        background-color: transparent !important;
         background: transparent !important;
-        height: 0px !important;
-        z-index: 100 !important;
+        z-index: 99999 !important;
     }
-    [data-testid="stSidebarCollapsedControl"] {
-        display: block !important;
-        position: fixed !important;
-        top: 1.2rem !important;
-        left: 1.5rem !important;
-        color: #90CAF9 !important;
-        background: #1C212D !important;
+    /* 🚀 사이드바 열기 버튼을 크고 선명하게 최상위에 띄움 */
+    [data-testid="stSidebarCollapsedControl"],
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 999999 !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"] button {
+        background-color: #0D2744 !important;
+        color: #00E5FF !important;
+        border: 1.5px solid #00E5FF !important;
         border-radius: 8px !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        z-index: 102 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
-    /* 🚀 상단 우측 불필요한 Streamlit 툴바(Share, Star, Edit, GitHub, 점세개 등) 완전 차단 */
+    /* 🚀 우측 불필요한 Streamlit 툴바(Share, Star, GitHub, 점세개 등)만 숨김 */
     [data-testid="stToolbar"],
     .stDeployButton,
     #MainMenu,
     [data-testid="stToolbarActions"] {
         display: none !important;
         visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
     }
     .block-container {
-        padding-top: 1.15rem !important;
+        padding-top: 3.5rem !important;
         padding-bottom: 2rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
