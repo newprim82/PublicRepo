@@ -2516,6 +2516,21 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         if cur_w_idx > 0:
             prev_week_label = available_weeks[cur_w_idx - 1]
             prev_df = df_scope[df_scope["week_label"] == prev_week_label].copy()
+        else:
+            # 💡 월 첫 주차인 경우 -> 지난달 마지막 주차 (직전 7일 날짜 범위)를 df_raw 전체에서 추출!
+            if "start_time" in df_active.columns and pd.notna(df_active["start_time"].min()):
+                cur_min_dt = df_active["start_time"].min()
+                cur_monday = cur_min_dt - pd.Timedelta(days=cur_min_dt.weekday())
+                cur_monday_start = cur_monday.replace(hour=0, minute=0, second=0, microsecond=0)
+                prev_monday_start = cur_monday_start - pd.Timedelta(days=7)
+                prev_sunday_end = cur_monday_start - pd.Timedelta(seconds=1)
+
+                if "start_time" in df_raw.columns:
+                    raw_dt = pd.to_datetime(df_raw["start_time"], errors="coerce")
+                    prev_df = df_raw[(raw_dt >= prev_monday_start) & (raw_dt <= prev_sunday_end)].copy()
+                    if selected_team != "전체" and not prev_df.empty:
+                        prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
+                        prev_df = prev_df[prev_df["worker_team"] == selected_team]
     else:
         df_active = df_scope.copy()
         current_period_label = f"{selected_team} - 월간 전체"
@@ -2531,7 +2546,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             prev_end = cur_min_dt - pd.Timedelta(seconds=1)
 
             prev_df = df_raw[(df_raw["start_time"] >= prev_start) & (df_raw["start_time"] <= prev_end)].copy()
-            if selected_team != "전체":
+            if selected_team != "전체" and not prev_df.empty:
                 prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
                 prev_df = prev_df[prev_df["worker_team"] == selected_team]
 
