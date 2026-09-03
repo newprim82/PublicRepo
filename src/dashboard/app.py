@@ -513,7 +513,8 @@ st.markdown("""
         color: #bdcddc !important;
     }
     /* 🌲 APIC 트리 아이템: 하위 메뉴 버튼에만 정밀하게 좌측 정렬 적용 (다른 위젯 간섭 0%) */
-    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button {
+    [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button,
+    [data-testid="stSidebar"] details .stButton > button {
         display: flex !important;
         justify-content: flex-start !important;
         align-items: center !important;
@@ -530,24 +531,33 @@ st.markdown("""
         min-height: 30px !important;
         width: 100% !important;
     }
-    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button [data-testid="stMarkdownContainer"] {
+    [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button div,
+    [data-testid="stSidebar"] details .stButton > button div {
+        justify-content: flex-start !important;
+        text-align: left !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button [data-testid="stMarkdownContainer"],
+    [data-testid="stSidebar"] details .stButton > button [data-testid="stMarkdownContainer"] {
         width: 100% !important;
         text-align: left !important;
         display: flex !important;
         justify-content: flex-start !important;
         align-items: center !important;
     }
-    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button [data-testid="stMarkdownContainer"] p {
+    [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button [data-testid="stMarkdownContainer"] p,
+    [data-testid="stSidebar"] details .stButton > button [data-testid="stMarkdownContainer"] p {
         text-align: left !important;
         width: 100% !important;
         margin: 0 !important;
     }
-    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button:hover {
+    [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button:hover,
+    [data-testid="stSidebar"] details .stButton > button:hover {
         background-color: rgba(0, 180, 216, 0.10) !important;
         color: #ffffff !important;
         border-left: 3px solid #00b4d8 !important;
     }
-    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button[kind="primary"] {
+    [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button[kind="primary"],
+    [data-testid="stSidebar"] details .stButton > button[kind="primary"] {
         background-color: rgba(0, 180, 216, 0.15) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
