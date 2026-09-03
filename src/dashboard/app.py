@@ -895,14 +895,17 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         # 세부 작업 내역 리스트
         st.markdown("#### 📋 세부 작업 내역 원장")
         disp_detail = detail.copy()
+        if "end_time" not in disp_detail.columns:
+            disp_detail["end_time"] = None
         if "status" in disp_detail.columns:
             disp_detail["status"] = disp_detail["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_detail["status"])
         st.dataframe(
             disp_detail[[
-                "start_time", "client_name", "task_description",
+                "start_time", "end_time", "client_name", "task_description",
                 "actual_hours", "status", "is_night_work"
             ]].rename(columns={
                 "start_time": "시작 보고시각",
+                "end_time": "완료 보고시각",
                 "client_name": "고객사",
                 "task_description": "작업내용",
                 "actual_hours": "소요(h)",
@@ -949,6 +952,8 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
 
     sorted_df = df_data.sort_values(by="start_time", ascending=False).reset_index(drop=True)
     disp_sorted_df = sorted_df.copy()
+    if "end_time" not in disp_sorted_df.columns:
+        disp_sorted_df["end_time"] = None
     if "status" in disp_sorted_df.columns:
         disp_sorted_df["status"] = disp_sorted_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_sorted_df["status"])
     
@@ -956,10 +961,11 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
     st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
     sel_tbl = st.dataframe(
         disp_sorted_df[[
-            "start_time", "worker_name", "worker_team",
+            "start_time", "end_time", "worker_name", "worker_team",
             "client_name", "task_description", "estimated_hours", "actual_hours", "status"
         ]].rename(columns={
             "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
             "worker_name": "담당자",
             "worker_team": "소속팀",
             "client_name": "고객사",
@@ -1002,12 +1008,16 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
     t_tab1, t_tab2 = st.tabs([f"🟢 완료된 작업 ({len(comp_df)}건)", f"🟡 진행 중인 작업 ({len(pend_df)}건)"])
     with t_tab1:
         st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 원본 메시지**가 아래에 표시됩니다.")
+        disp_comp = comp_df.copy()
+        if "end_time" not in disp_comp.columns:
+            disp_comp["end_time"] = None
         sel_t1 = st.dataframe(
-            comp_df[[
-                "start_time", "worker_name", "worker_team",
+            disp_comp[[
+                "start_time", "end_time", "worker_name", "worker_team",
                 "client_name", "task_description", "estimated_hours", "actual_hours"
             ]].rename(columns={
                 "start_time": "시작 보고시각",
+                "end_time": "완료 보고시각",
                 "worker_name": "담당자",
                 "worker_team": "소속팀",
                 "client_name": "고객사",
@@ -1031,12 +1041,16 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
             st.success("🎉 현재 진행 중(미완료)인 잔여 작업이 없습니다!")
         else:
             st.caption("💡 표에서 행을 클릭하시면 시작 보고 원본 메시지가 표시됩니다.")
+            disp_pend = pend_df.copy()
+            if "end_time" not in disp_pend.columns:
+                disp_pend["end_time"] = None
             sel_t2 = st.dataframe(
-                pend_df[[
-                    "start_time", "worker_name", "worker_team",
+                disp_pend[[
+                    "start_time", "end_time", "worker_name", "worker_team",
                     "client_name", "task_description", "estimated_hours"
                 ]].rename(columns={
-                    "start_time": "시작시각",
+                    "start_time": "시작 보고시각",
+                    "end_time": "완료 보고시각",
                     "worker_name": "담당자",
                     "worker_team": "소속팀",
                     "client_name": "고객사",
@@ -1097,12 +1111,16 @@ def show_kpi_urgent_dialog(df_data: pd.DataFrame):
             st.info("야간 작업 내역이 없습니다.")
         else:
             st.caption("💡 표에서 행을 클릭하시면 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
+            disp_night = night_df.copy()
+            if "end_time" not in disp_night.columns:
+                disp_night["end_time"] = None
             sel_u1 = st.dataframe(
-                night_df[[
-                    "start_time", "worker_name", "worker_team",
+                disp_night[[
+                    "start_time", "end_time", "worker_name", "worker_team",
                     "client_name", "task_description", "actual_hours"
                 ]].rename(columns={
                     "start_time": "시작 보고시각",
+                    "end_time": "완료 보고시각",
                     "worker_name": "담당자",
                     "worker_team": "소속팀",
                     "client_name": "고객사",
@@ -1125,12 +1143,16 @@ def show_kpi_urgent_dialog(df_data: pd.DataFrame):
             st.info("주말 작업 내역이 없습니다.")
         else:
             st.caption("💡 표에서 행을 클릭하시면 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
+            disp_weekend = weekend_df.copy()
+            if "end_time" not in disp_weekend.columns:
+                disp_weekend["end_time"] = None
             sel_u2 = st.dataframe(
-                weekend_df[[
-                    "start_time", "worker_name", "worker_team",
+                disp_weekend[[
+                    "start_time", "end_time", "worker_name", "worker_team",
                     "client_name", "task_description", "actual_hours"
                 ]].rename(columns={
                     "start_time": "시작 보고시각",
+                    "end_time": "완료 보고시각",
                     "worker_name": "담당자",
                     "worker_team": "소속팀",
                     "client_name": "고객사",
@@ -1167,13 +1189,17 @@ def show_kpi_overdue_dialog(df_data: pd.DataFrame):
     else:
         st.caption("💡 **표에서 확인하고 싶은 작업 행을 클릭**하시면, 해당 작업의 **카카오톡 시작 보고 & 완료 보고 원본 메시지 전문**과 **지연 괴리 사유**를 바로 아래에서 상세히 확인하실 수 있습니다.")
         
+        disp_overdue = overdue_df.copy()
+        if "end_time" not in disp_overdue.columns:
+            disp_overdue["end_time"] = None
         sel_overdue = st.dataframe(
-            overdue_df[[
-                "start_time", "worker_name", "worker_team",
+            disp_overdue[[
+                "start_time", "end_time", "worker_name", "worker_team",
                 "client_name", "task_description", "estimated_hours",
                 "actual_hours", "diff_hours"
             ]].rename(columns={
                 "start_time": "시작 보고시각",
+                "end_time": "완료 보고시각",
                 "worker_name": "담당자",
                 "worker_team": "소속팀",
                 "client_name": "고객사",
@@ -1243,14 +1269,17 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
     
     st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
     disp_w_df = w_df.copy()
+    if "end_time" not in disp_w_df.columns:
+        disp_w_df["end_time"] = None
     if "status" in disp_w_df.columns:
         disp_w_df["status"] = disp_w_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_w_df["status"])
     sel_tbl = st.dataframe(
         disp_w_df[[
-            "start_time", "client_name", "task_description",
+            "start_time", "end_time", "client_name", "task_description",
             "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"
         ]].rename(columns={
             "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
             "client_name": "고객사",
             "task_description": "작업내용",
             "estimated_hours": "예정(h)",
@@ -1307,14 +1336,17 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
     st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
     
     disp_cat_df = cat_df.copy()
+    if "end_time" not in disp_cat_df.columns:
+        disp_cat_df["end_time"] = None
     if "status" in disp_cat_df.columns:
         disp_cat_df["status"] = disp_cat_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_cat_df["status"])
     sel_tbl = st.dataframe(
         disp_cat_df[[
-            "start_time", "client_name", "task_description",
+            "start_time", "end_time", "client_name", "task_description",
             "estimated_hours", "actual_hours", "status"
         ]].rename(columns={
             "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
             "client_name": "고객사",
             "task_description": "작업내용",
             "estimated_hours": "예정(h)",
