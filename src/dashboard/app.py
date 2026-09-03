@@ -82,18 +82,19 @@ st.markdown("""
     html {
         scroll-behavior: smooth;
     }
-    /* 🚀 헤더 배경을 투명하게 하여 검은 줄을 없애고, 사이드바 열기 버튼이 항상 완벽히 작동하도록 보장 */
+    /* 🚀 타이틀 + 기준시각 & 우측 Deploy/점세개 최적화 */
     header[data-testid="stHeader"] {
-        background-color: transparent !important;
         background: transparent !important;
-        z-index: 99999 !important;
+        height: 0px !important;
+        z-index: 100 !important;
     }
-    /* 🚀 사이드바 열기 버튼을 크고 선명하게 최상위에 띄움 */
+    /* 🚀 좌측 사이드바 열기 버튼 */
     [data-testid="stSidebarCollapsedControl"],
     [data-testid="collapsedControl"] {
-        display: flex !important;
-        visibility: visible !important;
-        opacity: 1 !important;
+        display: block !important;
+        position: fixed !important;
+        top: 1.15rem !important;
+        left: 1.2rem !important;
         z-index: 999999 !important;
     }
     [data-testid="stSidebarCollapsedControl"] button,
@@ -101,19 +102,21 @@ st.markdown("""
         background-color: #0D2744 !important;
         color: #00E5FF !important;
         border: 1.5px solid #00E5FF !important;
-        border-radius: 8px !important;
+        border-radius: 6px !important;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
-    /* 🚀 우측 불필요한 Streamlit 툴바(Share, Star, GitHub, 점세개 등)만 숨김 */
+    /* 🚀 상단 우측 불필요한 Streamlit 툴바(Share, Star, Edit, GitHub, 점세개 등) 완전 차단 */
     [data-testid="stToolbar"],
     .stDeployButton,
     #MainMenu,
     [data-testid="stToolbarActions"] {
         display: none !important;
         visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
     .block-container {
-        padding-top: 3.5rem !important;
+        padding-top: 1.15rem !important;
         padding-bottom: 2rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
@@ -2268,9 +2271,19 @@ def main():
 
     st.markdown(f"""
     <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 229, 255, 0.25);">
-        <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button onclick="
+                const doc = window.parent.document || document;
+                const btn = doc.querySelector('[data-testid=stSidebarCollapsedControl] button') 
+                         || doc.querySelector('[data-testid=collapsedControl] button')
+                         || doc.querySelector('button[aria-label*=\'sidebar\']')
+                         || doc.querySelector('button[aria-label*=\'Sidebar\']');
+                if (btn) btn.click();
+            " style="background: rgba(0, 229, 255, 0.2); border: 1.5px solid #00E5FF; color: #00E5FF; padding: 5px 12px; border-radius: 6px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(0, 229, 255, 0.3); transition: all 0.2s ease;">
+                ☰ 대메뉴
+            </button>
             <span style="font-size: 18px; font-weight: 800; color: #00E5FF; letter-spacing: -0.4px;">📊 기술본부 현장 업무 관제 센터</span>
-            <span style="background: rgba(0, 229, 255, 0.15); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.4); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; margin-left: 6px;">{page_tag}</span>
+            <span style="background: rgba(0, 229, 255, 0.15); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.4); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; margin-left: 4px;">{page_tag}</span>
         </div>
         <div style="font-size: 12px; color: #94A3B8; display: flex; align-items: center; gap: 12px;">
             <span>🟢 관제 시스템 정상 가동</span>
