@@ -47,20 +47,25 @@ def check_is_night_work(
 ) -> bool:
     """
     사용자 지정 야간 판정 기준:
-    1. ★ 절대 규칙: 'day', 'days', 다일(16시간 이상) 작업은 주간 연속 지원 업무이므로 야간 작업에서 무조건 제외(False)!
-    2. ★ 실제 작업 시간 기준: 카톡 완료글을 늦게 올린 시각이 아니라, [시작 보고 시각 ~ 시작 시각 + 실제 소요시간] 구간이 실제 작업 시간대임!
-       - 예: 09:20 시작 + 8시간 소요 = 17:20 종료 ➔ 09:20~17:20은 순수 주간(08:00~19:00)이므로 야간 아님(False)!
-       - 예: 18:00 시작 + 3시간 소요 = 21:00 종료 ➔ 19:00~21:00이 걸치므로 야간(True)!
-    3. 야간 기준 시간: 19:00 ~ 익일 08:00
+    1. ★ 시작 보고 시각 조건: 18:00 이후에 시작 보고가 시작되어야 함 (18:00 ~ 익일 09:00 사이 시작)
+       - 당일 18:00~23:59:59 또는 자정 넘어 00:00~08:59:59
+       - 18:00 이전(예: 17:30)에 시작된 작업은 시작 보고가 18시 이전이므로 제외(False)!
+    2. ★ 작업 시간 조건: [18:00 ~ 익일 09:00] 야간 윈도우 내에서 일한 시간이 1시간(60분) 이상이어야 함!
+       - 18시 이후에 시작했더라도 야간 근무 시간이 1시간 미만(예: 30분, 45분)이면 야간 아님(False)!
+    3. ★ 절대 규칙: 'day', 'days', 다일(16시간 이상) 작업은 주간 연속 지원 업무이므로 야간 작업에서 무조건 제외(False)!
     """
     # 1. day / days 표기 작업 무조건 야간 제외
     if raw_message:
         low = raw_message.lower()
-        if "day" in low or "days" in low or "3일" in low or "2일" in low or "4일" in low or "5일" in low:
+        if any(k in low for k in ["day", "days", "2일", "3일", "4일", "5일"]):
             return False
 
     # 2. 예정 시간 또는 실제 소요 시간이 16시간 이상인 다일 작업 제외
     if estimated_minutes >= 16 * 60 or actual_minutes >= 16 * 60:
+        return False
+
+    # 3. 시작 시각 윈도우 검사 (18시 이후 ~ 익일 09시 이전 시작)
+    if not (start_dt.hour >= 18 or start_dt.hour < 9):
         return False
 
     # 실제 작업 종료 시각 산출 (카톡 늦게 올린 시각이 아닌 실제 작업 소요시간 기준)
@@ -74,30 +79,67 @@ def check_is_night_work(
         effective_end_dt = start_dt
 
     # 총 소요시간이 16시간을 초과하는 다일 작업 제외
-    elapsed_hours = (effective_end_dt - start_dt).total_seconds() / 3600.0
-    if elapsed_hours > 16.0:
+    if (effective_end_dt - start_dt).total_seconds() / 3600.0 > 16.0:
         return False
 
-    def is_hour_night(hour: int) -> bool:
-        # ★ 사용자 정의: 19:00 (저녁 7시) ~ 익일 08:00 (오전 8시)
-        return hour >= 19 or hour < 8
+    # 4. [18:00 ~ 익일 09:00] 야간 윈도우와 작업 시간 겹침 계산
+    if start_dt.hour >= 18:
+        w_start = start_dt.replace(hour=18, minute=0, second=0, microsecond=0)
+        w_end = (start_dt + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
+    else:  # start_dt.hour < 9
+        w_start = (start_dt - timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0)
+        w_end = start_dt.replace(hour=9, minute=0, second=0, microsecond=0)
 
-    # 시작 시각 자체가 야간 기준 시간(19시~08시)인 경우
-    if is_hour_night(start_dt.hour):
-        return True
+    overlap_start = max(start_dt, w_start)
+    overlap_end = min(effective_end_dt, w_end)
 
-    # 실제 작업 진행 구간(시작시각 ~ 시작시각 + 실제소요시간) 순회 검사
-    cur = start_dt
-    while cur <= effective_end_dt:
-        if is_hour_night(cur.hour):
-            return True
-        cur += timedelta(minutes=30)
+    if overlap_end > overlap_start:
+        overlap_minutes = (overlap_end - overlap_start).total_seconds() / 60.0
+        return overlap_minutes >= 60.0  # 1시간 이상 근무 시 True
 
     return False
 
 
-def check_is_weekend_work(dt: datetime) -> bool:
-    return dt.weekday() in [5, 6]
+def check_is_weekend_work(
+    start_dt: datetime,
+    end_dt: Optional[datetime] = None,
+    raw_message: str = "",
+    estimated_minutes: int = 0,
+    actual_minutes: int = 0
+) -> bool:
+    """
+    사용자 지정 주말 판정 기준:
+    - 작업 진행 구간 [start_dt ~ effective_end_dt] 중 주말(토/일) 시간이 1시간(60분)이라도 껴있으면 무조건 주말 작업(True)!
+    - 예: 금요일 23:00 시작 ~ 토요일 03:00 종료 (토요일에 3시간 근무 ➔ 주말 작업 인정!)
+    - 예: 일요일 22:00 시작 ~ 월요일 02:00 종료 (일요일에 2시간 근무 ➔ 주말 작업 인정!)
+    """
+    # 실제 작업 종료 시각 산출
+    if actual_minutes > 0:
+        effective_end_dt = start_dt + timedelta(minutes=actual_minutes)
+    elif end_dt and end_dt > start_dt and (end_dt - start_dt).total_seconds() <= 16 * 3600:
+        effective_end_dt = end_dt
+    elif estimated_minutes > 0:
+        effective_end_dt = start_dt + timedelta(minutes=estimated_minutes)
+    else:
+        effective_end_dt = start_dt + timedelta(minutes=60) if start_dt.weekday() in [5, 6] else start_dt
+
+    cur_date = start_dt.date()
+    end_date = effective_end_dt.date()
+
+    weekend_minutes = 0.0
+    while cur_date <= end_date:
+        if cur_date.weekday() in [5, 6]:  # 토(5) 또는 일(6)
+            day_start = datetime.combine(cur_date, datetime.min.time())
+            day_end = datetime.combine(cur_date, datetime.max.time())
+
+            overlap_s = max(start_dt, day_start)
+            overlap_e = min(effective_end_dt, day_end)
+            if overlap_e > overlap_s:
+                weekend_minutes += (overlap_e - overlap_s).total_seconds() / 60.0
+
+        cur_date += timedelta(days=1)
+
+    return weekend_minutes >= 60.0
 
 
 def generate_msg_hash(worker_name: str, client_name: str, start_dt: datetime, task_desc: str) -> str:
@@ -122,7 +164,7 @@ class WorkLogMatcher:
                     if ts.is_direct_completed and ts.direct_actual_minutes > 0:
                         msg_hash = generate_msg_hash(ts.worker_name, ts.client_name, ts.timestamp, ts.task_description)
                         is_night = check_is_night_work(ts.timestamp, ts.timestamp, ts.raw_message, ts.estimated_minutes, ts.direct_actual_minutes)
-                        is_weekend = check_is_weekend_work(ts.timestamp)
+                        is_weekend = check_is_weekend_work(ts.timestamp, ts.timestamp, ts.raw_message, ts.estimated_minutes, ts.direct_actual_minutes)
                         matched_records.append(WorkLogRecord(
                             msg_hash=msg_hash,
                             log_type=ts.log_type,
@@ -256,7 +298,7 @@ class WorkLogMatcher:
                         )
                         
                         is_night = check_is_night_work(p_start.timestamp, adj_end_time, p_start.raw_message, p_start.estimated_minutes, calc_minutes)
-                        is_weekend = check_is_weekend_work(p_start.timestamp)
+                        is_weekend = check_is_weekend_work(p_start.timestamp, adj_end_time, p_start.raw_message, p_start.estimated_minutes, calc_minutes)
                         
                         record = WorkLogRecord(
                             msg_hash=msg_hash,
@@ -290,7 +332,7 @@ class WorkLogMatcher:
                 p_start.task_description
             )
             is_night = check_is_night_work(p_start.timestamp, None, p_start.raw_message, p_start.estimated_minutes, p_start.estimated_minutes)
-            is_weekend = check_is_weekend_work(p_start.timestamp)
+            is_weekend = check_is_weekend_work(p_start.timestamp, None, p_start.raw_message, p_start.estimated_minutes, p_start.estimated_minutes)
             
             time_diff_hours = (latest_ref_time - p_start.timestamp).total_seconds() / 3600.0
             

@@ -18,6 +18,5 @@ data/*.db
 *.db
 @AutomationLog.txt
 
-# IDE
-.vscode/
-.idea/
+# Backup files
+backup/
