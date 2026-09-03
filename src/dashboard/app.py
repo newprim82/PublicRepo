@@ -2377,7 +2377,7 @@ def main():
             .header-bar {{
                 background: #0D2744;
                 color: #FFFFFF;
-                padding: 11px 20px 11px 48px;
+                padding: 11px 20px 11px 16px;
                 border-radius: 8px;
                 display: flex;
                 justify-content: space-between;
@@ -2420,9 +2420,9 @@ def main():
             }}
             #live-bora-clock {{
                 color: #F1F5F9;
-                font-weight: 700;
-                font-family: monospace, 'Pretendard', sans-serif;
-                letter-spacing: 0.2px;
+                font-weight: 600;
+                font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+                letter-spacing: -0.2px;
             }}
             .badge-bora {{
                 background: rgba(0, 229, 255, 0.12);
