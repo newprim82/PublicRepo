@@ -805,30 +805,40 @@ def load_data() -> pd.DataFrame:
 
         # 🌙 야간 작업(18시~06시 시작 & 1시간 이상) 및 🏖️ 주말 작업(1시간 이상 포함) 실시간 일관성 보장
         def _eval_night(row):
-            st_val = row.get("start_time")
-            if pd.isna(st_val):
-                return False
-            if hasattr(st_val, "to_pydatetime"):
-                st_val = st_val.to_pydatetime()
-            if hasattr(st_val, "tzinfo") and st_val.tzinfo is not None:
-                st_val = st_val.replace(tzinfo=None)
-            act_m = int(row.get("actual_minutes") or 0)
-            est_m = int(row.get("estimated_minutes") or 0)
-            raw_msg = str(row.get("raw_start_message") or "") + " " + str(row.get("task_description") or "")
-            return check_is_night_work(st_val, None, raw_msg, est_m, act_m)
+            try:
+                st_val = row.get("start_time")
+                if pd.isna(st_val) or not st_val:
+                    return False
+                if isinstance(st_val, str):
+                    st_val = pd.to_datetime(st_val)
+                if hasattr(st_val, "to_pydatetime"):
+                    st_val = st_val.to_pydatetime()
+                if getattr(st_val, "tzinfo", None) is not None:
+                    st_val = st_val.replace(tzinfo=None)
+                act_m = int(row.get("actual_minutes") or 0)
+                est_m = int(row.get("estimated_minutes") or 0)
+                raw_msg = str(row.get("raw_start_message") or "") + " " + str(row.get("task_description") or "")
+                return check_is_night_work(st_val, None, raw_msg, est_m, act_m)
+            except Exception:
+                return bool(row.get("is_night_work", False))
 
         def _eval_weekend(row):
-            st_val = row.get("start_time")
-            if pd.isna(st_val):
-                return False
-            if hasattr(st_val, "to_pydatetime"):
-                st_val = st_val.to_pydatetime()
-            if hasattr(st_val, "tzinfo") and st_val.tzinfo is not None:
-                st_val = st_val.replace(tzinfo=None)
-            act_m = int(row.get("actual_minutes") or 0)
-            est_m = int(row.get("estimated_minutes") or 0)
-            raw_msg = str(row.get("raw_start_message") or "") + " " + str(row.get("task_description") or "")
-            return check_is_weekend_work(st_val, None, raw_msg, est_m, act_m)
+            try:
+                st_val = row.get("start_time")
+                if pd.isna(st_val) or not st_val:
+                    return False
+                if isinstance(st_val, str):
+                    st_val = pd.to_datetime(st_val)
+                if hasattr(st_val, "to_pydatetime"):
+                    st_val = st_val.to_pydatetime()
+                if getattr(st_val, "tzinfo", None) is not None:
+                    st_val = st_val.replace(tzinfo=None)
+                act_m = int(row.get("actual_minutes") or 0)
+                est_m = int(row.get("estimated_minutes") or 0)
+                raw_msg = str(row.get("raw_start_message") or "") + " " + str(row.get("task_description") or "")
+                return check_is_weekend_work(st_val, None, raw_msg, est_m, act_m)
+            except Exception:
+                return bool(row.get("is_weekend_work", False))
 
         df["is_night_work"] = df.apply(_eval_night, axis=1)
         df["is_weekend_work"] = df.apply(_eval_weekend, axis=1)

@@ -54,6 +54,22 @@ def check_is_night_work(
        - 18시 이후에 시작했더라도 야간 근무 시간이 1시간 미만(예: 30분, 45분)이면 야간 아님(False)!
     3. ★ 절대 규칙: 'day', 'days', 다일(16시간 이상) 작업은 주간 연속 지원 업무이므로 야간 작업에서 무조건 제외(False)!
     """
+    # 0. 타입 및 타임존 안전 정규화 (str / Timestamp / tz-aware -> naive datetime)
+    if isinstance(start_dt, str):
+        start_dt = pd.to_datetime(start_dt)
+    if hasattr(start_dt, "to_pydatetime"):
+        start_dt = start_dt.to_pydatetime()
+    if getattr(start_dt, "tzinfo", None) is not None:
+        start_dt = start_dt.replace(tzinfo=None)
+
+    if end_dt is not None:
+        if isinstance(end_dt, str):
+            end_dt = pd.to_datetime(end_dt)
+        if hasattr(end_dt, "to_pydatetime"):
+            end_dt = end_dt.to_pydatetime()
+        if getattr(end_dt, "tzinfo", None) is not None:
+            end_dt = end_dt.replace(tzinfo=None)
+
     # 1. day / days 표기 작업 무조건 야간 제외
     if raw_message:
         low = raw_message.lower()
@@ -113,6 +129,22 @@ def check_is_weekend_work(
     - 예: 금요일 23:00 시작 ~ 토요일 03:00 종료 (토요일에 3시간 근무 ➔ 주말 작업 인정!)
     - 예: 일요일 22:00 시작 ~ 월요일 02:00 종료 (일요일에 2시간 근무 ➔ 주말 작업 인정!)
     """
+    # 0. 타입 및 타임존 안전 정규화 (str / Timestamp / tz-aware -> naive datetime)
+    if isinstance(start_dt, str):
+        start_dt = pd.to_datetime(start_dt)
+    if hasattr(start_dt, "to_pydatetime"):
+        start_dt = start_dt.to_pydatetime()
+    if getattr(start_dt, "tzinfo", None) is not None:
+        start_dt = start_dt.replace(tzinfo=None)
+
+    if end_dt is not None:
+        if isinstance(end_dt, str):
+            end_dt = pd.to_datetime(end_dt)
+        if hasattr(end_dt, "to_pydatetime"):
+            end_dt = end_dt.to_pydatetime()
+        if getattr(end_dt, "tzinfo", None) is not None:
+            end_dt = end_dt.replace(tzinfo=None)
+
     # 실제 작업 종료 시각 산출
     if actual_minutes > 0:
         effective_end_dt = start_dt + timedelta(minutes=actual_minutes)
