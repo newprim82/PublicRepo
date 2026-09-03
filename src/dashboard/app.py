@@ -514,10 +514,22 @@ st.markdown("""
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
-    /* 🏛️ Cisco Catalyst Center 사이드바 드로어 스타일링 */
+    }
+
+    /* 🏛️ Cisco Catalyst Center 사이드바 드로어 스타일링 (메뉴 최상단 밀착) */
     [data-testid="stSidebar"] {
         background-color: #0F172A !important;
         border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    [data-testid="stSidebar"] .block-container,
+    [data-testid="stSidebarUserContent"] {
+        padding-top: 0.4rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+    }
+    [data-testid="stSidebarHeader"] {
+        padding-top: 0.4rem !important;
+        padding-bottom: 0.1rem !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] {
         border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -2045,16 +2057,6 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        # 사이드바 헤더
-        st.markdown("""
-        <div style="padding: 6px 2px 14px 2px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 18px; font-weight: 800; color: #00E5FF; letter-spacing: -0.4px;">📊 기술본부 관제 시스템</span>
-            </div>
-            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">실시간 현장 업무 모니터링</div>
-        </div>
-        """, unsafe_allow_html=True)
-
         # 1. 📂 메인 메뉴
         with st.expander("📂 메인 메뉴", expanded=False):
             main_menu_items = [
