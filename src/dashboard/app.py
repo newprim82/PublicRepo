@@ -13,6 +13,8 @@ import socket
 import struct
 from datetime import datetime, timedelta, timezone
 
+from src.auth.auth_manager import AuthManager
+
 KST_TIMEZONE = timezone(timedelta(hours=9))
 
 def get_current_kst_time() -> datetime:
@@ -2257,7 +2259,75 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
 
 
+def render_login_page():
+    """🔐 기술본부 관리자 로그인 전용 페이지"""
+    st.markdown("""
+    <style>
+        .login-card {
+            background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%);
+            border: 1px solid #005f8a;
+            border-radius: 12px;
+            padding: 32px 36px 24px 36px;
+            box-shadow: 0 8px 32px rgba(0, 34, 51, 0.35);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .login-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.4px;
+            margin-top: 8px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .login-sub {
+            font-size: 12.5px;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+    col_l, col_center, col_r = st.columns([1, 1.4, 1])
+    with col_center:
+        st.markdown("""
+        <div class="login-card">
+            <div style="font-size: 36px;">🔐</div>
+            <div class="login-title">기술본부 관리자 로그인</div>
+            <div class="login-sub">시스템 설정 및 작업 원장 관리를 위한 관리자 인증 (24시간 세션 유지)</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if AuthManager.is_authenticated():
+            current_admin = AuthManager.get_current_user() or "newprim"
+            st.success(f"✅ 현재 **{current_admin}** 계정으로 로그인되어 있습니다.")
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                if st.button("🏠 대시보드로 이동", use_container_width=True, type="primary"):
+                    st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                    st.rerun()
+            with col_b2:
+                if st.button("🚪 로그아웃", use_container_width=True):
+                    AuthManager.logout()
+                    st.toast("👋 로그아웃되었습니다.", icon="ℹ️")
+                    st.rerun()
+            return
+
+        with st.form("admin_login_form", clear_on_submit=False):
+            u_input = st.text_input("👤 관리자 아이디 (ID)", placeholder="아이디 입력 (newprim)", key="login_id_field")
+            p_input = st.text_input("🔑 비밀번호 (Password)", type="password", placeholder="비밀번호 입력", key="login_pw_field")
+            
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+            submit = st.form_submit_button("🔓 로그인 (Login)", type="primary", use_container_width=True)
+            
+            if submit:
+                if AuthManager.login(u_input, p_input):
+                    st.toast("🎉 로그인 성공! 모든 관리자 권한이 활성화되었습니다.", icon="✅")
+                    st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                    st.rerun()
+                else:
+                    st.error("⚠️ 아이디 또는 비밀번호가 올바르지 않습니다.")
 
 
 def render_team_management_page(all_workers_list, team_mappings):
@@ -2611,18 +2681,21 @@ def main():
             st.rerun()
         st.markdown('<div style="height: 30px;"></div>', unsafe_allow_html=True)
 
-        # 1. 📂 메인 메뉴
-        with st.expander("⚙ 관리", expanded=False):
-            main_menu_items = [
-                "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
-                "📋 작업 기록 원장 & 엑셀"
-            ]
-            for m_item in main_menu_items:
-                is_active = (st.session_state["current_page"] == m_item)
-                btn_prefix = "▸ " if is_active else "  "
-                if st.button(f"{btn_prefix}{m_item}", key=f"nav_main_{m_item}", use_container_width=True, type="primary" if is_active else "secondary"):
-                    st.session_state["current_page"] = m_item
-                    st.rerun()
+        is_auth = AuthManager.is_authenticated()
+
+        # 1. 📂 메인 메뉴 (로그인 시에만 노출)
+        if is_auth:
+            with st.expander("⚙ 관리", expanded=False):
+                main_menu_items = [
+                    "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
+                    "📋 작업 기록 원장 & 엑셀"
+                ]
+                for m_item in main_menu_items:
+                    is_active = (st.session_state["current_page"] == m_item)
+                    btn_prefix = "▸ " if is_active else "  "
+                    if st.button(f"{btn_prefix}{m_item}", key=f"nav_main_{m_item}", use_container_width=True, type="primary" if is_active else "secondary"):
+                        st.session_state["current_page"] = m_item
+                        st.rerun()
 
         # 2. 🔍 조회 기준
         with st.expander("🔍 조회 기준", expanded=True):
@@ -2759,143 +2832,159 @@ def main():
                     st.session_state["current_page"] = d_item
                     st.rerun()
 
-        # 4. 🤖 카카오톡 실시간 연동
-        with st.expander("🔄 연동", expanded=False):
-            countdown = get_collector_countdown_info()
-            st.components.v1.html(f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <style>
-                    body {{
-                        margin: 0;
-                        padding: 0;
-                        background: transparent;
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                        overflow: hidden;
-                    }}
-                    .sb-card {{
-                        background: rgba(0, 230, 118, 0.08);
-                        border: 1px solid rgba(0, 230, 118, 0.35);
-                        border-radius: 8px;
-                        padding: 7px 10px;
-                        box-sizing: border-box;
-                    }}
-                    .sb-title {{
-                        font-weight: 800;
-                        color: #00E676;
-                        font-size: 11.5px;
-                    }}
-                    .sb-main {{
-                        font-size: 13.5px;
-                        font-weight: 900;
-                        color: #FFFFFF;
-                        margin-top: 2px;
-                    }}
-                    .sb-sub {{
-                        font-size: 10.5px;
-                        color: #94A3B8;
-                        margin-top: 2px;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="sb-card">
-                    <div class="sb-title">⏳ 다음 자동 증분 수집:</div>
-                    <div class="sb-main">
-                        <span id="sb-live-timer">{countdown['remaining_minutes']}분 뒤</span> <span style="font-size: 11px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
-                    </div>
-                    <div class="sb-sub">최근 수집: {countdown['last_run_str']} | {max(1, config.COLLECTOR_INTERVAL_SECONDS // 60)}분 주기 자동</div>
-                </div>
-                <script>
-                    let remaining = {countdown['remaining_seconds']};
-                    function updateSb() {{
-                        let tEl = document.getElementById('sb-live-timer');
-                        if (!tEl) return;
-                        if (remaining <= 0) {{
-                            tEl.innerText = "⚡ 지금 수집 중...";
-                            tEl.style.color = "#00E676";
-                        }} else {{
-                            let m = Math.floor(remaining / 60);
-                            let s = remaining % 60;
-                            let sStr = s < 10 ? '0' + s : s;
-                            tEl.innerText = (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
-                            tEl.style.color = "#FFFFFF";
-                            remaining--;
+        # 4. 🤖 카카오톡 실시간 연동 (로그인 시에만 노출)
+        if is_auth:
+            with st.expander("🔄 연동", expanded=False):
+                countdown = get_collector_countdown_info()
+                st.components.v1.html(f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <style>
+                        body {{
+                            margin: 0;
+                            padding: 0;
+                            background: transparent;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                            overflow: hidden;
                         }}
-                    }}
-                    setInterval(updateSb, 1000);
-                    updateSb();
-                </script>
-            </body>
-            </html>
-            """, height=72)
+                        .sb-card {{
+                            background: rgba(0, 230, 118, 0.08);
+                            border: 1px solid rgba(0, 230, 118, 0.35);
+                            border-radius: 8px;
+                            padding: 7px 10px;
+                            box-sizing: border-box;
+                        }}
+                        .sb-title {{
+                            font-weight: 800;
+                            color: #00E676;
+                            font-size: 11.5px;
+                        }}
+                        .sb-main {{
+                            font-size: 13.5px;
+                            font-weight: 900;
+                            color: #FFFFFF;
+                            margin-top: 2px;
+                        }}
+                        .sb-sub {{
+                            font-size: 10.5px;
+                            color: #94A3B8;
+                            margin-top: 2px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="sb-card">
+                        <div class="sb-title">⏳ 다음 자동 증분 수집:</div>
+                        <div class="sb-main">
+                            <span id="sb-live-timer">{countdown['remaining_minutes']}분 뒤</span> <span style="font-size: 11px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
+                        </div>
+                        <div class="sb-sub">최근 수집: {countdown['last_run_str']} | {max(1, config.COLLECTOR_INTERVAL_SECONDS // 60)}분 주기 자동</div>
+                    </div>
+                    <script>
+                        let remaining = {countdown['remaining_seconds']};
+                        function updateSb() {{
+                            let tEl = document.getElementById('sb-live-timer');
+                            if (!tEl) return;
+                            if (remaining <= 0) {{
+                                tEl.innerText = "⚡ 지금 수집 중...";
+                                tEl.style.color = "#00E676";
+                            }} else {{
+                                let m = Math.floor(remaining / 60);
+                                let s = remaining % 60;
+                                let sStr = s < 10 ? '0' + s : s;
+                                tEl.innerText = (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
+                                tEl.style.color = "#FFFFFF";
+                                remaining--;
+                            }}
+                        }}
+                        setInterval(updateSb, 1000);
+                        updateSb();
+                    </script>
+                </body>
+                </html>
+                """, height=72)
 
-            if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True):
-                with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
-                    res = run_collection_cycle(is_manual=True)
-                    if res.get("status") == "success":
-                        st.toast(f"🎉 즉시 수집 완료! 총 {res['total_records']}건 분석 (DB 저장: {res['saved_records']}건)", icon="✅")
-                        st.success(f"🎉 즉시 수집 성공! 총 {res['total_records']}건 분석 (DB 저장/동기화: {res['saved_records']}건)")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
-                    elif res.get("status") == "window_not_found":
-                        st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
-                        st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
-                    elif res.get("status") == "no_text":
-                        st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
-                    else:
-                        st.info(f"💡 {res.get('message', '수집 완료')}")
-                        st.cache_data.clear()
-                        time.sleep(1)
-                        st.rerun()
-
-            if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True):
-                st.cache_data.clear()
-                st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
-                time.sleep(0.3)
-                st.rerun()
-
-            # 5분 자동 실시간 화면 갱신
-            if st_autorefresh:
-                refresh_count = st_autorefresh(interval=5 * 60 * 1000, key="auto_refresh_counter")
-                st.markdown("""
-                <div style="background: rgba(0, 230, 118, 0.08); border: 1px dashed rgba(0, 230, 118, 0.35); border-radius: 6px; padding: 5px 8px; text-align: center; margin-top: 4px;">
-                    <span style="font-size: 11px; color: #00E676; font-weight: 700;">🟢 5분 자동 실시간 동기화 가동 중</span>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # 카카오톡 대화 파일 업로드 (.txt)
-            with st.expander("💬 카카오톡 대화 파일 업로드 (.txt)", expanded=False):
-                uploaded_file = st.file_uploader("카카오톡 대화 텍스트 파일", type=["txt"], label_visibility="collapsed")
-                if uploaded_file is not None:
-                    try:
-                        file_content = uploaded_file.getvalue().decode("utf-8", errors="ignore")
-                        records = WorkLogMatcher.parse_and_match_text(file_content)
-                        if records:
-                            clear_all_web_caches()
-                            saved = db_manager.save_work_logs(records)
-                            st.success(f"총 {len(records)}건 최신 엔진으로 완벽 동기화 완료!")
+                if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True):
+                    with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
+                        res = run_collection_cycle(is_manual=True)
+                        if res.get("status") == "success":
+                            st.toast(f"🎉 즉시 수집 완료! 총 {res['total_records']}건 분석 (DB 저장: {res['saved_records']}건)", icon="✅")
+                            st.success(f"🎉 즉시 수집 성공! 총 {res['total_records']}건 분석 (DB 저장/동기화: {res['saved_records']}건)")
+                            st.cache_data.clear()
+                            time.sleep(1)
                             st.rerun()
+                        elif res.get("status") == "window_not_found":
+                            st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
+                            st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
+                        elif res.get("status") == "no_text":
+                            st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
                         else:
-                            st.warning("파싱 가능한 작업/지원 메시지가 없습니다. 파일 내용을 확인해주세요.")
-                    except Exception as e:
-                        st.error(f"파일 처리 중 오류: {e}")
+                            st.info(f"💡 {res.get('message', '수집 완료')}")
+                            st.cache_data.clear()
+                            time.sleep(1)
+                            st.rerun()
 
-        # 5. 🛠️ 시스템 관리
-        with st.expander("🛠️ 시스템 관리", expanded=False):
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                if st.button("🔄 새로고침", use_container_width=True):
+                if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True):
                     st.cache_data.clear()
+                    st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
+                    time.sleep(0.3)
                     st.rerun()
-            with col_btn2:
-                if st.button("🧹 캐시 초기화", use_container_width=True):
-                    clear_all_web_caches()
-                    st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
-                    st.rerun()
+
+                # 5분 자동 실시간 화면 갱신
+                if st_autorefresh:
+                    refresh_count = st_autorefresh(interval=5 * 60 * 1000, key="auto_refresh_counter")
+                    st.markdown("""
+                    <div style="background: rgba(0, 230, 118, 0.08); border: 1px dashed rgba(0, 230, 118, 0.35); border-radius: 6px; padding: 5px 8px; text-align: center; margin-top: 4px;">
+                        <span style="font-size: 11px; color: #00E676; font-weight: 700;">🟢 5분 자동 실시간 동기화 가동 중</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # 카카오톡 대화 파일 업로드 (.txt)
+                with st.expander("💬 카카오톡 대화 파일 업로드 (.txt)", expanded=False):
+                    uploaded_file = st.file_uploader("카카오톡 대화 텍스트 파일", type=["txt"], label_visibility="collapsed")
+                    if uploaded_file is not None:
+                        try:
+                            file_content = uploaded_file.getvalue().decode("utf-8", errors="ignore")
+                            records = WorkLogMatcher.parse_and_match_text(file_content)
+                            if records:
+                                clear_all_web_caches()
+                                saved = db_manager.save_work_logs(records)
+                                st.success(f"총 {len(records)}건 최신 엔진으로 완벽 동기화 완료!")
+                                st.rerun()
+                            else:
+                                st.warning("파싱 가능한 작업/지원 메시지가 없습니다. 파일 내용을 확인해주세요.")
+                        except Exception as e:
+                            st.error(f"파일 처리 중 오류: {e}")
+
+        # 5. 🛠️ 시스템 관리 (로그인 시에만 노출)
+        if is_auth:
+            with st.expander("🛠️ 시스템 관리", expanded=False):
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    if st.button("🔄 새로고침", use_container_width=True):
+                        st.cache_data.clear()
+                        st.rerun()
+                with col_btn2:
+                    if st.button("🧹 캐시 초기화", use_container_width=True):
+                        clear_all_web_caches()
+                        st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
+                        st.rerun()
+
+        # 6. 🔑 사이드바 최하단 독립 로그인 / 로그아웃 버튼 (실시간 대시보드 스타일)
+        st.markdown('<div style="height: 25px;"></div><div style="border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;"></div>', unsafe_allow_html=True)
+        if not is_auth:
+            is_login_active = (st.session_state.get("current_page") == "🔐 시스템 로그인")
+            if st.button("🔑 Login", key="btn_sidebar_standalone_login", type="primary" if is_login_active else "secondary", use_container_width=True):
+                st.session_state["current_page"] = "🔐 시스템 로그인"
+                st.rerun()
+        else:
+            current_admin = AuthManager.get_current_user() or "newprim"
+            if st.button(f"🚪 Logout ({current_admin})", key="btn_sidebar_standalone_logout", use_container_width=True):
+                AuthManager.logout()
+                st.toast("👋 로그아웃되었습니다. 일반 조회 모드로 전환됩니다.", icon="ℹ️")
+                st.rerun()
 
     # 데이터가 없을 때 안내 화면
     if df_raw.empty:
@@ -3041,6 +3130,21 @@ def main():
     </body>
     </html>
     """, height=56)
+
+    # 0) 🔐 로그인 페이지
+    if curr_page == "🔐 시스템 로그인":
+        render_login_page()
+        return
+
+    # 🔒 관리자 전용 페이지 가드 (비인가 접근 시 로그인 화면으로 유도)
+    admin_only_pages = [
+        "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
+        "📋 작업 기록 원장 & 엑셀"
+    ]
+    if curr_page in admin_only_pages and not AuthManager.is_authenticated():
+        st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
+        render_login_page()
+        return
 
     # 1) 팀원 소속 및 직급 관리 페이지
     if curr_page == "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)":
