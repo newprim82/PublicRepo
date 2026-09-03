@@ -397,7 +397,7 @@ st.markdown("""
     .badge-purple { background-color: #ede9fe !important; color: #5b21b6 !important; border: 1px solid #c4b5fd !important; }
     .badge-amber { background-color: #fef3c7 !important; color: #d97706 !important; border: 1px solid #fde68a !important; }
     .badge-red { background-color: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; }
-    /* 🏛️ Cisco ACI 사이드바 스타일링 (#002d42 딥 네이비 완벽 일체형) */
+    /* 🏛️ Cisco APIC 트리 메뉴 사이드바 스타일링 */
     [data-testid="stSidebar"] {
         background-color: #002d42 !important;
         border-right: 1px solid #003852 !important;
@@ -413,17 +413,17 @@ st.markdown("""
     [data-testid="stSidebar"] .block-container,
     [data-testid="stSidebarUserContent"] {
         padding-top: 0.4rem !important;
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
     }
     [data-testid="stSidebarHeader"] {
         padding-top: 0.4rem !important;
         padding-bottom: 0.1rem !important;
     }
-    /* 🚀 사이드바 내부 엘리먼트 위아래 밀착 (gap 4px) */
+    /* 사이드바 내부 엘리먼트 초밀착 (APIC 트리 간격) */
     [data-testid="stSidebar"] [data-testid="stVerticalBlock"],
     [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] > div {
-        gap: 4px !important;
+        gap: 1px !important;
     }
     [data-testid="stSidebar"] div.element-container {
         margin-top: 0px !important;
@@ -431,33 +431,46 @@ st.markdown("""
         padding-top: 0px !important;
         padding-bottom: 0px !important;
     }
-    /* 사이드바 아코디언 일체화 & 상하 초밀착 */
+    /* 🌲 APIC 트리 노드 (Expander = 폴더/카테고리 헤더) */
     [data-testid="stSidebar"] [data-testid="stExpander"] {
         margin-top: 0px !important;
-        margin-bottom: 4px !important;
+        margin-bottom: 0px !important;
+        border: none !important;
     }
     [data-testid="stSidebar"] details,
     [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] {
-        border: 1px solid #003852 !important;
-        border-radius: 6px !important;
-        background-color: #001e2d !important;
-        background: #001e2d !important;
+        border: none !important;
+        border-radius: 0px !important;
+        background-color: transparent !important;
+        background: transparent !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
         font-weight: 700 !important;
-        font-size: 13px !important;
-        color: #ffffff !important;
-        background-color: #001e2d !important;
-        border-radius: 6px !important;
-        padding: 5px 12px !important;
-        min-height: 32px !important;
+        font-size: 12.5px !important;
+        color: #8eafc0 !important;
+        background-color: transparent !important;
+        border-radius: 0px !important;
+        border-bottom: 1px solid #003852 !important;
+        padding: 8px 8px 6px 8px !important;
+        min-height: 28px !important;
         display: flex !important;
         align-items: center !important;
+        letter-spacing: 0.3px !important;
+        text-transform: uppercase !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
         color: #00b4d8 !important;
+        background-color: rgba(0, 180, 216, 0.06) !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary svg {
+        fill: #4a7b94 !important;
+        color: #4a7b94 !important;
+        width: 14px !important;
+        height: 14px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover svg {
         fill: #00b4d8 !important;
         color: #00b4d8 !important;
     }
@@ -488,27 +501,33 @@ st.markdown("""
     [data-testid="stSidebar"] [data-baseweb="checkbox"] span {
         color: #bdcddc !important;
     }
-    /* 사이드바 버튼 */
+    /* 🌲 APIC 트리 아이템 (버튼 = 메뉴 항목) */
     [data-testid="stSidebar"] button {
-        border-radius: 4px !important;
+        border-radius: 0px !important;
         font-size: 12.5px !important;
-        font-weight: 600 !important;
+        font-weight: 500 !important;
         background-color: transparent !important;
-        border: 1px solid transparent !important;
+        border: none !important;
+        border-left: 3px solid transparent !important;
         color: #bdcddc !important;
-        transition: all 0.15s ease-in-out !important;
+        transition: all 0.12s ease !important;
+        padding: 5px 8px 5px 14px !important;
+        text-align: left !important;
+        min-height: 30px !important;
     }
     [data-testid="stSidebar"] button:hover {
-        background-color: #003852 !important;
+        background-color: rgba(0, 180, 216, 0.10) !important;
         color: #ffffff !important;
-        border-color: #00b4d8 !important;
+        border-left: 3px solid #00b4d8 !important;
     }
+    /* 선택된 메뉴 (primary 버튼 = 활성 트리 아이템) */
     [data-testid="stSidebar"] button[kind="primary"] {
-        background-color: #004566 !important;
+        background-color: rgba(0, 180, 216, 0.15) !important;
         color: #ffffff !important;
-        border-left: 4px solid #00b4d8 !important;
-        border-radius: 0 4px 4px 0 !important;
-        box-shadow: 0 2px 6px rgba(0, 70, 102, 0.4) !important;
+        font-weight: 700 !important;
+        border-left: 3px solid #00b4d8 !important;
+        border-radius: 0px !important;
+        box-shadow: none !important;
     }
 
     /* 🏛️ Cisco ACI 표준 테이블 스타일링 */
@@ -2367,11 +2386,11 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        # 🏛️ Cisco ACI 스타일 사이드바 헤더 배너
+        # 🏛️ APIC 스타일 사이드바 헤더
         st.markdown("""
-        <div style="background-color: #001e2d; padding: 16px 14px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #003852; border-left: 4px solid #00b4d8;">
-            <div style="font-size: 16px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">🏢 기술본부 관제센터</div>
-            <div style="font-size: 11px; color: #a3b8cc; margin-top: 3px;">Field Support & Monitoring Portal</div>
+        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px; border-bottom: 2px solid #00b4d8;">
+            <div style="font-size: 15px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">기술본부 관제센터</div>
+            <div style="font-size: 10px; color: #5a8a9e; margin-top: 2px; letter-spacing: 0.5px;">FIELD SUPPORT PORTAL</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2382,14 +2401,14 @@ def main():
             st.rerun()
 
         # 1. 📂 메인 메뉴
-        with st.expander("📂 메인 메뉴", expanded=False):
+        with st.expander("⚙ 관리", expanded=False):
             main_menu_items = [
                 "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                 "📋 작업 기록 원장 & 엑셀"
             ]
             for m_item in main_menu_items:
                 is_active = (st.session_state["current_page"] == m_item)
-                btn_prefix = "👉 " if is_active else ""
+                btn_prefix = "▸ " if is_active else "  "
                 if st.button(f"{btn_prefix}{m_item}", key=f"nav_main_{m_item}", use_container_width=True, type="primary" if is_active else "secondary"):
                     st.session_state["current_page"] = m_item
                     st.rerun()
@@ -2511,7 +2530,7 @@ def main():
 
 
         # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
-        with st.expander("📊 작업 디테일", expanded=False):
+        with st.expander("📊 분석", expanded=False):
             detail_menu_items = [
                 "📅 작업 캘린더 & 밀도 히트맵",
                 "🔍 전체 작업 스마트 검색",
@@ -2524,13 +2543,13 @@ def main():
             ]
             for d_item in detail_menu_items:
                 is_active = (st.session_state["current_page"] == d_item)
-                btn_prefix = "👉 " if is_active else ""
+                btn_prefix = "▸ " if is_active else "  "
                 if st.button(f"{btn_prefix}{d_item}", key=f"nav_detail_{d_item}", use_container_width=True, type="primary" if is_active else "secondary"):
                     st.session_state["current_page"] = d_item
                     st.rerun()
 
         # 4. 🤖 카카오톡 실시간 연동
-        with st.expander("🤖 카카오톡 실시간 연동", expanded=False):
+        with st.expander("🔄 연동", expanded=False):
             countdown = get_collector_countdown_info()
             st.components.v1.html(f"""
             <!DOCTYPE html>
