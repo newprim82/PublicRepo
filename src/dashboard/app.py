@@ -515,8 +515,8 @@ st.markdown("""
         border-radius: 8px !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
         padding: 14px 20px !important;
-        margin-top: 14px !important;
-        margin-bottom: 18px !important;
+        margin-top: 10px !important;
+        margin-bottom: 6px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
         background: #f0fdf4 !important;
@@ -525,8 +525,8 @@ st.markdown("""
         border-radius: 8px !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
         padding: 12px 20px !important;
-        margin-top: 10px !important;
-        margin-bottom: 16px !important;
+        margin-top: 8px !important;
+        margin-bottom: 6px !important;
         text-align: center !important;
     }
     .normal-status-badge {
@@ -2829,7 +2829,7 @@ def main():
             else:
                 # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너
                 st.markdown("""
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 10px 0 14px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 9px 18px; margin: 4px 0 2px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
                     <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
                         <span style="font-size: 15px; line-height: 1;">🟢</span>
                         <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
@@ -2838,7 +2838,8 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
 
-        st.divider()
+        # 📌 과중 근무 배너와 LIVE 관제 사이를 구분하는 회색 실선 (초밀착)
+        st.markdown("<div style='margin-top: 8px; margin-bottom: 10px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
 
         # 🟢 오늘 실시간 작업 현황 라이브 보드 (첫 화면에 단독 풀사이즈 표출)
         render_today_live_board(df_raw, team_mappings, selected_team)
