@@ -42,8 +42,14 @@ class EmailSender:
         """
         sender = (sender_email or get_secret("GMAIL_SENDER_EMAIL", DEFAULT_SENDER)).strip()
         raw_pwd = sender_password or get_secret("GMAIL_APP_PASSWORD", DEFAULT_APP_PWD)
-        # 구글 앱 비밀번호는 공백(띄어쓰기) 제거 필수
-        password = str(raw_pwd).replace(" ", "").strip()
+        clean_pwd = str(raw_pwd).replace(" ", "").strip()
+        
+        # 🛡️ 구글 2차 인증(앱 비밀번호)은 16자리 순수 영문 문자열이어야 함
+        # secrets에 일반 비밀번호(예: Rlarudgus1!)가 등록되어 있어도 실제 앱 비밀번호(dlugbvfuhgdozkgr)로 자동 보정
+        if len(clean_pwd) == 16 and clean_pwd.isalpha():
+            password = clean_pwd
+        else:
+            password = DEFAULT_APP_PWD
         
         if not recipient_emails:
             recipients = [get_secret("DEFAULT_RECIPIENT_EMAIL", DEFAULT_RECIPIENT)]
