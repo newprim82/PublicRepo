@@ -3144,7 +3144,7 @@ def main():
                         div.stButton > button {
                             white-space: nowrap !important;
                             font-size: 12px !important;
-                            padding: 4px 8px !important;
+                            padding: 4px 6px !important;
                         }
                         div.stButton > button *,
                         div.stButton > button p,
@@ -3157,13 +3157,13 @@ def main():
                     st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
                     st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid #fecaca;'></div>", unsafe_allow_html=True)
                     
-                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경, 4개씩 넉넉하게 줄바꿈)
+                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경, 5개씩 넉넉하게 줄바꿈)
                     if danger_items:
                         col_d_lbl, col_d_chips = st.columns([1.4, 8.6])
                         with col_d_lbl:
                             st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#dc2626;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
                         with col_d_chips:
-                            chunk_size = 4
+                            chunk_size = 5
                             for i in range(0, len(danger_items), chunk_size):
                                 chunk = danger_items[i:i + chunk_size]
                                 d_cols = st.columns(chunk_size)
@@ -3177,13 +3177,13 @@ def main():
                                         ):
                                             show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
 
-                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경, 4개씩 넉넉하게 줄바꿈)
+                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경, 5개씩 넉넉하게 줄바꿈)
                     if caution_items:
                         col_c_lbl, col_c_chips = st.columns([1.4, 8.6])
                         with col_c_lbl:
                             st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#d97706;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
                         with col_c_chips:
-                            chunk_size = 4
+                            chunk_size = 5
                             for i in range(0, len(caution_items), chunk_size):
                                 chunk = caution_items[i:i + chunk_size]
                                 c_cols = st.columns(chunk_size)
