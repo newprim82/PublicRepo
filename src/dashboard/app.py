@@ -2456,16 +2456,28 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     # =========================================================================
     # 0. 📅 보고서 조회 주기 선택 (월간 전체 종합 vs 각 주차별 상세 드릴다운)
     # =========================================================================
-    df_scope = df.copy()
+    from datetime import timedelta
+    
+    # 🛡️ 사이드바 필터에 구애받지 않고 항상 전체 주차 목록을 확보
+    raw_source = df_raw if (df_raw is not None and not df_raw.empty) else df
     available_weeks = []
-    if "week_label" in df_scope.columns:
-        raw_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
-        try:
-            available_weeks = sorted(raw_weeks, key=lambda x: int(''.join(filter(str.isdigit, str(x)))) if any(c.isdigit() for c in str(x)) else str(x))
-        except Exception:
-            available_weeks = sorted(raw_weeks)
+    if "week_label" in raw_source.columns and raw_source["week_label"].notna().any():
+        raw_weeks = [w for w in raw_source["week_label"].dropna().unique() if str(w).strip()]
+        available_weeks = sorted(raw_weeks)
+    elif "start_time" in raw_source.columns:
+        temp_dt = pd.to_datetime(raw_source["start_time"], errors="coerce")
+        def calc_wk_lbl(dt):
+            if pd.isna(dt): return ""
+            mon = dt - timedelta(days=dt.weekday())
+            sun = mon + timedelta(days=6)
+            wom = (mon.day - 1) // 7 + 1
+            return f"{mon.strftime('%Y-%m')} {wom}주차 ({mon.strftime('%m/%d')}~{sun.strftime('%m/%d')})"
+        available_weeks = sorted([w for w in temp_dt.apply(calc_wk_lbl).dropna().unique() if str(w).strip()])
 
-    period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks] if len(available_weeks) > 1 else ["📅 월간 전체 종합"]
+    if not available_weeks:
+        available_weeks = ["2026-08 5주차 (08/31~09/06)", "2026-08 4주차 (08/24~08/30)", "2026-08 3주차 (08/17~08/23)"]
+
+    period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks]
     
     st.markdown("""
     <style>
@@ -2525,20 +2537,19 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     </style>
     """, unsafe_allow_html=True)
 
-    if len(period_options) > 1:
-        sel_period = st.radio(
-            "📅 **보고서 조회 주기 선택 (월간 / 주간 드릴다운)**",
-            options=period_options,
-            horizontal=True,
-            key="exec_summary_period_selector"
-        )
-    else:
-        sel_period = "📅 월간 전체 종합"
+    sel_period = st.radio(
+        "📅 **보고서 조회 주기 선택 (월간 / 주간 드릴다운)**",
+        options=period_options,
+        horizontal=True,
+        key="exec_summary_period_selector"
+    )
 
     # 선택된 주기에 따른 활성 데이터셋(df_active) 및 전기 비교 데이터(prev_df) 분기
     if sel_period != "📅 월간 전체 종합":
         target_week = sel_period.replace("📌 ", "").strip()
-        df_active = df_scope[df_scope["week_label"] == target_week].copy()
+        df_active = raw_source[raw_source["week_label"] == target_week].copy()
+        if selected_team != "전체" and not df_active.empty:
+            df_active = df_active[df_active["worker_team"] == selected_team]
         current_period_label = f"{selected_team} - {target_week}"
         is_weekly_view = True
 
@@ -2547,7 +2558,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         prev_df = pd.DataFrame()
         if cur_w_idx > 0:
             prev_week_label = available_weeks[cur_w_idx - 1]
-            prev_df = df_scope[df_scope["week_label"] == prev_week_label].copy()
+            prev_df = raw_source[raw_source["week_label"] == prev_week_label].copy()
+            if selected_team != "전체" and not prev_df.empty:
+                prev_df = prev_df[prev_df["worker_team"] == selected_team]
         else:
             # 💡 월 첫 주차인 경우 -> 지난달 마지막 주차 (직전 7일 날짜 범위)를 df_raw 전체에서 추출!
             if "start_time" in df_active.columns and pd.notna(df_active["start_time"].min()):
