@@ -894,8 +894,11 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
 
         # 세부 작업 내역 리스트
         st.markdown("#### 📋 세부 작업 내역 원장")
+        disp_detail = detail.copy()
+        if "status" in disp_detail.columns:
+            disp_detail["status"] = disp_detail["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_detail["status"])
         st.dataframe(
-            detail[[
+            disp_detail[[
                 "start_time", "client_name", "task_description",
                 "actual_hours", "status", "is_night_work"
             ]].rename(columns={
@@ -945,11 +948,14 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
         st.plotly_chart(fig2, use_container_width=True)
 
     sorted_df = df_data.sort_values(by="start_time", ascending=False).reset_index(drop=True)
+    disp_sorted_df = sorted_df.copy()
+    if "status" in disp_sorted_df.columns:
+        disp_sorted_df["status"] = disp_sorted_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_sorted_df["status"])
     
     st.markdown("#### 📋 전체 지원 작업 상세 목록")
     st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
     sel_tbl = st.dataframe(
-        sorted_df[[
+        disp_sorted_df[[
             "start_time", "worker_name", "worker_team",
             "client_name", "task_description", "estimated_hours", "actual_hours", "status"
         ]].rename(columns={
@@ -1236,8 +1242,11 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
     st.markdown(f"☀️ 평일 주간: **{day_cnt}건** | 🌙 평일 야간: **{night_cnt}건** | 🏖️ 주말: **{weekend_cnt}건**")
     
     st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
+    disp_w_df = w_df.copy()
+    if "status" in disp_w_df.columns:
+        disp_w_df["status"] = disp_w_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_w_df["status"])
     sel_tbl = st.dataframe(
-        w_df[[
+        disp_w_df[[
             "start_time", "client_name", "task_description",
             "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"
         ]].rename(columns={
@@ -1297,8 +1306,11 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
     st.markdown(f"### {cat_icon} **{worker_name}** 님의 **[{cat_name}]** 세부 내역 (총 **{tot_h}시간** / **{tot_cnt}건**)")
     st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
     
+    disp_cat_df = cat_df.copy()
+    if "status" in disp_cat_df.columns:
+        disp_cat_df["status"] = disp_cat_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_cat_df["status"])
     sel_tbl = st.dataframe(
-        cat_df[[
+        disp_cat_df[[
             "start_time", "client_name", "task_description",
             "estimated_hours", "actual_hours", "status"
         ]].rename(columns={
@@ -1893,6 +1905,8 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             "is_weekend_work": "주말",
             "remarks": "비고"
         })
+        if "상태" in display_df.columns:
+            display_df["상태"] = display_df["상태"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(display_df["상태"])
         st.dataframe(display_df, use_container_width=True, height=450)
 
     with view_t2:
@@ -2794,9 +2808,12 @@ def main():
             "client_name", "task_description", "estimated_hours", "actual_hours", "is_night_work", "is_weekend_work"
         ]
         available_display_cols = [c for c in display_cols if c in df.columns]
+        disp_df_out = df[available_display_cols].copy()
+        if "status" in disp_df_out.columns:
+            disp_df_out["status"] = disp_df_out["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_df_out["status"])
         
         st.dataframe(
-            df[available_display_cols].rename(columns={
+            disp_df_out.rename(columns={
                 "start_time": "시작 보고시각",
                 "status": "상태",
                 "log_type": "구분",
