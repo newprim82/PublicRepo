@@ -79,6 +79,43 @@ st.set_page_config(
 # 커스텀 CSS
 st.markdown("""
 <style>
+    /* 🔤 페이퍼로지 (Paperlogy) 웹 폰트 정의 (로컬 윈도우 폰트 우선 + 웹폰트 CDN 백업) */
+    @font-face {
+        font-family: 'Paperlogy';
+        src: local('Paperlogy-4Regular'), local('Paperlogy 4 Regular'), local('Paperlogy 4'),
+             url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-4Regular.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'Paperlogy';
+        src: local('Paperlogy-8ExtraBold'), local('Paperlogy 8 ExtraBold'), local('Paperlogy 8'),
+             url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-8ExtraBold.woff2') format('woff2');
+        font-weight: 800;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    /* 1. 사이트 전체 기본 본문 -> 페이퍼로지 4 Regular (weight: 400) */
+    html, body, [class*="css"], .stApp, p, span, div, input, select, button, label, .stMarkdown, .stText, td, th {
+        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        font-weight: 400;
+    }
+
+    /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> 페이퍼로지 8 ExtraBold (weight: 800) */
+    h1, h2, h3, h4, h5, h6, 
+    .kpi-value, 
+    .kpi-title, 
+    .main-title-text, 
+    summary, 
+    .sidebar-section-header,
+    .filter-badge b,
+    .alert-blink-badge {
+        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        font-weight: 800 !important;
+    }
+
     html {
         scroll-behavior: smooth;
     }
@@ -242,7 +279,7 @@ st.markdown("""
         font-weight: 900;
         line-height: 1.1;
         margin-bottom: 8px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, sans-serif;
     }
     .kpi-unit {
         font-size: 15px;
