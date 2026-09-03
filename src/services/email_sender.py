@@ -8,9 +8,22 @@ from datetime import datetime
 
 from .email_report_service import EmailReportService
 
-DEFAULT_SENDER = os.getenv("GMAIL_SENDER_EMAIL", "newprim82@gmail.com")
-DEFAULT_APP_PWD = os.getenv("GMAIL_APP_PASSWORD", "dlugbvfuhgdozkgr")
-DEFAULT_RECIPIENT = os.getenv("DEFAULT_RECIPIENT_EMAIL", "ymmoon@sangsanginworld.co.kr")
+def get_secret(key: str, default: str = "") -> str:
+    """Streamlit secrets 또는 OS 환경변수에서 안전하게 설정값을 가져옵니다."""
+    try:
+        import streamlit as st
+        if hasattr(st, "secrets") and key in st.secrets:
+            val = str(st.secrets[key]).strip()
+            if val:
+                return val
+    except Exception:
+        pass
+    val = os.getenv(key, "").strip()
+    return val if val else default
+
+DEFAULT_SENDER = "newprim82@gmail.com"
+DEFAULT_APP_PWD = "dlugbvfuhgdozkgr"
+DEFAULT_RECIPIENT = "ymmoon@sangsanginworld.co.kr"
 
 class EmailSender:
     @staticmethod
@@ -27,11 +40,13 @@ class EmailSender:
         Returns:
             (success: bool, message: str)
         """
-        sender = sender_email or os.getenv("GMAIL_SENDER_EMAIL", DEFAULT_SENDER)
-        password = sender_password or os.getenv("GMAIL_APP_PASSWORD", DEFAULT_APP_PWD)
+        sender = (sender_email or get_secret("GMAIL_SENDER_EMAIL", DEFAULT_SENDER)).strip()
+        raw_pwd = sender_password or get_secret("GMAIL_APP_PASSWORD", DEFAULT_APP_PWD)
+        # 구글 앱 비밀번호는 공백(띄어쓰기) 제거 필수
+        password = str(raw_pwd).replace(" ", "").strip()
         
         if not recipient_emails:
-            recipients = [DEFAULT_RECIPIENT]
+            recipients = [get_secret("DEFAULT_RECIPIENT_EMAIL", DEFAULT_RECIPIENT)]
         elif isinstance(recipient_emails, str):
             recipients = [r.strip() for r in recipient_emails.split(",") if r.strip()]
         else:
