@@ -3056,9 +3056,12 @@ def main():
     if curr_page == "📋 작업 기록 원장 & 엑셀":
         st.subheader("📋 작업 지원 상세 기록 원장 & 엑셀 다운로드")
         
+        # openpyxl은 타임존(tz-aware) datetime을 지원하지 않으므로 strip_tz 적용
+        clean_df = strip_tz(df)
+        
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name="지원시간통계")
+            clean_df.to_excel(writer, index=False, sheet_name="지원시간통계")
         excel_data = output.getvalue()
         
         btn_col1, btn_col2 = st.columns([1, 4])
@@ -3073,7 +3076,7 @@ def main():
         with btn_col2:
             st.download_button(
                 label="📥 CSV 다운로드",
-                data=df.to_csv(index=False, encoding='utf-8-sig'),
+                data=clean_df.to_csv(index=False, encoding='utf-8-sig'),
                 file_name=f"작업지원시간_통계_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
                 use_container_width=True
