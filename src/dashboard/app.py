@@ -1339,42 +1339,6 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     )
     st.plotly_chart(fig_peak, use_container_width=True)
 
-    # ----------------------------------------------------
-    # 4. 🔍 특정 날짜 상세 작업 목록 탐색기
-    # ----------------------------------------------------
-    st.divider()
-    st.markdown(f"#### 🔍 {pick_month} 날짜별 상세 작업 목록 탐색기")
-    
-    active_day_list = sorted(df_month["day_num"].unique())
-    if active_day_list:
-        c_day_pick, _ = st.columns([1.5, 2.5])
-        with c_day_pick:
-            sel_day = st.selectbox(
-                "상세 조회할 일자(Day) 선택:",
-                options=active_day_list,
-                index=len(active_day_list) - 1,
-                format_func=lambda d: f"{year}년 {month:02d}월 {d:02d}일 ({len(df_month[df_month['day_num']==d])}건)",
-                key="sel_cal_day_detail"
-            )
-
-        day_detail_df = df_month[df_month["day_num"] == sel_day].sort_values("start_time")
-        st.markdown(f"**{year}년 {month:02d}월 {sel_day:02d}일** 작업 내역 (총 **{len(day_detail_df)}건** / **{round(day_detail_df['actual_hours'].sum(), 1)}시간**):")
-
-        d_cols = st.columns(2)
-        for idx, (_, r) in enumerate(day_detail_df.iterrows()):
-            with d_cols[idx % 2]:
-                w_name = r["worker_name"]
-                w_team = r["worker_team"] or ""
-                c_name = r["client_name"]
-                t_desc = r["task_description"]
-                st_t = r["start_time"].strftime("%H:%M") if pd.notna(r["start_time"]) else "?"
-                ed_t = r["end_time"].strftime("%H:%M") if pd.notna(r["end_time"]) else "진행"
-                act_h = r["actual_hours"]
-                status_badge = "✅ 완료" if r["status"] == "COMPLETED" else "⏳ 진행중"
-
-                st.markdown(f"""<div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;"><div style="display: flex; justify-content: space-between; margin-bottom: 4px;"><span style="font-weight: 700; color: #FFFFFF;">👤 {w_name} <span style="font-size: 11px; color: #38BDF8;">[{w_team}]</span></span><span style="font-size: 11px; color: #94A3B8;">{status_badge} ({st_t} ~ {ed_t} | {act_h}h)</span></div><div style="font-size: 13px; color: #38BDF8; font-weight: 600; margin-bottom: 2px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #CBD5E1;">{t_desc}</div></div>""", unsafe_allow_html=True)
-
-
 def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기"""
     st.markdown("### 🔍 전체 작업 통합 스마트 검색 & 다중 필터")
