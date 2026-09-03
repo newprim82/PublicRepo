@@ -2416,16 +2416,58 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     
     st.markdown("""
     <style>
-        .summary-period-box {
-            background: #ffffff;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            padding: 10px 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        div[data-testid="stRadio"] > label {
+            color: #002d42 !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            margin-bottom: 6px !important;
+        }
+        div[data-testid="stRadio"] > label p {
+            color: #002d42 !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            background: #ffffff !important;
+            border: 1.5px solid #005f8a !important;
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+            box-shadow: 0 2px 6px rgba(0,45,66,0.06) !important;
+            margin-bottom: 12px !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label {
+            background: #f1f5f9 !important;
+            border: 1.2px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 5px 12px !important;
+            margin: 0 !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+            background: #e2e8f0 !important;
+            border-color: #0284c7 !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label p,
+        div[data-testid="stRadio"] div[role="radiogroup"] label span {
+            color: #002d42 !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
+        div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
+            background: #005073 !important;
+            border-color: #002d42 !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p,
+        div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span,
+        div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) span {
+            color: #ffffff !important;
+            font-weight: 900 !important;
         }
     </style>
     """, unsafe_allow_html=True)
