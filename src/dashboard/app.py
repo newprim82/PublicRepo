@@ -308,21 +308,28 @@ st.markdown("""
         border-color: rgba(56, 189, 248, 0.8) !important;
         box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.35) !important;
     }
-    /* 🌟 무깜빡임 숨김 버튼 컨테이너 (화면 밖 -9999px 완전 퇴장) */
-    button[aria-label^="__kpi_"],
-    div.element-container:has(button[aria-label^="__kpi_"]),
-    div[data-testid="stVerticalBlock"] > div:has(button[aria-label^="__kpi_"]) {
-        position: fixed !important;
-        top: -9999px !important;
-        left: -9999px !important;
-        width: 1px !important;
-        height: 0px !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        margin: 0 !important;
-        padding: 0 !important;
+    /* 🌟 5대 KPI 카드 투명 오버레이 버튼: 카드를 완벽하게 덮어서 원클릭 모달 오픈 */
+    div[data-testid="column"]:hover .kpi-card,
+    div[data-testid="stColumn"]:hover .kpi-card {
+        transform: translateY(-4px) !important;
+        border-color: rgba(56, 189, 248, 0.8) !important;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.35) !important;
+    }
+    button[aria-label=" "] {
+        position: relative !important;
+        margin-top: -136px !important;
+        height: 136px !important;
+        min-height: 136px !important;
+        width: 100% !important;
+        background: transparent !important;
+        background-color: transparent !important;
         border: none !important;
-        overflow: hidden !important;
+        box-shadow: none !important;
+        color: transparent !important;
+        opacity: 0 !important;
+        cursor: pointer !important;
+        z-index: 10 !important;
+        padding: 0 !important;
     }
     .kpi-title {
         font-size: 15.5px !important;
@@ -2601,40 +2608,48 @@ def main():
         
         with kpi_col1:
             st.markdown(f"""
-            <div class="kpi-card" id="kpi-card-hours" style="border-top: 4px solid #00E5FF;" title="클릭하여 총 지원 시간 상세 내역 팝업 열기">
+            <div class="kpi-card" style="border-top: 4px solid #00E5FF;">
                 <div class="kpi-title">⏱️ 총 지원 시간</div>
                 <div class="kpi-value" style="color: #00E5FF;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
                 <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
             </div>
             """, unsafe_allow_html=True)
+            if st.button(" ", key="kpi_btn_hours", use_container_width=True, help="클릭하여 총 지원 시간 상세 내역 팝업 열기"):
+                show_kpi_total_hours_dialog(df)
             
         with kpi_col2:
             st.markdown(f"""
-            <div class="kpi-card" id="kpi-card-tasks" style="border-top: 4px solid #00E676;" title="클릭하여 총 작업 건수 상세 팝업 열기">
+            <div class="kpi-card" style="border-top: 4px solid #00E676;">
                 <div class="kpi-title">📋 총 작업 건수</div>
                 <div class="kpi-value" style="color: #FFFFFF;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-green">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#64748B;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
             </div>
             """, unsafe_allow_html=True)
+            if st.button(" ", key="kpi_btn_tasks", use_container_width=True, help="클릭하여 총 작업 건수 상세 팝업 열기"):
+                show_kpi_total_tasks_dialog(df)
             
         with kpi_col3:
             st.markdown(f"""
-            <div class="kpi-card" id="kpi-card-workers" style="border-top: 4px solid #B388FF;" title="클릭하여 팀원별 공수 팝업 열기">
+            <div class="kpi-card" style="border-top: 4px solid #B388FF;">
                 <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
                 <div class="kpi-value" style="color: #FFFFFF;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
                 <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
             </div>
             """, unsafe_allow_html=True)
+            if st.button(" ", key="kpi_btn_workers", use_container_width=True, help="클릭하여 팀원별 공수 팝업 열기"):
+                show_kpi_workers_dialog(df)
             
         with kpi_col4:
             total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
             st.markdown(f"""
-            <div class="kpi-card" id="kpi-card-urgent" style="border-top: 4px solid #FFAB00;" title="클릭하여 야간/주말 긴급 작업 팝업 열기">
+            <div class="kpi-card" style="border-top: 4px solid #FFAB00;">
                 <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
                 <div class="kpi-value" style="color: #FFAB00;">{total_urg}<span class="kpi-unit">건</span></div>
                 <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#64748B;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
             </div>
             """, unsafe_allow_html=True)
+            if st.button(" ", key="kpi_btn_urgent", use_container_width=True, help="클릭하여 야간/주말 긴급 작업 팝업 열기"):
+                show_kpi_urgent_dialog(df)
             
         with kpi_col5:
             overdue_val = float(kpi.get('overdue_rate', 0))
@@ -2644,86 +2659,14 @@ def main():
             badge_cls = "badge-red" if is_danger else "badge-green"
             badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
             st.markdown(f"""
-            <div class="kpi-card" id="kpi-card-overdue" style="border-top: 4px solid {overdue_color};" title="클릭하여 예정 시간 초과 내역 팝업 열기">
+            <div class="kpi-card" style="border-top: 4px solid {overdue_color};">
                 <div class="kpi-title">⚠️ 예정 시간 초과율</div>
                 <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
                 <div class="kpi-badge {badge_cls}">{badge_text}</div>
             </div>
             """, unsafe_allow_html=True)
-
-        # 🌟 무깜빡임(Zero-Blink) 네이티브 WebSocket 모달 트리거 (화면 밖 -9999px 완전 은폐)
-        act_h = st.button("__kpi_h__", key="kpi_act_hours")
-        act_t = st.button("__kpi_t__", key="kpi_act_tasks")
-        act_w = st.button("__kpi_w__", key="kpi_act_workers")
-        act_u = st.button("__kpi_u__", key="kpi_act_urgent")
-        act_o = st.button("__kpi_o__", key="kpi_act_overdue")
-
-        if act_h:
-            show_kpi_total_hours_dialog(df)
-        if act_t:
-            show_kpi_total_tasks_dialog(df)
-        if act_w:
-            show_kpi_workers_dialog(df)
-        if act_u:
-            show_kpi_urgent_dialog(df)
-        if act_o:
-            show_kpi_overdue_dialog(df)
-
-        # 🌟 카드 클릭 시 숨김 버튼을 트리거하는 자바스크립트 브리지 (브라우저 깜빡임 0%, 원클릭 즉시 오픈)
-        import streamlit.components.v1 as components
-        components.html("""
-        <script>
-            (function() {
-                function setupBridges() {
-                    const pDoc = window.parent.document;
-                    // 숨김 버튼들을 화면 밖으로 완벽 추방 (JS 인라인 스타일 보강)
-                    const btns = Array.from(pDoc.querySelectorAll('button')).filter(b => b.innerText.includes('__kpi_') || (b.getAttribute('aria-label') && b.getAttribute('aria-label').startsWith('__kpi_')));
-                    btns.forEach(b => {
-                        b.style.position = 'fixed';
-                        b.style.top = '-9999px';
-                        b.style.left = '-9999px';
-                        b.style.opacity = '0';
-                        b.style.pointerEvents = 'none';
-                        let p = b.parentElement;
-                        while (p && p !== pDoc.body && !p.classList.contains('element-container')) {
-                            p = p.parentElement;
-                        }
-                        if (p && p.classList.contains('element-container')) {
-                            p.style.position = 'fixed';
-                            p.style.top = '-9999px';
-                            p.style.height = '0px';
-                            p.style.margin = '0px';
-                            p.style.padding = '0px';
-                            p.style.overflow = 'hidden';
-                        }
-                    });
-
-                    function clickBtn(label) {
-                        const target = btns.find(b => b.innerText.includes(label) || b.getAttribute('aria-label') === label);
-                        if (target) {
-                            target.click();
-                        }
-                    }
-
-                    const c1 = pDoc.getElementById('kpi-card-hours');
-                    const c2 = pDoc.getElementById('kpi-card-tasks');
-                    const c3 = pDoc.getElementById('kpi-card-workers');
-                    const c4 = pDoc.getElementById('kpi-card-urgent');
-                    const c5 = pDoc.getElementById('kpi-card-overdue');
-
-                    if (c1) c1.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_h__'); };
-                    if (c2) c2.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_t__'); };
-                    if (c3) c3.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_w__'); };
-                    if (c4) c4.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_u__'); };
-                    if (c5) c5.onclick = (e) => { e.preventDefault(); clickBtn('__kpi_o__'); };
-                }
-
-                setupBridges();
-                const timer = setInterval(setupBridges, 200);
-                setTimeout(() => clearInterval(timer), 3000);
-            })();
-        </script>
-        """, height=0)
+            if st.button(" ", key="kpi_btn_overdue", use_container_width=True, help="클릭하여 예정 시간 초과 내역 팝업 열기"):
+                show_kpi_overdue_dialog(df)
 
         # ----------------------------------------------------
         # 🚨 상단 과중 근무 실시간 감지 & 원클릭 보상휴가 팝업 배너
