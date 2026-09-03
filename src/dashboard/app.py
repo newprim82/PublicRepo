@@ -3151,8 +3151,14 @@ def main():
                         }
 
                         /* ✅ 과중근무 보상완료 버튼 (초록색 배경) */
-                        div.element-container:has(.reward-btn-marker) + div.element-container button,
-                        div:has(.reward-btn-marker) + div button {
+                        div.element-container:has(.reward-chip-zone) {
+                            display: none !important;
+                            height: 0px !important;
+                            margin: 0px !important;
+                            padding: 0px !important;
+                        }
+                        div[data-testid="stColumn"]:has(.reward-chip-zone) button,
+                        div[data-testid="column"]:has(.reward-chip-zone) button {
                             background-color: #16a34a !important;
                             border: 1.5px solid #15803d !important;
                             border-radius: 6px !important;
@@ -3162,13 +3168,13 @@ def main():
                             padding: 4px 6px !important;
                             box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3) !important;
                         }
-                        div.element-container:has(.reward-btn-marker) + div.element-container button *,
-                        div:has(.reward-btn-marker) + div button * {
+                        div[data-testid="stColumn"]:has(.reward-chip-zone) button *,
+                        div[data-testid="column"]:has(.reward-chip-zone) button * {
                             color: #ffffff !important;
                             font-weight: 700 !important;
                         }
-                        div.element-container:has(.reward-btn-marker) + div.element-container button:hover,
-                        div:has(.reward-btn-marker) + div button:hover {
+                        div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover,
+                        div[data-testid="column"]:has(.reward-chip-zone) button:hover {
                             background-color: #15803d !important;
                             border-color: #166534 !important;
                         }
@@ -3238,13 +3244,13 @@ def main():
                         with col_r_lbl:
                             st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#16a34a;'>✅ 보상 완료 ({len(rewarded_items)}건):</div>", unsafe_allow_html=True)
                         with col_r_chips:
+                            st.markdown('<span class="reward-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
                             chunk_size = 5
                             for i in range(0, len(rewarded_items), chunk_size):
                                 chunk = rewarded_items[i:i + chunk_size]
                                 r_cols = st.columns(chunk_size)
                                 for c_idx, r_item in enumerate(chunk):
                                     with r_cols[c_idx]:
-                                        st.markdown('<span class="reward-btn-marker" style="display:none;"></span>', unsafe_allow_html=True)
                                         if st.button(
                                             f"✅ {r_item['worker_name']}({r_item['short_w']}:{r_item['val']}h)",
                                             key=f"btn_chip_reward_{r_item['worker_name']}_{r_item['week_label']}",
