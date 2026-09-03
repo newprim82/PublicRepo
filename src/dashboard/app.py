@@ -2449,7 +2449,7 @@ def main():
                 <div class="clock-box">
                     <span>🕒</span>
                     <span id="live-bora-clock">로딩 중...</span>
-                    <span class="badge-bora" title="LGU+ time.bora.net NTP 타임서버 실시간 동기화">BORA·KST</span>
+                    <span class="badge-bora" title="LGU+ time.bora.net NTP 타임서버 실시간 동기화">time.bora.net·KST</span>
                 </div>
             </div>
         </div>
