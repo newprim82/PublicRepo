@@ -2160,83 +2160,62 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             color: #38bdf8 !important;
         }
 
-        /* 4. 탭 바 가독성 (미선택 탭 텍스트 100% 진한 다크네이비, 활성 탭 딥블루+화이트) */
-        div[data-testid="stTabs"] [role="tablist"],
-        div[data-testid="stTabs"] [data-baseweb="tab-list"],
-        .stTabs [role="tablist"],
-        .stTabs [data-baseweb="tab-list"] {
+        /* 4. 뷰 전환 세그먼트 버튼 (완벽한 카드형 버튼 배경색 및 고대비 가독성) */
+        div[data-testid="stRadio"] > div[role="radiogroup"],
+        div.stRadio > div[role="radiogroup"] {
             display: flex !important;
             gap: 12px !important;
             background: transparent !important;
-            border: none !important;
             padding: 0 !important;
+            margin-top: 8px !important;
             margin-bottom: 16px !important;
         }
-        div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
-        div[data-testid="stTabs"] [data-baseweb="tab-border"],
-        .stTabs [data-baseweb="tab-highlight"],
-        .stTabs [data-baseweb="tab-border"] {
-            display: none !important;
-            height: 0px !important;
-            background-color: transparent !important;
-        }
-        div[data-testid="stTabs"] button[role="tab"],
-        div[data-testid="stTabs"] button[data-baseweb="tab"],
-        .stTabs button[role="tab"],
-        .stTabs button[data-baseweb="tab"] {
+        div[data-testid="stRadio"] label[data-baseweb="radio"],
+        div.stRadio label[data-baseweb="radio"] {
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
-            height: 42px !important;
-            min-height: 42px !important;
-            white-space: nowrap !important;
-            padding: 8px 20px !important;
-            border-radius: 8px !important;
-            font-size: 14px !important;
-            font-weight: 800 !important;
-            cursor: pointer !important;
-            transition: all 0.2s ease !important;
-        }
-        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]),
-        div[data-testid="stTabs"] button[role="tab"][aria-selected="false"],
-        div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]),
-        .stTabs button[role="tab"]:not([aria-selected="true"]) {
             background-color: #f1f5f9 !important;
             background: #f1f5f9 !important;
             border: 1.5px solid #cbd5e1 !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+            border-radius: 8px !important;
+            padding: 9px 22px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+            margin: 0 !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
         }
-        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]) *,
-        div[data-testid="stTabs"] button[role="tab"][aria-selected="false"] *,
-        div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]) *,
-        .stTabs button[role="tab"]:not([aria-selected="true"]) * {
+        /* 라디오 동그라미 숨김 */
+        div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child,
+        div.stRadio label[data-baseweb="radio"] > div:first-child {
+            display: none !important;
+        }
+        /* 미선택 버튼 텍스트: 선명한 다크네이비 */
+        div[data-testid="stRadio"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p,
+        div.stRadio label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
             color: #002d42 !important;
             font-weight: 800 !important;
             font-size: 14px !important;
-            opacity: 1 !important;
-            visibility: visible !important;
+            margin: 0 !important;
         }
-        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]):hover,
-        .stTabs button[role="tab"]:not([aria-selected="true"]):hover {
+        div[data-testid="stRadio"] label[data-baseweb="radio"]:hover,
+        div.stRadio label[data-baseweb="radio"]:hover {
             background-color: #e2e8f0 !important;
             border-color: #94a3b8 !important;
         }
-        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
-        div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
-        .stTabs button[role="tab"][aria-selected="true"] {
-            background-color: #005073 !important;
+        /* 선택된 활성 버튼: Cisco ACI 딥블루 + 볼드 화이트 글자 */
+        div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
+        div.stRadio label[data-baseweb="radio"]:has(input:checked) {
             background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
+            background-color: #005073 !important;
             border: 1.5px solid #002233 !important;
-            box-shadow: 0 3px 10px rgba(0, 80, 115, 0.35) !important;
+            box-shadow: 0 3px 10px rgba(0, 80, 115, 0.3) !important;
         }
-        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
-        div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
-        .stTabs button[role="tab"][aria-selected="true"] * {
+        div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p,
+        div.stRadio label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p {
             color: #ffffff !important;
             font-weight: 900 !important;
             font-size: 14px !important;
-            opacity: 1 !important;
-            visibility: visible !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -2367,10 +2346,17 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         st.warning("🔍 설정하신 검색 조건에 부합하는 작업 내역이 없습니다. 다른 키워드나 조건으로 검색해 보세요.")
         return
 
-    # 4. 결과 표출 뷰 (테이블 vs 카드 뷰)
-    view_t1, view_t2 = st.tabs(["📋 인터랙티브 테이블 뷰", "📇 카드 상세 리스트 뷰"])
+    # 4. 결과 표출 뷰 (확실한 배경색과 고대비 폰트를 보장하는 세그먼트 버튼)
+    view_mode = st.radio(
+        "결과 표출 방식 선택:",
+        options=["📋 인터랙티브 테이블 뷰", "🗂️ 카드 상세 리스트 뷰"],
+        index=0,
+        horizontal=True,
+        label_visibility="collapsed",
+        key="smart_search_view_mode"
+    )
 
-    with view_t1:
+    if view_mode == "📋 인터랙티브 테이블 뷰":
         # 다운로드 버튼
         target_cols = [
             "id", "worker_name", "worker_team", "worker_title", "client_name", 
@@ -2422,7 +2408,7 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
 
         st.dataframe(display_df, use_container_width=True, height=450)
 
-    with view_t2:
+    else:
         st.caption(f"최신 작업 순으로 정렬된 상세 카드 목록입니다. (총 {res_cnt}건)")
         # 3열 그리드로 카드 표출 (최대 상위 60건)
         card_sub_df = filtered_df.head(60)
