@@ -1824,13 +1824,13 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
 
     year, month = map(int, pick_month.split("-"))
 
-    # 1. 상단 월간 핵심 요약 카드
+    # 1. 상단 월간 핵심 요약 카드 (메인 대시보드와 통일된 세련된 화이트 카드)
     tot_h = round(df_month["actual_hours"].sum(), 1)
     tot_cnt = len(df_month)
     tot_w = df_month["worker_name"].nunique()
     active_days = df_month["start_time"].dt.date.nunique()
 
-    summary_cards_html = f"""<div style="display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;"><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">📅 작업 일수</div><div style="font-size: 22px; font-weight: 800; color: #38BDF8;">{active_days}일 <span style="font-size: 13px; font-weight: 500; color: #64748B;">/ 월</span></div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 230, 118, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">⏱️ 총 투입 공수</div><div style="font-size: 22px; font-weight: 800; color: #00E676;">{tot_h}시간</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(129, 140, 248, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">📋 총 작업 건수</div><div style="font-size: 22px; font-weight: 800; color: #818CF8;">{tot_cnt}건</div></div><div style="flex: 1; min-width: 140px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 10px; padding: 12px 16px;"><div style="font-size: 12px; color: #94A3B8;">👥 투입 인원</div><div style="font-size: 22px; font-weight: 800; color: #FBBF24;">{tot_w}명</div></div></div>"""
+    summary_cards_html = f"""<div style="display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap;"><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #005073; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">📅 작업 일수</div><div style="font-size: 24px; font-weight: 900; color: #005073; letter-spacing: -0.5px;">{active_days}일 <span style="font-size: 13px; font-weight: 600; color: #94a3b8;">/ 월</span></div></div><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #0284c7; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">⏱️ 총 투입 공수</div><div style="font-size: 24px; font-weight: 900; color: #0284c7; letter-spacing: -0.5px;">{tot_h}시간</div></div><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #10b981; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">📋 총 작업 건수</div><div style="font-size: 24px; font-weight: 900; color: #10b981; letter-spacing: -0.5px;">{tot_cnt}건</div></div><div style="flex: 1; min-width: 140px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="font-size: 12.5px; font-weight: 700; color: #64748b; margin-bottom: 4px;">👥 투입 인원</div><div style="font-size: 24px; font-weight: 900; color: #f59e0b; letter-spacing: -0.5px;">{tot_w}명</div></div></div>"""
     st.markdown(summary_cards_html, unsafe_allow_html=True)
 
     # ----------------------------------------------------
@@ -1852,18 +1852,18 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     h_cols = st.columns(7)
     for idx, wd in enumerate(weekdays):
         with h_cols[idx]:
-            h_color = "#F43F5E" if idx == 6 else ("#38BDF8" if idx == 5 else "#E2E8F0")
-            st.markdown(f"<div style='text-align:center; font-weight:700; color:{h_color}; background:rgba(30,41,59,0.6); padding:6px; border-radius:6px; font-size:12px; margin-bottom:6px;'>{wd}</div>", unsafe_allow_html=True)
+            h_color = "#fca5a5" if idx == 6 else ("#7dd3fc" if idx == 5 else "#ffffff")
+            st.markdown(f"<div style='text-align:center; font-weight:800; color:{h_color}; background: linear-gradient(135deg, #002233 0%, #004d71 100%); border: 1px solid #005f8a; padding:7px 4px; border-radius:7px; font-size:12.5px; margin-bottom:8px; box-shadow: 0 2px 5px rgba(0,34,51,0.15);'>{wd}</div>", unsafe_allow_html=True)
 
     for week in cal_matrix:
         w_cols = st.columns(7)
         for idx, day in enumerate(week):
             with w_cols[idx]:
                 if day == 0:
-                    st.markdown("<div style='height:86px; background:rgba(15,23,42,0.2); border-radius:8px; margin-bottom:6px;'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height:92px; background:rgba(241, 245, 249, 0.4); border: 1px dashed #e2e8f0; border-radius:8px; margin-bottom:8px;'></div>", unsafe_allow_html=True)
                 else:
                     day_data = day_summary.get(day)
-                    num_color = "#F43F5E" if idx == 6 else ("#38BDF8" if idx == 5 else "#F8FAFC")
+                    num_color = "#dc2626" if idx == 6 else ("#0284c7" if idx == 5 else "#0f172a")
 
                     if day_data:
                         d_hours = round(day_data["total_hours"], 1)
@@ -1871,16 +1871,15 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
                         d_workers = day_data["workers"][:2]
                         w_str = ", ".join(d_workers) + (f" 외 {len(day_data['workers'])-2}명" if len(day_data["workers"]) > 2 else "")
 
-                        bg_opacity = min(0.85, 0.25 + (d_hours / 35.0) * 0.6)
-                        cell_html = f"""<div style="background: rgba(16, 185, 129, {bg_opacity:.2f}); border: 1px solid rgba(16, 185, 129, 0.6); border-radius: 8px 8px 0px 0px; padding: 5px 7px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="font-weight: 800; font-size: 13px; color: {num_color};">{day}</span><span style="background: rgba(0,0,0,0.4); color: #A7F3D0; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 10.5px; color: #FFFFFF; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
+                        cell_html = f"""<div style="background: #ffffff; border: 1.5px solid #10b981; border-radius: 8px 8px 0px 0px; padding: 6px 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;"><span style="font-weight: 800; font-size: 13.5px; color: {num_color};">{day}</span><span style="background: #d1fae5; color: #065f46; font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px; border: 1px solid #a7f3d0;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 11px; color: #334155; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
                         st.markdown(cell_html, unsafe_allow_html=True)
                         
-                        # 클릭 시 상세 팝업 오픈 버튼 (마우스 오버레이 툴팁 제거)
+                        # 클릭 시 상세 팝업 오픈 버튼 (깔끔한 테마 적용)
                         if st.button(f"🔍 {day}일 상세 ({d_cnt}건)", key=f"btn_cal_pop_{year}_{month}_{day}", use_container_width=True):
                             day_target_df = df_month[df_month["day_num"] == day]
                             show_calendar_day_dialog(f"{year}년 {month:02d}월 {day:02d}일", day_target_df)
                     else:
-                        cell_html = f"""<div style="min-height:86px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 5px 7px; margin-bottom: 6px;"><div style="font-weight: 700; font-size: 12px; color: {num_color}; opacity: 0.5;">{day}</div><div style="font-size: 10px; color: #475569; margin-top: 14px; text-align: center;">-</div></div>"""
+                        cell_html = f"""<div style="min-height:92px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; margin-bottom: 8px;"><div style="font-weight: 700; font-size: 12.5px; color: {num_color}; opacity: 0.7;">{day}</div><div style="font-size: 11px; color: #94a3b8; margin-top: 18px; text-align: center;">-</div></div>"""
                         st.markdown(cell_html, unsafe_allow_html=True)
 
     st.write("")
@@ -1919,16 +1918,17 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
         labels=dict(x="시작 시간대", y="요일", color="작업 건수"),
         x=pivot_df.columns,
         y=pivot_df.index,
-        color_continuous_scale="Viridis",
+        color_continuous_scale="Blues",
         aspect="auto",
         text_auto=True
     )
     fig_peak.update_layout(
-        template="plotly_dark",
+        template="plotly_white",
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=20, r=20, t=20, b=20),
-        height=320
+        height=320,
+        font=dict(family="Pretendard, -apple-system, sans-serif", size=11.5, color="#0f172a")
     )
     st.plotly_chart(fig_peak, use_container_width=True)
 
