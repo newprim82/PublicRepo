@@ -367,6 +367,20 @@ st.markdown("""
         color: #00b4d8 !important;
     }
     [data-testid="stSidebar"] .block-container,
+    /* 🏛️ Cisco ACI 사이드바 스타일링 (#002d42 딥 네이비 완벽 일체형) */
+    [data-testid="stSidebar"] {
+        background-color: #002d42 !important;
+        border-right: 1px solid #003852 !important;
+    }
+    [data-testid="stSidebar"] * {
+        color: #bdcddc !important;
+    }
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #00b4d8 !important;
+    }
+    [data-testid="stSidebar"] .block-container,
     [data-testid="stSidebarUserContent"] {
         padding-top: 0.4rem !important;
         padding-left: 0.8rem !important;
@@ -376,6 +390,7 @@ st.markdown("""
         padding-top: 0.4rem !important;
         padding-bottom: 0.1rem !important;
     }
+    /* 사이드바 아코디언 일체화 */
     [data-testid="stSidebar"] [data-testid="stExpander"],
     [data-testid="stSidebar"] details,
     [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] {
@@ -390,7 +405,44 @@ st.markdown("""
         font-size: 13px !important;
         color: #ffffff !important;
         background-color: #001e2d !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
     }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
+        color: #00b4d8 !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary svg {
+        fill: #00b4d8 !important;
+        color: #00b4d8 !important;
+    }
+    /* 사이드바 내부 라벨 & 인풋 */
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] .stMarkdown p {
+        color: #e2e8f0 !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] > div {
+        background-color: #002d42 !important;
+        border: 1px solid #003852 !important;
+        border-radius: 4px !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] span,
+    [data-testid="stSidebar"] [data-baseweb="select"] div {
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] svg {
+        fill: #00b4d8 !important;
+        color: #00b4d8 !important;
+    }
+    /* 사이드바 라디오 & 체크박스 */
+    [data-testid="stSidebar"] [data-baseweb="radio"] div {
+        color: #bdcddc !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="checkbox"] span {
+        color: #bdcddc !important;
+    }
+    /* 사이드바 버튼 */
     [data-testid="stSidebar"] button {
         border-radius: 4px !important;
         font-size: 12.5px !important;
@@ -410,6 +462,7 @@ st.markdown("""
         color: #ffffff !important;
         border-left: 4px solid #00b4d8 !important;
         border-radius: 0 4px 4px 0 !important;
+        box-shadow: 0 2px 6px rgba(0, 70, 102, 0.4) !important;
     }
 
     /* 🏛️ Cisco ACI 표준 테이블 스타일링 */
@@ -529,20 +582,6 @@ st.markdown("""
         color: #0f172a !important;
     }
 
-    /* 🏛️ 사이드바 인풋 및 라벨 가독성 */
-    [data-testid="stSidebar"] label,
-    [data-testid="stSidebar"] .stMarkdown p {
-        color: #e2e8f0 !important;
-        font-weight: 600 !important;
-    }
-    [data-testid="stSidebar"] [data-baseweb="select"] > div {
-        background-color: #001e2d !important;
-        border-color: #003852 !important;
-        color: #ffffff !important;
-    }
-    [data-testid="stSidebar"] [data-baseweb="select"] span {
-        color: #ffffff !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
