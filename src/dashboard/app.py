@@ -424,6 +424,27 @@ st.markdown("""
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
+    /* 🏛️ Cisco Catalyst Center 사이드바 드로어 스타일링 */
+    [data-testid="stSidebar"] {
+        background-color: #0F172A !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] {
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-radius: 6px !important;
+        background: rgba(30, 41, 59, 0.4) !important;
+        margin-bottom: 8px !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        color: #E2E8F0 !important;
+    }
+    [data-testid="stSidebar"] button {
+        border-radius: 4px !important;
+        font-size: 12.5px !important;
+        font-weight: 600 !important;
+        transition: all 0.15s ease-in-out !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1925,53 +1946,41 @@ def main():
     all_workers_list = sorted(df_raw["worker_name"].dropna().unique()) if not df_raw.empty else []
 
     # ==========================================
-    # 사이드바: 최상단 메인 메뉴 선택 (대시보드 vs 팀원 소속 관리)
+    # Cisco Catalyst Center 네비게이션 상태 초기화
+    # ==========================================
+    if "current_page" not in st.session_state:
+        st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+
+    # ==========================================
+    # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        st.markdown('<div class="sidebar-section-header purple">📌 메인 메뉴</div>', unsafe_allow_html=True)
-        selected_menu = st.radio(
-            "이동할 메뉴를 선택하세요:",
-            [
-                "📊 실시간 분석 대시보드",
+        # Catalyst Center 로고 헤더
+        st.markdown("""
+        <div style="padding: 6px 2px 14px 2px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 19px; font-weight: 800; color: #00BCEB; letter-spacing: -0.5px;">Catalyst Center</span>
+            </div>
+            <div style="font-size: 11px; color: #94A3B8; margin-top: 2px;">기술본부 현장 관제 시스템</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 1. 📂 메인 메뉴
+        with st.expander("📂 메인 메뉴", expanded=True):
+            main_menu_items = [
+                "🏠 실시간 분석 대시보드",
                 "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                 "📋 작업 기록 원장 & 엑셀"
-            ],
-            index=0,
-            label_visibility="collapsed"
-        )
-        st.write("")
+            ]
+            for m_item in main_menu_items:
+                is_active = (st.session_state["current_page"] == m_item)
+                btn_prefix = "👉 " if is_active else ""
+                if st.button(f"{btn_prefix}{m_item}", key=f"nav_main_{m_item}", use_container_width=True, type="primary" if is_active else "secondary"):
+                    st.session_state["current_page"] = m_item
+                    st.rerun()
 
-    # 상단 컴팩트 헤더 (화면 최상단 밀착 배치)
-    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
-    st.markdown(f"""
-    <div class="dashboard-title-box">
-        <div>
-            <div class="main-title-text">
-                📊 팀 지원 시간 & 업무량 분석 대시보드
-                <span style="font-size: 13px; color: #64748B; font-weight: 500; margin-left: 6px;">(기준 시각: {current_time_str})</span>
-            </div>
-            <div style="font-size: 13px; color: #94A3B8; margin-top: 4px;">카카오톡 작업/지원 보고 데이터를 기반으로 월별 업무 투입 공수 및 사용자별 업무량을 모니터링합니다.</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ==========================================
-    # 메뉴 분기 1: [⚙️ 팀원 소속 및 직급 관리] 메뉴 선택 시
-    # ==========================================
-    if "팀원 소속" in selected_menu:
-        render_team_management_page(all_workers_list, team_mappings)
-        return
-
-    # ==========================================
-    # 메뉴 분기 2 & 3: 사이드바 필터 및 대시보드
-    # ==========================================
-    # 메뉴 분기 2 & 3: 사이드바 필터 및 대시보드
-    # ==========================================
-    with st.sidebar:
-        # 1. 핵심 조회 기준 필터
-        if not df_raw.empty:
-            st.markdown('<div class="sidebar-section-header">🔍 핵심 조회 기준</div>', unsafe_allow_html=True)
-            
+        # 2. 🔍 조회 기준
+        with st.expander("🔍 조회 기준", expanded=True):
             # (1) 대상 월 선택
             available_months = sorted(df_raw["month_str"].dropna().unique(), reverse=True)
             month_mode = st.selectbox(
@@ -2084,161 +2093,164 @@ def main():
                 df = df[df["is_night_work"] == True]
             if weekend_only:
                 df = df[df["is_weekend_work"] == True]
-        else:
-            df = df_raw.copy()
-            selected_months = []
-            selected_team = "전체 팀"
-            selected_workers = []
-            worker_mode = "팀 전체 인원"
-            title_mode = "전체 직급"
-            selected_titles = []
-            team_available_workers = []
 
-        # 2. 카카오톡 실시간 동기화
-        st.markdown('<div class="sidebar-section-header green">🤖 카카오톡 실시간 연동</div>', unsafe_allow_html=True)
-        countdown = get_collector_countdown_info()
-        st.components.v1.html(f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>
-                body {{
-                    margin: 0;
-                    padding: 0;
-                    background: transparent;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                    overflow: hidden;
-                }}
-                .sb-card {{
-                    background: rgba(0, 230, 118, 0.08);
-                    border: 1px solid rgba(0, 230, 118, 0.35);
-                    border-radius: 8px;
-                    padding: 7px 10px;
-                    box-sizing: border-box;
-                }}
-                .sb-title {{
-                    font-weight: 800;
-                    color: #00E676;
-                    font-size: 11.5px;
-                }}
-                .sb-main {{
-                    font-size: 13.5px;
-                    font-weight: 900;
-                    color: #FFFFFF;
-                    margin-top: 2px;
-                }}
-                .sb-sub {{
-                    font-size: 10.5px;
-                    color: #94A3B8;
-                    margin-top: 2px;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="sb-card">
-                <div class="sb-title">⏳ 다음 자동 증분 수집:</div>
-                <div class="sb-main">
-                    <span id="sb-live-timer">{countdown['remaining_minutes']}분 뒤</span> <span style="font-size: 11px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
-                </div>
-                <div class="sb-sub">최근 수집: {countdown['last_run_str']} | {max(1, config.COLLECTOR_INTERVAL_SECONDS // 60)}분 주기 자동</div>
-            </div>
-            <script>
-                let remaining = {countdown['remaining_seconds']};
-                function updateSb() {{
-                    let tEl = document.getElementById('sb-live-timer');
-                    if (!tEl) return;
-                    if (remaining <= 0) {{
-                        tEl.innerText = "⚡ 지금 수집 중...";
-                        tEl.style.color = "#00E676";
-                    }} else {{
-                        let m = Math.floor(remaining / 60);
-                        let s = remaining % 60;
-                        let sStr = s < 10 ? '0' + s : s;
-                        tEl.innerText = (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
-                        tEl.style.color = "#FFFFFF";
-                        remaining--;
+
+        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
+        with st.expander("📊 작업 디테일", expanded=True):
+            detail_menu_items = [
+                "📅 작업 캘린더 & 밀도 히트맵",
+                "🔍 전체 작업 스마트 검색",
+                "📊 Summary",
+                "👤 팀원별 업무량 분석",
+                "🏢 팀별 업무량 비교",
+                "📈 월별/일별 추이",
+                "🏢 고객사별 공수 분포",
+                "⏱️ 예정 vs 실제 소요시간"
+            ]
+            for d_item in detail_menu_items:
+                is_active = (st.session_state["current_page"] == d_item)
+                btn_prefix = "👉 " if is_active else ""
+                if st.button(f"{btn_prefix}{d_item}", key=f"nav_detail_{d_item}", use_container_width=True, type="primary" if is_active else "secondary"):
+                    st.session_state["current_page"] = d_item
+                    st.rerun()
+
+        # 4. 🤖 카카오톡 실시간 연동
+        with st.expander("🤖 카카오톡 실시간 연동", expanded=False):
+            countdown = get_collector_countdown_info()
+            st.components.v1.html(f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body {{
+                        margin: 0;
+                        padding: 0;
+                        background: transparent;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                        overflow: hidden;
                     }}
-                }}
-                setInterval(updateSb, 1000);
-                updateSb();
-            </script>
-        </body>
-        </html>
-        """, height=72)
+                    .sb-card {{
+                        background: rgba(0, 230, 118, 0.08);
+                        border: 1px solid rgba(0, 230, 118, 0.35);
+                        border-radius: 8px;
+                        padding: 7px 10px;
+                        box-sizing: border-box;
+                    }}
+                    .sb-title {{
+                        font-weight: 800;
+                        color: #00E676;
+                        font-size: 11.5px;
+                    }}
+                    .sb-main {{
+                        font-size: 13.5px;
+                        font-weight: 900;
+                        color: #FFFFFF;
+                        margin-top: 2px;
+                    }}
+                    .sb-sub {{
+                        font-size: 10.5px;
+                        color: #94A3B8;
+                        margin-top: 2px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="sb-card">
+                    <div class="sb-title">⏳ 다음 자동 증분 수집:</div>
+                    <div class="sb-main">
+                        <span id="sb-live-timer">{countdown['remaining_minutes']}분 뒤</span> <span style="font-size: 11px; color: #00E5FF; font-weight: 700;">({countdown['next_run_str']} 예정)</span>
+                    </div>
+                    <div class="sb-sub">최근 수집: {countdown['last_run_str']} | {max(1, config.COLLECTOR_INTERVAL_SECONDS // 60)}분 주기 자동</div>
+                </div>
+                <script>
+                    let remaining = {countdown['remaining_seconds']};
+                    function updateSb() {{
+                        let tEl = document.getElementById('sb-live-timer');
+                        if (!tEl) return;
+                        if (remaining <= 0) {{
+                            tEl.innerText = "⚡ 지금 수집 중...";
+                            tEl.style.color = "#00E676";
+                        }} else {{
+                            let m = Math.floor(remaining / 60);
+                            let s = remaining % 60;
+                            let sStr = s < 10 ? '0' + s : s;
+                            tEl.innerText = (m > 0 ? m + "분 " : "") + sStr + "초 뒤";
+                            tEl.style.color = "#FFFFFF";
+                            remaining--;
+                        }}
+                    }}
+                    setInterval(updateSb, 1000);
+                    updateSb();
+                </script>
+            </body>
+            </html>
+            """, height=72)
 
-        if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True):
-            with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
-                res = run_collection_cycle(is_manual=True)
-                if res.get("status") == "success":
-                    st.toast(f"🎉 즉시 수집 완료! 총 {res['total_records']}건 분석 (DB 저장: {res['saved_records']}건)", icon="✅")
-                    st.success(f"🎉 즉시 수집 성공! 총 {res['total_records']}건 분석 (DB 저장/동기화: {res['saved_records']}건)")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
-                elif res.get("status") == "window_not_found":
-                    st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
-                    st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
-                elif res.get("status") == "no_text":
-                    st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
-                else:
-                    st.info(f"💡 {res.get('message', '수집 완료')}")
-                    st.cache_data.clear()
-                    time.sleep(1)
-                    st.rerun()
-
-        if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True):
-            st.cache_data.clear()
-            st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
-            time.sleep(0.3)
-            st.rerun()
-
-        # ⏱️ 5분(300초) 무간섭 자동 실시간 화면 갱신 (Streamlit 공식 WebSocket 프로토콜 엔진)
-        # iframe 보안 제약(cross-origin) 없이 어떤 PC/브라우저에서든 100% 확실하게 자동 갱신!
-        # 사용자가 선택한 기간, 소속팀, 담당 팀원, 직급, 야간/주말 필터 설정 100% 완벽 보존!
-        if st_autorefresh:
-            refresh_count = st_autorefresh(interval=5 * 60 * 1000, key="auto_refresh_counter")
-            st.markdown("""
-            <div style="background: rgba(0, 230, 118, 0.08); border: 1px dashed rgba(0, 230, 118, 0.35); border-radius: 6px; padding: 5px 8px; text-align: center; margin-top: 4px;">
-                <span style="font-size: 11px; color: #00E676; font-weight: 700;">🟢 5분 자동 실시간 동기화 가동 중 (필터 유지)</span>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            # Fallback
-            st.markdown("""
-            <meta http-equiv="refresh" content="300">
-            """, unsafe_allow_html=True)
-
-        # 3. 데이터 수동 동기화 (대화 파일 업로드)
-        st.markdown('<div class="sidebar-section-header blue">📥 데이터 동기화 (파일 업로드)</div>', unsafe_allow_html=True)
-        with st.expander("💬 카카오톡 대화 파일 업로드 (.txt)", expanded=False):
-            uploaded_file = st.file_uploader("카카오톡 대화 텍스트 파일", type=["txt"], label_visibility="collapsed")
-            if uploaded_file is not None:
-                try:
-                    file_content = uploaded_file.getvalue().decode("utf-8", errors="ignore")
-                    records = WorkLogMatcher.parse_and_match_text(file_content)
-                    if records:
-                        clear_all_web_caches()
-                        saved = db_manager.save_work_logs(records)
-                        st.success(f"총 {len(records)}건 최신 엔진으로 완벽 동기화 완료!")
+            if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True):
+                with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
+                    res = run_collection_cycle(is_manual=True)
+                    if res.get("status") == "success":
+                        st.toast(f"🎉 즉시 수집 완료! 총 {res['total_records']}건 분석 (DB 저장: {res['saved_records']}건)", icon="✅")
+                        st.success(f"🎉 즉시 수집 성공! 총 {res['total_records']}건 분석 (DB 저장/동기화: {res['saved_records']}건)")
+                        st.cache_data.clear()
+                        time.sleep(1)
                         st.rerun()
+                    elif res.get("status") == "window_not_found":
+                        st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
+                        st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
+                    elif res.get("status") == "no_text":
+                        st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
                     else:
-                        st.warning("파싱 가능한 작업/지원 메시지가 없습니다. 파일 내용을 확인해주세요.")
-                except Exception as e:
-                    st.error(f"파일 처리 중 오류: {e}")
+                        st.info(f"💡 {res.get('message', '수집 완료')}")
+                        st.cache_data.clear()
+                        time.sleep(1)
+                        st.rerun()
 
-        # 4. 시스템 관리
-        st.markdown('<div class="sidebar-section-header amber">⚙️ 시스템 관리</div>', unsafe_allow_html=True)
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-            if st.button("🔄 새로고침", use_container_width=True):
+            if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True):
                 st.cache_data.clear()
+                st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
+                time.sleep(0.3)
                 st.rerun()
-        with col_btn2:
-            if st.button("🧹 캐시 초기화", use_container_width=True):
-                clear_all_web_caches()
-                st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
-                st.rerun()
+
+            # 5분 자동 실시간 화면 갱신
+            if st_autorefresh:
+                refresh_count = st_autorefresh(interval=5 * 60 * 1000, key="auto_refresh_counter")
+                st.markdown("""
+                <div style="background: rgba(0, 230, 118, 0.08); border: 1px dashed rgba(0, 230, 118, 0.35); border-radius: 6px; padding: 5px 8px; text-align: center; margin-top: 4px;">
+                    <span style="font-size: 11px; color: #00E676; font-weight: 700;">🟢 5분 자동 실시간 동기화 가동 중</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # 카카오톡 대화 파일 업로드 (.txt)
+            with st.expander("💬 카카오톡 대화 파일 업로드 (.txt)", expanded=False):
+                uploaded_file = st.file_uploader("카카오톡 대화 텍스트 파일", type=["txt"], label_visibility="collapsed")
+                if uploaded_file is not None:
+                    try:
+                        file_content = uploaded_file.getvalue().decode("utf-8", errors="ignore")
+                        records = WorkLogMatcher.parse_and_match_text(file_content)
+                        if records:
+                            clear_all_web_caches()
+                            saved = db_manager.save_work_logs(records)
+                            st.success(f"총 {len(records)}건 최신 엔진으로 완벽 동기화 완료!")
+                            st.rerun()
+                        else:
+                            st.warning("파싱 가능한 작업/지원 메시지가 없습니다. 파일 내용을 확인해주세요.")
+                    except Exception as e:
+                        st.error(f"파일 처리 중 오류: {e}")
+
+        # 5. 🛠️ 시스템 관리
+        with st.expander("🛠️ 시스템 관리", expanded=False):
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("🔄 새로고침", use_container_width=True):
+                    st.cache_data.clear()
+                    st.rerun()
+            with col_btn2:
+                if st.button("🧹 캐시 초기화", use_container_width=True):
+                    clear_all_web_caches()
+                    st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
+                    st.rerun()
 
     # 데이터가 없을 때 안내 화면
     if df_raw.empty:
@@ -2247,9 +2259,47 @@ def main():
         return
 
     # ==========================================
-    # 메뉴 분기 3: [📋 작업 기록 원장 & 엑셀] 메뉴 선택 시
+    # 상단 Cisco Catalyst Center 글로벌 네이비 플랫폼 헤더
     # ==========================================
-    if "작업 기록 원장" in selected_menu:
+    curr_page = st.session_state.get("current_page", "🏠 실시간 분석 대시보드")
+    page_tag = curr_page.split(" ")[1] if " " in curr_page else curr_page
+    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    st.markdown(f"""
+    <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 188, 235, 0.25);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 19px; font-weight: 800; color: #00BCEB; letter-spacing: -0.4px;">Catalyst Center</span>
+            <span style="color: #48525B;">|</span>
+            <span style="font-size: 14px; color: #E2E8F0; font-weight: 600;">기술본부 현장 업무 관제 센터</span>
+            <span style="background: rgba(0, 188, 235, 0.15); color: #00BCEB; border: 1px solid rgba(0, 188, 235, 0.4); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; margin-left: 6px;">{page_tag}</span>
+        </div>
+        <div style="font-size: 12px; color: #94A3B8; display: flex; align-items: center; gap: 12px;">
+            <span>🟢 관제 시스템 정상 가동</span>
+            <span style="color: #48525B;">|</span>
+            <span>🕒 {current_time_str}</span>
+            <span style="color: #48525B;">|</span>
+            <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 4px; color: #CBD5E1;">👤 admin (기술본부)</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 1) 팀원 소속 및 직급 관리 페이지
+    if curr_page == "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)":
+        col_back, _ = st.columns([1, 4])
+        with col_back:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_team"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
+        render_team_management_page(all_workers_list, team_mappings)
+        return
+
+    # 2) 작업 기록 원장 & 엑셀
+    if curr_page == "📋 작업 기록 원장 & 엑셀":
+        col_back, _ = st.columns([1, 4])
+        with col_back:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_raw"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         st.subheader("📋 작업 지원 상세 기록 원장 & 엑셀 다운로드")
         
         output = io.BytesIO()
@@ -2320,194 +2370,189 @@ def main():
     if title_mode != "전체 직급" and selected_titles:
         title_badge_str = f" | <b>직급 [{', '.join(selected_titles)}]</b>"
 
-    # 메인 상단 집계 기준 배너 (가로 전체 너비로 시원하게 렌더링)
-    st.markdown(
-        f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
-        unsafe_allow_html=True
-    )
+    # ==========================================
+    # 메인 캔버스 뷰 전환 라우터 (Cisco Catalyst Center 방식)
+    # ==========================================
+    if curr_page == "🏠 실시간 분석 대시보드":
+        # 메인 상단 집계 기준 배너 (가로 전체 너비로 시원하게 렌더링)
+        st.markdown(
+            f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
+            unsafe_allow_html=True
+        )
 
-    # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링)
-    kpi = StatsService.compute_kpis(df)
-    kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
-    
-    with kpi_col1:
-        st.markdown(f"""
-        <div class="kpi-card" style="border-top: 4px solid #00E5FF;">
-            <div class="kpi-title">⏱️ 총 지원 시간</div>
-            <div class="kpi-value" style="color: #00E5FF;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
-            <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🔍 상세 내역 팝업", key="btn_kpi_hours", use_container_width=True):
-            show_kpi_total_hours_dialog(df)
+        # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링)
+        kpi = StatsService.compute_kpis(df)
+        kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
         
-    with kpi_col2:
-        st.markdown(f"""
-        <div class="kpi-card" style="border-top: 4px solid #00E676;">
-            <div class="kpi-title">📋 총 작업 건수</div>
-            <div class="kpi-value" style="color: #FFFFFF;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
-            <div class="kpi-badge badge-green">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#64748B;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🔍 건수 상세 팝업", key="btn_kpi_tasks", use_container_width=True):
-            show_kpi_total_tasks_dialog(df)
-        
-    with kpi_col3:
-        st.markdown(f"""
-        <div class="kpi-card" style="border-top: 4px solid #B388FF;">
-            <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
-            <div class="kpi-value" style="color: #FFFFFF;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
-            <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🔍 팀원별 공수 팝업", key="btn_kpi_workers", use_container_width=True):
-            show_kpi_workers_dialog(df)
-        
-    with kpi_col4:
-        total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
-        st.markdown(f"""
-        <div class="kpi-card" style="border-top: 4px solid #FFAB00;">
-            <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
-            <div class="kpi-value" style="color: #FFAB00;">{total_urg}<span class="kpi-unit">건</span></div>
-            <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#64748B;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🔍 긴급 작업 팝업", key="btn_kpi_urgent", use_container_width=True):
-            show_kpi_urgent_dialog(df)
-        
-    with kpi_col5:
-        overdue_val = float(kpi.get('overdue_rate', 0))
-        overdue_color = "#FF5252" if overdue_val > 10 else "#00E676"
-        badge_cls = "badge-red" if overdue_val > 10 else "badge-green"
-        st.markdown(f"""
-        <div class="kpi-card" style="border-top: 4px solid {overdue_color};">
-            <div class="kpi-title">⚠️ 예정 시간 초과율</div>
-            <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
-            <div class="kpi-badge {badge_cls}">🚨 초과 {kpi['overdue_tasks_count']}건 발생</div>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("🔍 초과 내역 팝업", key="btn_kpi_overdue", use_container_width=True):
-            show_kpi_overdue_dialog(df)
-
-    # ----------------------------------------------------
-    # 🚨 상단 과중 근무 실시간 감지 & 원클릭 보상휴가 팝업 배너
-    # ----------------------------------------------------
-    if not df.empty and "week_label" in df.columns:
-        all_rewards = RewardLeaveService.get_all_reward_leaves()
-        overwork_items = []
-        
-        # 주차별/팀원별 집계
-        wk_user_agg = df.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
-        for _, r in wk_user_agg.iterrows():
-            w_name = r["worker_name"]
-            w_lbl = r["week_label"]
-            val = round(r["actual_hours"], 1)
-            short_w = w_lbl.split(" ")[-2] if " " in w_lbl else w_lbl
-            if val >= 40.0:
-                if (w_name, w_lbl) not in all_rewards:
-                    overwork_items.append({
-                        "worker_name": w_name,
-                        "week_label": w_lbl,
-                        "short_w": short_w,
-                        "val": val,
-                        "is_52": (val >= 52.0)
-                    })
-
-        if overwork_items:
-            danger_items = [it for it in overwork_items if it["is_52"]]
-            caution_items = [it for it in overwork_items if not it["is_52"]]
-
-            with st.container(border=True):
-                # 1행: 상단 알림 제목 (반짝반짝 애니메이션) + 우측 퀵점프 바로가기 버튼
-                col_head_l, col_head_r = st.columns([7.8, 2.2])
-                with col_head_l:
-                    st.markdown('<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #FFFFFF;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
-                with col_head_r:
-                    st.markdown('<div style="text-align: right;"><a href="#weekly-monitor-section" style="background: linear-gradient(135deg, #FF1744, #D50000); color: #FFFFFF; font-weight: 800; font-size: 12.5px; padding: 7px 16px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(255, 23, 68, 0.45); white-space: nowrap;">👇 주차별 모니터링 표로 바로가기</a></div>', unsafe_allow_html=True)
-
-                st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid rgba(255, 82, 82, 0.3);'></div>", unsafe_allow_html=True)
-                
-                # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우)
-                if danger_items:
-                    col_d_lbl, col_d_chips = st.columns([2.0, 8.0])
-                    with col_d_lbl:
-                        st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FF5252;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
-                    with col_d_chips:
-                        d_cols = st.columns(max(len(danger_items), 1) + 4)
-                        for d_idx, d_item in enumerate(danger_items):
-                            with d_cols[d_idx]:
-                                if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}"):
-                                    show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
-
-                # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우)
-                if caution_items:
-                    col_c_lbl, col_c_chips = st.columns([2.0, 8.0])
-                    with col_c_lbl:
-                        st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FFA726;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
-                    with col_c_chips:
-                        c_cols = st.columns(max(len(caution_items), 1) + 4)
-                        for c_idx, c_item in enumerate(caution_items):
-                            with c_cols[c_idx]:
-                                if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}"):
-                                    show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
-        else:
-            # 🟢 과중 근무자가 없는 경우: 상하 여백이 100% 동일한 일체형 카드 배너
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 229, 255, 0.05)); border: 1.5px solid rgba(0, 230, 118, 0.35); border-radius: 10px; padding: 10px 18px; margin: 10px 0 14px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0, 230, 118, 0.12);">
-                <div style="font-size: 14.5px; font-weight: 700; color: #E2E8F0; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
-                    <span style="font-size: 16px; line-height: 1;">🟢</span>
-                    <span style="background: rgba(0, 230, 118, 0.18); color: #00E676; border: 1.5px solid rgba(0, 230, 118, 0.6); padding: 3px 10px; border-radius: 6px; font-weight: 900; font-size: 13px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
-                    <span style="color: #94A3B8; font-size: 13.5px; line-height: 1;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
-                </div>
-                <div style="margin: 0; padding: 0;">
-                    <a href="#weekly-monitor-section" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #E2E8F0; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1;">👇 주차별 모니터링 표</a>
-                </div>
+        with kpi_col1:
+            st.markdown(f"""
+            <div class="kpi-card" style="border-top: 4px solid #00E5FF;">
+                <div class="kpi-title">⏱️ 총 지원 시간</div>
+                <div class="kpi-value" style="color: #00E5FF;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
+                <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
             </div>
             """, unsafe_allow_html=True)
+            if st.button("🔍 상세 내역 팝업", key="btn_kpi_hours", use_container_width=True):
+                show_kpi_total_hours_dialog(df)
+            
+        with kpi_col2:
+            st.markdown(f"""
+            <div class="kpi-card" style="border-top: 4px solid #00E676;">
+                <div class="kpi-title">📋 총 작업 건수</div>
+                <div class="kpi-value" style="color: #FFFFFF;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
+                <div class="kpi-badge badge-green">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#64748B;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔍 건수 상세 팝업", key="btn_kpi_tasks", use_container_width=True):
+                show_kpi_total_tasks_dialog(df)
+            
+        with kpi_col3:
+            st.markdown(f"""
+            <div class="kpi-card" style="border-top: 4px solid #B388FF;">
+                <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
+                <div class="kpi-value" style="color: #FFFFFF;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
+                <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔍 팀원별 공수 팝업", key="btn_kpi_workers", use_container_width=True):
+                show_kpi_workers_dialog(df)
+            
+        with kpi_col4:
+            total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
+            st.markdown(f"""
+            <div class="kpi-card" style="border-top: 4px solid #FFAB00;">
+                <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
+                <div class="kpi-value" style="color: #FFAB00;">{total_urg}<span class="kpi-unit">건</span></div>
+                <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#64748B;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔍 긴급 작업 팝업", key="btn_kpi_urgent", use_container_width=True):
+                show_kpi_urgent_dialog(df)
+            
+        with kpi_col5:
+            overdue_val = float(kpi.get('overdue_rate', 0))
+            overdue_color = "#FF5252" if overdue_val > 10 else "#00E676"
+            badge_cls = "badge-red" if overdue_val > 10 else "badge-green"
+            st.markdown(f"""
+            <div class="kpi-card" style="border-top: 4px solid {overdue_color};">
+                <div class="kpi-title">⚠️ 예정 시간 초과율</div>
+                <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
+                <div class="kpi-badge {badge_cls}">🚨 초과 {kpi['overdue_tasks_count']}건 발생</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔍 초과 내역 팝업", key="btn_kpi_overdue", use_container_width=True):
+                show_kpi_overdue_dialog(df)
 
-    st.divider()
+        # ----------------------------------------------------
+        # 🚨 상단 과중 근무 실시간 감지 & 원클릭 보상휴가 팝업 배너
+        # ----------------------------------------------------
+        if not df.empty and "week_label" in df.columns:
+            all_rewards = RewardLeaveService.get_all_reward_leaves()
+            overwork_items = []
+            
+            # 주차별/팀원별 집계
+            wk_user_agg = df.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
+            for _, r in wk_user_agg.iterrows():
+                w_name = r["worker_name"]
+                w_lbl = r["week_label"]
+                val = round(r["actual_hours"], 1)
+                short_w = w_lbl.split(" ")[-2] if " " in w_lbl else w_lbl
+                if val >= 40.0:
+                    if (w_name, w_lbl) not in all_rewards:
+                        overwork_items.append({
+                            "worker_name": w_name,
+                            "week_label": w_lbl,
+                            "short_w": short_w,
+                            "val": val,
+                            "is_52": (val >= 52.0)
+                        })
 
-    # 탭 기반 분석 시각화
-    tab0, tab_cal, tab_search, tab_exec, tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "🟢 오늘 실시간 라이브 현황 (Live)",
-        "📅 작업 캘린더 & 밀도 히트맵",
-        "🔍 전체 작업 스마트 검색",
-        "📊 Summary",
-        "👤 팀원별 업무량 분석",
-        "🏢 팀별 업무량 비교",
-        "📈 월별/일별 추이",
-        "🏢 고객사별 공수 분포",
-        "⏱️ 예정 vs 실제 소요시간"
-    ])
+            if overwork_items:
+                danger_items = [it for it in overwork_items if it["is_52"]]
+                caution_items = [it for it in overwork_items if not it["is_52"]]
 
-    # ------------------------------------------
-    # TAB 0: 오늘 실시간 작업 현황 라이브 보드
-    # ------------------------------------------
-    with tab0:
+                with st.container(border=True):
+                    # 1행: 상단 알림 제목 (반짝반짝 애니메이션)
+                    col_head_l, col_head_r = st.columns([7.8, 2.2])
+                    with col_head_l:
+                        st.markdown('<div style="font-size: 15px; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #FFFFFF;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
+                    with col_head_r:
+                        if st.button("👉 팀원별 모니터링 표 보기", key="btn_jump_to_worker_page"):
+                            st.session_state["current_page"] = "👤 팀원별 업무량 분석"
+                            st.rerun()
+
+                    st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid rgba(255, 82, 82, 0.3);'></div>", unsafe_allow_html=True)
+                    
+                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우)
+                    if danger_items:
+                        col_d_lbl, col_d_chips = st.columns([2.0, 8.0])
+                        with col_d_lbl:
+                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FF5252;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
+                        with col_d_chips:
+                            d_cols = st.columns(max(len(danger_items), 1) + 4)
+                            for d_idx, d_item in enumerate(danger_items):
+                                with d_cols[d_idx]:
+                                    if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}"):
+                                        show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
+
+                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우)
+                    if caution_items:
+                        col_c_lbl, col_c_chips = st.columns([2.0, 8.0])
+                        with col_c_lbl:
+                            st.markdown(f"<div style='padding-top:4px; font-size:13px; font-weight:900; color:#FFA726;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
+                        with col_c_chips:
+                            c_cols = st.columns(max(len(caution_items), 1) + 4)
+                            for c_idx, c_item in enumerate(caution_items):
+                                with c_cols[c_idx]:
+                                    if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}"):
+                                        show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
+            else:
+                # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너
+                st.markdown("""
+                <div style="background: linear-gradient(135deg, rgba(0, 230, 118, 0.08), rgba(0, 229, 255, 0.05)); border: 1.5px solid rgba(0, 230, 118, 0.35); border-radius: 10px; padding: 10px 18px; margin: 10px 0 14px 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 4px 16px rgba(0, 230, 118, 0.12);">
+                    <div style="font-size: 14.5px; font-weight: 700; color: #E2E8F0; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
+                        <span style="font-size: 16px; line-height: 1;">🟢</span>
+                        <span style="background: rgba(0, 230, 118, 0.18); color: #00E676; border: 1.5px solid rgba(0, 230, 118, 0.6); padding: 3px 10px; border-radius: 6px; font-weight: 900; font-size: 13px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
+                        <span style="color: #94A3B8; font-size: 13.5px; line-height: 1;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.divider()
+
+        # 🟢 오늘 실시간 작업 현황 라이브 보드 (첫 화면에 단독 풀사이즈 표출)
         render_today_live_board(df_raw, team_mappings, selected_team)
 
-    # ------------------------------------------
-    # TAB CAL: 작업 캘린더 & 밀도 히트맵
-    # ------------------------------------------
-    with tab_cal:
+    elif curr_page == "📅 작업 캘린더 & 밀도 히트맵":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_cal"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         render_calendar_and_heatmap_tab(df, df_raw, selected_team)
 
-    # ------------------------------------------
-    # TAB SEARCH: 전체 작업 스마트 검색
-    # ------------------------------------------
-    with tab_search:
+    elif curr_page == "🔍 전체 작업 스마트 검색":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_search"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         render_smart_search_tab(df_raw, team_mappings)
 
-    # ------------------------------------------
-    # TAB EXEC: 경영진 보고용 Executive Summary
-    # ------------------------------------------
-    with tab_exec:
+    elif curr_page == "📊 Summary":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_summary"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         render_executive_summary_tab(df, df_raw, selected_team, team_mappings)
 
-    # ------------------------------------------
-    # TAB 1: 팀원별 업무량 분석
-    # ------------------------------------------
-    with tab1:
+    elif curr_page == "👤 팀원별 업무량 분석":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_w1"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         st.subheader(f"👤 {selected_team} - 팀원별 총 작업 시간 및 업무 집중도 ({month_desc})")
         worker_summary = StatsService.get_worker_summary(df)
         
@@ -2918,9 +2963,14 @@ def main():
                         st.session_state["_last_matrix_click_token"] = None
 
     # ------------------------------------------
-    # TAB 2: 팀별 업무량 비교
+    # PAGE: 팀별 업무량 비교
     # ------------------------------------------
-    with tab2:
+    elif curr_page == "🏢 팀별 업무량 비교":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t2"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         st.subheader("🏢 팀별(기술 1/2/3팀 + PI팀) 총 투입 시간 및 공수 비교")
         team_df = df_raw.copy()
         if selected_months:
@@ -2981,9 +3031,14 @@ def main():
         )
 
     # ------------------------------------------
-    # TAB 3: 월별 / 주별 / 일별 추이 분석
+    # PAGE: 월별 / 주별 / 일별 추이 분석
     # ------------------------------------------
-    with tab3:
+    elif curr_page == "📈 월별/일별 추이":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t3"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         st.subheader("📈 월별 / 주별 / 일별 지원 시간 추이 및 시계열 분석")
         monthly_trend = StatsService.get_monthly_trend(df)
         
@@ -3032,9 +3087,14 @@ def main():
             st.plotly_chart(fig_daily, use_container_width=True)
 
     # ------------------------------------------
-    # TAB 4: 고객사별 공수 분포
+    # PAGE: 고객사별 공수 분포
     # ------------------------------------------
-    with tab4:
+    elif curr_page == "🏢 고객사별 공수 분포":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t4"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         st.subheader("🏢 고객사별 지원 시간 및 공수 비중")
         client_summary = StatsService.get_client_summary(df)
         
@@ -3068,9 +3128,14 @@ def main():
                 st.plotly_chart(fig_client_bar, use_container_width=True)
 
     # ------------------------------------------
-    # TAB 5: 예정 vs 실제 소요시간 분석
+    # PAGE: 예정 vs 실제 소요시간 분석
     # ------------------------------------------
-    with tab5:
+    elif curr_page == "⏱️ 예정 vs 실제 소요시간":
+        col_b, _ = st.columns([1, 4])
+        with col_b:
+            if st.button("← 🏠 실시간 대시보드로 돌아가기", key="btn_back_t5"):
+                st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
+                st.rerun()
         st.subheader("⏱️ 예정 소요시간 대비 실제 시간 편차 분석")
         completed_df = df[df["status"] == "COMPLETED"].copy()
         
