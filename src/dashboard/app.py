@@ -376,9 +376,12 @@ st.markdown("""
         padding-top: 0.4rem !important;
         padding-bottom: 0.1rem !important;
     }
-    [data-testid="stSidebar"] [data-testid="stExpander"] {
+    [data-testid="stSidebar"] [data-testid="stExpander"],
+    [data-testid="stSidebar"] details,
+    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] {
         border: 1px solid #003852 !important;
         border-radius: 6px !important;
+        background-color: #001e2d !important;
         background: #001e2d !important;
         margin-bottom: 8px !important;
     }
@@ -386,6 +389,7 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 13px !important;
         color: #ffffff !important;
+        background-color: #001e2d !important;
     }
     [data-testid="stSidebar"] button {
         border-radius: 4px !important;
