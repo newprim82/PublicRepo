@@ -2390,8 +2390,13 @@ def show_email_report_dialog(selected_team: str):
     
     if st.button("🚀 주간 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
         with st.spinner("📧 보고서 생성 및 이메일 전송 중..."):
-            success, send_msg = EmailSender.send_weekly_report(
+            import importlib
+            import src.services.email_sender as es_module
+            importlib.reload(es_module)
+            success, send_msg = es_module.EmailSender.send_weekly_report(
                 recipient_emails=mail_rcpt,
+                sender_email="newprim82@gmail.com",
+                sender_password="dlugbvfuhgdozkgr",
                 selected_team=selected_team
             )
             if success:
