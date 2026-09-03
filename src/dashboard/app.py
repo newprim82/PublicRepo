@@ -575,67 +575,27 @@ st.markdown("""
         pointer-events: none !important;
     }
 
-    /* 🏛️ Cisco ACI 프리미엄 모달 다이얼로그 (@st.dialog) 초고대비 가독성 보장 */
-    div[role="dialog"],
-    div[data-testid="stDialog"] {
-        border-radius: 12px !important;
-        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.5) !important;
+    /* 🏛️ Cisco ACI 모달 다이얼로그 (@st.dialog) 엔터프라이즈 화이트 스타일링 */
+    div[role="dialog"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid #e1e4e8 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15) !important;
     }
-    
-    /* 🌟 모달 최상단 메인 제목 (@st.dialog 데코레이터 타이틀) - 선명한 화이트/볼드 */
     div[role="dialog"] h1,
     div[role="dialog"] h2,
-    div[role="dialog"] [data-testid="stHeadingWithActionElements"] h2,
-    div[role="dialog"] header h2 {
-        color: #ffffff !important;
-        font-size: 20px !important;
-        font-weight: 800 !important;
-        letter-spacing: -0.3px !important;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5) !important;
-        margin-bottom: 8px !important;
-    }
-    div[role="dialog"] h1 *,
-    div[role="dialog"] h2 * {
-        color: #ffffff !important;
-    }
-
-    /* 🌟 모달 내부 본문 소제목 (h3, h4, h5) */
     div[role="dialog"] h3,
-    div[role="dialog"] h3 * {
-        color: #38bdf8 !important; /* 밝고 산뜻한 시안 블루 */
-        font-weight: 800 !important;
+    div[role="dialog"] h4 {
+        color: #002d42 !important;
     }
-    div[role="dialog"] h4,
-    div[role="dialog"] h4 * {
-        color: #f8fafc !important; /* 순백색 */
-        font-weight: 700 !important;
-    }
-    div[role="dialog"] h5,
-    div[role="dialog"] h5 * {
-        color: #cbd5e1 !important;
-        font-weight: 700 !important;
-    }
-
-    /* 🌟 모달 내부 본문 텍스트 & 안내문 */
     div[role="dialog"] p,
+    div[role="dialog"] span,
     div[role="dialog"] label {
-        color: #e2e8f0 !important;
+        color: #334155 !important;
     }
-    div[role="dialog"] .stCaption,
-    div[role="dialog"] [data-testid="stCaptionContainer"] p {
-        color: #94a3b8 !important;
-        font-size: 12.5px !important;
-    }
-
-    /* 🌟 닫기(X) 버튼 가독성 */
-    div[role="dialog"] button[aria-label="Close"],
-    div[role="dialog"] button[data-testid="stBaseButton-header"] {
-        color: #ffffff !important;
-        opacity: 0.9 !important;
-    }
-    div[role="dialog"] button[aria-label="Close"]:hover {
-        opacity: 1 !important;
-        transform: scale(1.15) !important;
+    div[role="dialog"] button[aria-label="Close"] {
+        color: #64748b !important;
     }
 
     /* 🏛️ 드롭다운 팝오버 및 셀렉트박스 옵션 가독성 */
