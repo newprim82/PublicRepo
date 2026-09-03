@@ -297,14 +297,49 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.09);
         border-radius: 14px;
         padding: 16px 18px;
-        margin-bottom: 12px;
+        margin-bottom: 0px !important;
         box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
         transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        cursor: pointer !important;
     }
     .kpi-card:hover {
         transform: translateY(-4px);
-        border-color: rgba(56, 189, 248, 0.5);
-        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.2);
+        border-color: rgba(56, 189, 248, 0.6);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.25);
+    }
+    /* 🌟 KPI 카드 전체를 클릭 가능하게 덮는 투명 버튼 오버레이 */
+    div[data-testid="column"]:has(.kpi-card) {
+        position: relative !important;
+        cursor: pointer !important;
+    }
+    div[data-testid="column"]:has(.kpi-card) .stButton {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        z-index: 20 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    div[data-testid="column"]:has(.kpi-card) .stButton button {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 100% !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: transparent !important;
+        opacity: 0 !important;
+        cursor: pointer !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    div[data-testid="column"]:has(.kpi-card):hover .kpi-card {
+        transform: translateY(-4px) !important;
+        border-color: rgba(56, 189, 248, 0.7) !important;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.3) !important;
     }
     .kpi-title {
         font-size: 15.5px !important;
@@ -2589,7 +2624,7 @@ def main():
                 <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🔍 상세 내역 팝업", key="btn_kpi_hours", use_container_width=True):
+            if st.button("", key="btn_kpi_hours", use_container_width=True, help="클릭하여 총 지원 시간 상세 내역 팝업 열기"):
                 show_kpi_total_hours_dialog(df)
             
         with kpi_col2:
@@ -2600,7 +2635,7 @@ def main():
                 <div class="kpi-badge badge-green">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#64748B;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🔍 건수 상세 팝업", key="btn_kpi_tasks", use_container_width=True):
+            if st.button("", key="btn_kpi_tasks", use_container_width=True, help="클릭하여 총 작업 건수 상세 팝업 열기"):
                 show_kpi_total_tasks_dialog(df)
             
         with kpi_col3:
@@ -2611,7 +2646,7 @@ def main():
                 <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🔍 팀원별 공수 팝업", key="btn_kpi_workers", use_container_width=True):
+            if st.button("", key="btn_kpi_workers", use_container_width=True, help="클릭하여 팀원별 공수 팝업 열기"):
                 show_kpi_workers_dialog(df)
             
         with kpi_col4:
@@ -2623,7 +2658,7 @@ def main():
                 <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#64748B;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🔍 긴급 작업 팝업", key="btn_kpi_urgent", use_container_width=True):
+            if st.button("", key="btn_kpi_urgent", use_container_width=True, help="클릭하여 야간/주말 긴급 작업 팝업 열기"):
                 show_kpi_urgent_dialog(df)
             
         with kpi_col5:
@@ -2640,7 +2675,7 @@ def main():
                 <div class="kpi-badge {badge_cls}">{badge_text}</div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("🔍 초과 내역 팝업", key="btn_kpi_overdue", use_container_width=True):
+            if st.button("", key="btn_kpi_overdue", use_container_width=True, help="클릭하여 초과 내역 팝업 열기"):
                 show_kpi_overdue_dialog(df)
 
         # ----------------------------------------------------
