@@ -2373,8 +2373,8 @@ def show_email_report_dialog(selected_team: str):
     """주간 리포트 이메일 발송 전용 팝업 모달"""
     st.markdown(
         """
-        <div style="background: rgba(0, 80, 115, 0.08); border-left: 4px solid #005073; padding: 10px 14px; border-radius: 6px; font-size: 13.5px; color: #1e293b; line-height: 1.6; margin-bottom: 15px;">
-            매주 월요일 08:00에 자동 발송되는 <b>Executive Summary 반응형 HTML 리포트</b> 및 <b>상세 실적 엑셀 파일</b>을 지정한 메일 주소로 즉시 전송합니다.
+        <div style="background: rgba(2, 132, 199, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); border-left: 4px solid #38bdf8; padding: 12px 16px; border-radius: 6px; font-size: 13.5px; color: #FFFFFF !important; line-height: 1.6; margin-bottom: 15px;">
+            매주 월요일 08:00에 자동 발송되는 <b style="color: #38bdf8;">Executive Summary 반응형 HTML 리포트</b> 및 <b style="color: #38bdf8;">상세 실적 엑셀 파일</b>을 지정한 메일 주소로 즉시 전송합니다.
         </div>
         """,
         unsafe_allow_html=True
@@ -2385,7 +2385,7 @@ def show_email_report_dialog(selected_team: str):
         value="ymmoon@sangsanginworld.co.kr",
         key="dialog_recipient_email"
     )
-    st.markdown("<div style='font-size: 12px; color: #64748b; margin-top: -6px; margin-bottom: 12px;'>발신 계정: <b>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-size: 12px; color: #cbd5e1; margin-top: -6px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
     st.write("")
     
     if st.button("🚀 주간 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
