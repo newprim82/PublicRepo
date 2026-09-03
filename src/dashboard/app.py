@@ -9,6 +9,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import socket
+import struct
 from datetime import datetime, timedelta, timezone
 
 KST_TIMEZONE = timezone(timedelta(hours=9))
@@ -16,6 +18,21 @@ KST_TIMEZONE = timezone(timedelta(hours=9))
 def get_current_kst_time() -> datetime:
     """한국 표준시(KST, UTC+9) 현재 시각 반환"""
     return datetime.now(KST_TIMEZONE)
+
+def get_bora_ntp_timestamp() -> float:
+    """time.bora.net (LGU+ 타임서버) NTP 기준 한국 표준시 타임스탬프(초) 반환 (네트워크 실패 시 시스템 KST fallback)"""
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client.settimeout(0.8)
+        data = b'\x1b' + 47 * b'\0'
+        client.sendto(data, ('time.bora.net', 123))
+        resp, _ = client.recvfrom(1024)
+        if resp:
+            t = struct.unpack('!12I', resp)[10] - 2208988800
+            return float(t)
+    except Exception:
+        pass
+    return datetime.now(timezone.utc).timestamp()
 
 try:
     from streamlit_autorefresh import st_autorefresh
@@ -2336,7 +2353,9 @@ def main():
     # ==========================================
     curr_page = st.session_state.get("current_page", "🏠 실시간 분석 대시보드")
     page_tag = curr_page.split(" ")[1] if " " in curr_page else curr_page
-    current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+    bora_ts = get_bora_ntp_timestamp()
+    initial_kst_str = datetime.fromtimestamp(bora_ts, KST_TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
+    initial_ms = int(bora_ts * 1000)
 
     st.markdown(f"""
     <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px 12px 48px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 229, 255, 0.25);">
@@ -2347,9 +2366,45 @@ def main():
         <div style="font-size: 12px; color: #94A3B8; display: flex; align-items: center; gap: 12px;">
             <span>🟢 관제 시스템 정상 가동</span>
             <span style="color: #48525B;">|</span>
-            <span>🕒 {current_time_str}</span>
+            <span style="display: inline-flex; align-items: center; gap: 5px;">
+                <span style="color: #94A3B8;">🕒</span>
+                <span id="live-bora-clock" style="color: #F1F5F9; font-weight: 700; font-family: monospace, 'Pretendard', sans-serif; letter-spacing: 0.2px;">{initial_kst_str}</span>
+                <span style="background: rgba(0, 229, 255, 0.12); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.3); font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px;" title="LGU+ time.bora.net NTP 타임서버 동기화">BORA·KST</span>
+            </span>
         </div>
     </div>
+    <img src="data:image/svg+xml;utf8,<svg></svg>" style="display:none;" onload="
+        (function() {{
+            let serverTime = {initial_ms};
+            let clientStart = performance.now();
+            function tickBoraClock() {{
+                let current = new Date(serverTime + (performance.now() - clientStart));
+                let formatter = new Intl.DateTimeFormat('ko-KR', {{
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }});
+                let parts = formatter.formatToParts(current);
+                let p = {{}};
+                parts.forEach(x => p[x.type] = x.value);
+                let timeStr = p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ':' + p.second;
+                
+                const doc = window.parent.document || document;
+                const el = doc.getElementById('live-bora-clock') || document.getElementById('live-bora-clock');
+                if (el) {{
+                    el.innerText = timeStr;
+                }}
+            }}
+            if (window._boraClockInterval) clearInterval(window._boraClockInterval);
+            window._boraClockInterval = setInterval(tickBoraClock, 1000);
+            tickBoraClock();
+        }})();
+    ">
     """, unsafe_allow_html=True)
 
     # 1) 팀원 소속 및 직급 관리 페이지
