@@ -215,8 +215,12 @@ class KakaoMessageParser:
     )
 
     START_PATTERNS = [
+        # 1. 5개 필드 표준 패턴 (구분 / 작업자 / 고객사 / 작업내용 / 예정시간)
         re.compile(r'^(?:\[(?P<b_type>[^\]]+)\]\s*)?(?P<type>[^/\n\r]+?)\s*/\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
         re.compile(r'^\[(?P<type>[^\]]+)\]\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
+        # 2. 4개 필드 패턴 (예정시간 생략 형태: 구분 / 작업자 / 고객사 / 작업내용)
+        re.compile(r'^(?:\[(?P<b_type>[^\]]+)\]\s*)?(?P<type>[^/\n\r]+?)\s*/\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+)$', re.MULTILINE),
+        re.compile(r'^\[(?P<type>[^\]]+)\]\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+)$', re.MULTILINE),
     ]
 
     END_WITH_TIME_PATTERNS = [
@@ -370,11 +374,11 @@ class KakaoMessageParser:
         raw_name_field = group_dict.get("name", "").strip()
         client_name = normalize_client_name(group_dict.get("client", "").strip())
         task_desc = group_dict.get("task", "").strip()
-        est_str = group_dict.get("est", "").strip()
+        est_str = (group_dict.get("est") or "").strip()
         
-        is_direct_completed = ("완료" in est_str) or ("소요" in est_str)
+        is_direct_completed = bool(est_str and (("완료" in est_str) or ("소요" in est_str)))
         direct_actual_minutes = parse_duration_to_minutes(est_str) if is_direct_completed else 0
-        est_minutes = parse_duration_to_minutes(est_str)
+        est_minutes = parse_duration_to_minutes(est_str) if est_str else 0
         
         sender_worker_info = parse_worker_profile(msg.sender_profile)
         individual_workers = extract_individual_workers(raw_name_field, sender_worker_info)
