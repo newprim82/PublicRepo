@@ -82,55 +82,32 @@ st.markdown("""
     html {
         scroll-behavior: smooth;
     }
+    /* 🚀 타이틀 + 기준시각 & 우측 Deploy/점세개 최적화 */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 0px !important;
+        z-index: 100 !important;
+    }
+    [data-testid="stSidebarCollapsedControl"] {
+        display: block !important;
+        position: fixed !important;
+        top: 1.2rem !important;
+        left: 1.5rem !important;
+        color: #90CAF9 !important;
+        background: #1C212D !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        z-index: 102 !important;
+    }
     /* 🚀 상단 우측 불필요한 Streamlit 툴바(Share, Star, Edit, GitHub, 점세개 등) 완전 차단 */
     [data-testid="stToolbar"],
     .stDeployButton,
     #MainMenu,
-    [data-testid="stToolbarActions"],
-    header[data-testid="stHeader"] [data-testid="stToolbar"] {
+    [data-testid="stToolbarActions"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
-    }
-
-    /* 🚀 좌측 사이드바 열기 버튼(stSidebarCollapsedControl) 항상 확실하게 노출 */
-    [data-testid="stSidebarCollapsedControl"] {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        position: fixed !important;
-        top: 1.15rem !important;
-        left: 1.2rem !important;
-        z-index: 999999 !important;
-    }
-    [data-testid="stSidebarCollapsedControl"] button {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        color: #00E5FF !important;
-        background: #0D2744 !important;
-        border-radius: 8px !important;
-        border: 1.5px solid #00E5FF !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
-        width: 36px !important;
-        height: 36px !important;
-        cursor: pointer !important;
-    }
-    [data-testid="stSidebarCollapsedControl"] button:hover {
-        background: #1B3B6F !important;
-        border-color: #00E5FF !important;
-        transform: scale(1.06) !important;
-    }
-    [data-testid="stSidebarCollapsedControl"] svg {
-        fill: #00E5FF !important;
-        color: #00E5FF !important;
-        width: 20px !important;
-        height: 20px !important;
     }
     .block-container {
         padding-top: 1.15rem !important;
