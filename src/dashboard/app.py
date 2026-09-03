@@ -413,6 +413,18 @@ st.markdown("""
         transform: translateY(-2px) scale(1.04) !important;
         box-shadow: 0 6px 20px rgba(255, 109, 0, 0.85) !important;
     }
+
+    /* 🚫 사이트 전체 마우스 호버 툴팁(Tooltip) 오버레이 완전 차단 */
+    div[data-baseweb="tooltip"],
+    div[role="tooltip"],
+    .stTooltipContent,
+    [data-testid="stTooltipContent"],
+    [data-testid="stTooltipHoverTarget"] div[data-baseweb="tooltip"] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -571,7 +583,7 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
                     default_leave_hrs = 8.0 if tot_h >= 52.0 else 4.0
                     input_leave_hrs = st.number_input("보상 시간(h):", value=default_leave_hrs, step=0.5, min_value=0.5)
                 with col_note:
-                    input_leave_note = st.text_input("보상 내용 및 휴가 메모:", value="대체 휴무 1일 부여 완료" if default_leave_hrs >= 8.0 else "반차 부여 완료", help="예: 8/21 대체휴무 1일 부여, 8/25 반차 등")
+                    input_leave_note = st.text_input("보상 내용 및 휴가 메모:", value="대체 휴무 1일 부여 완료" if default_leave_hrs >= 8.0 else "반차 부여 완료")
                 
                 btn_save_reward = st.form_submit_button("💾 보상 휴가 부여 확정 (초록색 전환)", use_container_width=True)
                 if btn_save_reward:
@@ -1282,8 +1294,8 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
                         cell_html = f"""<div style="background: rgba(16, 185, 129, {bg_opacity:.2f}); border: 1px solid rgba(16, 185, 129, 0.6); border-radius: 8px 8px 0px 0px; padding: 5px 7px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="font-weight: 800; font-size: 13px; color: {num_color};">{day}</span><span style="background: rgba(0,0,0,0.4); color: #A7F3D0; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 10.5px; color: #FFFFFF; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
                         st.markdown(cell_html, unsafe_allow_html=True)
                         
-                        # 클릭 시 상세 팝업 오픈 버튼
-                        if st.button(f"🔍 {day}일 상세 ({d_cnt}건)", key=f"btn_cal_pop_{year}_{month}_{day}", use_container_width=True, help=f"{year}년 {month}월 {day}일 상세 작업 팝업 열기"):
+                        # 클릭 시 상세 팝업 오픈 버튼 (마우스 오버레이 툴팁 제거)
+                        if st.button(f"🔍 {day}일 상세 ({d_cnt}건)", key=f"btn_cal_pop_{year}_{month}_{day}", use_container_width=True):
                             day_target_df = df_month[df_month["day_num"] == day]
                             show_calendar_day_dialog(f"{year}년 {month:02d}월 {day:02d}일", day_target_df)
                     else:
@@ -1759,7 +1771,7 @@ def render_team_management_page(all_workers_list, team_mappings):
             with c_d1:
                 del_pick = st.selectbox("삭제할 커스텀 팀", options=custom_teams, label_visibility="collapsed", key="del_team_pick_sb")
             with c_d2:
-                if st.button("🗑️ 팀 삭제", use_container_width=True, help=f"[{del_pick}] 팀을 삭제하고 소속 인원을 '미지정'으로 전환합니다."):
+                if st.button("🗑️ 팀 삭제", use_container_width=True):
                     TeamService.delete_custom_team(del_pick)
                     st.toast(f"🗑️ [{del_pick}] 팀이 삭제되었습니다.", icon="✅")
                     st.rerun()
@@ -1834,7 +1846,7 @@ def render_team_management_page(all_workers_list, team_mappings):
                                     st.toast(f"⚡ [{name}] 님의 직급이 [{final_new_t or '미지정'}]으로 자동 저장되었습니다!", icon="✅")
                                     st.rerun()
                             with c_del:
-                                if st.button("❌ 해제", key=f"del_indiv_{t_name}_{name}", help=f"[{name}] 님을 {t_name}에서 해제합니다."):
+                                if st.button("❌ 해제", key=f"del_indiv_{t_name}_{name}"):
                                     TeamService.remove_worker_team(name)
                                     st.toast(f"🗑️ [{name}] 님의 {t_name} 소속이 해제되었습니다!", icon="✅")
                                     st.rerun()
@@ -1882,14 +1894,12 @@ def render_team_management_page(all_workers_list, team_mappings):
             "소속팀": st.column_config.SelectboxColumn(
                 "소속팀",
                 options=all_teams + [UNASSIGNED_TEAM],
-                required=True,
-                help="원하는 팀으로 변경하거나 '미지정'을 선택하여 소속을 삭제합니다."
+                required=True
             ),
             "직급": st.column_config.SelectboxColumn(
                 "직급",
                 options=["사원", "대리", "과장", "수석", ""],
-                required=False,
-                help="사원, 대리, 과장, 수석 중 선택하세요."
+                required=False
             )
         },
         use_container_width=True,
@@ -2157,7 +2167,7 @@ def main():
         </html>
         """, height=72)
 
-        if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True, help="PC 카카오톡에 열려 있는 '[기술본부] 업무공유방' 창에서 최신 대화를 즉시 긁어와 DB에 저장/동기화합니다."):
+        if st.button("⚡ [기술본부] 방 지금 즉시 긁어오기", key="btn_manual_kakao_sidebar", type="primary", use_container_width=True):
             with st.spinner("💬 카카오톡 [기술본부] 업무공유방에서 최신 대화 긁어오는 중..."):
                 res = run_collection_cycle(is_manual=True)
                 if res.get("status") == "success":
@@ -2177,7 +2187,7 @@ def main():
                     time.sleep(1)
                     st.rerun()
 
-        if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True, help="Supabase 클라우드 DB에서 최신 동기화 데이터를 즉시 다시 불러옵니다."):
+        if st.button("🔄 실시간 Cloud DB 새로고침", key="btn_refresh_cloud_db", use_container_width=True):
             st.cache_data.clear()
             st.toast("☁️ 최신 클라우드 데이터를 불러왔습니다!", icon="✅")
             time.sleep(0.3)
@@ -2225,7 +2235,7 @@ def main():
                 st.cache_data.clear()
                 st.rerun()
         with col_btn2:
-            if st.button("🧹 캐시 초기화", use_container_width=True, help="DB 데이터는 안전하게 보존하고, 웹 대시보드 임시 캐시만 새로고침합니다."):
+            if st.button("🧹 캐시 초기화", use_container_width=True):
                 clear_all_web_caches()
                 st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
                 st.rerun()
@@ -2426,7 +2436,7 @@ def main():
                         d_cols = st.columns(max(len(danger_items), 1) + 4)
                         for d_idx, d_item in enumerate(danger_items):
                             with d_cols[d_idx]:
-                                if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}", help=f"[{d_item['worker_name']}] 보상 휴가 팝업 열기"):
+                                if st.button(f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)", key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}"):
                                     show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
 
                 # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우)
@@ -2438,7 +2448,7 @@ def main():
                         c_cols = st.columns(max(len(caution_items), 1) + 4)
                         for c_idx, c_item in enumerate(caution_items):
                             with c_cols[c_idx]:
-                                if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}", help=f"[{c_item['worker_name']}] 보상 휴가 팝업 열기"):
+                                if st.button(f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)", key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}"):
                                     show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
         else:
             # 🟢 과중 근무자가 없는 경우: 상하 여백이 100% 동일한 일체형 카드 배너
