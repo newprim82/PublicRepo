@@ -2838,8 +2838,8 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
 
-        # 📌 과중 근무 배너와 LIVE 관제 사이를 구분하는 회색 실선 (초밀착)
-        st.markdown("<div style='margin-top: 8px; margin-bottom: 10px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
+        # 📌 과중 근무 배너와 LIVE 관제 사이를 구분하는 회색 실선 (상하 균형 여백 매칭)
+        st.markdown("<div style='margin-top: 14px; margin-bottom: 18px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
 
         # 🟢 오늘 실시간 작업 현황 라이브 보드 (첫 화면에 단독 풀사이즈 표출)
         render_today_live_board(df_raw, team_mappings, selected_team)
