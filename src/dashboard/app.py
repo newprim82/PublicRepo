@@ -1428,7 +1428,7 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
     elif "야간" in category:
         cat_df = w_df[(w_df["is_weekend_work"] == False) & (w_df["is_night_work"] == True)].sort_values(by="start_time", ascending=False).reset_index(drop=True)
         cat_icon = "🌙"
-        cat_name = "평일 야간 작업 (18시~09시, 1h 이상)"
+        cat_name = "평일 야간 작업 (18시~06시, 1h 이상)"
     else:
         cat_df = w_df[(w_df["is_weekend_work"] == False) & (w_df["is_night_work"] == False)].sort_values(by="start_time", ascending=False).reset_index(drop=True)
         cat_icon = "☀️"
@@ -2703,7 +2703,7 @@ def main():
                 selected_titles = ["사원", "대리", "과장", "수석"] if title_mode == "전체 직급" else st.multiselect("직급 선택:", options=["사원", "대리", "과장", "수석"], default=["사원", "대리", "과장", "수석"], label_visibility="collapsed", key="sb_filter_titles")
 
                 # 야간/주말 필터
-                night_only = st.checkbox("🌙 야간 작업만 보기 (18시~09시, 1h 이상)", key="sb_filter_night_only")
+                night_only = st.checkbox("🌙 야간 작업만 보기 (18시~06시, 1h 이상)", key="sb_filter_night_only")
                 weekend_only = st.checkbox("🏖️ 주말 작업만 보기", key="sb_filter_weekend_only")
 
             # 필터 적용
@@ -3515,7 +3515,7 @@ def main():
                             customdata=[[w, '☀️ 평일 주간'] for w in sorted_for_h_bar['worker_name']]
                         ),
                         go.Bar(
-                            name='🌙 평일 야간 (18시~09시)',
+                            name='🌙 평일 야간 (18시~06시)',
                             y=sorted_for_h_bar['worker_name'],
                             x=sorted_for_h_bar.get('weekday_night_tasks', sorted_for_h_bar['night_tasks']),
                             orientation='h',
@@ -3573,7 +3573,7 @@ def main():
                             customdata=[[w, '☀️ 평일 주간'] for w in display_summary['worker_name']]
                         ),
                         go.Bar(
-                            name='🌙 평일 야간 (18시~09시)',
+                            name='🌙 평일 야간 (18시~06시)',
                             x=display_summary['worker_name'],
                             y=display_summary.get('weekday_night_tasks', display_summary['night_tasks']),
                             marker_color='#E53935',

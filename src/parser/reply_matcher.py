@@ -47,10 +47,10 @@ def check_is_night_work(
 ) -> bool:
     """
     사용자 지정 야간 판정 기준:
-    1. ★ 시작 보고 시각 조건: 18:00 이후에 시작 보고가 시작되어야 함 (18:00 ~ 익일 09:00 사이 시작)
-       - 당일 18:00~23:59:59 또는 자정 넘어 00:00~08:59:59
-       - 18:00 이전(예: 17:30)에 시작된 작업은 시작 보고가 18시 이전이므로 제외(False)!
-    2. ★ 작업 시간 조건: [18:00 ~ 익일 09:00] 야간 윈도우 내에서 일한 시간이 1시간(60분) 이상이어야 함!
+    1. ★ 시작 보고 시각 조건: 18:00 이후 ~ 익일 06:00 사이에 시작 보고가 시작되어야 함
+       - 당일 18:00~23:59:59 또는 자정 넘어 00:00~05:59:59
+       - 06:00 이후(예: 06:10, 07:00, 08:30 등) 시작 작업은 주간 작업으로 분류(False)!
+    2. ★ 작업 시간 조건: [18:00 ~ 익일 06:00] 야간 윈도우 내에서 일한 시간이 1시간(60분) 이상이어야 함!
        - 18시 이후에 시작했더라도 야간 근무 시간이 1시간 미만(예: 30분, 45분)이면 야간 아님(False)!
     3. ★ 절대 규칙: 'day', 'days', 다일(16시간 이상) 작업은 주간 연속 지원 업무이므로 야간 작업에서 무조건 제외(False)!
     """
@@ -64,8 +64,8 @@ def check_is_night_work(
     if estimated_minutes >= 16 * 60 or actual_minutes >= 16 * 60:
         return False
 
-    # 3. 시작 시각 윈도우 검사 (18시 이후 ~ 익일 09시 이전 시작)
-    if not (start_dt.hour >= 18 or start_dt.hour < 9):
+    # 3. 시작 시각 윈도우 검사 (18시 이후 ~ 익일 06시 이전 시작)
+    if not (start_dt.hour >= 18 or start_dt.hour < 6):
         return False
 
     # 실제 작업 종료 시각 산출 (카톡 늦게 올린 시각이 아닌 실제 작업 소요시간 기준)
@@ -82,13 +82,13 @@ def check_is_night_work(
     if (effective_end_dt - start_dt).total_seconds() / 3600.0 > 16.0:
         return False
 
-    # 4. [18:00 ~ 익일 09:00] 야간 윈도우와 작업 시간 겹침 계산
+    # 4. [18:00 ~ 익일 06:00] 야간 윈도우와 작업 시간 겹침 계산
     if start_dt.hour >= 18:
         w_start = start_dt.replace(hour=18, minute=0, second=0, microsecond=0)
-        w_end = (start_dt + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
-    else:  # start_dt.hour < 9
+        w_end = (start_dt + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)
+    else:  # start_dt.hour < 6
         w_start = (start_dt - timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0)
-        w_end = start_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+        w_end = start_dt.replace(hour=6, minute=0, second=0, microsecond=0)
 
     overlap_start = max(start_dt, w_start)
     overlap_end = min(effective_end_dt, w_end)
