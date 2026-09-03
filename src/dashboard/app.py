@@ -2275,18 +2275,8 @@ def main():
     current_time_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     st.markdown(f"""
-    <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 229, 255, 0.25);">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <button onclick="
-                const doc = window.parent.document || document;
-                const btn = doc.querySelector('[data-testid=stExpandSidebarButton]')
-                         || doc.querySelector('[data-testid=stSidebarCollapseButton]')
-                         || doc.querySelector('[data-testid=stSidebarCollapsedControl] button') 
-                         || doc.querySelector('[data-testid=collapsedControl] button');
-                if (btn) btn.click();
-            " style="background: rgba(0, 229, 255, 0.2); border: 1.5px solid #00E5FF; color: #00E5FF; padding: 5px 12px; border-radius: 6px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(0, 229, 255, 0.3); transition: all 0.2s ease;">
-                ☰ 대메뉴
-            </button>
+    <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px 12px 48px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 229, 255, 0.25);">
+        <div style="display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 18px; font-weight: 800; color: #00E5FF; letter-spacing: -0.4px;">📊 기술본부 현장 업무 관제 센터</span>
             <span style="background: rgba(0, 229, 255, 0.15); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.4); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; margin-left: 4px;">{page_tag}</span>
         </div>
