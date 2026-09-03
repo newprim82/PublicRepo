@@ -6,6 +6,7 @@ from datetime import datetime
 
 from ..config import config
 from ..parser.reply_matcher import WorkLogRecord
+from ..parser.multiday_splitter import split_multiday_record, is_multiday_record
 
 try:
     from supabase import create_client, Client
@@ -102,9 +103,42 @@ class DatabaseManager:
     def save_work_logs(self, records: List[WorkLogRecord]) -> int:
         """
         파싱된 WorkLogRecord 리스트를 Supabase(클라우드) 및 로컬 SQLite에 동시 Upsert 저장
+        (다일 작업 2days, 3days 등 감지 시 일자별 9.0시간 레코드로 자동 분할하여 저장)
         """
         if not records:
             return 0
+
+        # 🌟 다일(Multi-day) 작업 자동 분할 (2days -> 일자별 9h씩 2건 전개)
+        expanded_records: List[WorkLogRecord] = []
+        for r in records:
+            r_dict = r.to_dict()
+            if is_multiday_record(r_dict):
+                splits = split_multiday_record(r_dict)
+                for s in splits:
+                    st_p = pd.to_datetime(s["start_time"]).to_pydatetime()
+                    ed_p = pd.to_datetime(s["end_time"]).to_pydatetime() if s.get("end_time") else None
+                    expanded_records.append(WorkLogRecord(
+                        msg_hash=s["msg_hash"],
+                        log_type=s.get("log_type") or "작업",
+                        worker_name=s.get("worker_name") or "",
+                        worker_company=s.get("worker_company") or "",
+                        worker_title=s.get("worker_title") or "",
+                        worker_team=s.get("worker_team") or "",
+                        client_name=s.get("client_name") or "",
+                        task_description=s.get("task_description") or "",
+                        estimated_minutes=int(s.get("estimated_minutes") or 540),
+                        actual_minutes=int(s.get("actual_minutes") or 540),
+                        start_time=st_p,
+                        end_time=ed_p,
+                        status=s.get("status") or "COMPLETED",
+                        is_night_work=False,
+                        is_weekend_work=bool(s.get("is_weekend_work")),
+                        raw_start_message=str(s.get("raw_start_message") or ""),
+                        raw_end_message=str(s.get("raw_end_message") or "")
+                    ))
+            else:
+                expanded_records.append(r)
+        records = expanded_records
 
         # 1. Supabase 클라우드 DB 저장
         if self.use_supabase and self.supabase:
