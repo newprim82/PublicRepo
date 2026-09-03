@@ -99,17 +99,15 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
         z-index: 102 !important;
     }
-    [data-testid="stToolbar"] {
-        display: flex !important;
-        align-items: center !important;
-        position: absolute !important;
-        right: 1.5rem !important;
-        top: 1.15rem !important;
-        height: 32px !important;
-        margin: 0px !important;
-        padding: 0px !important;
-        opacity: 0.9 !important;
-        z-index: 101 !important;
+    [data-testid="stToolbar"],
+    .stDeployButton,
+    #MainMenu,
+    [data-testid="stToolbarActions"],
+    header[data-testid="stHeader"] button:not([data-testid="stSidebarCollapsedControl"]) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
     .block-container {
         padding-top: 1.15rem !important;
@@ -2275,8 +2273,6 @@ def main():
             <span>🟢 관제 시스템 정상 가동</span>
             <span style="color: #48525B;">|</span>
             <span>🕒 {current_time_str}</span>
-            <span style="color: #48525B;">|</span>
-            <span style="background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 4px; color: #CBD5E1;">👤 admin (기술본부)</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
