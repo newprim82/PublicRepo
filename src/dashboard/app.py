@@ -2160,39 +2160,6 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             color: #38bdf8 !important;
         }
 
-        /* 4. 뷰 전환 버튼 네비게이션 (확실한 배경색과 고대비 폰트 상시 보장) */
-        div[data-testid="column"]:has(.view-nav-active) button {
-            background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
-            background-color: #005073 !important;
-            color: #ffffff !important;
-            border: 1.5px solid #002233 !important;
-            border-radius: 8px !important;
-            padding: 9px 18px !important;
-            box-shadow: 0 3px 10px rgba(0, 80, 115, 0.35) !important;
-        }
-        div[data-testid="column"]:has(.view-nav-active) button * {
-            color: #ffffff !important;
-            font-weight: 900 !important;
-            font-size: 14px !important;
-        }
-        div[data-testid="column"]:has(.view-nav-inactive) button {
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            color: #002d42 !important;
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            padding: 9px 18px !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-        }
-        div[data-testid="column"]:has(.view-nav-inactive) button * {
-            color: #002d42 !important;
-            font-weight: 800 !important;
-            font-size: 14px !important;
-        }
-        div[data-testid="column"]:has(.view-nav-inactive) button:hover {
-            background-color: #f1f5f9 !important;
-            border-color: #94a3b8 !important;
-        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -2322,114 +2289,56 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         st.warning("🔍 설정하신 검색 조건에 부합하는 작업 내역이 없습니다. 다른 키워드나 조건으로 검색해 보세요.")
         return
 
-    # 4. 결과 표출 뷰 (두 가지 뷰 모드 전환 버튼 - 확실한 배경색과 시인성 보장)
-    if "smart_search_view_mode" not in st.session_state:
-        st.session_state["smart_search_view_mode"] = "table"
+    # 4. 결과 표출: 인터랙티브 테이블 뷰 및 엑셀(XLSX) 다운로드 단독 노출
+    target_cols = [
+        "id", "worker_name", "worker_team", "worker_title", "client_name", 
+        "task_description", "start_time", "end_time", "actual_hours", 
+        "estimated_hours", "status", "is_night_work", "is_weekend_work", "remarks"
+    ]
+    available_cols = [c for c in target_cols if c in filtered_df.columns]
+    export_df = filtered_df[available_cols].copy()
+    if "start_time" in export_df.columns:
+        export_df["start_time"] = export_df["start_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
+    if "end_time" in export_df.columns:
+        export_df["end_time"] = export_df["end_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
+    display_df = export_df.rename(columns={
+        "worker_name": "작업자",
+        "worker_team": "소속팀",
+        "worker_title": "직급",
+        "client_name": "고객사",
+        "task_description": "작업 내용",
+        "start_time": "시작 시각",
+        "end_time": "종료 시각",
+        "actual_hours": "실제공수(h)",
+        "estimated_hours": "예정공수(h)",
+        "status": "상태",
+        "is_night_work": "야간",
+        "is_weekend_work": "주말",
+        "remarks": "비고"
+    })
+    if "상태" in display_df.columns:
+        display_df["상태"] = display_df["상태"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(display_df["상태"])
+    if "야간" in display_df.columns:
+        display_df["야간"] = display_df["야간"].apply(lambda x: "Y" if x else "")
+    if "주말" in display_df.columns:
+        display_df["주말"] = display_df["주말"].apply(lambda x: "Y" if x else "")
 
-    cur_mode = st.session_state["smart_search_view_mode"]
+    # 📊 엑셀(.xlsx) 파일 생성 및 다운로드 버튼
+    import io
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+        display_df.to_excel(writer, index=False, sheet_name="작업검색결과")
+    excel_data = excel_buffer.getvalue()
 
-    v_col1, v_col2, _ = st.columns([1.6, 1.6, 3.8])
-    with v_col1:
-        is_active_1 = (cur_mode == "table")
-        st.markdown(f'<div class="{"view-nav-active" if is_active_1 else "view-nav-inactive"}" style="display:none;"></div>', unsafe_allow_html=True)
-        if st.button("📋 인터랙티브 테이블 뷰", key="btn_view_table", use_container_width=True):
-            st.session_state["smart_search_view_mode"] = "table"
-            st.rerun()
+    st.download_button(
+        label="📥 검색 결과 엑셀(XLSX) 다운로드",
+        data=excel_data,
+        file_name=f"기술본부_작업검색결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key="dl_smart_search_xlsx"
+    )
 
-    with v_col2:
-        is_active_2 = (cur_mode == "card")
-        st.markdown(f'<div class="{"view-nav-active" if is_active_2 else "view-nav-inactive"}" style="display:none;"></div>', unsafe_allow_html=True)
-        if st.button("🗂️ 카드 상세 리스트 뷰", key="btn_view_card", use_container_width=True):
-            st.session_state["smart_search_view_mode"] = "card"
-            st.rerun()
-
-    if cur_mode == "table":
-        # 다운로드 버튼
-        target_cols = [
-            "id", "worker_name", "worker_team", "worker_title", "client_name", 
-            "task_description", "start_time", "end_time", "actual_hours", 
-            "estimated_hours", "status", "is_night_work", "is_weekend_work", "remarks"
-        ]
-        available_cols = [c for c in target_cols if c in filtered_df.columns]
-        export_df = filtered_df[available_cols].copy()
-        if "start_time" in export_df.columns:
-            export_df["start_time"] = export_df["start_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
-        if "end_time" in export_df.columns:
-            export_df["end_time"] = export_df["end_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
-        display_df = export_df.rename(columns={
-            "worker_name": "작업자",
-            "worker_team": "소속팀",
-            "worker_title": "직급",
-            "client_name": "고객사",
-            "task_description": "작업 내용",
-            "start_time": "시작 시각",
-            "end_time": "종료 시각",
-            "actual_hours": "실제공수(h)",
-            "estimated_hours": "예정공수(h)",
-            "status": "상태",
-            "is_night_work": "야간",
-            "is_weekend_work": "주말",
-            "remarks": "비고"
-        })
-        if "상태" in display_df.columns:
-            display_df["상태"] = display_df["상태"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(display_df["상태"])
-        if "야간" in display_df.columns:
-            display_df["야간"] = display_df["야간"].apply(lambda x: "Y" if x else "")
-        if "주말" in display_df.columns:
-            display_df["주말"] = display_df["주말"].apply(lambda x: "Y" if x else "")
-
-        # 📊 엑셀(.xlsx) 파일 생성
-        import io
-        excel_buffer = io.BytesIO()
-        with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-            display_df.to_excel(writer, index=False, sheet_name="작업검색결과")
-        excel_data = excel_buffer.getvalue()
-
-        st.download_button(
-            label="📥 검색 결과 엑셀(XLSX) 다운로드",
-            data=excel_data,
-            file_name=f"기술본부_작업검색결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="dl_smart_search_xlsx"
-        )
-
-        st.dataframe(display_df, use_container_width=True, height=450)
-
-    else:
-        st.caption(f"최신 작업 순으로 정렬된 상세 카드 목록입니다. (총 {res_cnt}건)")
-        # 3열 그리드로 카드 표출 (최대 상위 60건)
-        card_sub_df = filtered_df.head(60)
-        c_cols = st.columns(3)
-        for idx, (_, r) in enumerate(card_sub_df.iterrows()):
-            with c_cols[idx % 3]:
-                w_name = r["worker_name"]
-                w_team = r["worker_team"] or ""
-                w_title = r.get("worker_title") or ""
-                c_name = r["client_name"]
-                t_desc = r["task_description"]
-                st_dt = r["start_time"]
-                ed_dt = r["end_time"]
-                act_h = r["actual_hours"]
-                est_h = r["estimated_hours"]
-                status = r["status"]
-
-                st_str = st_dt.strftime("%m/%d %H:%M") if pd.notna(st_dt) else "?"
-                ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
-
-                title_badge = get_job_title_badge(w_title)
-                team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_team}</span>"
-                is_search_night = bool(r.get("is_night_work"))
-                if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
-                    is_search_night = False
-                night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🌙</span>" if is_search_night else ""
-                weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🏖️</span>" if r.get("is_weekend_work") else ""
-
-                status_badge = "<span style='background:#d1e7dd; color:#0f5132; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>⏳ 진행</span>" if status == "PENDING" else f"<span style='background:#ede9fe; color:#5b21b6; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>✅ {act_h}h</span>"
-
-                st.markdown(f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #005073; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-weight: 700; color: #0f172a; font-size: 14px;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #334155; line-height: 1.3; margin-bottom: 6px; min-height: 32px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 4px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
-
-        if res_cnt > 60:
-            st.info(f"💡 결과가 많아 상위 60건의 카드만 표시 중입니다. 전체 {res_cnt:,}건은 [📋 인터랙티브 테이블 뷰]에서 모두 확인 및 다운로드하실 수 있습니다.")
+    st.dataframe(display_df, use_container_width=True, height=520)
 
 
 def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict):
