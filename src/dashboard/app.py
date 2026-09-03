@@ -3056,6 +3056,38 @@ def main():
     if curr_page == "📋 작업 기록 원장 & 엑셀":
         st.subheader("📋 작업 지원 상세 기록 원장 & 엑셀 다운로드")
         
+        # 🎨 Cisco ACI 다운로드 버튼 전용 스타일링 (글자 선명한 흰색 볼드 강제)
+        st.markdown("""
+        <style>
+            div.stDownloadButton > button {
+                background-color: #005073 !important;
+                border: 1.5px solid #003852 !important;
+                border-radius: 6px !important;
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                font-size: 13.5px !important;
+                padding: 6px 14px !important;
+                box-shadow: 0 2px 5px rgba(0, 80, 115, 0.25) !important;
+                transition: all 0.2s ease !important;
+            }
+            div.stDownloadButton > button *,
+            div.stDownloadButton > button p,
+            div.stDownloadButton > button span {
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                font-size: 13.5px !important;
+            }
+            div.stDownloadButton > button:hover {
+                background-color: #003852 !important;
+                border-color: #002233 !important;
+                box-shadow: 0 3px 8px rgba(0, 80, 115, 0.4) !important;
+            }
+            div.stDownloadButton > button:hover * {
+                color: #ffffff !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
+        
         # openpyxl은 타임존(tz-aware) datetime을 지원하지 않으므로 strip_tz 적용
         clean_df = strip_tz(df)
         
@@ -3064,7 +3096,7 @@ def main():
             clean_df.to_excel(writer, index=False, sheet_name="지원시간통계")
         excel_data = output.getvalue()
         
-        btn_col1, btn_col2 = st.columns([1, 4])
+        btn_col1, btn_col2, _ = st.columns([1.5, 1.5, 4.0])
         with btn_col1:
             st.download_button(
                 label="📥 엑셀(.xlsx) 다운로드",
