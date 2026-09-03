@@ -605,20 +605,49 @@ st.markdown("""
     }
 
     /* 🏛️ 팝업 모달 다이얼로그 (@st.dialog) 제목 및 닫기 버튼 흰색 스타일링 */
+    div[data-testid="stDialog"] h1,
+    div[data-testid="stDialog"] h2,
+    div[data-testid="stDialog"] h3,
+    div[data-testid="stDialog"] [data-testid="stHeadingWithActionElements"] h2,
+    div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h2,
+    div[data-testid="stDialog"] header,
+    div[data-testid="stDialog"] header *,
     div[role="dialog"] h1,
     div[role="dialog"] h2,
+    div[role="dialog"] h3,
     div[role="dialog"] [data-testid="stHeadingWithActionElements"] h2,
-    div[role="dialog"] header h2 {
+    div[role="dialog"] [data-testid="stMarkdownContainer"] h2,
+    div[role="dialog"] header,
+    div[role="dialog"] header *,
+    div[data-baseweb="modal"] h1,
+    div[data-baseweb="modal"] h2,
+    div[data-baseweb="modal"] h3,
+    div[data-baseweb="modal"] header,
+    div[data-baseweb="modal"] header * {
         color: #ffffff !important;
         font-weight: 800 !important;
+        fill: #ffffff !important;
     }
+    div[data-testid="stDialog"] h1 *,
+    div[data-testid="stDialog"] h2 *,
+    div[data-testid="stDialog"] h3 *,
     div[role="dialog"] h1 *,
-    div[role="dialog"] h2 * {
+    div[role="dialog"] h2 *,
+    div[role="dialog"] h3 * {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+    }
+    div[data-testid="stDialog"] button[aria-label="Close"],
+    div[data-testid="stDialog"] button[data-testid="stBaseButton-header"],
+    div[role="dialog"] button[aria-label="Close"],
+    div[role="dialog"] button[data-testid="stBaseButton-header"],
+    div[data-baseweb="modal"] button[aria-label="Close"] {
         color: #ffffff !important;
     }
-    div[role="dialog"] button[aria-label="Close"],
-    div[role="dialog"] button[data-testid="stBaseButton-header"] {
-        color: #ffffff !important;
+    div[data-testid="stDialog"] button[aria-label="Close"] svg,
+    div[role="dialog"] button[aria-label="Close"] svg {
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
     }
 
     /* 🏛️ 드롭다운 팝오버 및 셀렉트박스 옵션 가독성 */
@@ -698,11 +727,54 @@ def format_raw_chat_display(row) -> str:
     return f"{start_line}\n{end_line}"
 
 
+def inject_dialog_title_style():
+    """모달 팝업 내부에서 상단 제목을 선명한 흰색으로 강제 주입"""
+    st.markdown("""
+    <style>
+    div[data-testid="stDialog"] h1,
+    div[data-testid="stDialog"] h2,
+    div[data-testid="stDialog"] h3,
+    div[data-testid="stDialog"] [data-testid="stHeadingWithActionElements"] h2,
+    div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h2,
+    div[data-testid="stDialog"] header,
+    div[data-testid="stDialog"] header *,
+    div[role="dialog"] h1,
+    div[role="dialog"] h2,
+    div[role="dialog"] h3,
+    div[role="dialog"] [data-testid="stHeadingWithActionElements"] h2,
+    div[role="dialog"] [data-testid="stMarkdownContainer"] h2,
+    div[role="dialog"] header,
+    div[role="dialog"] header *,
+    div[data-baseweb="modal"] h1,
+    div[data-baseweb="modal"] h2,
+    div[data-baseweb="modal"] h3 {
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        fill: #ffffff !important;
+    }
+    div[data-testid="stDialog"] h1 *,
+    div[data-testid="stDialog"] h2 *,
+    div[data-testid="stDialog"] h3 *,
+    div[role="dialog"] h1 *,
+    div[role="dialog"] h2 *,
+    div[role="dialog"] h3 * {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+    }
+    div[data-testid="stDialog"] button[aria-label="Close"],
+    div[role="dialog"] button[aria-label="Close"] {
+        color: #ffffff !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+
 # ==========================================
 # 팝업 대화상자 (모달 다이얼로그) - 최상단 전역 정의
 # ==========================================
 @st.dialog("🔍 세부 작업 내역 및 카카오톡 원본 분석", width="large")
 def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default_week_name: str = None):
+    inject_dialog_title_style()
     worker_df = df_data[df_data["worker_name"] == target_worker]
     if worker_df.empty:
         st.warning(f"[{target_worker}] 님의 작업 데이터가 없습니다.")
@@ -852,6 +924,7 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
 # ----------------------------------------------------
 @st.dialog("⏱️ 총 지원 시간 세부 작업 내역", width="large")
 def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
+    inject_dialog_title_style()
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
@@ -911,6 +984,7 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
 
 @st.dialog("📋 총 작업 건수 세부 내역 (완료 / 진행 중)", width="large")
 def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
+    inject_dialog_title_style()
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
@@ -978,6 +1052,7 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
 
 @st.dialog("👥 투입 인원 및 팀원별 공수 상세", width="large")
 def show_kpi_workers_dialog(df_data: pd.DataFrame):
+    inject_dialog_title_style()
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
@@ -1001,6 +1076,7 @@ def show_kpi_workers_dialog(df_data: pd.DataFrame):
 
 @st.dialog("🌙 야간 / 주말 긴급 작업 세부 내역", width="large")
 def show_kpi_urgent_dialog(df_data: pd.DataFrame):
+    inject_dialog_title_style()
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
@@ -1069,6 +1145,7 @@ def show_kpi_urgent_dialog(df_data: pd.DataFrame):
 
 @st.dialog("⚠️ 예정 시간 초과 작업 세부 내역 및 카카오톡 원본 확인", width="large")
 def show_kpi_overdue_dialog(df_data: pd.DataFrame):
+    inject_dialog_title_style()
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
@@ -1143,6 +1220,7 @@ def show_kpi_overdue_dialog(df_data: pd.DataFrame):
 
 @st.dialog("👤 팀원 전체 작업 상세 내역", width="large")
 def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
+    inject_dialog_title_style()
     w_df = df_data[df_data["worker_name"] == worker_name].sort_values(by="start_time", ascending=False).reset_index(drop=True)
     if w_df.empty:
         st.info(f"[{worker_name}] 님의 작업 데이터가 없습니다.")
@@ -1193,6 +1271,7 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
 
 @st.dialog("🔍 작업 구분별 세부 내역", width="large")
 def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: pd.DataFrame):
+    inject_dialog_title_style()
     w_df = df_data[df_data["worker_name"] == worker_name].copy()
     
     if "주말" in category:
@@ -1472,6 +1551,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 @st.dialog("📅 일자별 세부 작업 내역", width="large")
 def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
     """캘린더 날짜 클릭 시 열리는 상세 작업 내역 모달 팝업"""
+    inject_dialog_title_style()
     st.subheader(f"📅 {date_title} 작업 상세 목록 (총 {len(day_df)}건)")
 
     if day_df.empty:
