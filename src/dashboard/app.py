@@ -447,9 +447,9 @@ st.markdown("""
         padding-bottom: 0px !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary {
-        font-weight: 700 !important;
-        font-size: 12.5px !important;
-        color: #8eafc0 !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+        color: #ffffff !important;
         background-color: transparent !important;
         border-radius: 0px !important;
         border-bottom: 1px solid #1a5a73 !important;
@@ -460,7 +460,14 @@ st.markdown("""
         letter-spacing: 0.3px !important;
         text-transform: uppercase !important;
     }
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary *,
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary p,
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary span {
+        font-weight: 800 !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover,
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover * {
         color: #00b4d8 !important;
         background-color: rgba(0, 180, 216, 0.06) !important;
     }
