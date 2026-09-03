@@ -1158,6 +1158,53 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     st.markdown(comp_html, unsafe_allow_html=True)
 
 
+@st.dialog("📅 일자별 세부 작업 내역", width="large")
+def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
+    """캘린더 날짜 클릭 시 열리는 상세 작업 내역 모달 팝업"""
+    st.subheader(f"📅 {date_title} 작업 상세 목록 (총 {len(day_df)}건)")
+
+    if day_df.empty:
+        st.info("해당 일자에 등록된 작업 내역이 없습니다.")
+        return
+
+    tot_h = round(day_df["actual_hours"].sum(), 1)
+    tot_w = day_df["worker_name"].nunique()
+    tot_c = day_df["client_name"].nunique()
+    comp_cnt = int((day_df["status"] == "COMPLETED").sum())
+    pend_cnt = int((day_df["status"] == "PENDING").sum())
+
+    # 상단 요약 미니 배너
+    st.markdown(f"""<div style="display: flex; gap: 10px; margin-bottom: 16px; background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(0, 229, 255, 0.3); border-radius: 8px; padding: 10px 14px; flex-wrap: wrap;"><span style="color: #00E5FF; font-weight: 700;">⏱️ 총 공수: <b>{tot_h}h</b></span><span style="color: #64748B;">|</span><span style="color: #B388FF; font-weight: 700;">👥 투입 인원: <b>{tot_w}명</b></span><span style="color: #64748B;">|</span><span style="color: #FBBF24; font-weight: 700;">🏢 고객사: <b>{tot_c}개사</b></span><span style="color: #64748B;">|</span><span style="color: #00E676; font-weight: 700;">✅ 완료 {comp_cnt}건 / ⏳ 진행 {pend_cnt}건</span></div>""", unsafe_allow_html=True)
+
+    # 2열 상세 카드 그리드
+    day_df_sorted = day_df.sort_values("start_time")
+    c_cols = st.columns(2)
+    for idx, (_, r) in enumerate(day_df_sorted.iterrows()):
+        with c_cols[idx % 2]:
+            w_name = r["worker_name"]
+            w_team = r.get("worker_team") or ""
+            w_title = r.get("worker_title") or ""
+            c_name = r["client_name"]
+            t_desc = r["task_description"]
+            st_dt = r["start_time"]
+            ed_dt = r["end_time"]
+            act_h = r["actual_hours"]
+            est_h = r.get("estimated_hours") or 0
+            status = r["status"]
+
+            st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
+            ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
+
+            title_badge = f"<span style='background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
+            team_badge = f"<span style='background:rgba(56,189,248,0.12); color:#38BDF8; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>" if w_team else ""
+            night_badge = "<span style='background:rgba(244,63,94,0.2); color:#F43F5E; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
+            weekend_badge = "<span style='background:rgba(245,158,11,0.2); color:#F59E0B; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+
+            status_badge = "<span style='background:rgba(0,230,118,0.15); color:#00E676; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>⏳ 진행 중</span>" if status == "PENDING" else f"<span style='background:rgba(129,140,248,0.15); color:#818CF8; border:1px solid rgba(129,140,248,0.3); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>✅ {act_h}h 완료</span>"
+
+            st.markdown(f"""<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.7) 100%); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14.5px; font-weight: 700; color: #FFFFFF;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #38BDF8; font-weight: 600; margin-bottom: 3px;">🏢 <span style="color: #38BDF8;">{c_name}</span></div><div style="font-size: 12.5px; color: #CBD5E1; line-height: 1.4; margin-bottom: 6px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #94A3B8; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 5px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
+
+
 def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
     """[📅 작업 캘린더 & 밀도 히트맵] 탭 렌더링 컴포넌트"""
     if df.empty or "start_time" not in df.columns:
@@ -1197,7 +1244,7 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     # 2. 🗓️ 인터랙티브 월간 캘린더 그리드 (Monthly Calendar)
     # ----------------------------------------------------
     st.markdown(f"#### 🗓️ {pick_month} 월간 작업 캘린더")
-    st.caption("달력의 각 날짜별 총 작업 시간과 참여 인원입니다.")
+    st.caption("달력의 각 날짜 카드를 클릭하면 그날의 상세 작업 목록 팝업이 즉시 열립니다.")
 
     df_month["day_num"] = df_month["start_time"].dt.day
     day_summary = df_month.groupby("day_num").agg(
@@ -1220,7 +1267,7 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
         for idx, day in enumerate(week):
             with w_cols[idx]:
                 if day == 0:
-                    st.markdown("<div style='height:76px; background:rgba(15,23,42,0.2); border-radius:8px; margin-bottom:6px;'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='height:86px; background:rgba(15,23,42,0.2); border-radius:8px; margin-bottom:6px;'></div>", unsafe_allow_html=True)
                 else:
                     day_data = day_summary.get(day)
                     num_color = "#F43F5E" if idx == 6 else ("#38BDF8" if idx == 5 else "#F8FAFC")
@@ -1232,10 +1279,15 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
                         w_str = ", ".join(d_workers) + (f" 외 {len(day_data['workers'])-2}명" if len(day_data["workers"]) > 2 else "")
 
                         bg_opacity = min(0.85, 0.25 + (d_hours / 35.0) * 0.6)
-                        cell_html = f"""<div style="min-height:76px; background: rgba(16, 185, 129, {bg_opacity:.2f}); border: 1px solid rgba(16, 185, 129, 0.6); border-radius: 8px; padding: 5px 7px; margin-bottom: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="font-weight: 800; font-size: 13px; color: {num_color};">{day}</span><span style="background: rgba(0,0,0,0.4); color: #A7F3D0; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 10.5px; color: #FFFFFF; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
+                        cell_html = f"""<div style="background: rgba(16, 185, 129, {bg_opacity:.2f}); border: 1px solid rgba(16, 185, 129, 0.6); border-radius: 8px 8px 0px 0px; padding: 5px 7px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;"><span style="font-weight: 800; font-size: 13px; color: {num_color};">{day}</span><span style="background: rgba(0,0,0,0.4); color: #A7F3D0; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 4px;">{d_cnt}건 ({d_hours}h)</span></div><div style="font-size: 10.5px; color: #FFFFFF; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👥 {w_str}</div></div>"""
                         st.markdown(cell_html, unsafe_allow_html=True)
+                        
+                        # 클릭 시 상세 팝업 오픈 버튼
+                        if st.button(f"🔍 {day}일 상세 ({d_cnt}건)", key=f"btn_cal_pop_{year}_{month}_{day}", use_container_width=True, help=f"{year}년 {month}월 {day}일 상세 작업 팝업 열기"):
+                            day_target_df = df_month[df_month["day_num"] == day]
+                            show_calendar_day_dialog(f"{year}년 {month:02d}월 {day:02d}일", day_target_df)
                     else:
-                        cell_html = f"""<div style="min-height:76px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 5px 7px; margin-bottom: 6px;"><div style="font-weight: 700; font-size: 12px; color: {num_color}; opacity: 0.5;">{day}</div><div style="font-size: 10px; color: #475569; margin-top: 8px; text-align: center;">-</div></div>"""
+                        cell_html = f"""<div style="min-height:86px; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 5px 7px; margin-bottom: 6px;"><div style="font-weight: 700; font-size: 12px; color: {num_color}; opacity: 0.5;">{day}</div><div style="font-size: 10px; color: #475569; margin-top: 14px; text-align: center;">-</div></div>"""
                         st.markdown(cell_html, unsafe_allow_html=True)
 
     st.write("")
