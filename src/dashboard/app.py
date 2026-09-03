@@ -815,12 +815,17 @@ def load_data() -> pd.DataFrame:
                     st_val = st_val.to_pydatetime()
                 if getattr(st_val, "tzinfo", None) is not None:
                     st_val = st_val.replace(tzinfo=None)
+                
+                # 🌟 [절대 규칙] 시작 시각이 06:00~17:59인 주간 작업은 야간 판정 무조건 제외(False)
+                if not (st_val.hour >= 18 or st_val.hour < 6):
+                    return False
+
                 act_m = int(row.get("actual_minutes") or 0)
                 est_m = int(row.get("estimated_minutes") or 0)
                 raw_msg = str(row.get("raw_start_message") or "") + " " + str(row.get("task_description") or "")
                 return check_is_night_work(st_val, None, raw_msg, est_m, act_m)
             except Exception:
-                return bool(row.get("is_night_work", False))
+                return False
 
         def _eval_weekend(row):
             try:
@@ -1685,7 +1690,10 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                         pct_display = f"{raw_pct}%"
 
                         time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
-                        night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if r.get("is_night_work") else ""
+                        is_night_flag = bool(r.get("is_night_work"))
+                        if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
+                            is_night_flag = False
+                        night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
                         weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
 
                         rank_color = get_job_title_color(w_title)
@@ -1779,7 +1787,10 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
 
             title_badge = get_job_title_badge(w_title)
             team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>" if w_team else ""
-            night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
+            is_comp_night = bool(r.get("is_night_work"))
+            if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
+                is_comp_night = False
+            night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if is_comp_night else ""
             weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
 
             status_badge = "<span style='background:#d1e7dd; color:#0f5132; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>⏳ 진행 중</span>" if status == "PENDING" else f"<span style='background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>✅ {act_h}h 완료</span>"
@@ -2111,7 +2122,10 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
 
                 title_badge = get_job_title_badge(w_title)
                 team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_team}</span>"
-                night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🌙</span>" if r.get("is_night_work") else ""
+                is_search_night = bool(r.get("is_night_work"))
+                if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
+                    is_search_night = False
+                night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🌙</span>" if is_search_night else ""
                 weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🏖️</span>" if r.get("is_weekend_work") else ""
 
                 status_badge = "<span style='background:#d1e7dd; color:#0f5132; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>⏳ 진행</span>" if status == "PENDING" else f"<span style='background:#ede9fe; color:#5b21b6; padding:2px 6px; border-radius:6px; font-size:10.5px; font-weight:700;'>✅ {act_h}h</span>"
