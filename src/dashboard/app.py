@@ -480,14 +480,18 @@ st.markdown("""
         color: #e2e8f0 !important;
         font-weight: 600 !important;
     }
+    /* 사이드바 셀렉트박스 완벽 복원 (글씨 선명한 흰색 & 배경 유지) */
+    [data-testid="stSidebar"] [data-baseweb="select"] {
+        background-color: #002d42 !important;
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] [data-baseweb="select"] * {
+        color: #ffffff !important;
+    }
     [data-testid="stSidebar"] [data-baseweb="select"] > div {
         background-color: #002d42 !important;
         border: 1px solid #003852 !important;
         border-radius: 4px !important;
-        color: #ffffff !important;
-    }
-    [data-testid="stSidebar"] [data-baseweb="select"] span,
-    [data-testid="stSidebar"] [data-baseweb="select"] div {
         color: #ffffff !important;
     }
     [data-testid="stSidebar"] [data-baseweb="select"] svg {
@@ -501,8 +505,8 @@ st.markdown("""
     [data-testid="stSidebar"] [data-baseweb="checkbox"] span {
         color: #bdcddc !important;
     }
-    /* 🌲 APIC 트리 아이템 (버튼 = 메뉴 항목) - 완벽한 좌측 정렬 */
-    [data-testid="stSidebar"] button {
+    /* 🌲 APIC 트리 아이템: 하위 메뉴 버튼에만 정밀하게 좌측 정렬 적용 (다른 위젯 간섭 0%) */
+    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button {
         display: flex !important;
         justify-content: flex-start !important;
         align-items: center !important;
@@ -519,37 +523,24 @@ st.markdown("""
         min-height: 30px !important;
         width: 100% !important;
     }
-    /* 버튼 내부의 모든 컨테이너와 텍스트를 강제로 좌측 정렬 */
-    [data-testid="stSidebar"] button div,
-    [data-testid="stSidebar"] button span,
-    [data-testid="stSidebar"] button p {
+    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button [data-testid="stMarkdownContainer"] {
+        width: 100% !important;
+        text-align: left !important;
         display: flex !important;
         justify-content: flex-start !important;
         align-items: center !important;
+    }
+    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button [data-testid="stMarkdownContainer"] p {
         text-align: left !important;
         width: 100% !important;
         margin: 0 !important;
     }
-    [data-testid="stSidebar"] button [data-testid="stMarkdownContainer"] {
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        text-align: left !important;
-        width: 100% !important;
-    }
-    [data-testid="stSidebar"] button [data-testid="stMarkdownContainer"] p {
-        display: block !important;
-        text-align: left !important;
-        width: 100% !important;
-        margin: 0 !important;
-    }
-    [data-testid="stSidebar"] button:hover {
+    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button:hover {
         background-color: rgba(0, 180, 216, 0.10) !important;
         color: #ffffff !important;
         border-left: 3px solid #00b4d8 !important;
     }
-    /* 선택된 메뉴 (primary 버튼 = 활성 트리 아이템) */
-    [data-testid="stSidebar"] button[kind="primary"] {
+    [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] .stButton > button[kind="primary"] {
         background-color: rgba(0, 180, 216, 0.15) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
