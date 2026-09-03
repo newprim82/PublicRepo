@@ -264,17 +264,22 @@ st.markdown("""
     .stTabs [data-baseweb="tab-highlight"] { display: none !important; }
     .stTabs [data-baseweb="tab-border"] { display: none !important; }
 
-    /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 (선명한 입체감 & 구분선) */
+    /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 (완벽 중앙 정렬 & 입체감) */
     .kpi-card {
         background: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         border-radius: 10px !important;
-        padding: 16px 18px !important;
+        padding: 16px 14px !important;
         margin-bottom: 0px !important;
         box-shadow: 0 4px 16px rgba(0, 45, 66, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
         transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         cursor: pointer !important;
         user-select: none;
+        text-align: center !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     .kpi-card:hover {
         transform: translateY(-4px) !important;
@@ -312,7 +317,7 @@ st.markdown("""
     }
 
     .kpi-title {
-        font-size: 15px !important;
+        font-size: 16.5px !important;
         font-weight: 800 !important;
         color: #002d42 !important;
         text-transform: uppercase !important;
@@ -321,16 +326,24 @@ st.markdown("""
         border-bottom: 1.5px solid #e2e8f0 !important;
         display: flex !important;
         align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
         gap: 6px !important;
         letter-spacing: -0.3px !important;
+        text-align: center !important;
     }
     .kpi-value {
-        font-size: 34px !important;
+        font-size: 35px !important;
         font-weight: 900 !important;
         line-height: 1.1 !important;
         margin-bottom: 10px !important;
         font-family: 'Segoe UI', Pretendard, sans-serif !important;
         color: #0f172a !important;
+        display: flex !important;
+        align-items: baseline !important;
+        justify-content: center !important;
+        width: 100% !important;
+        text-align: center !important;
     }
     .kpi-unit {
         font-size: 15px !important;
@@ -341,12 +354,14 @@ st.markdown("""
     .kpi-badge {
         display: inline-flex !important;
         align-items: center !important;
+        justify-content: center !important;
         gap: 4px !important;
         padding: 4px 10px !important;
         border-radius: 6px !important;
         font-size: 12px !important;
         font-weight: 800 !important;
         letter-spacing: -0.2px !important;
+        margin: 0 auto !important;
     }
     .badge-cyan { background-color: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd !important; }
     .badge-green { background-color: #d1e7dd !important; color: #0f5132 !important; border: 1px solid #a3cfbb !important; }
