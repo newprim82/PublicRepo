@@ -315,14 +315,6 @@ st.markdown("""
         padding: 0 !important;
         margin: 0 !important;
     }
-    /* iframe 스크립트 래퍼 잔여 높이/여백 완전 제거 */
-    div[data-testid="stCustomComponentV1"],
-    div.element-container:has(iframe) {
-        display: none !important;
-        height: 0px !important;
-        margin: 0px !important;
-        padding: 0px !important;
-    }
 
     .kpi-title {
         font-size: 16.5px !important;
@@ -2753,45 +2745,6 @@ def main():
             if st.button(" ", key="kpi_btn_overdue", use_container_width=True, help="클릭하여 예정 시간 초과 내역 팝업 열기"):
                 show_kpi_overdue_dialog(df)
 
-        # 🌟 카드 상자 1:1 오버레이 위치 보정 (하단 네모칸 0% 완전 박멸)
-        import streamlit.components.v1 as components
-        components.html("""
-        <script>
-            (function() {
-                function fixOverlay() {
-                    const pDoc = window.parent.document;
-                    const cards = pDoc.querySelectorAll('.kpi-card');
-                    cards.forEach(card => {
-                        let cContainer = card.closest('.element-container');
-                        if (cContainer && cContainer.nextElementSibling) {
-                            let bContainer = cContainer.nextElementSibling;
-                            bContainer.style.marginTop = '-138px';
-                            bContainer.style.height = '138px';
-                            bContainer.style.position = 'relative';
-                            bContainer.style.zIndex = '20';
-                            let btn = bContainer.querySelector('button');
-                            if (btn) {
-                                btn.style.height = '138px';
-                                btn.style.minHeight = '138px';
-                                btn.style.width = '100%';
-                                btn.style.background = 'transparent';
-                                btn.style.backgroundColor = 'transparent';
-                                btn.style.border = 'none';
-                                btn.style.boxShadow = 'none';
-                                btn.style.opacity = '0';
-                                btn.style.cursor = 'pointer';
-                            }
-                        }
-                    });
-                }
-                fixOverlay();
-                setTimeout(fixOverlay, 100);
-                setTimeout(fixOverlay, 300);
-                setTimeout(fixOverlay, 800);
-            })();
-        </script>
-        """, height=0)
-
         # ----------------------------------------------------
         # 🚨 상단 과중 근무 실시간 감지 & 원클릭 보상휴가 팝업 배너
         # ----------------------------------------------------
@@ -2858,7 +2811,7 @@ def main():
             else:
                 # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너 (상단 5개 카드와 간격 28px 정밀 일치)
                 st.markdown("""
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 12px 0 0 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 18px 0 0 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
                     <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
                         <span style="font-size: 15px; line-height: 1;">🟢</span>
                         <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
