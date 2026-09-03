@@ -2354,26 +2354,132 @@ def main():
     curr_page = st.session_state.get("current_page", "🏠 실시간 분석 대시보드")
     page_tag = curr_page.split(" ")[1] if " " in curr_page else curr_page
     bora_ts = get_bora_ntp_timestamp()
-    initial_kst_str = datetime.fromtimestamp(bora_ts, KST_TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
     initial_ms = int(bora_ts * 1000)
 
-    st.markdown(f"""
-    <div style="background: #0D2744; color: #FFFFFF; padding: 12px 20px 12px 48px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.25); border: 1px solid rgba(0, 229, 255, 0.25);">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 18px; font-weight: 800; color: #00E5FF; letter-spacing: -0.4px;">📊 기술본부 현장 업무 관제 센터</span>
-            <span style="background: rgba(0, 229, 255, 0.15); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.4); padding: 2px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 700; margin-left: 4px;">{page_tag}</span>
+    import streamlit.components.v1 as components
+    components.html(f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+        <style>
+            * {{
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            }}
+            body {{
+                background: transparent;
+                overflow: hidden;
+            }}
+            .header-bar {{
+                background: #0D2744;
+                color: #FFFFFF;
+                padding: 11px 20px 11px 48px;
+                border-radius: 8px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+                border: 1px solid rgba(0, 229, 255, 0.25);
+            }}
+            .header-left {{
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }}
+            .header-title {{
+                font-size: 18px;
+                font-weight: 800;
+                color: #00E5FF;
+                letter-spacing: -0.4px;
+            }}
+            .header-tag {{
+                background: rgba(0, 229, 255, 0.15);
+                color: #00E5FF;
+                border: 1px solid rgba(0, 229, 255, 0.4);
+                padding: 2px 8px;
+                border-radius: 6px;
+                font-size: 11.5px;
+                font-weight: 700;
+                margin-left: 4px;
+            }}
+            .header-right {{
+                font-size: 12px;
+                color: #94A3B8;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }}
+            .clock-box {{
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }}
+            #live-bora-clock {{
+                color: #F1F5F9;
+                font-weight: 700;
+                font-family: monospace, 'Pretendard', sans-serif;
+                letter-spacing: 0.2px;
+            }}
+            .badge-bora {{
+                background: rgba(0, 229, 255, 0.12);
+                color: #00E5FF;
+                border: 1px solid rgba(0, 229, 255, 0.3);
+                font-size: 10px;
+                font-weight: 800;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header-bar">
+            <div class="header-left">
+                <span class="header-title">📊 기술본부 현장 업무 관제 센터</span>
+                <span class="header-tag">{page_tag}</span>
+            </div>
+            <div class="header-right">
+                <span>🟢 관제 시스템 정상 가동</span>
+                <span style="color: #48525B;">|</span>
+                <div class="clock-box">
+                    <span>🕒</span>
+                    <span id="live-bora-clock">로딩 중...</span>
+                    <span class="badge-bora" title="LGU+ time.bora.net NTP 타임서버 실시간 동기화">BORA·KST</span>
+                </div>
+            </div>
         </div>
-        <div style="font-size: 12px; color: #94A3B8; display: flex; align-items: center; gap: 12px;">
-            <span>🟢 관제 시스템 정상 가동</span>
-            <span style="color: #48525B;">|</span>
-            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                <span style="color: #94A3B8;">🕒</span>
-                <span id="live-bora-clock" style="color: #F1F5F9; font-weight: 700; font-family: monospace, 'Pretendard', sans-serif; letter-spacing: 0.2px;">{initial_kst_str}</span>
-                <span style="background: rgba(0, 229, 255, 0.12); color: #00E5FF; border: 1px solid rgba(0, 229, 255, 0.3); font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 4px;" title="LGU+ time.bora.net NTP 타임서버 동기화">BORA·KST</span>
-            </span>
-        </div>
-    </div><img src="data:image/svg+xml;utf8,<svg></svg>" style="display:none;" onload="(function(){{let s={initial_ms},c=performance.now();function t(){{let n=new Date(s+(performance.now()-c)),f=new Intl.DateTimeFormat('ko-KR',{{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}}),p={{}};f.formatToParts(n).forEach(x=>p[x.type]=x.value);let str=p.year+'-'+p.month+'-'+p.day+' '+p.hour+':'+p.minute+':'+p.second,d=window.parent.document||document,e=d.getElementById('live-bora-clock');if(e)e.innerText=str;}}if(window._bInt)clearInterval(window._bInt);window._bInt=setInterval(t,1000);t();}})();">
-    """, unsafe_allow_html=True)
+        <script>
+            let serverTime = {initial_ms};
+            let clientStart = performance.now();
+            function tickBoraClock() {{
+                let current = new Date(serverTime + (performance.now() - clientStart));
+                let formatter = new Intl.DateTimeFormat('ko-KR', {{
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }});
+                let parts = formatter.formatToParts(current);
+                let p = {{}};
+                parts.forEach(x => p[x.type] = x.value);
+                let el = document.getElementById('live-bora-clock');
+                if (el) {{
+                    el.innerText = p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ':' + p.second;
+                }}
+            }}
+            setInterval(tickBoraClock, 1000);
+            tickBoraClock();
+        </script>
+    </body>
+    </html>
+    """, height=56)
 
     # 1) 팀원 소속 및 직급 관리 페이지
     if curr_page == "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)":
