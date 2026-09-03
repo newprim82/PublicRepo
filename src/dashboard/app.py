@@ -2436,13 +2436,16 @@ def main():
             
         with kpi_col5:
             overdue_val = float(kpi.get('overdue_rate', 0))
-            overdue_color = "#FF5252" if overdue_val > 10 else "#00E676"
-            badge_cls = "badge-red" if overdue_val > 10 else "badge-green"
+            overdue_cnt = int(kpi.get('overdue_tasks_count', 0))
+            is_danger = (overdue_val > 0) or (overdue_cnt > 0)
+            overdue_color = "#FF5252" if is_danger else "#00E676"
+            badge_cls = "badge-red" if is_danger else "badge-green"
+            badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
             st.markdown(f"""
             <div class="kpi-card" style="border-top: 4px solid {overdue_color};">
                 <div class="kpi-title">⚠️ 예정 시간 초과율</div>
                 <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
-                <div class="kpi-badge {badge_cls}">🚨 초과 {kpi['overdue_tasks_count']}건 발생</div>
+                <div class="kpi-badge {badge_cls}">{badge_text}</div>
             </div>
             """, unsafe_allow_html=True)
             if st.button("🔍 초과 내역 팝업", key="btn_kpi_overdue", use_container_width=True):
