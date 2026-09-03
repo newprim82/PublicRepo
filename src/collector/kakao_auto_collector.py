@@ -362,12 +362,12 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
         
         try:
             log_trace(f"==================================================")
-            log_trace(f"🤖 [카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 정기'})] 대상: '{target_chat}'")
+            log_trace(f"🤖 [{now_str}] 카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 정기'}) 대상: '{target_chat}'")
             
             hwnd = find_kakao_chat_window(target_chat)
             if not hwnd:
                 msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않습니다."
-                log_trace(f"[-] {msg}")
+                log_trace(f"[-] [{now_str}] {msg}")
                 COLLECTOR_STATUS["last_status"] = "대화방 창 미열림"
                 COLLECTOR_STATUS["last_log_message"] = msg
                 return {"status": "window_not_found", "message": msg, "time": now_str}
@@ -375,7 +375,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             raw_text = extract_text_from_kakao_window(hwnd, is_manual=is_manual)
             if not raw_text or len(raw_text.strip()) == 0:
                 msg = "대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 클릭한 뒤 다시 시도해주세요."
-                log_trace(f"[-] {msg}")
+                log_trace(f"[-] [{now_str}] {msg}")
                 COLLECTOR_STATUS["last_status"] = "텍스트 추출 실패"
                 COLLECTOR_STATUS["last_log_message"] = msg
                 return {"status": "no_text", "message": msg, "time": now_str}
@@ -384,7 +384,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             records = WorkLogMatcher.parse_and_match_text(raw_text)
             if not records:
                 msg = "새로 등록/완료할 작업 보고 메시지가 없습니다."
-                log_trace(f"[✓] {msg}")
+                log_trace(f"[✓] [{now_str}] {msg}")
                 COLLECTOR_STATUS["last_status"] = "새 작업 없음"
                 COLLECTOR_STATUS["last_log_message"] = msg
                 return {"status": "no_records", "message": msg, "time": now_str}
@@ -397,7 +397,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             }
             COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
             
-            log_trace(f"[✓] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
+            log_trace(f"[✓] [{now_str}] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
             return {
                 "status": "success",
                 "total_records": len(records),
