@@ -1,8 +1,11 @@
 import os
 import smtplib
+import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+from email.utils import make_msgid, formatdate
+from email.header import Header
 from typing import List, Union, Tuple, Optional
 from datetime import datetime
 
@@ -65,11 +68,16 @@ class EmailSender:
                 selected_team=selected_team
             )
 
-            # 2. 이메일 메시지 조립
+            # 2. 이메일 메시지 조립 (기업 스팸 필터 통과를 위한 RFC 표준 헤더 완비)
             msg = MIMEMultipart("mixed")
-            msg["Subject"] = subject
-            msg["From"] = f"기술본부 업무관제 시스템 <{sender}>"
+            msg["Subject"] = Header(subject, "utf-8")
+            from_name_b64 = base64.b64encode("기술본부 업무관제 시스템".encode("utf-8")).decode("ascii")
+            msg["From"] = f"=?UTF-8?B?{from_name_b64}?= <{sender}>"
             msg["To"] = ", ".join(recipients)
+            msg["Date"] = formatdate(localtime=True)
+            msg["Message-ID"] = make_msgid(domain="gmail.com")
+            msg["Reply-To"] = sender
+            msg["X-Mailer"] = "WorkTime Dashboard Executive Reporter v2.0"
 
             # HTML 본문 추가
             msg_body = MIMEMultipart("alternative")
@@ -77,13 +85,14 @@ class EmailSender:
             msg_body.attach(html_part)
             msg.attach(msg_body)
 
-            # 엑셀 파일 첨부
+            # 엑셀 파일 첨부 (표준 인코딩 파일명)
             if excel_bytes:
                 excel_attachment = MIMEApplication(excel_bytes, _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                today_str = datetime.now().strftime("%Y%m%d")
                 excel_attachment.add_header(
                     "Content-Disposition",
                     "attachment",
-                    filename=f"주간_작업실적_요약_{datetime.now().strftime('%Y%m%d')}.xlsx"
+                    filename=f"Weekly_Report_{today_str}.xlsx"
                 )
                 msg.attach(excel_attachment)
 
