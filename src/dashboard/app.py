@@ -97,23 +97,53 @@ st.markdown("""
         font-display: swap;
     }
 
-    /* 1. 사이트 전체 기본 본문 -> 페이퍼로지 4 Regular (weight: 400) */
-    html, body, [class*="css"], .stApp, p, span, div, input, select, button, label, .stMarkdown, .stText, td, th {
+    /* 1. 사이트 전체 기본 본문 -> 페이퍼로지 4 Regular (아이콘 제외 텍스트 요소에만 적용) */
+    .stApp {
+        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-weight: 400;
+    }
+    .stApp p, 
+    .stApp input, 
+    .stApp select, 
+    .stApp textarea, 
+    .stApp button:not(:has(svg)):not([data-testid*="Icon"]), 
+    .stApp label, 
+    .stApp .stMarkdown, 
+    .stApp .stText, 
+    .stApp td, 
+    .stApp th {
         font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         font-weight: 400;
     }
 
-    /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> 페이퍼로지 8 ExtraBold (weight: 800) */
+    /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> 페이퍼로지 8 ExtraBold */
     h1, h2, h3, h4, h5, h6, 
     .kpi-value, 
     .kpi-title, 
     .main-title-text, 
-    summary, 
     .sidebar-section-header,
     .filter-badge b,
     .alert-blink-badge {
         font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         font-weight: 800 !important;
+    }
+
+    /* 3. 사이드바 expander summary 텍스트에 페이퍼로지 적용 */
+    [data-testid="stExpander"] summary {
+        font-family: 'Paperlogy', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-weight: 700;
+    }
+
+    /* 🚀 Streamlit 머티리얼 아이콘 폰트 (Material Symbols / Icons) 100% 온전하게 보존 */
+    span[translate="no"],
+    [data-testid*="Icon"],
+    [data-testid*="icon"],
+    [data-testid="stExpanderToggleIcon"],
+    .material-symbols-rounded,
+    .material-symbols-outlined,
+    .material-icons {
+        font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons", sans-serif !important;
+        font-weight: normal !important;
     }
 
     html {
