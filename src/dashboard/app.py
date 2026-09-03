@@ -2070,9 +2070,10 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             color: #0369a1 !important;
         }
 
-        /* 3. 다운로드 버튼 (Cisco ACI Deep Blue + 볼드 화이트 글자) */
+        /* 3. 다운로드 버튼 (Cisco ACI Deep Blue + 볼드 화이트 글자 상시 노출) */
         div[data-testid="stMain"] .stDownloadButton button,
         div[data-testid="stMain"] [data-testid="stDownloadButton"] button,
+        div[data-testid="stMain"] button[kind="primary"],
         div[data-testid="stMain"] button[data-testid="baseButton-secondary"]:has(p:contains("다운로드")),
         div[data-testid="stMain"] div.stDownloadButton > button {
             background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
@@ -2099,6 +2100,44 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         div[data-testid="stMain"] .stDownloadButton button:hover *,
         div[data-testid="stMain"] [data-testid="stDownloadButton"] button:hover * {
             color: #38bdf8 !important;
+        }
+
+        /* 4. 탭 바 가독성 (미선택 탭 텍스트 100% 진한 다크네이비, 활성 탭 딥블루+화이트) */
+        div[data-testid="stMain"] .stTabs [data-baseweb="tab-list"] {
+            gap: 10px !important;
+            background: #e2e8f0 !important;
+            padding: 6px 8px !important;
+            border-radius: 8px !important;
+            border: 1px solid #cbd5e1 !important;
+        }
+        div[data-testid="stMain"] .stTabs [data-baseweb="tab"] {
+            background-color: #ffffff !important;
+            border: 1.5px solid #94a3b8 !important;
+            border-radius: 6px !important;
+            padding: 7px 18px !important;
+        }
+        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) *,
+        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) p,
+        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) span,
+        div[data-testid="stMain"] .stTabs [data-baseweb="tab"]:not([aria-selected="true"]) div {
+            color: #0f172a !important;
+            font-weight: 800 !important;
+            font-size: 13.5px !important;
+            opacity: 1 !important;
+        }
+        div[data-testid="stMain"] .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
+            background-color: #005073 !important;
+            border: 1px solid #002233 !important;
+            box-shadow: 0 2px 6px rgba(0, 80, 115, 0.3) !important;
+        }
+        div[data-testid="stMain"] .stTabs [aria-selected="true"] *,
+        div[data-testid="stMain"] .stTabs [aria-selected="true"] p,
+        div[data-testid="stMain"] .stTabs [aria-selected="true"] span,
+        div[data-testid="stMain"] .stTabs [aria-selected="true"] div {
+            color: #ffffff !important;
+            font-weight: 900 !important;
+            font-size: 13.5px !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -2245,16 +2284,6 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             export_df["start_time"] = export_df["start_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
         if "end_time" in export_df.columns:
             export_df["end_time"] = export_df["end_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M") if pd.notna(x) else "")
-        csv_data = export_df.to_csv(index=False, encoding="utf-8-sig")
-
-        st.download_button(
-            label="📥 검색 결과 엑셀(CSV) 다운로드",
-            data=csv_data,
-            file_name=f"작업검색결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            key="dl_smart_search_csv"
-        )
-
         display_df = export_df.rename(columns={
             "worker_name": "작업자",
             "worker_team": "소속팀",
@@ -2272,6 +2301,26 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         })
         if "상태" in display_df.columns:
             display_df["상태"] = display_df["상태"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(display_df["상태"])
+        if "야간" in display_df.columns:
+            display_df["야간"] = display_df["야간"].apply(lambda x: "Y" if x else "")
+        if "주말" in display_df.columns:
+            display_df["주말"] = display_df["주말"].apply(lambda x: "Y" if x else "")
+
+        # 📊 엑셀(.xlsx) 파일 생성
+        import io
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+            display_df.to_excel(writer, index=False, sheet_name="작업검색결과")
+        excel_data = excel_buffer.getvalue()
+
+        st.download_button(
+            label="📥 검색 결과 엑셀(XLSX) 다운로드",
+            data=excel_data,
+            file_name=f"기술본부_작업검색결과_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key="dl_smart_search_xlsx"
+        )
+
         st.dataframe(display_df, use_container_width=True, height=450)
 
     with view_t2:
