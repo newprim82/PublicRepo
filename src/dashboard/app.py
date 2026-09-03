@@ -303,14 +303,16 @@ st.markdown("""
         box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.2);
     }
     .kpi-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: #94A3B8;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        letter-spacing: -0.2px;
+        font-size: 15.5px !important;
+        font-weight: 800 !important;
+        color: #F1F5F9 !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 12px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        letter-spacing: -0.3px !important;
     }
     .kpi-value {
         font-size: 30px;
