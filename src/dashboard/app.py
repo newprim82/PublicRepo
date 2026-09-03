@@ -2160,62 +2160,38 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             color: #38bdf8 !important;
         }
 
-        /* 4. 뷰 전환 세그먼트 버튼 (완벽한 카드형 버튼 배경색 및 고대비 가독성) */
-        div[data-testid="stRadio"] > div[role="radiogroup"],
-        div.stRadio > div[role="radiogroup"] {
-            display: flex !important;
-            gap: 12px !important;
-            background: transparent !important;
-            padding: 0 !important;
-            margin-top: 8px !important;
-            margin-bottom: 16px !important;
-        }
-        div[data-testid="stRadio"] label[data-baseweb="radio"],
-        div.stRadio label[data-baseweb="radio"] {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            background-color: #f1f5f9 !important;
-            background: #f1f5f9 !important;
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 8px !important;
-            padding: 9px 22px !important;
-            cursor: pointer !important;
-            transition: all 0.2s ease !important;
-            margin: 0 !important;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-        }
-        /* 라디오 동그라미 숨김 */
-        div[data-testid="stRadio"] label[data-baseweb="radio"] > div:first-child,
-        div.stRadio label[data-baseweb="radio"] > div:first-child {
-            display: none !important;
-        }
-        /* 미선택 버튼 텍스트: 선명한 다크네이비 */
-        div[data-testid="stRadio"] label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p,
-        div.stRadio label[data-baseweb="radio"] div[data-testid="stMarkdownContainer"] p {
-            color: #002d42 !important;
-            font-weight: 800 !important;
-            font-size: 14px !important;
-            margin: 0 !important;
-        }
-        div[data-testid="stRadio"] label[data-baseweb="radio"]:hover,
-        div.stRadio label[data-baseweb="radio"]:hover {
-            background-color: #e2e8f0 !important;
-            border-color: #94a3b8 !important;
-        }
-        /* 선택된 활성 버튼: Cisco ACI 딥블루 + 볼드 화이트 글자 */
-        div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked),
-        div.stRadio label[data-baseweb="radio"]:has(input:checked) {
+        /* 4. 뷰 전환 버튼 네비게이션 (확실한 배경색과 고대비 폰트 상시 보장) */
+        div[data-testid="column"]:has(.view-nav-active) button {
             background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
             background-color: #005073 !important;
+            color: #ffffff !important;
             border: 1.5px solid #002233 !important;
-            box-shadow: 0 3px 10px rgba(0, 80, 115, 0.3) !important;
+            border-radius: 8px !important;
+            padding: 9px 18px !important;
+            box-shadow: 0 3px 10px rgba(0, 80, 115, 0.35) !important;
         }
-        div[data-testid="stRadio"] label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p,
-        div.stRadio label[data-baseweb="radio"]:has(input:checked) div[data-testid="stMarkdownContainer"] p {
+        div[data-testid="column"]:has(.view-nav-active) button * {
             color: #ffffff !important;
             font-weight: 900 !important;
             font-size: 14px !important;
+        }
+        div[data-testid="column"]:has(.view-nav-inactive) button {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #002d42 !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 8px !important;
+            padding: 9px 18px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        }
+        div[data-testid="column"]:has(.view-nav-inactive) button * {
+            color: #002d42 !important;
+            font-weight: 800 !important;
+            font-size: 14px !important;
+        }
+        div[data-testid="column"]:has(.view-nav-inactive) button:hover {
+            background-color: #f1f5f9 !important;
+            border-color: #94a3b8 !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -2346,17 +2322,28 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         st.warning("🔍 설정하신 검색 조건에 부합하는 작업 내역이 없습니다. 다른 키워드나 조건으로 검색해 보세요.")
         return
 
-    # 4. 결과 표출 뷰 (확실한 배경색과 고대비 폰트를 보장하는 세그먼트 버튼)
-    view_mode = st.radio(
-        "결과 표출 방식 선택:",
-        options=["📋 인터랙티브 테이블 뷰", "🗂️ 카드 상세 리스트 뷰"],
-        index=0,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="smart_search_view_mode"
-    )
+    # 4. 결과 표출 뷰 (두 가지 뷰 모드 전환 버튼 - 확실한 배경색과 시인성 보장)
+    if "smart_search_view_mode" not in st.session_state:
+        st.session_state["smart_search_view_mode"] = "table"
 
-    if view_mode == "📋 인터랙티브 테이블 뷰":
+    cur_mode = st.session_state["smart_search_view_mode"]
+
+    v_col1, v_col2, _ = st.columns([1.6, 1.6, 3.8])
+    with v_col1:
+        is_active_1 = (cur_mode == "table")
+        st.markdown(f'<div class="{"view-nav-active" if is_active_1 else "view-nav-inactive"}" style="display:none;"></div>', unsafe_allow_html=True)
+        if st.button("📋 인터랙티브 테이블 뷰", key="btn_view_table", use_container_width=True):
+            st.session_state["smart_search_view_mode"] = "table"
+            st.rerun()
+
+    with v_col2:
+        is_active_2 = (cur_mode == "card")
+        st.markdown(f'<div class="{"view-nav-active" if is_active_2 else "view-nav-inactive"}" style="display:none;"></div>', unsafe_allow_html=True)
+        if st.button("🗂️ 카드 상세 리스트 뷰", key="btn_view_card", use_container_width=True):
+            st.session_state["smart_search_view_mode"] = "card"
+            st.rerun()
+
+    if cur_mode == "table":
         # 다운로드 버튼
         target_cols = [
             "id", "worker_name", "worker_team", "worker_title", "client_name", 
