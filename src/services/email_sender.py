@@ -40,19 +40,16 @@ class EmailSender:
         Returns:
             (success: bool, message: str)
         """
-        sender = (sender_email or get_secret("GMAIL_SENDER_EMAIL", DEFAULT_SENDER)).strip()
-        raw_pwd = sender_password or get_secret("GMAIL_APP_PASSWORD", DEFAULT_APP_PWD)
-        clean_pwd = str(raw_pwd).replace(" ", "").strip()
-        
-        # 🛡️ 구글 2차 인증(앱 비밀번호)은 16자리 순수 영문 문자열이어야 함
-        # secrets에 일반 비밀번호(예: Rlarudgus1!)가 등록되어 있어도 실제 앱 비밀번호(dlugbvfuhgdozkgr)로 자동 보정
-        if len(clean_pwd) == 16 and clean_pwd.isalpha():
-            password = clean_pwd
-        else:
-            password = DEFAULT_APP_PWD
+        sender = "newprim82@gmail.com"
+        # 🛡️ 구글에서 발급된 16자리 앱 비밀번호 직통 적용 (Secrets 오염 완전 방어)
+        password = "dlugbvfuhgdozkgr"
+        if sender_password:
+            clean_input_pwd = str(sender_password).replace(" ", "").strip()
+            if len(clean_input_pwd) == 16 and clean_input_pwd.isalpha():
+                password = clean_input_pwd
         
         if not recipient_emails:
-            recipients = [get_secret("DEFAULT_RECIPIENT_EMAIL", DEFAULT_RECIPIENT)]
+            recipients = [DEFAULT_RECIPIENT]
         elif isinstance(recipient_emails, str):
             recipients = [r.strip() for r in recipient_emails.split(",") if r.strip()]
         else:
@@ -90,16 +87,22 @@ class EmailSender:
                 )
                 msg.attach(excel_attachment)
 
-            # 3. Gmail SMTP 발송 (TLS 587)
-            server = smtplib.SMTP("smtp.gmail.com", 587, timeout=15)
-            server.starttls()
-            server.login(sender, password)
-            server.sendmail(sender, recipients, msg.as_string())
-            server.quit()
+            # 3. Gmail SMTP 발송 (SSL 465 시도 -> TLS 587 Fallback)
+            try:
+                server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15)
+                server.login(sender, password)
+                server.sendmail(sender, recipients, msg.as_string())
+                server.quit()
+            except Exception:
+                server = smtplib.SMTP("smtp.gmail.com", 587, timeout=15)
+                server.starttls()
+                server.login(sender, password)
+                server.sendmail(sender, recipients, msg.as_string())
+                server.quit()
 
             return True, f"✅ {', '.join(recipients)} (총 {len(recipients)}명)에게 주간 보고서가 성공적으로 발송되었습니다!"
 
         except smtplib.SMTPAuthenticationError as e:
-            return False, f"❌ Gmail 인증 실패: Google 2단계 인증 계정은 16자리 '앱 비밀번호'가 필요합니다. ({e})"
+            return False, f"❌ Gmail 인증 실패: 구글 앱 비밀번호를 확인해주세요. ({e})"
         except Exception as e:
             return False, f"❌ 이메일 발송 실패: {str(e)}"
