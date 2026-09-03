@@ -1234,6 +1234,25 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
             st.divider()
 
 
+def get_job_title_badge(title: str) -> str:
+    """직급별 고유 색상(수석=보라, 과장=블루, 대리=그린, 사원=앰버) 뱃지 HTML 생성"""
+    if not title:
+        return ""
+    t = str(title).strip()
+    if not t or t == "None":
+        return ""
+    if "수석" in t:
+        return f"<span style='background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:800; margin-left:4px;'>{t}</span>"
+    elif "과장" in t:
+        return f"<span style='background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:800; margin-left:4px;'>{t}</span>"
+    elif "대리" in t:
+        return f"<span style='background:#d1e7dd; color:#0f5132; border:1px solid #a3cfbb; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:800; margin-left:4px;'>{t}</span>"
+    elif "사원" in t:
+        return f"<span style='background:#fef3c7; color:#d97706; border:1px solid #fde68a; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:800; margin-left:4px;'>{t}</span>"
+    else:
+        return f"<span style='background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:1px 6px; border-radius:4px; font-size:11px; font-weight:800; margin-left:4px;'>{t}</span>"
+
+
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 실시간 관제 대시보드 컴포넌트"""
     kst_now = get_current_kst_time()
@@ -1296,7 +1315,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     with p_cols[idx % 4]:
                         w_name = r["worker_name"]
                         w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                        title_str = f"<span style='font-size: 12px; font-weight: 600; color: #64748b; margin-left: 3px;'>{w_title}</span>" if w_title else ""
+                        title_str = get_job_title_badge(w_title)
                         c_name = r["client_name"]
                         t_desc = r["task_description"]
                         st_dt = r["start_time"]
@@ -1357,7 +1376,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     with c_cols[idx % 4]:
                         w_name = r["worker_name"]
                         w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                        title_str = f"<span style='font-size: 12px; font-weight: 600; color: #64748b; margin-left: 3px;'>{w_title}</span>" if w_title else ""
+                        title_str = get_job_title_badge(w_title)
                         c_name = r["client_name"]
                         t_desc = r["task_description"]
                         st_dt = r["start_time"]
@@ -1408,7 +1427,7 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
             st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
             ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
 
-            title_badge = f"<span style='background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_title}</span>" if w_title else ""
+            title_badge = get_job_title_badge(w_title)
             team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>" if w_team else ""
             night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if r.get("is_night_work") else ""
             weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
@@ -1738,7 +1757,7 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
                 st_str = st_dt.strftime("%m/%d %H:%M") if pd.notna(st_dt) else "?"
                 ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
 
-                title_badge = f"<span style='background:#f1f5f9; color:#475569; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_title}</span>" if w_title else ""
+                title_badge = get_job_title_badge(w_title)
                 team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>{w_team}</span>"
                 night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🌙</span>" if r.get("is_night_work") else ""
                 weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 5px; border-radius:4px; font-size:11px; margin-left:3px;'>🏖️</span>" if r.get("is_weekend_work") else ""
