@@ -3677,14 +3677,38 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             danger_workers = danger_rows["worker_name"].unique()
             caution_workers = caution_rows["worker_name"].unique()
 
-            danger_names = sorted(list(danger_workers), key=lambda w: worker_hours.get(w, 0.0), reverse=True)
-            caution_names = sorted([w for w in caution_workers if w not in danger_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
+            # 헬퍼 함수: 주차 라벨에서 정렬 튜플 추출 (예: '2026-08 2주차' -> (2026, 8, 2))
+            def extract_week_sort_key(w_lbl: str):
+                import re
+                nums = [int(n) for n in re.findall(r'\d+', str(w_lbl))]
+                return nums if nums else [9999]
+
+            # 각 작업자별 가장 빠른 초과 발생 주차 정렬 키
+            def get_earliest_week_key(w, sub_df):
+                w_sub = sub_df[sub_df["worker_name"] == w]
+                if not w_sub.empty:
+                    keys = [extract_week_sort_key(wl) for wl in w_sub["week_label"]]
+                    return min(keys)
+                return [9999]
+
+            # 🌟 빠른 주차가 위로 오도록 정렬 (1순위: 가장 빠른 발생 주차 오름차순, 2순위: 총 투입시간 내림차순)
+            danger_names = sorted(
+                list(danger_workers),
+                key=lambda w: (get_earliest_week_key(w, danger_rows), -worker_hours.get(w, 0.0))
+            )
+            caution_names = sorted(
+                [w for w in caution_workers if w not in danger_names],
+                key=lambda w: (get_earliest_week_key(w, caution_rows), -worker_hours.get(w, 0.0))
+            )
 
             # 주차 정보 표기 여부 (월간 전체 종합이거나 대상 주차가 복수인 경우)
             show_week_info = (not is_weekly_view) or (df_active["week_label"].nunique() > 1)
 
             for w in danger_names:
-                sub_d = danger_rows[danger_rows["worker_name"] == w].sort_values(by="actual_hours", ascending=False)
+                # 괄호 안 주차 목록도 빠른 주차 순으로 정렬!
+                sub_d = danger_rows[danger_rows["worker_name"] == w].copy()
+                sub_d["_w_sort"] = sub_d["week_label"].apply(extract_week_sort_key)
+                sub_d = sub_d.sort_values(by="_w_sort", ascending=True)
                 if show_week_info:
                     wk_infos = [f"{format_week_short(r['week_label'])}: {r['actual_hours']:.1f}h" for _, r in sub_d.iterrows()]
                     danger_detail_map[w] = f"{w}({', '.join(wk_infos)})"
@@ -3692,7 +3716,10 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                     danger_detail_map[w] = f"{w}({worker_hours.get(w, 0.0):.1f}h)"
 
             for w in caution_names:
-                sub_c = caution_rows[caution_rows["worker_name"] == w].sort_values(by="actual_hours", ascending=False)
+                # 괄호 안 주차 목록도 빠른 주차 순으로 정렬!
+                sub_c = caution_rows[caution_rows["worker_name"] == w].copy()
+                sub_c["_w_sort"] = sub_c["week_label"].apply(extract_week_sort_key)
+                sub_c = sub_c.sort_values(by="_w_sort", ascending=True)
                 if show_week_info:
                     wk_infos = [f"{format_week_short(r['week_label'])}: {r['actual_hours']:.1f}h" for _, r in sub_c.iterrows()]
                     caution_detail_map[w] = f"{w}({', '.join(wk_infos)})"
@@ -3881,9 +3908,17 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     caution_str_list = [caution_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in caution_names]
     safe_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in safe_names]
 
-    danger_text = ', '.join(danger_str_list) if danger_str_list else '초과 인원 없음 (안전)'
-    caution_text = ', '.join(caution_str_list) if caution_str_list else '주의 대상자 없음 (안전)'
-    safe_text = ', '.join(safe_str_list) if safe_str_list else '해당 인원 없음'
+    def format_card_lines(str_list: list, empty_msg: str) -> str:
+        if not str_list:
+            return empty_msg
+        return "".join([f"<div style='margin-top: 4px; line-height: 1.6;'>{item}</div>" for item in str_list])
+
+    danger_text = format_card_lines(danger_str_list, '초과 인원 없음 (안전)')
+    caution_text = format_card_lines(caution_str_list, '주의 대상자 없음 (안전)')
+    if len(safe_str_list) <= 5:
+        safe_text = format_card_lines(safe_str_list, '해당 인원 없음')
+    else:
+        safe_text = ', '.join(safe_str_list) if safe_str_list else '해당 인원 없음'
 
     st.markdown(f"""
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; margin-top: 4px;">
