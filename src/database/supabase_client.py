@@ -81,7 +81,7 @@ class DatabaseManager:
         if self.use_supabase and self.supabase:
             try:
                 self.supabase.table("worktime_work_logs").delete().neq("id", 0).execute()
-                print("[DB] ☁️ Supabase work_logs 데이터 전체 삭제 완료")
+                print("[DB] [Cloud] Supabase work_logs 데이터 전체 삭제 완료")
             except Exception as e:
                 print(f"[DB 오류] Supabase 데이터 삭제 실패: {e}")
                 success = False
@@ -92,7 +92,7 @@ class DatabaseManager:
             cursor.execute("DELETE FROM work_logs")
             conn.commit()
             conn.close()
-            print("[DB] 💾 로컬 SQLite 데이터 전체 삭제 완료")
+            print("[DB] [Local] 로컬 SQLite 데이터 전체 삭제 완료")
         except Exception as e:
             print(f"[DB 오류] 로컬 SQLite 데이터 삭제 실패: {e}")
             success = False
@@ -168,7 +168,7 @@ class DatabaseManager:
                 for i in range(0, len(payloads), 100):
                     batch = payloads[i:i+100]
                     self.supabase.table("worktime_work_logs").upsert(batch, on_conflict="msg_hash").execute()
-                print(f"[DB] ☁️ Supabase에 {len(records)}건 Upsert 완료")
+                print(f"[DB] [Cloud] Supabase에 {len(records)}건 Upsert 완료")
             except Exception as e:
                 print(f"[DB 오류] Supabase 저장 실패 (로컬 DB 백업 유지): {e}")
 

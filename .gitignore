@@ -20,3 +20,5 @@ data/*.db
 
 # Backup files
 backup/
+data/.session_cache.json
+*.cache
