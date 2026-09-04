@@ -10,3 +10,10 @@ gatherUsageStats = false
 
 [logger]
 level = "error"
+
+[theme]
+base = "light"
+primaryColor = "#005073"
+backgroundColor = "#f4f6f9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#0f172a"

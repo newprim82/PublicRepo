@@ -895,6 +895,84 @@ st.markdown("""
         color: #0f172a !important;
     }
 
+    /* 📻 본문(Main) 라디오 버튼 프리미엄 칩 & 선명한 텍스트 스타일 (시인성 100% 보장) */
+    div[data-testid="stMain"] div[data-testid="stRadio"] > label,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] > label {
+        color: #002d42 !important;
+        font-size: 13.5px !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stRadio"] > label p,
+    div[data-testid="stMain"] div[data-testid="stRadio"] > label span,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] > label p,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] > label span {
+        color: #002d42 !important;
+        font-size: 13.5px !important;
+        font-weight: 800 !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"],
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 6px 12px !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        box-shadow: 0 2px 5px rgba(0, 45, 66, 0.04) !important;
+        margin-bottom: 8px !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label {
+        background: #f8fafc !important;
+        border: 1.2px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 5px 12px !important;
+        margin: 0 !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:hover,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+        background: #e2e8f0 !important;
+        border-color: #0284c7 !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label p,
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label span,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label p,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label span {
+        color: #002d42 !important;
+        font-size: 13px !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
+        background: #005073 !important;
+        border-color: #002d42 !important;
+    }
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p,
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span,
+    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) span,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) span {
+        color: #ffffff !important;
+        font-weight: 900 !important;
+    }
+
+    /* 💡 본문 캡션 및 안내 문구 가독성 */
+    div[data-testid="stMain"] [data-testid="stCaptionContainer"],
+    div[data-testid="stMain"] [data-testid="stCaptionContainer"] p,
+    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) [data-testid="stCaptionContainer"] p {
+        color: #334155 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -4584,7 +4662,10 @@ def main():
             else:
                 display_summary = worker_summary.copy()
 
-            st.caption("💡 **그래프의 막대(세그먼트)를 클릭**하시면, **[왼쪽 그래프: 개인 전체 작업 내역]**, **[오른쪽 그래프: 평일 주간/야간/주말별 상세 내역 및 카카오톡 원본]** 팝업이 바로 열립니다.")
+            st.markdown("""<div style="background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-left: 4.5px solid #0284c7; border-radius: 6px; padding: 9px 15px; margin: 6px 0 16px 0; font-size: 13px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+<span>💡</span>
+<span><b>그래프의 막대(세그먼트)를 클릭</b>하시면, <b>[왼쪽 그래프: 개인 전체 작업 내역]</b>, <b>[오른쪽 그래프: 평일 주간/야간/주말별 상세 내역 및 카카오톡 원본]</b> 팝업이 바로 열립니다.</span>
+</div>""", unsafe_allow_html=True)
             
             chart_height = max(450, len(display_summary) * 28)
             col_t1_left, col_t1_right = st.columns(2)
