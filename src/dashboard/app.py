@@ -5315,34 +5315,60 @@ def main():
                 key="chart_trend_daily_bar"
             )
 
-            # 🖱️ 클릭 이벤트 감지 및 세부 작업 내역 모달 팝업 연동
-            # 1. 주차별 막대 클릭 시: 해당 주차 전체 작업 지원 내역 모달 팝업
-            if event_weekly and hasattr(event_weekly, "selection") and event_weekly.selection.points:
-                pt_w = event_weekly.selection.points[0]
-                target_wk = None
-                if "customdata" in pt_w and pt_w["customdata"]:
-                    cdata = pt_w["customdata"]
-                    target_wk = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-                elif "x" in pt_w:
-                    target_wk = pt_w["x"]
-                if target_wk:
-                    target_df = df[df["week_label"] == target_wk]
-                    if not target_df.empty:
-                        show_week_summary_dialog(target_wk, target_df)
+            # 🖱️ 클릭 이벤트 감지 및 세부 작업 내역 모달 팝업 연동 (단일 다이얼로그 상호 배타적 실행 보장)
+            curr_wk_pt = event_weekly.selection.points[0] if (event_weekly and hasattr(event_weekly, "selection") and event_weekly.selection.points) else None
+            curr_day_pt = event_daily.selection.points[0] if (event_daily and hasattr(event_daily, "selection") and event_daily.selection.points) else None
 
-            # 2. 일자별 막대 클릭 시: 해당 일자 전체 작업 지원 내역 모달 팝업
-            if event_daily and hasattr(event_daily, "selection") and event_daily.selection.points:
-                pt_d = event_daily.selection.points[0]
-                target_dt = None
-                if "customdata" in pt_d and pt_d["customdata"]:
-                    cdata = pt_d["customdata"]
-                    target_dt = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-                elif "x" in pt_d:
-                    target_dt = pt_d["x"]
-                if target_dt:
-                    target_df = df[df["date_str"] == target_dt]
+            last_wk_id = st.session_state.get("last_selected_trend_week")
+            last_day_id = st.session_state.get("last_selected_trend_day")
+
+            wk_target = None
+            if curr_wk_pt:
+                if "customdata" in curr_wk_pt and curr_wk_pt["customdata"]:
+                    cdata = curr_wk_pt["customdata"]
+                    wk_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+                elif "x" in curr_wk_pt:
+                    wk_target = curr_wk_pt["x"]
+
+            day_target = None
+            if curr_day_pt:
+                if "customdata" in curr_day_pt and curr_day_pt["customdata"]:
+                    cdata = curr_day_pt["customdata"]
+                    day_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+                elif "x" in curr_day_pt:
+                    day_target = curr_day_pt["x"]
+
+            # 변경 감지
+            wk_changed = (wk_target is not None) and (wk_target != last_wk_id)
+            day_changed = (day_target is not None) and (day_target != last_day_id)
+
+            dialog_to_open = None
+            if day_changed:
+                # 일자 막대가 새로 클릭됨
+                st.session_state["last_selected_trend_day"] = day_target
+                st.session_state["last_selected_trend_week"] = None
+                dialog_to_open = ("day", day_target)
+            elif wk_changed:
+                # 주차 막대가 새로 클릭됨
+                st.session_state["last_selected_trend_week"] = wk_target
+                st.session_state["last_selected_trend_day"] = None
+                dialog_to_open = ("week", wk_target)
+            elif day_target and not wk_target:
+                dialog_to_open = ("day", day_target)
+            elif wk_target and not day_target:
+                dialog_to_open = ("week", wk_target)
+
+            # 🛡️ 1회 실행 주기당 정확히 1개의 다이얼로그만 단독 호출 (다이얼로그 중복 오픈 에러 방지)
+            if dialog_to_open:
+                dtype, dval = dialog_to_open
+                if dtype == "week" and dval:
+                    target_df = df[df["week_label"] == dval]
                     if not target_df.empty:
-                        show_calendar_day_dialog(target_dt, target_df)
+                        show_week_summary_dialog(dval, target_df)
+                elif dtype == "day" and dval:
+                    target_df = df[df["date_str"] == dval]
+                    if not target_df.empty:
+                        show_calendar_day_dialog(dval, target_df)
 
     # ------------------------------------------
     # PAGE: 고객사별 공수 분포
