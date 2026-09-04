@@ -3796,37 +3796,40 @@ def main():
             title_map = TeamService.get_title_mappings()
             df["worker_title"] = df["worker_name"].map(title_map).fillna(df.get("worker_title", ""))
             
-            if selected_months:
-                df = df[df["month_str"].isin(selected_months)]
-            else:
-                df = df.iloc[0:0]
-
+            # 🚀 월 필터 적용 전 베이스셋 (팀, 담당자, 고객사, 작업구분, 직급, 야간/주말 필터 적용)
+            df_filtered_base = df.copy()
             if selected_team != "전체 팀":
-                df = df[df["worker_name"].isin(team_available_workers)]
+                df_filtered_base = df_filtered_base[df_filtered_base["worker_name"].isin(team_available_workers)]
 
             if selected_workers:
-                df = df[df["worker_name"].isin(selected_workers)]
+                df_filtered_base = df_filtered_base[df_filtered_base["worker_name"].isin(selected_workers)]
             else:
-                df = df.iloc[0:0]
+                df_filtered_base = df_filtered_base.iloc[0:0]
 
             if selected_clients:
-                df = df[df["client_name"].isin(selected_clients)]
+                df_filtered_base = df_filtered_base[df_filtered_base["client_name"].isin(selected_clients)]
             else:
-                df = df.iloc[0:0]
+                df_filtered_base = df_filtered_base.iloc[0:0]
 
             if selected_types:
-                df = df[df["log_type"].isin(selected_types)]
+                df_filtered_base = df_filtered_base[df_filtered_base["log_type"].isin(selected_types)]
             else:
-                df = df.iloc[0:0]
+                df_filtered_base = df_filtered_base.iloc[0:0]
 
             # 직급 필터링 적용
             if title_mode != "전체 직급":
-                df = df[df["worker_title"].isin(selected_titles)]
+                df_filtered_base = df_filtered_base[df_filtered_base["worker_title"].isin(selected_titles)]
 
             if night_only:
-                df = df[df["is_night_work"] == True]
+                df_filtered_base = df_filtered_base[df_filtered_base["is_night_work"] == True]
             if weekend_only:
-                df = df[df["is_weekend_work"] == True]
+                df_filtered_base = df_filtered_base[df_filtered_base["is_weekend_work"] == True]
+
+            # 최종 선택된 월 필터링
+            if selected_months:
+                df = df_filtered_base[df_filtered_base["month_str"].isin(selected_months)]
+            else:
+                df = df_filtered_base.iloc[0:0]
 
 
         # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
@@ -5086,22 +5089,59 @@ def main():
     # ------------------------------------------
     elif curr_page == "📈 월별/일별 추이":
         st.subheader("📈 월별 / 주별 / 일별 지원 시간 추이 및 시계열 분석")
-        monthly_trend = StatsService.get_monthly_trend(df)
+        
+        # 🌟 월별 총 지원 시간 변동 추이: 선택된 조회 월 기준 지난 2달 포함 (총 최근 3개월 비교)
+        ref_month = selected_months[0] if selected_months else (available_months[0] if available_months else "")
+        target_months = []
+        if ref_month:
+            try:
+                ref_dt = pd.to_datetime(ref_month + "-01")
+                m0 = ref_dt.strftime("%Y-%m")
+                m1 = (ref_dt - pd.DateOffset(months=1)).strftime("%Y-%m")
+                m2 = (ref_dt - pd.DateOffset(months=2)).strftime("%Y-%m")
+                target_months = [m2, m1, m0]
+            except Exception:
+                target_months = [ref_month]
+
+        if target_months and "df_filtered_base" in locals():
+            df_trend_3m = df_filtered_base[df_filtered_base["month_str"].isin(target_months)]
+        else:
+            df_trend_3m = df.copy()
+
+        monthly_trend = StatsService.get_monthly_trend(df_trend_3m)
+        if target_months and not monthly_trend.empty:
+            base_months_df = pd.DataFrame({"month_str": target_months})
+            monthly_trend = pd.merge(base_months_df, monthly_trend, on="month_str", how="left").fillna({
+                "total_hours": 0.0, "total_tasks": 0, "night_tasks": 0, "worker_count": 0
+            })
+            monthly_trend = monthly_trend.sort_values(by="month_str")
         
         if not df.empty:
             col_t3_1, col_t3_2 = st.columns(2)
             with col_t3_1:
                 if not monthly_trend.empty:
+                    range_label = f"{target_months[0]} ~ {target_months[-1]}" if len(target_months) >= 3 else ""
                     fig_monthly = px.line(
                         monthly_trend,
                         x="month_str",
                         y="total_hours",
                         markers=True,
+                        text="total_hours",
                         labels={"month_str": "월", "total_hours": "총 지원 시간(h)"},
-                        title="월별 총 지원 시간(h) 변동 추이"
+                        title=f"월별 총 지원 시간(h) 변동 추이 (지난 2달 포함 3개월 비교: {range_label})"
                     )
-                    fig_monthly.update_traces(line_color="#1E88E5", line_width=3)
-                    fig_monthly.update_layout(height=350)
+                    fig_monthly.update_traces(
+                        line_color="#0284c7",
+                        line_width=3,
+                        texttemplate='%{text}h',
+                        textposition='top center',
+                        marker=dict(size=9, color="#005073", line=dict(width=2, color="#ffffff"))
+                    )
+                    fig_monthly.update_layout(
+                        height=350,
+                        margin=dict(l=40, r=40, t=50, b=40),
+                        xaxis=dict(type='category', title="조회 월")
+                    )
                     st.plotly_chart(fig_monthly, use_container_width=True)
                 
             with col_t3_2:
