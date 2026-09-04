@@ -3015,40 +3015,40 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     st.divider()
 
     # =========================================================================
-    # 5. 🏢 고객사 포트폴리오 파레토 분석 & 주요 집계표
+    # 3. 🏢 전체 고객사 포트폴리오 파레토 분석 & 주요 집계표
     # =========================================================================
-    st.markdown("#### 🏢 3. 주요 고객사별 공수 투입 Top 10 및 파레토 분석")
+    st.markdown("#### 🏢 3. 전체 고객사별 공수 투입 및 파레토 분석")
     
-    # 상위 10개 고객사 파레토 차트 렌더링
-    top10_clients = client_agg.head(10).reset_index()
-    top10_clients.columns = ["client_name", "actual_hours"]
-    top10_clients["cum_pct"] = (top10_clients["actual_hours"].cumsum() / tot_hours) * 100 if tot_hours > 0 else 0
+    # 전체 고객사 파레토 차트 렌더링
+    all_clients = client_agg.reset_index()
+    all_clients.columns = ["client_name", "actual_hours"]
+    all_clients["cum_pct"] = (all_clients["actual_hours"].cumsum() / tot_hours) * 100 if tot_hours > 0 else 0
 
     fig_pareto = go.Figure()
     fig_pareto.add_trace(go.Bar(
-        x=top10_clients["client_name"],
-        y=top10_clients["actual_hours"],
+        x=all_clients["client_name"],
+        y=all_clients["actual_hours"],
         name="투입 공수(h)",
         marker=dict(color="#005073", line=dict(color="#002d42", width=1)),
-        text=[f"{h:.1f}h" for h in top10_clients["actual_hours"]],
+        text=[f"{h:.1f}h" for h in all_clients["actual_hours"]],
         textposition="auto"
     ))
     fig_pareto.add_trace(go.Scatter(
-        x=top10_clients["client_name"],
-        y=top10_clients["cum_pct"],
+        x=all_clients["client_name"],
+        y=all_clients["cum_pct"],
         name="누적 점유율(%)",
         yaxis="y2",
         mode="lines+markers+text",
         line=dict(color="#ea580c", width=2.5),
         marker=dict(size=7, color="#ea580c"),
-        text=[f"{p:.1f}%" for p in top10_clients["cum_pct"]],
+        text=[f"{p:.1f}%" for p in all_clients["cum_pct"]],
         textposition="top center"
     ))
     fig_pareto.update_layout(
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
         font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42", size=12),
-        height=350,
+        height=360,
         margin=dict(l=20, r=20, t=35, b=30),
         legend=dict(
             orientation="h",
@@ -3084,19 +3084,19 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     st.plotly_chart(fig_pareto, use_container_width=True)
 
     # 💡 고객사 공수 집중도 핵심 인사이트 동적 산출 (그래프 바로 아래 / 표 바로 위 배치)
-    cum_80_idx = len(top10_clients)
-    for idx, pct in enumerate(top10_clients["cum_pct"]):
+    cum_80_idx = len(all_clients)
+    for idx, pct in enumerate(all_clients["cum_pct"]):
         if pct >= 80.0:
             cum_80_idx = idx + 1
             break
 
     if cum_80_idx <= 3:
-        top_pareto_names = ", ".join(top10_clients.iloc[:cum_80_idx]["client_name"].tolist())
+        top_pareto_names = ", ".join(all_clients.iloc[:cum_80_idx]["client_name"].tolist())
     else:
-        top_3_names = ", ".join(top10_clients.iloc[:3]["client_name"].tolist())
+        top_3_names = ", ".join(all_clients.iloc[:3]["client_name"].tolist())
         top_pareto_names = f"{top_3_names} 외 {cum_80_idx - 3}개사"
 
-    top_pareto_pct = top10_clients.iloc[cum_80_idx - 1]["cum_pct"] if not top10_clients.empty else 0.0
+    top_pareto_pct = all_clients.iloc[cum_80_idx - 1]["cum_pct"] if not all_clients.empty else 0.0
 
     pareto_insight_html = f"""
     <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-left: 5px solid #16a34a; border-radius: 8px; padding: 13px 18px; margin-top: 6px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
@@ -3124,15 +3124,15 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         """
         st.markdown(warning_html, unsafe_allow_html=True)
 
-    client_top10_rows = []
-    for c_rank, (c_name, c_h) in enumerate(client_agg.head(10).items(), 1):
+    client_table_rows = []
+    for c_rank, (c_name, c_h) in enumerate(client_agg.items(), 1):
         sub_c_df = df_active[df_active["client_name"] == c_name]
         c_w_cnt = sub_c_df["worker_name"].nunique()
         c_cnt = len(sub_c_df)
         c_share = round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
         main_tasks = ", ".join(sub_c_df["task_description"].dropna().unique()[:2])
 
-        client_top10_rows.append({
+        client_table_rows.append({
             "순위": f"{c_rank}위",
             "고객사명": c_name,
             "투입 인원": f"{c_w_cnt}명",
@@ -3142,16 +3142,48 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             "주요 지원 작업": main_tasks
         })
 
-    if client_top10_rows:
-        st.dataframe(pd.DataFrame(client_top10_rows), use_container_width=True, hide_index=True)
+    if client_table_rows:
+        st.dataframe(pd.DataFrame(client_table_rows), use_container_width=True, hide_index=True)
 
     st.write("")
     st.divider()
 
     # =========================================================================
-    # 6. 📈 주차별 공수 변동 추이 & 부서별 종합 집계표
+    # 4. 👥 전체 팀원별 공수 투입 현황 (구 5번에서 위치 이동 & 전체 팀원 표출)
     # =========================================================================
-    st.markdown("#### 📈 4. 주차별 공수 변동 추이 & 부서별 종합 집계표")
+    st.markdown("#### 👥 4. 전체 팀원별 공수 투입 현황")
+    if not df_active.empty:
+        worker_agg = df_active.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False)
+        all_worker_rows = []
+        for rank, (w_name, w_hours) in enumerate(worker_agg.items(), 1):
+            w_sub = df_active[df_active["worker_name"] == w_name]
+            w_team = w_sub["worker_team"].iloc[0] if "worker_team" in w_sub.columns and pd.notna(w_sub["worker_team"].iloc[0]) else team_mappings.get(w_name, UNASSIGNED_TEAM)
+            w_title = w_sub["worker_title"].iloc[0] if "worker_title" in w_sub.columns and pd.notna(w_sub["worker_title"].iloc[0]) else ""
+            w_cnt = len(w_sub)
+            
+            # 주요 고객사 Top 2
+            top_c = w_sub.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(2)
+            top_c_str = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in top_c.items()]) if not top_c.empty else "-"
+            
+            all_worker_rows.append({
+                "순위": f"{rank}위",
+                "팀원명": w_name,
+                "소속팀": w_team,
+                "직급": w_title,
+                "작업 건수": f"{w_cnt:,}건",
+                "총 투입공수": f"{round(w_hours, 1)}h",
+                "주요 지원 고객사": top_c_str
+            })
+        if all_worker_rows:
+            st.dataframe(pd.DataFrame(all_worker_rows), use_container_width=True, hide_index=True)
+
+    st.write("")
+    st.divider()
+
+    # =========================================================================
+    # 5. 📈 주차별 공수 변동 추이 & 부서별 종합 집계표 (구 4번에서 위치 이동)
+    # =========================================================================
+    st.markdown("#### 📈 5. 주차별 공수 변동 추이 & 부서별 종합 집계표")
 
     df_teams = df_active.copy()
     if "worker_team" in df_teams.columns:
@@ -3223,38 +3255,6 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     if team_table_rows:
         st.dataframe(pd.DataFrame(team_table_rows), use_container_width=True, hide_index=True)
-
-    st.write("")
-    st.divider()
-
-    # =========================================================================
-    # 7. 👥 핵심 기여 팀원 Top 5
-    # =========================================================================
-    st.markdown("#### 👥 5. 최다 공수 투입 핵심 팀원 Top 5")
-    if not df_active.empty:
-        worker_agg = df_active.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False).head(5)
-        top5_rows = []
-        for rank, (w_name, w_hours) in enumerate(worker_agg.items(), 1):
-            w_sub = df_active[df_active["worker_name"] == w_name]
-            w_team = w_sub["worker_team"].iloc[0] if "worker_team" in w_sub.columns and pd.notna(w_sub["worker_team"].iloc[0]) else team_mappings.get(w_name, UNASSIGNED_TEAM)
-            w_title = w_sub["worker_title"].iloc[0] if "worker_title" in w_sub.columns and pd.notna(w_sub["worker_title"].iloc[0]) else ""
-            w_cnt = len(w_sub)
-            
-            # 주요 고객사 Top 2
-            top_c = w_sub.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(2)
-            top_c_str = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in top_c.items()]) if not top_c.empty else "-"
-            
-            top5_rows.append({
-                "순위": f"{rank}위",
-                "팀원명": w_name,
-                "소속팀": w_team,
-                "직급": w_title,
-                "작업 건수": f"{w_cnt:,}건",
-                "총 투입공수": f"{round(w_hours, 1)}h",
-                "주요 지원 고객사": top_c_str
-            })
-        if top5_rows:
-            st.dataframe(pd.DataFrame(top5_rows), use_container_width=True, hide_index=True)
 
 
 
