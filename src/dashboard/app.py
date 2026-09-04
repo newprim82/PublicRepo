@@ -272,7 +272,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* 🏛️ Cisco ACI 스타일 필터 배지 */
+    /* 🏛️ Cisco ACI 스타일 필터 배지 및 고시인성 실시간 집계 기준 정보 패널 */
     .filter-badge {
         background-color: #e0f2fe !important;
         color: #0369a1 !important;
@@ -284,6 +284,109 @@ st.markdown("""
         margin-bottom: 18px !important;
         border: 1px solid #bae6fd !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    }
+
+    .active-criteria-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-left: 5px solid #005073 !important;
+        border-radius: 10px !important;
+        padding: 10px 16px !important;
+        margin-top: 4px !important;
+        margin-bottom: 18px !important;
+        box-shadow: 0 2px 8px rgba(0, 45, 66, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+    }
+    .criteria-left {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        flex: 1;
+    }
+    .criteria-header {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #002d42 0%, #004d71 100%) !important;
+        color: #ffffff !important;
+        padding: 5px 11px !important;
+        border-radius: 6px !important;
+        font-weight: 800 !important;
+        font-size: 12.5px !important;
+        letter-spacing: -0.2px;
+        white-space: nowrap;
+        box-shadow: 0 1px 3px rgba(0, 45, 66, 0.2) !important;
+    }
+    .criteria-chips-wrapper {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .criteria-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 11px;
+        border-radius: 6px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+    .criteria-chip .chip-label {
+        color: #64748b;
+        font-size: 11.5px;
+        font-weight: 600;
+    }
+    .criteria-chip .chip-value {
+        font-weight: 800;
+        font-size: 13px;
+    }
+    .chip-period {
+        background: #eff6ff !important;
+        border: 1px solid #bfdbfe !important;
+    }
+    .chip-period .chip-value { color: #1d4ed8 !important; }
+    
+    .chip-team {
+        background: #f0fdf4 !important;
+        border: 1px solid #bbf7d0 !important;
+    }
+    .chip-team .chip-value { color: #15803d !important; }
+    
+    .chip-worker {
+        background: #faf5ff !important;
+        border: 1px solid #e9d5ff !important;
+    }
+    .chip-worker .chip-value { color: #7e22ce !important; }
+
+    .chip-extra {
+        background: #fffbeb !important;
+        border: 1px solid #fde68a !important;
+    }
+    .chip-extra .chip-value { color: #b45309 !important; }
+
+    .criteria-count-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f8fafc !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 5px 13px !important;
+        font-size: 12.5px !important;
+        color: #475569 !important;
+        font-weight: 700 !important;
+        white-space: nowrap;
+    }
+    .criteria-count-badge b {
+        color: #005073 !important;
+        font-size: 14.5px !important;
+        font-weight: 800 !important;
     }
 
     /* 🏛️ Cisco ACI 탭 바 완벽 카드형 배경 및 가독성 보장 */
@@ -4547,11 +4650,54 @@ def main():
     # 메인 캔버스 뷰 전환 라우터 (Cisco Catalyst Center 방식)
     # ==========================================
     if curr_page == "🏠 실시간 분석 대시보드":
-        # 메인 상단 집계 기준 배너 (가로 전체 너비로 시원하게 렌더링)
-        st.markdown(
-            f'<div class="filter-badge">📌 현재 집계 기준: <b>기간 [{month_desc}]</b> | <b>소속 [{selected_team}]</b> | <b>사용자 [{worker_desc}]</b>{title_badge_str} (총 {len(df)}건 일치)</div>',
-            unsafe_allow_html=True
-        )
+        # 🎯 추가 상세 필터 활성 칩 구성
+        extra_chips = []
+        if title_mode != "전체 직급" and selected_titles:
+            extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">👔 직급:</span><span class="chip-value">{", ".join(selected_titles)}</span></div>')
+        if client_mode != "전체 고객사" and selected_clients:
+            c_txt = selected_clients[0] if len(selected_clients) == 1 else f"{selected_clients[0]} 외 {len(selected_clients)-1}사"
+            extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">🏢 고객사:</span><span class="chip-value">{c_txt}</span></div>')
+        if type_mode != "전체 구분" and selected_types:
+            t_txt = selected_types[0] if len(selected_types) == 1 else f"{selected_types[0]} 외 {len(selected_types)-1}개"
+            extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">🏷️ 구분:</span><span class="chip-value">{t_txt}</span></div>')
+        if night_only:
+            extra_chips.append('<div class="criteria-chip chip-extra"><span class="chip-label">🌙</span><span class="chip-value">야간 전용</span></div>')
+        if weekend_only:
+            extra_chips.append('<div class="criteria-chip chip-extra"><span class="chip-label">🏖️</span><span class="chip-value">주말 전용</span></div>')
+
+        extra_chips_str = "".join(extra_chips)
+
+        # 🏛️ 메인 상단 고시인성 실시간 집계 기준 정보 패널 (5대 KPI 카드 상단)
+        criteria_panel_html = f"""
+        <div class="active-criteria-container">
+            <div class="criteria-left">
+                <div class="criteria-header">
+                    <span>🔍</span>
+                    <span>현재 집계 기준</span>
+                </div>
+                <div class="criteria-chips-wrapper">
+                    <div class="criteria-chip chip-period">
+                        <span class="chip-label">📅 대상 기간:</span>
+                        <span class="chip-value">{month_desc}</span>
+                    </div>
+                    <div class="criteria-chip chip-team">
+                        <span class="chip-label">🏢 소속 팀:</span>
+                        <span class="chip-value">{selected_team}</span>
+                    </div>
+                    <div class="criteria-chip chip-worker">
+                        <span class="chip-label">👤 담당 팀원:</span>
+                        <span class="chip-value">{worker_desc}</span>
+                    </div>
+                    {extra_chips_str}
+                </div>
+            </div>
+            <div class="criteria-count-badge">
+                <span style="color: #22c55e; font-size: 11px;">●</span>
+                <span>총 <b>{len(df):,}건</b> 집계 중</span>
+            </div>
+        </div>
+        """
+        st.markdown(criteria_panel_html, unsafe_allow_html=True)
 
         # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링)
         kpi = StatsService.compute_kpis(df)
