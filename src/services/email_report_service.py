@@ -6,6 +6,7 @@ from typing import Dict, Any, Tuple, Optional
 from ..database.supabase_client import DatabaseManager
 from ..services.team_service import TeamService, UNASSIGNED_TEAM
 from ..services.client_normalizer import normalize_client_name
+from ..services.ai_briefing_service import FactExtractor, AIBriefingService
 
 KST = timezone(timedelta(hours=9))
 
@@ -174,6 +175,11 @@ class EmailReportService:
 
         danger_badge = f"<span style='color: #dc2626; font-weight: bold;'>🚨 52h 초과({len(danger_names)}명: {', '.join(danger_names)})</span>" if danger_names else "<span style='color: #16a34a; font-weight: bold;'>🟢 52h 초과 없음 (안전)</span>"
 
+        # 🌟 다차원 팩트 추출(2번) + AI 브리핑(1번) 연동
+        facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_week)
+        ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=True)
+        briefing_source = ai_briefing.get("source", "📊 다차원 팩트 분석 엔진")
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -229,11 +235,14 @@ class EmailReportService:
                             </tr>
                         </table>
 
-                        <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 10px;">📝 2. AI 주간 운영 인사이트 브리핑</div>
+                        <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 10px; display: flex; justify-content: space-between;">
+                            <span>📝 2. AI 주간 운영 인사이트 브리핑</span>
+                            <span style="font-size: 11px; color: #0284c7; font-weight: bold;">[{briefing_source}]</span>
+                        </div>
                         <div style="background: #f8fafc; border: 1.5px solid #005f8a; border-left: 5px solid #005073; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; font-size: 13px; line-height: 1.7; color: #1e293b;">
-                            <div style="margin-bottom: 8px;">📌 <b>실적 총괄</b>: 총 <b>{tot_workers}명</b>의 엔지니어가 <b>{tot_clients}개사</b> 대상 <b>{tot_cnt:,}건</b>의 작업을 완료하여 총 <b>{tot_hours:,}시간</b>을 투입했습니다. (주요 고객사: {top_clients_summary})</div>
-                            <div style="margin-bottom: 8px;">⚠️ <b>운영 건전성</b>: {danger_badge} | 비정규 근무 비중은 <b>야간 {night_pct}% ({night_hours}h)</b>, <b>주말 {wknd_pct}% ({wknd_hours}h)</b>입니다.</div>
-                            <div>💡 <b>전략 제언</b>: 상위 3개사 집중도가 <b>{top3_share}%</b> 수준이므로, 특정 고객사 전담 인력의 피로도 관리 및 교차 지원 편성을 권장합니다.</div>
+                            <div style="margin-bottom: 8px;">📌 <b>핵심 변화 & 집중 요인</b>: {ai_briefing.get('overview', '')}</div>
+                            <div style="margin-bottom: 8px;">⚠️ <b>현장 리스크 & 지연 진단</b>: {ai_briefing.get('risks', '')}</div>
+                            <div>💡 <b>차기 운영 전략 & 액션 플랜</b>: {ai_briefing.get('recommendations', '')}</div>
                         </div>
 
                         <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 10px;">⚖️ 3. 법정 근로시간 거버넌스 진단</div>

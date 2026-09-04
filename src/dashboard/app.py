@@ -2480,7 +2480,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         except Exception:
             available_weeks = sorted(raw_weeks)
 
-    period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks] if len(available_weeks) > 1 else ["📅 월간 전체 종합"]
+    period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks]
     
     st.markdown("""
     <style>
@@ -2540,7 +2540,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     </style>
     """, unsafe_allow_html=True)
 
-    if len(period_options) > 1:
+    if available_weeks:
         sel_period = st.radio(
             "📅 **보고서 조회 주기 선택 (월간 / 주간 드릴다운)**",
             options=period_options,
@@ -2733,6 +2733,22 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     risk_status_html = "<span style='color:#16a34a; font-weight:800;'>🟢 법정 근로시간 안정 (주 52시간 초과 인원 없음)</span>" if danger_cnt == 0 else f"<span style='color:#dc2626; font-weight:800;'>🚨 주 52시간 초과 주의 ({danger_cnt}명: {', '.join(danger_names)})</span>"
 
+    # ----------------------------------------------------
+    # 🌟 다차원 팩트 추출(2번) + AI 심층 분석(1번) 결합 브리핑 생성
+    # ----------------------------------------------------
+    from src.services.ai_briefing_service import FactExtractor, AIBriefingService
+
+    facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_period_label)
+
+    b_col1, b_col2 = st.columns([4.2, 0.8])
+    with b_col2:
+        re_analyze = st.button("🔄 AI 재분석", key="btn_refresh_ai_briefing", help="최신 작업 데이터를 기반으로 다차원 이상치 및 AI 브리핑을 실시간 재산출합니다.")
+
+    with st.spinner("✨ 다차원 작업 패턴 분석 및 경영진 브리핑 생성 중..."):
+        ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze)
+
+    briefing_source_tag = ai_briefing.get("source", "📊 다차원 팩트 분석 엔진")
+
     briefing_html = f"""
     <div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 6px solid #005073; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0, 45, 66, 0.06);">
         <div style="font-size: 16px; font-weight: 800; color: #002d42; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
@@ -2740,17 +2756,19 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                 <span>📑 [경영진 핵심 요약 브리핑 & 액션 아이템]</span>
                 <span style="font-size: 12px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 700;">조회 기준: {current_period_label}</span>
             </div>
-            <div style="font-size: 12px; color: #64748b; font-weight: 600;">실시간 자동 분석 브리핑</div>
+            <div style="font-size: 12px; color: #005073; background: #f0fdf4; border: 1px solid #86efac; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
+                {briefing_source_tag}
+            </div>
         </div>
         <div style="font-size: 13.5px; color: #1e293b; line-height: 1.85;">
-            <div style="margin-bottom: 8px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #0284c7;">
-                📌 <b>핵심 실적 총괄</b>: 총 <b>{tot_workers}명</b>의 인원이 <b>{tot_clients}개사</b>를 대상으로 <b>{tot_cnt:,}건</b>의 작업을 수행하여 <b>총 {tot_hours:,}시간</b>의 현장 지원 공수를 투입했습니다. 주요 집중 고객사 Top 3는 {top_clients_str} 순입니다.
+            <div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #0284c7;">
+                📌 <b>핵심 변화 & 집중 요인</b>: {ai_briefing.get('overview', '')}
             </div>
-            <div style="margin-bottom: 8px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #f59e0b;">
-                ⚠️ <b>운영 건전성 진단</b>: {risk_status_html} | 비정규 근무 비중은 <b>야간 {night_pct}% ({tot_night_hours}h)</b>, <b>주말 {wknd_pct}% ({tot_wknd_hours}h)</b>로 집계되었습니다.
+            <div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #f59e0b;">
+                ⚠️ <b>현장 리스크 & 지연 진단</b>: {ai_briefing.get('risks', '')}
             </div>
-            <div style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #10b981;">
-                💡 <b>전략적 리소스 제언</b>: 상위 3개 고객사 공수 점유율이 <b>{top3_share}%</b>로 집중되어 있으므로, 차기 계획 시 집중 고객사 전담 엔지니어 피로도 관리 및 인력 교차 지원(Cross-Support) 편성을 권장합니다.
+            <div style="background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #10b981;">
+                💡 <b>차기 운영 전략 & 액션 플랜</b>: {ai_briefing.get('recommendations', '')}
             </div>
         </div>
     </div>
