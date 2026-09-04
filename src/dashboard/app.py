@@ -860,6 +860,28 @@ st.markdown("""
         pointer-events: none !important;
     }
 
+    /* ⚡ 팝업 모달 다이얼로그(@st.dialog) 및 배경(Backdrop) 페이드/트랜지션 애니메이션 완전 제거 (즉시 표출) */
+    div[data-baseweb="backdrop"],
+    div[data-testid="stDialog"],
+    div[data-testid="stDialog"] > div,
+    div[role="dialog"],
+    div[role="dialog"] > div,
+    div[data-baseweb="modal"],
+    div[data-baseweb="modal"] > div {
+        transition: none !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+        animation: none !important;
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transform: none !important;
+    }
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    section.main {
+        transition: none !important;
+    }
+
     /* 🏛️ 팝업 모달 다이얼로그 (@st.dialog) 제목 및 닫기 버튼 흰색 스타일링 */
     div[data-testid="stDialog"] h1,
     div[data-testid="stDialog"] h2,
@@ -1110,6 +1132,22 @@ def inject_dialog_title_style():
     div[data-testid="stDialog"] button[aria-label="Close"],
     div[role="dialog"] button[aria-label="Close"] {
         color: #ffffff !important;
+    }
+    /* ⚡ 모달 팝업 및 뒷배경 페이드 애니메이션 완전 제거 */
+    div[data-baseweb="backdrop"],
+    div[data-testid="stDialog"],
+    div[data-testid="stDialog"] > div,
+    div[role="dialog"],
+    div[role="dialog"] > div,
+    div[data-baseweb="modal"],
+    div[data-baseweb="modal"] > div {
+        transition: none !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+        animation: none !important;
+        animation-duration: 0s !important;
+        animation-delay: 0s !important;
+        transform: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
