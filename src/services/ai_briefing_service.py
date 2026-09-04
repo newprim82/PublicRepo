@@ -148,7 +148,13 @@ class AIBriefingService:
     @classmethod
     def generate_briefing(cls, facts: Dict[str, Any], force_refresh: bool = False) -> Dict[str, str]:
         cache_key = f"ai_briefing_{facts.get('period_label', '')}_{facts.get('selected_team', '')}"
-        if not force_refresh and st is not None:
+        if force_refresh and st is not None:
+            try:
+                if cache_key in st.session_state:
+                    del st.session_state[cache_key]
+            except Exception:
+                pass
+        elif not force_refresh and st is not None:
             try:
                 if cache_key in st.session_state:
                     return st.session_state[cache_key]
@@ -156,6 +162,13 @@ class AIBriefingService:
                 pass
 
         api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not api_key:
+            try:
+                from ..config import config
+                api_key = config.GEMINI_API_KEY
+            except Exception:
+                pass
+
         if not api_key and st is not None:
             try:
                 if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
@@ -203,7 +216,7 @@ class AIBriefingService:
                 payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {
-                        "temperature": 0.2,
+                        "temperature": 0.7,
                         "response_mime_type": "application/json"
                     }
                 }
