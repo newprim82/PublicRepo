@@ -2617,7 +2617,7 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         key="dl_smart_search_xlsx"
     )
 
-    st.dataframe(display_df, use_container_width=True, height=520, hide_index=True)
+    st.dataframe(display_df, use_container_width=True, height=520)
 
 
 @st.dialog("📧 주간 Executive Summary 메일 발송", width="medium")
