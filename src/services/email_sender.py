@@ -42,7 +42,8 @@ class EmailSender:
         current_period_label_override: Optional[str] = None,
         available_weeks_override: Optional[List[str]] = None,
         df_scope_override: Optional[Any] = None,
-        team_mappings_override: Optional[dict] = None
+        team_mappings_override: Optional[dict] = None,
+        **kwargs
     ) -> Tuple[bool, str]:
         """
         Gmail SMTP를 통해 주간/월간 Executive Summary 보고서를 발송합니다.
@@ -70,8 +71,13 @@ class EmailSender:
             return False, "수신자 이메일 주소가 지정되지 않았습니다."
 
         try:
-            # 1. 보고서 HTML 및 엑셀 생성
-            subject, html_content, excel_bytes = EmailReportService.generate_weekly_report(
+            # 1. 최신 리포트 모듈 동적 리로드 (Streamlit 캐시 방어)
+            import importlib
+            import src.services.email_report_service as ers_mod
+            importlib.reload(ers_mod)
+            ActiveReportService = ers_mod.EmailReportService
+
+            subject, html_content, excel_bytes = ActiveReportService.generate_weekly_report(
                 target_week_label=target_week_label,
                 selected_team=selected_team,
                 df_active_override=df_active_override,
@@ -80,7 +86,8 @@ class EmailSender:
                 current_period_label_override=current_period_label_override,
                 available_weeks_override=available_weeks_override,
                 df_scope_override=df_scope_override,
-                team_mappings_override=team_mappings_override
+                team_mappings_override=team_mappings_override,
+                **kwargs
             )
 
             # 2. 이메일 메시지 조립 (기업 스팸 필터 통과를 위한 RFC 표준 헤더 완비)

@@ -22,7 +22,8 @@ class EmailReportService:
         current_period_label_override: Optional[str] = None,
         available_weeks_override: Optional[List[str]] = None,
         df_scope_override: Optional[pd.DataFrame] = None,
-        team_mappings_override: Optional[dict] = None
+        team_mappings_override: Optional[dict] = None,
+        **kwargs
     ) -> Tuple[str, str, bytes]:
         """
         대시보드의 '📊 Summary' 페이지와 100% 동일한 내용의

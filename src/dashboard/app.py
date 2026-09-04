@@ -3534,6 +3534,8 @@ def show_email_report_dialog(selected_team: str):
     if st.button("🚀 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
         with st.spinner("📧 서머리 보고서 생성 및 이메일 전송 중..."):
             import importlib
+            import src.services.email_report_service as ers_module
+            importlib.reload(ers_module)
             import src.services.email_sender as es_module
             importlib.reload(es_module)
             success, send_msg = es_module.EmailSender.send_weekly_report(
