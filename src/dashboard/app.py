@@ -2092,13 +2092,36 @@ def get_team_theme(team_name: str) -> dict:
 
 @st.fragment(run_every="60s")
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
-    # 1분 주기 자동 실행 시 최신 DB(카카오톡 수집 데이터) 동기화 시도
+    # 팀명 공백 무관 안전 비교 헬퍼 (예: "기술1팀" == "기술 1팀")
+    def is_same_team(t1, t2):
+        return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
+
+    # 1분 주기 자동 실행 시 최신 DB(카카오톡 수집 데이터) 동기화 시도 및 팀 매핑 보장
     try:
         latest_df = db_manager.fetch_all_work_logs()
         if latest_df is not None and not latest_df.empty:
+            if "start_time" in latest_df.columns:
+                latest_df["start_time"] = pd.to_datetime(latest_df["start_time"], errors="coerce")
+            if "end_time" in latest_df.columns:
+                latest_df["end_time"] = pd.to_datetime(latest_df["end_time"], errors="coerce")
+            if "estimated_minutes" in latest_df.columns and "estimated_hours" not in latest_df.columns:
+                latest_df["estimated_hours"] = (latest_df["estimated_minutes"] / 60.0).round(1)
+            if "actual_minutes" in latest_df.columns and "actual_hours" not in latest_df.columns:
+                latest_df["actual_hours"] = (latest_df["actual_minutes"] / 60.0).round(1)
+            if team_mappings:
+                latest_df["worker_team"] = latest_df["worker_name"].map(team_mappings).fillna(latest_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+            title_mappings = TeamService.get_title_mappings()
+            if title_mappings:
+                latest_df["worker_title"] = latest_df["worker_name"].map(title_mappings).fillna(latest_df.get("worker_title", ""))
             df_raw = latest_df
     except Exception:
         pass
+
+    # 전달된 df_raw의 worker_team 매핑 안전 보장
+    if team_mappings and "worker_name" in df_raw.columns:
+        df_raw = df_raw.copy()
+        df_raw["worker_team"] = df_raw["worker_name"].map(team_mappings).fillna(df_raw.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+
     kst_now = get_current_kst_time()
     today_date = kst_now.date()
     kst_now_naive = kst_now.replace(tzinfo=None)
@@ -2112,7 +2135,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 
     # 팀 필터링 적용
     if selected_team != "전체 팀":
-        today_df = today_df[today_df["worker_team"] == selected_team]
+        today_df = today_df[today_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
     # 2. 진행 중(PENDING) vs 오늘 완료(COMPLETED) 분리
     pend_df = today_df[today_df["status"] == "PENDING"].sort_values("start_time", ascending=False)
@@ -2146,7 +2169,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
                 teams_to_render = list(base_teams)
                 for extra_t in pend_df["worker_team"].unique():
-                    if extra_t and extra_t not in teams_to_render:
+                    if extra_t and not any(is_same_team(extra_t, bt) for bt in teams_to_render):
                         teams_to_render.append(extra_t)
 
                 title_mappings = TeamService.get_title_mappings()
@@ -2155,7 +2178,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 for c_idx, t_name in enumerate(teams_to_render):
                     with team_cols[c_idx]:
                         theme = get_team_theme(t_name)
-                        t_pend = pend_df[pend_df["worker_team"] == t_name]
+                        t_pend = pend_df[pend_df["worker_team"].apply(lambda t: is_same_team(t, t_name))]
                         cnt_str = f"🟢 {len(t_pend)}건 진행" if len(t_pend) > 0 else "0건"
                         cnt_bg = "#d1e7dd" if len(t_pend) > 0 else "#f1f5f9"
                         cnt_color = "#0f5132" if len(t_pend) > 0 else "#64748b"
@@ -2201,7 +2224,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
                 teams_to_render_comp = list(base_teams)
                 for extra_t in comp_df["worker_team"].unique():
-                    if extra_t and extra_t not in teams_to_render_comp:
+                    if extra_t and not any(is_same_team(extra_t, bt) for bt in teams_to_render_comp):
                         teams_to_render_comp.append(extra_t)
 
                 title_mappings = TeamService.get_title_mappings()
@@ -2210,7 +2233,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 for c_idx, t_name in enumerate(teams_to_render_comp):
                     with comp_cols[c_idx]:
                         theme = get_team_theme(t_name)
-                        t_comp = comp_df[comp_df["worker_team"] == t_name]
+                        t_comp = comp_df[comp_df["worker_team"].apply(lambda t: is_same_team(t, t_name))]
                         cnt_str = f"✅ {len(t_comp)}건 완료" if len(t_comp) > 0 else "0건"
                         cnt_bg = "#ede9fe" if len(t_comp) > 0 else "#f1f5f9"
                         cnt_color = "#5b21b6" if len(t_comp) > 0 else "#64748b"
