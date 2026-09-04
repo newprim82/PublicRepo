@@ -1267,7 +1267,10 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         st.warning(f"[{target_worker}] 님의 작업 데이터가 없습니다.")
         return
 
-    # 주차 목록 (시간 많은 순 정렬)
+    # 주차 목록 (시간 많은 순 정렬 - 40h/52h 초과 판단은 교육 제외 실근로시간 기준)
+    worker_df_work = worker_df[~worker_df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in worker_df.columns else worker_df
+    wk_work_hours = worker_df_work.groupby("week_label")["actual_hours"].sum().to_dict()
+
     wk_agg = worker_df.groupby("week_label")["actual_hours"].agg(["sum", "count"]).reset_index()
     wk_agg = wk_agg.sort_values(by="sum", ascending=False)
 
@@ -1279,7 +1282,8 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         lbl = r["week_label"]
         s = round(r["sum"], 1)
         c = int(r["count"])
-        alert_icon = " 🚨 (주 52h 초과)" if s >= 52.0 else (" ⚠️ (주 40h 초과)" if s >= 40.0 else "")
+        work_s = round(wk_work_hours.get(lbl, 0.0), 1)
+        alert_icon = " 🚨 (주 52h 초과)" if work_s >= 52.0 else (" ⚠️ (주 40h 초과)" if work_s >= 40.0 else "")
         disp = f"{lbl} ➔ 총 {s}시간 ({c}건){alert_icon}"
         wk_options.append(disp)
         wk_map[disp] = lbl
@@ -1308,15 +1312,25 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         weekend_tasks = int(detail["is_weekend_work"].sum()) if "is_weekend_work" in detail.columns else 0
         clients = list(detail["client_name"].unique())
 
-        # 지표 카드 (주 52시간 기준 산정)
+        # 교육 제외 근로시간 산정 (주 40h / 52h 법정 기준 산정용)
+        detail_work = detail[~detail["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in detail.columns else detail
+        tot_work_h = round(detail_work["actual_hours"].sum(), 1)
+        edu_h = round(tot_h - tot_work_h, 1)
+
+        # 지표 카드 (주 52시간 기준 산정 - 교육 제외 실근로시간 기준)
         m1, m2, m3, m4 = st.columns(4)
         with m1:
+            metric_label = "해당 주차 실 근로시간 (교육제외)" if edu_h > 0 else "해당 주차 총 투입 시간"
+            delta_msg = f"{round(tot_work_h - 52.0, 1)}h 초과!" if tot_work_h >= 52.0 else "주 52h 이내 정상"
             st.metric(
-                "해당 주차 총 투입 시간",
-                f"{tot_h}시간",
-                delta=f"{round(tot_h - 52.0, 1)}h 초과!" if tot_h >= 52.0 else "주 52h 이내 정상",
-                delta_color="inverse" if tot_h >= 52.0 else "normal"
+                metric_label,
+                f"{tot_work_h}시간",
+                delta=delta_msg,
+                delta_color="inverse" if tot_work_h >= 52.0 else "normal",
+                help=f"총 투입: {tot_h}h (교육 {edu_h}h 제외됨)" if edu_h > 0 else "교육 제외 실근로시간 기준"
             )
+            if edu_h > 0:
+                st.caption(f"💡 총 {tot_h}h 중 교육 {edu_h}h 제외됨")
         with m2:
             st.metric("총 작업 건수", f"{tot_cnt}건")
         with m3:
@@ -1341,17 +1355,17 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
                     st.toast("보상 휴가 기록이 삭제되었습니다.", icon="🗑️")
                     st.rerun()
         else:
-            if tot_h >= 52.0:
-                st.warning(f"🚨 **주 52시간 초과 근무 {round(tot_h - 52.0, 1)}시간 발생** (미보상 상태). 아래에서 보상 휴가를 등록하시면 표의 색상이 **초록색**으로 전환됩니다.")
-            elif tot_h >= 40.0:
-                st.info(f"⚠️ 주 40시간 초과({tot_h}시간) 주차입니다. 필요 시 보상 휴가를 등록하시면 표에 반영됩니다.")
+            if tot_work_h >= 52.0:
+                st.warning(f"🚨 **주 52시간 초과 근무 {round(tot_work_h - 52.0, 1)}시간 발생** (교육 제외 {tot_work_h}h, 미보상 상태). 아래에서 보상 휴가를 등록하시면 표의 색상이 **초록색**으로 전환됩니다.")
+            elif tot_work_h >= 40.0:
+                st.info(f"⚠️ 주 40시간 초과(교육 제외 {tot_work_h}시간) 주차입니다. 필요 시 보상 휴가를 등록하시면 표에 반영됩니다.")
             else:
                 st.info("💡 해당 주차는 주 52시간 이내 정상이지만, 필요 시 특별 보상 휴가를 등록할 수 있습니다.")
 
             with st.form(f"form_reward_leave_{target_worker}_{target_wk}"):
                 col_hrs, col_note = st.columns([1, 2])
                 with col_hrs:
-                    default_leave_hrs = 8.0 if tot_h >= 52.0 else 4.0
+                    default_leave_hrs = 8.0 if tot_work_h >= 52.0 else 4.0
                     input_leave_hrs = st.number_input("보상 시간(h):", value=default_leave_hrs, step=0.5, min_value=0.5)
                 with col_note:
                     input_leave_note = st.text_input("보상 내용 및 휴가 메모:", value="대체 휴무 1일 부여 완료" if default_leave_hrs >= 8.0 else "반차 부여 완료")
@@ -3167,7 +3181,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     if "worker_name" in df_active.columns and not df_active.empty:
         all_active_workers = list(df_active["worker_name"].dropna().unique())
         if "week_label" in df_active.columns:
-            wk_agg = df_active.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
+            # 주 40h/52h 초과 산정 시 [교육] 구분은 법정 근로시간 합산에서 제외
+            df_active_work = df_active[~df_active["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in df_active.columns else df_active
+            wk_agg = df_active_work.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
             danger_rows = wk_agg[wk_agg["actual_hours"] > 52]
             caution_rows = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]
 
@@ -4763,8 +4779,9 @@ def main():
             caution_items = []
             rewarded_items = []
             
-            # 주차별/팀원별 집계
-            wk_user_agg = df.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
+            # 주차별/팀원별 집계 (주 40시간 / 52시간 과중 근무 감지 시 [교육] 구분은 법정 시간에서 제외)
+            df_for_overwork = df[~df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in df.columns else df
+            wk_user_agg = df_for_overwork.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
             for _, r in wk_user_agg.iterrows():
                 w_name = r["worker_name"]
                 w_lbl = r["week_label"]
@@ -5234,10 +5251,12 @@ def main():
             st.markdown("---")
             st.markdown('<div id="weekly-monitor-section" style="scroll-margin-top: 60px;"></div>', unsafe_allow_html=True)
             st.markdown(f"##### 📆 {month_desc} - 주차(Week)별 팀원 투입 시간 현황 & 휴식 조율 모니터링")
-            st.caption("선택된 월의 **각 주차별 투입 시간(h)**을 한눈에 비교하여, 한 주에 너무 많이 일한 팀원을 파악하고 다음 주 휴식을 조율할 수 있습니다.")
+            st.caption("선택된 월의 **각 주차별 투입 시간(h)**을 한눈에 비교하여, 한 주에 너무 많이 일한 팀원을 파악하고 다음 주 휴식을 조율할 수 있습니다. (💡 주 40h/52h 법정 기준에 따라 구분이 **[교육]**인 시간은 합산에서 제외됩니다.)")
 
             if not df.empty and "week_label" in df.columns:
-                pivot_df = df.pivot_table(
+                # 40시간 / 52시간 과중 업무 모니터링은 [교육] 구분 제외 기준으로 집계
+                df_for_pivot = df[~df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in df.columns else df
+                pivot_df = df_for_pivot.pivot_table(
                     index=["worker_name", "worker_team"],
                     columns="week_label",
                     values="actual_hours",
