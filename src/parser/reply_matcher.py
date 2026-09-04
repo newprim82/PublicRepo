@@ -217,25 +217,65 @@ class WorkLogMatcher:
                             raw_end_message=ts.raw_message
                         ))
                     else:
-                        # ★ 핵심: 동일 작업자/고객사/작업내용으로 48시간 이내 중복 시작 보고가 이미 대기 중인 경우 ★
-                        # 새로운 시작 보고를 별도로 만들지 않고, 최초 시작 보고(Pending)의 그룹 ID와 시각을 유지!
+                        # 1. 동일 작업자의 기존 대기 중인 시작 보고 확인
                         duplicate_target = None
+                        prev_different_starts = []
                         for existing in pending_starts:
-                            if (existing.worker_name == ts.worker_name and
-                                existing.client_name == ts.client_name and
-                                existing.task_description == ts.task_description and
-                                (ts.timestamp - existing.timestamp).total_seconds() <= 48 * 3600):
-                                duplicate_target = existing
-                                break
+                            if existing.worker_name == ts.worker_name:
+                                is_same_task = (
+                                    existing.client_name == ts.client_name and
+                                    existing.task_description == ts.task_description
+                                )
+                                if is_same_task and (ts.timestamp - existing.timestamp).total_seconds() <= 48 * 3600:
+                                    duplicate_target = existing
+                                    break
+                                else:
+                                    # ★ 사용자 지정 규칙: 동일 작업자가 완료보고 없이 다른 새 작업을 시작하면
+                                    # 첫 번째 시작 보고의 예정 시간대로 완료 처리!
+                                    prev_different_starts.append(existing)
                                 
                         if duplicate_target:
-                            # 기존 시작 보고의 group_id를 그대로 상속하여 완료 보고 매칭 시 최초 시작일시(7/27 07:17)로 귀속되도록 함
+                            # 기존 시작 보고의 group_id를 그대로 상속하여 완료 보고 매칭 시 최초 시작일시로 귀속되도록 함
                             ts.task_group_id = duplicate_target.task_group_id
                             ts.timestamp = duplicate_target.timestamp
-                            # 기존 것을 최신 메시지로 교체(시작시각은 7/27 최초 시각 유지)
                             pending_starts.remove(duplicate_target)
                             pending_starts.append(ts)
                         else:
+                            # 이전 미완료 작업들을 예정시간 기준으로 자동 완료 전환
+                            for prev in prev_different_starts:
+                                pending_starts.remove(prev)
+                                auto_actual = prev.estimated_minutes if prev.estimated_minutes > 0 else 60
+                                auto_end_time = prev.timestamp + timedelta(minutes=auto_actual)
+                                
+                                msg_hash = generate_msg_hash(
+                                    prev.worker_name,
+                                    prev.client_name,
+                                    prev.timestamp,
+                                    prev.task_description
+                                )
+                                is_night = check_is_night_work(prev.timestamp, auto_end_time, prev.raw_message, prev.estimated_minutes, auto_actual)
+                                is_weekend = check_is_weekend_work(prev.timestamp, auto_end_time, prev.raw_message, prev.estimated_minutes, auto_actual)
+                                
+                                matched_records.append(WorkLogRecord(
+                                    msg_hash=msg_hash,
+                                    log_type=prev.log_type,
+                                    worker_name=prev.worker_name,
+                                    worker_company=prev.worker_info.company,
+                                    worker_title=prev.worker_info.title,
+                                    worker_team=prev.worker_info.team,
+                                    client_name=prev.client_name,
+                                    task_description=prev.task_description,
+                                    estimated_minutes=prev.estimated_minutes,
+                                    actual_minutes=auto_actual,
+                                    start_time=prev.timestamp,
+                                    end_time=auto_end_time,
+                                    status="COMPLETED",
+                                    is_night_work=is_night,
+                                    is_weekend_work=is_weekend,
+                                    raw_start_message=prev.raw_message,
+                                    raw_end_message="[자동완료] 다음 시작 보고 수신으로 이전 작업 예정시간 기준 완료 처리"
+                                ))
+                            
                             pending_starts.append(ts)
                 continue
                 
