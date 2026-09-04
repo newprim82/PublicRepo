@@ -1989,53 +1989,76 @@ def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
 
 @st.dialog("📅 일자별 세부 작업 내역", width="large")
 def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
-    """캘린더 날짜 클릭 시 열리는 상세 작업 내역 모달 팝업"""
+    """일자 클릭 시 열리는 상세 작업 내역 원장 모달 팝업"""
     inject_dialog_title_style()
-    st.subheader(f"📅 {date_title} 작업 상세 목록 (총 {len(day_df)}건)")
-
     if day_df.empty:
         st.info("해당 일자에 등록된 작업 내역이 없습니다.")
         return
 
     tot_h = round(day_df["actual_hours"].sum(), 1)
+    tot_tasks = len(day_df)
     tot_w = day_df["worker_name"].nunique()
     tot_c = day_df["client_name"].nunique()
     comp_cnt = int((day_df["status"] == "COMPLETED").sum())
     pend_cnt = int((day_df["status"] == "PENDING").sum())
 
-    # 상단 요약 미니 배너
-    st.markdown(f"""<div style="display: flex; gap: 10px; margin-bottom: 16px; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 10px 14px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><span style="color: #005073; font-weight: 700;">⏱️ 총 공수: <b>{tot_h}h</b></span><span style="color: #cbd5e1;">|</span><span style="color: #4f46e5; font-weight: 700;">👥 투입 인원: <b>{tot_w}명</b></span><span style="color: #cbd5e1;">|</span><span style="color: #d97706; font-weight: 700;">🏢 고객사: <b>{tot_c}개사</b></span><span style="color: #cbd5e1;">|</span><span style="color: #0f5132; font-weight: 700;">✅ 완료 {comp_cnt}건 / ⏳ 진행 {pend_cnt}건</span></div>""", unsafe_allow_html=True)
+    st.markdown(f"### 📅 **{date_title}** 세부 작업 원장")
+    # 상단 요약 배너
+    st.markdown(
+        f"""<div style="display: flex; gap: 10px; margin-bottom: 16px; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 10px 14px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+<span style="color: #005073; font-weight: 700;">⏱️ 총 공수: <b>{tot_h}h</b> ({tot_tasks}건)</span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #4f46e5; font-weight: 700;">👥 투입 인원: <b>{tot_w}명</b></span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #d97706; font-weight: 700;">🏢 고객사: <b>{tot_c}개사</b></span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #0f5132; font-weight: 700;">✅ 완료 {comp_cnt}건 / ⏳ 진행 {pend_cnt}건</span>
+</div>""",
+        unsafe_allow_html=True
+    )
 
-    # 2열 상세 카드 그리드
-    day_df_sorted = day_df.sort_values("start_time")
-    c_cols = st.columns(2)
-    for idx, (_, r) in enumerate(day_df_sorted.iterrows()):
-        with c_cols[idx % 2]:
-            w_name = r["worker_name"]
-            w_team = r.get("worker_team") or ""
-            w_title = r.get("worker_title") or ""
-            c_name = r["client_name"]
-            t_desc = r["task_description"]
-            st_dt = r["start_time"]
-            ed_dt = r["end_time"]
-            act_h = r["actual_hours"]
-            est_h = r.get("estimated_hours") or 0
-            status = r["status"]
+    sorted_df = day_df.sort_values(by="start_time", ascending=True).reset_index(drop=True)
+    disp_sorted_df = strip_tz(sorted_df.copy())
+    if "end_time" not in disp_sorted_df.columns:
+        disp_sorted_df["end_time"] = None
+    if "status" in disp_sorted_df.columns:
+        disp_sorted_df["status"] = disp_sorted_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_sorted_df["status"])
 
-            st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
-            ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else ("진행" if status == "PENDING" else "?")
+    st.markdown("#### 📋 전체 지원 작업 상세 원장")
+    st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
 
-            title_badge = get_job_title_badge(w_title)
-            team_badge = f"<span style='background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>{w_team}</span>" if w_team else ""
-            is_comp_night = bool(r.get("is_night_work"))
-            if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
-                is_comp_night = False
-            night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🌙 야간</span>" if is_comp_night else ""
-            weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:4px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
+    avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
 
-            status_badge = "<span style='background:#d1e7dd; color:#0f5132; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>⏳ 진행 중</span>" if status == "PENDING" else f"<span style='background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700;'>✅ {act_h}h 완료</span>"
+    sel_tbl = st.dataframe(
+        disp_sorted_df[avail_cols].rename(columns={
+            "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
+            "worker_name": "담당자",
+            "worker_team": "소속팀",
+            "client_name": "고객사",
+            "task_description": "작업내용",
+            "estimated_hours": "예정(h)",
+            "actual_hours": "소요(h)",
+            "status": "상태"
+        }),
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key=f"tbl_day_popup_{abs(hash(str(date_title))) % 100000}"
+    )
 
-            st.markdown(f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid #005073; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14.5px; font-weight: 700; color: #0f172a;">👤 {w_name}</span>{title_badge}{team_badge}{night_badge}{weekend_badge}</div>{status_badge}</div><div style="font-size: 13.5px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12.5px; color: #334155; line-height: 1.4; margin-bottom: 6px;">{t_desc}</div><div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #64748b; border-top: 1px solid #f1f5f9; padding-top: 5px;"><span>🕒 {st_str} ~ {ed_str}</span><span>예정: {est_h}h / 실: {act_h}h</span></div></div>""", unsafe_allow_html=True)
+    if sel_tbl and hasattr(sel_tbl, "selection") and sel_tbl.selection.rows:
+        sel_idx = sel_tbl.selection.rows[0]
+        sel_row = sorted_df.iloc[sel_idx]
+        st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
+        st.code(format_raw_chat_display(sel_row), language="text")
+
+    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(sorted_df)}건)", expanded=False):
+        for i, (_, r) in enumerate(sorted_df.iterrows()):
+            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정:{r.get('estimated_hours',0)}h ➔ 소요:{r.get('actual_hours',0)}h]**")
+            st.code(format_raw_chat_display(r), language="text")
 
 
 def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
