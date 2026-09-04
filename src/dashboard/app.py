@@ -5229,18 +5229,31 @@ def main():
                     show_worker_category_tasks_dialog(target_w, target_cat, df)
 
             st.markdown("##### 📊 팀원별 종합 통계 현황판")
+            disp_worker_summary = worker_summary.rename(columns={
+                "worker_name": "담당자",
+                "total_hours": "총 투입시간(h)",
+                "total_tasks": "작업 건수",
+                "weekday_day_tasks": "평일 주간 건수",
+                "weekday_night_tasks": "평일 야간 건수",
+                "weekend_tasks": "주말 작업 건수",
+                "night_tasks": "야간 작업 건수",
+                "avg_hours": "건당 평균시간(h)",
+                "company": "회사",
+                "team": "소속팀",
+                "title": "직급"
+            })
+            col_order = [
+                "담당자", "소속팀", "직급", "회사",
+                "총 투입시간(h)", "작업 건수",
+                "평일 주간 건수", "평일 야간 건수", "주말 작업 건수", "야간 작업 건수",
+                "건당 평균시간(h)"
+            ]
+            existing_cols = [c for c in col_order if c in disp_worker_summary.columns]
+            other_cols = [c for c in disp_worker_summary.columns if c not in existing_cols]
+            disp_worker_summary = disp_worker_summary[existing_cols + other_cols]
+
             st.dataframe(
-                worker_summary.rename(columns={
-                    "worker_name": "담당자",
-                    "total_hours": "총 투입시간(h)",
-                    "total_tasks": "작업 건수",
-                    "night_tasks": "야간 작업 건수",
-                    "weekend_tasks": "주말 작업 건수",
-                    "avg_hours": "건당 평균시간(h)",
-                    "company": "회사",
-                    "team": "소속팀",
-                    "title": "직급"
-                }),
+                disp_worker_summary,
                 use_container_width=True,
                 hide_index=True
             )
