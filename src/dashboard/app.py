@@ -1951,6 +1951,65 @@ def get_job_title_rank(title: str) -> int:
         return 99
 
 
+def get_team_theme(team_name: str) -> dict:
+    """팀별 고유 아이덴티티 컬러, 아이콘, 틴트 배경 그라데이션 반환 (식별성 극대화)"""
+    t = str(team_name).strip()
+    if "본부" in t:
+        return {
+            "icon": "🏛️",
+            "primary": "#1e3a8a",
+            "border": "#bfdbfe",
+            "bg_gradient": "linear-gradient(90deg, #eff6ff 0%, #f8fafc 100%)",
+            "text_color": "#0f172a",
+            "tag": "본부",
+        }
+    elif "1팀" in t:
+        return {
+            "icon": "🌐",
+            "primary": "#0284c7",
+            "border": "#bae6fd",
+            "bg_gradient": "linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%)",
+            "text_color": "#0f172a",
+            "tag": "1팀",
+        }
+    elif "2팀" in t:
+        return {
+            "icon": "🌿",
+            "primary": "#059669",
+            "border": "#a7f3d0",
+            "bg_gradient": "linear-gradient(90deg, #ecfdf5 0%, #f8fafc 100%)",
+            "text_color": "#0f172a",
+            "tag": "2팀",
+        }
+    elif "3팀" in t:
+        return {
+            "icon": "🍇",
+            "primary": "#7c3aed",
+            "border": "#ddd6fe",
+            "bg_gradient": "linear-gradient(90deg, #f5f3ff 0%, #f8fafc 100%)",
+            "text_color": "#0f172a",
+            "tag": "3팀",
+        }
+    elif "PI" in t.upper() or "파이" in t:
+        return {
+            "icon": "⚡",
+            "primary": "#d97706",
+            "border": "#fde68a",
+            "bg_gradient": "linear-gradient(90deg, #fffbeb 0%, #f8fafc 100%)",
+            "text_color": "#0f172a",
+            "tag": "PI팀",
+        }
+    else:
+        return {
+            "icon": "🏢",
+            "primary": "#64748b",
+            "border": "#cbd5e1",
+            "bg_gradient": "linear-gradient(90deg, #f1f5f9 0%, #f8fafc 100%)",
+            "text_color": "#0f172a",
+            "tag": "기타",
+        }
+
+
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 실시간 관제 대시보드 컴포넌트"""
     kst_now = get_current_kst_time()
@@ -2010,47 +2069,50 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 t_pend["_rank_score"] = t_pend.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
                 t_pend = t_pend.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
 
-                # 웅장하고 눈에 확 띄는 프리미엄 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
-                st.markdown(f"""<div style="margin-top: 14px; margin-bottom: 12px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 6px solid #005073; border-radius: 8px; padding: 9px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><span style="font-size: 16.5px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
+                theme = get_team_theme(t_name)
+                # 📦 제안 1 + 제안 2: 팀별 독립 컨테이너 박스 & 고유 아이덴티티 컬러 테마
+                with st.container(border=True):
+                    st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{t_name}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(t_pend)}건 진행 중</span></div>""", unsafe_allow_html=True)
 
-                p_cols = st.columns(4)
-                for idx, (_, r) in enumerate(t_pend.iterrows()):
-                    with p_cols[idx % 4]:
-                        w_name = r["worker_name"]
-                        w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                        title_str = get_job_title_badge(w_title)
-                        c_name = r["client_name"]
-                        t_desc = r["task_description"]
-                        st_dt = r["start_time"]
+                    p_cols = st.columns(4)
+                    for idx, (_, r) in enumerate(t_pend.iterrows()):
+                        with p_cols[idx % 4]:
+                            w_name = r["worker_name"]
+                            w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
+                            title_str = get_job_title_badge(w_title)
+                            c_name = r["client_name"]
+                            t_desc = r["task_description"]
+                            st_dt = r["start_time"]
 
-                        # KST 기준 경과 시간 계산
-                        st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
-                        diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
-                        elapsed_mins = diff_sec // 60
-                        elapsed_hours = round(elapsed_mins / 60, 1)
-                        est_hours = float(r.get("estimated_hours") or 0)
-                        is_overtime = elapsed_hours > est_hours and est_hours > 0
+                            # KST 기준 경과 시간 계산
+                            st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
+                            diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
+                            elapsed_mins = diff_sec // 60
+                            elapsed_hours = round(elapsed_mins / 60, 1)
+                            est_hours = float(r.get("estimated_hours") or 0)
+                            is_overtime = elapsed_hours > est_hours and est_hours > 0
 
-                        raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
-                        bar_width_pct = min(100, max(5, raw_pct))
+                            raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
+                            bar_width_pct = min(100, max(5, raw_pct))
 
-                        rank_bar_bg, rank_bar_border = get_job_title_bar_style(w_title)
-                        bar_bg = rank_bar_bg
-                        bar_border = rank_bar_border
-                        pct_text_color = get_job_title_color(w_title)
-                        pct_display = f"{raw_pct}%"
+                            rank_bar_bg, rank_bar_border = get_job_title_bar_style(w_title)
+                            bar_bg = rank_bar_bg
+                            bar_border = rank_bar_border
+                            pct_text_color = get_job_title_color(w_title)
+                            pct_display = f"{raw_pct}%"
 
-                        time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
-                        is_night_flag = bool(r.get("is_night_work"))
-                        if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
-                            is_night_flag = False
-                        night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
-                        weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+                            time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
+                            is_night_flag = bool(r.get("is_night_work"))
+                            if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
+                                is_night_flag = False
+                            night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
+                            weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
 
-                        rank_color = get_job_title_color(w_title)
-                        border_color = rank_color
-                        card_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700;">시작 보고 시간 : {time_str}</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 4px;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;\"\u003e</div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; font-size: 11.5px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">{t_desc}</span><span style="font-weight: 700; color: #ffffff; font-size: 10.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#dc2626; font-weight:700;' if is_overtime else '#0f5132;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
-                        st.markdown(card_html, unsafe_allow_html=True)
+                            rank_color = get_job_title_color(w_title)
+                            border_color = rank_color
+                            card_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700;">시작 보고 시간 : {time_str}</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 4px;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; font-size: 11.5px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">{t_desc}</span><span style="font-weight: 700; color: #ffffff; font-size: 10.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#dc2626; font-weight:700;' if is_overtime else '#0f5132;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
+                            st.markdown(card_html, unsafe_allow_html=True)
+                st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
@@ -2075,26 +2137,31 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 t_comp["_rank_score"] = t_comp.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
                 t_comp = t_comp.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
 
-                # 웅장하고 눈에 확 띄는 프리미엄 완료 팀 섹션 헤더 배너 (팀명 바로 옆에 건수 배지 배치)
-                st.markdown(f"""<div style="margin-top: 14px; margin-bottom: 10px; background: #ffffff; border: 1px solid #e1e4e8; border-left: 6px solid #4f46e5; border-radius: 8px; padding: 9px 16px; display: flex; align-items: center; gap: 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><span style="font-size: 16.5px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">🏢 {t_name}</span><span style="background-color: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; padding: 2px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
+                theme = get_team_theme(t_name)
+                # 📦 제안 1 + 제안 2: 팀별 독립 컨테이너 박스 & 고유 아이덴티티 컬러 테마
+                with st.container(border=True):
+                    st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 10px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{t_name}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(t_comp)}건 완료</span></div>""", unsafe_allow_html=True)
 
-                c_cols = st.columns(4)
-                for idx, (_, r) in enumerate(t_comp.iterrows()):
-                    with c_cols[idx % 4]:
-                        w_name = r["worker_name"]
-                        w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                        title_str = get_job_title_badge(w_title)
-                        c_name = r["client_name"]
-                        t_desc = r["task_description"]
-                        st_dt = r["start_time"]
-                        ed_dt = r["end_time"]
-                        act_h = r["actual_hours"]
+                    c_cols = st.columns(4)
+                    for idx, (_, r) in enumerate(t_comp.iterrows()):
+                        with c_cols[idx % 4]:
+                            w_name = r["worker_name"]
+                            w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
+                            title_str = get_job_title_badge(w_title)
+                            c_name = r["client_name"]
+                            t_desc = r["task_description"]
+                            st_dt = r["start_time"]
+                            ed_dt = r["end_time"]
+                            act_h = r["actual_hours"]
 
-                        st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
-                        ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
+                            st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
+                            ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
 
-                        comp_border = get_job_title_color(w_title)
-                        comp_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
+                            comp_border = get_job_title_color(w_title)
+                            comp_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
+                            st.markdown(comp_html, unsafe_allow_html=True)
+                st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)
+
 @st.dialog("🏢 팀별 세부 작업 원장 및 카카오톡 원본", width="large")
 def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
     """팀 클릭 시 열리는 상세 작업 원장 모달 팝업"""
