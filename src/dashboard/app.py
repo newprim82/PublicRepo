@@ -1951,6 +1951,139 @@ def get_job_title_rank(title: str) -> int:
         return 99
 
 
+
+LIVE_PROGRESS_ANIMATION_AND_TIMER = """
+<style>
+@keyframes liveProgressBarStripes {
+    0% { background-position: 0 0; }
+    100% { background-position: 36px 0; }
+}
+.live-progress-fill {
+    background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.22) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.22) 50%,
+        rgba(255, 255, 255, 0.22) 75%,
+        transparent 75%,
+        transparent
+    ) !important;
+    background-size: 36px 36px !important;
+    animation: liveProgressBarStripes 2s linear infinite !important;
+    transition: width 0.8s ease-in-out !important;
+}
+</style>
+<script>
+(function() {
+    function updateLiveTaskProgress() {
+        const now = new Date();
+        const cards = document.querySelectorAll('.live-task-card');
+        if (!cards || cards.length === 0) return;
+
+        cards.forEach(card => {
+            const startStr = card.getAttribute('data-start');
+            const estHours = parseFloat(card.getAttribute('data-est') || '0');
+            const isSingleView = card.getAttribute('data-single-view') === 'true';
+
+            if (!startStr) return;
+            const startTime = new Date(startStr);
+            if (isNaN(startTime.getTime())) return;
+
+            const diffSec = Math.max(0, Math.floor((now - startTime) / 1000));
+            const elapsedMins = Math.floor(diffSec / 60);
+            const elapsedHours = (elapsedMins / 60).toFixed(1);
+
+            let rawPct = 50;
+            if (estHours > 0) {
+                rawPct = Math.round((parseFloat(elapsedHours) / estHours) * 100);
+            } else if (parseFloat(elapsedHours) > 0) {
+                rawPct = 100;
+            }
+            const barWidthPct = Math.min(100, Math.max(5, rawPct));
+            const isOvertime = estHours > 0 && parseFloat(elapsedHours) > estHours;
+
+            const progressBar = card.querySelector('.live-progress-bar');
+            if (progressBar) {
+                progressBar.style.width = barWidthPct + '%';
+            }
+
+            const pctBadge = card.querySelector('.live-pct-badge');
+            if (pctBadge) {
+                pctBadge.textContent = rawPct + '%';
+            }
+
+            const elapsedElem = card.querySelector('.live-elapsed-time');
+            if (elapsedElem) {
+                if (isSingleView) {
+                    elapsedElem.innerHTML = `⏱️ 경과: <b>${elapsedHours}h</b> (${elapsedMins}분) ${isOvertime ? '⚠️ 초과' : ''}`;
+                } else {
+                    elapsedElem.innerHTML = `⏱️ 경과 ${elapsedHours}h (${elapsedMins}분) ${isOvertime ? '⚠️' : ''}`;
+                }
+                elapsedElem.style.color = isOvertime ? '#dc2626' : '#0f5132';
+                if (isOvertime) {
+                    elapsedElem.style.fontWeight = '700';
+                }
+            }
+        });
+    }
+
+    if (window._liveTaskProgressTimer) {
+        clearInterval(window._liveTaskProgressTimer);
+    }
+    // 60초(1분)마다 화면 깜빡임 0.00%로 프로그레스 바 및 경과 시간 갱신
+    window._liveTaskProgressTimer = setInterval(updateLiveTaskProgress, 60000);
+    setTimeout(updateLiveTaskProgress, 1000);
+})();
+</script>
+"""
+
+
+def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bool = False) -> str:
+    """실시간 진행 중 작업 카드 HTML 생성 (부드러운 애니메이션 및 1분 타이머 데이터 태깅)"""
+    w_name = r["worker_name"]
+    w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
+    title_str = get_job_title_badge(w_title)
+    c_name = r["client_name"]
+    t_desc = r["task_description"]
+    st_dt = r["start_time"]
+
+    st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
+    diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
+    elapsed_mins = diff_sec // 60
+    elapsed_hours = round(elapsed_mins / 60, 1)
+    est_hours = float(r.get("estimated_hours") or 0)
+    is_overtime = elapsed_hours > est_hours and est_hours > 0
+
+    raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
+    bar_width_pct = min(100, max(5, raw_pct))
+
+    rank_bar_bg, rank_bar_border = get_job_title_bar_style(w_title)
+    bar_bg = rank_bar_bg
+    bar_border = rank_bar_border
+    pct_display = f"{raw_pct}%"
+
+    time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
+    st_dt_iso = st_dt.strftime("%Y-%m-%dT%H:%M:%S") if pd.notna(st_dt) else ""
+
+    is_night_flag = bool(r.get("is_night_work"))
+    if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
+        is_night_flag = False
+    night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
+    weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
+
+    rank_color = get_job_title_color(w_title)
+    border_color = rank_color
+
+    card_padding = "10px 12px; margin-bottom: 8px;" if is_single_view else "10px 11px; margin-bottom: 9px;"
+    time_badge_label = f"시작 보고 시간 : {time_str}" if is_single_view else f"시작 {time_str}"
+    client_font_size = "13px" if is_single_view else "12.5px"
+    time_badge_padding = "2px 8px" if is_single_view else "1.5px 6px"
+
+    elapsed_html = f"⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}" if is_single_view else f"⏱️ 경과 {elapsed_hours}h ({elapsed_mins}분) {'⚠️' if is_overtime else ''}"
+    elapsed_color = "#dc2626; font-weight:700;" if is_overtime else "#0f5132;"
+
+    return f"""<div class="live-task-card" data-start="{st_dt_iso}" data-est="{est_hours}" data-single-view="{'true' if is_single_view else 'false'}" style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: {card_padding}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: {time_badge_padding}; font-size: 10.5px; font-weight: 700; white-space: nowrap;">{time_badge_label}</span></div><div style="font-size: {client_font_size}; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div class="live-progress-bar live-progress-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.8s ease-in-out;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 11px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">{t_desc}</span><span class="live-pct-badge" style="font-weight: 700; color: #ffffff; font-size: 10px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정 {est_hours}h</span><span class="live-elapsed-time" style="color: {elapsed_color}">{elapsed_html}</span></div></div>"""
 def get_team_theme(team_name: str) -> dict:
     """팀별 고유 아이덴티티 컬러, 아이콘, 틴트 배경 그라데이션 반환 (식별성 극대화)"""
     t = str(team_name).strip()
@@ -2051,6 +2184,9 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         if pend_df.empty:
             st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
         else:
+            # 💡 1분 주기 무깜빡임 타이머 스크립트 및 프로그레스 바 스트라이프 애니메이션 주입
+            st.markdown(LIVE_PROGRESS_ANIMATION_AND_TIMER, unsafe_allow_html=True)
+
             if selected_team == "전체 팀":
                 # 🏛️ 전체 팀 기준: 5개 팀 세로 열 (칸반 보드) 레이아웃
                 base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
@@ -2081,39 +2217,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             t_pend = t_pend.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
 
                             for idx, (_, r) in enumerate(t_pend.iterrows()):
-                                w_name = r["worker_name"]
-                                w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                                title_str = get_job_title_badge(w_title)
-                                c_name = r["client_name"]
-                                t_desc = r["task_description"]
-                                st_dt = r["start_time"]
-
-                                st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
-                                diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
-                                elapsed_mins = diff_sec // 60
-                                elapsed_hours = round(elapsed_mins / 60, 1)
-                                est_hours = float(r.get("estimated_hours") or 0)
-                                is_overtime = elapsed_hours > est_hours and est_hours > 0
-
-                                raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
-                                bar_width_pct = min(100, max(5, raw_pct))
-
-                                rank_bar_bg, rank_bar_border = get_job_title_bar_style(w_title)
-                                bar_bg = rank_bar_bg
-                                bar_border = rank_bar_border
-                                pct_text_color = get_job_title_color(w_title)
-                                pct_display = f"{raw_pct}%"
-
-                                time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
-                                is_night_flag = bool(r.get("is_night_work"))
-                                if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
-                                    is_night_flag = False
-                                night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
-                                weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
-
-                                rank_color = get_job_title_color(w_title)
-                                border_color = rank_color
-                                card_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: 10px 11px; margin-bottom: 9px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: 1.5px 6px; font-size: 10.5px; font-weight: 700; white-space: nowrap;">시작 {time_str}</span></div><div style="font-size: 12.5px; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 11px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">{t_desc}</span><span style="font-weight: 700; color: #ffffff; font-size: 10px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정 {est_hours}h</span><span style="color: {'#dc2626; font-weight:700;' if is_overtime else '#0f5132;'}">⏱️ 경과 {elapsed_hours}h ({elapsed_mins}분) {'⚠️' if is_overtime else ''}</span></div></div>"""
+                                card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=False)
                                 st.markdown(card_html, unsafe_allow_html=True)
             else:
                 # 🏢 단일 팀 선택 시: 기존 4열 그리드 레이아웃
@@ -2129,39 +2233,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     p_cols = st.columns(4)
                     for idx, (_, r) in enumerate(t_pend.iterrows()):
                         with p_cols[idx % 4]:
-                            w_name = r["worker_name"]
-                            w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
-                            title_str = get_job_title_badge(w_title)
-                            c_name = r["client_name"]
-                            t_desc = r["task_description"]
-                            st_dt = r["start_time"]
-
-                            st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
-                            diff_sec = max(0, int((kst_now_naive - st_dt_naive).total_seconds())) if pd.notna(st_dt) else 0
-                            elapsed_mins = diff_sec // 60
-                            elapsed_hours = round(elapsed_mins / 60, 1)
-                            est_hours = float(r.get("estimated_hours") or 0)
-                            is_overtime = elapsed_hours > est_hours and est_hours > 0
-
-                            raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
-                            bar_width_pct = min(100, max(5, raw_pct))
-
-                            rank_bar_bg, rank_bar_border = get_job_title_bar_style(w_title)
-                            bar_bg = rank_bar_bg
-                            bar_border = rank_bar_border
-                            pct_text_color = get_job_title_color(w_title)
-                            pct_display = f"{raw_pct}%"
-
-                            time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "시각 미상"
-                            is_night_flag = bool(r.get("is_night_work"))
-                            if pd.notna(st_dt) and (6 <= st_dt.hour < 18):
-                                is_night_flag = False
-                            night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
-                            weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
-
-                            rank_color = get_job_title_color(w_title)
-                            border_color = rank_color
-                            card_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 14px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700;">시작 보고 시간 : {time_str}</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 4px;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.6s ease;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; font-size: 11.5px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 75%;">{t_desc}</span><span style="font-weight: 700; color: #ffffff; font-size: 10.5px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 4px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정: <b>{est_hours}h</b></span><span style="color: {'#dc2626; font-weight:700;' if is_overtime else '#0f5132;'}">⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}</span></div></div>"""
+                            card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=True)
                             st.markdown(card_html, unsafe_allow_html=True)
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
