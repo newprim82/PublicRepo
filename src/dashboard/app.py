@@ -2905,6 +2905,10 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     briefing_source_tag = ai_briefing.get("source", "📊 다차원 팩트 분석 엔진")
 
+    briefing_overview = AIBriefingService.clean_briefing_text(ai_briefing.get('overview', ''))
+    briefing_risks = AIBriefingService.clean_briefing_text(ai_briefing.get('risks', ''))
+    briefing_recomms = AIBriefingService.clean_briefing_text(ai_briefing.get('recommendations', ''))
+
     briefing_html = f"""
     <div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 6px solid #005073; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0, 45, 66, 0.06);">
         <div style="font-size: 16px; font-weight: 800; color: #002d42; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
@@ -2918,13 +2922,13 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         </div>
         <div style="font-size: 13.5px; color: #1e293b; line-height: 1.85;">
             <div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #0284c7;">
-                📌 <b>핵심 변화 & 집중 요인</b>: {ai_briefing.get('overview', '')}
+                📌 <b>핵심 변화 & 집중 요인</b>: {briefing_overview}
             </div>
             <div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #f59e0b;">
-                ⚠️ <b>현장 리스크 & 지연 진단</b>: {ai_briefing.get('risks', '')}
+                ⚠️ <b>현장 리스크 & 지연 진단</b>: {briefing_risks}
             </div>
             <div style="background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #10b981;">
-                💡 <b>차기 운영 전략 & 액션 플랜</b>: {ai_briefing.get('recommendations', '')}
+                💡 <b>차기 운영 전략 & 액션 플랜</b>: {briefing_recomms}
             </div>
         </div>
     </div>

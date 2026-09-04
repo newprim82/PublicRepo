@@ -280,9 +280,9 @@ class EmailReportService:
                             <span style="font-size: 11px; color: #0284c7; font-weight: bold;">[{briefing_source}]</span>
                         </div>
                         <div style="background: #f8fafc; border: 1.5px solid #005f8a; border-left: 5px solid #005073; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; font-size: 13px; line-height: 1.7; color: #1e293b;">
-                            <div style="margin-bottom: 8px;">📌 <b>핵심 변화 & 집중 요인</b>: {ai_briefing.get('overview', '')}</div>
-                            <div style="margin-bottom: 8px;">⚠️ <b>현장 리스크 & 지연 진단</b>: {ai_briefing.get('risks', '')}</div>
-                            <div>💡 <b>차기 운영 전략 & 액션 플랜</b>: {ai_briefing.get('recommendations', '')}</div>
+                            <div style="margin-bottom: 8px;">📌 <b>핵심 변화 & 집중 요인</b>: {AIBriefingService.clean_briefing_text(ai_briefing.get('overview', ''))}</div>
+                            <div style="margin-bottom: 8px;">⚠️ <b>현장 리스크 & 지연 진단</b>: {AIBriefingService.clean_briefing_text(ai_briefing.get('risks', ''))}</div>
+                            <div>💡 <b>차기 운영 전략 & 액션 플랜</b>: {AIBriefingService.clean_briefing_text(ai_briefing.get('recommendations', ''))}</div>
                         </div>
 
                         <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 10px;">⚖️ 3. 법정 근로시간 거버넌스 진단</div>

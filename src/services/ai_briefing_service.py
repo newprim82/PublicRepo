@@ -145,6 +145,18 @@ class FactExtractor:
 class AIBriefingService:
     """1단계 추출 팩트를 바탕으로 LLM(Gemini) 또는 자체 동적 알고리즘을 통해 심층 브리핑을 완성하는 서비스"""
 
+    @staticmethod
+    def clean_briefing_text(text: str) -> str:
+        """AI 브리핑 텍스트 앞머리에 붙은 중복 제목 및 이모지를 말끔히 제거하고 순수 본문만 반환"""
+        if not text:
+            return ""
+        import re
+        pattern = r'^[^\w가-힣]*(\*{1,2})?(핵심\s*변화\s*(&|및)?\s*집중\s*요인|현장\s*리스크\s*(&|및)?\s*지연\s*진단|차기\s*운영\s*전략\s*(&|및)?\s*액션\s*플랜|핵심\s*변화|현장\s*리스크|차기\s*운영\s*전략)(\*{1,2})?\s*[:：\-]?\s*'
+        cleaned = text.strip()
+        for _ in range(3):
+            cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE).strip()
+        return cleaned
+
     @classmethod
     def generate_briefing(cls, facts: Dict[str, Any], force_refresh: bool = False, api_key: Optional[str] = None) -> Dict[str, str]:
         cache_key = f"ai_briefing_{facts.get('period_label', '')}_{facts.get('selected_team', '')}"
@@ -157,7 +169,12 @@ class AIBriefingService:
         elif not force_refresh and st is not None:
             try:
                 if cache_key in st.session_state:
-                    return st.session_state[cache_key]
+                    cached = st.session_state[cache_key]
+                    if isinstance(cached, dict):
+                        for k in ["overview", "risks", "recommendations"]:
+                            if k in cached:
+                                cached[k] = cls.clean_briefing_text(cached[k])
+                    return cached
             except Exception:
                 pass
 
@@ -184,6 +201,11 @@ class AIBriefingService:
         if not briefing:
             briefing = cls._generate_fact_based_rule_briefing(facts)
 
+        if briefing and isinstance(briefing, dict):
+            for k in ["overview", "risks", "recommendations"]:
+                if k in briefing:
+                    briefing[k] = cls.clean_briefing_text(briefing[k])
+
         if st is not None:
             try:
                 st.session_state[cache_key] = briefing
@@ -201,10 +223,12 @@ class AIBriefingService:
 정형화된 고정 틀을 벗어나, 사람이 직접 작성한 것처럼 날카롭고 생생하며 실질적인 [경영진 주간/월간 핵심 브리핑]을 작성해주세요.
 반드시 아래 JSON 형식으로만 답변해야 합니다:
 {{
-  "overview": "🎯 핵심 변화 & 집중 요인: (전기 대비 공수 증감 원인, 특히 어떤 고객사의 어떤 구체적 작업 때문에 공수가 급증했는지 사실에 근거해 2~3문장)",
-  "risks": "⚠️ 현장 리스크 & 지연 진단: (예정 시간 대비 초과 지연된 작업 건수와 구체적 고객사/작업 내용, 인력 쏠림 현상, 야간/주말 근무 원인을 2~3문장)",
-  "recommendations": "💡 차기 운영 전략 & 액션 플랜: (현장 관리자/팀장이 다음 주에 즉시 취해야 할 인력 재배치, 고객사 난이도 재산정, 피로도 관리 등 구체적 실행 지침 2~3문장)"
+  "overview": "(제목이나 이모지를 절대 쓰지 마십시오. 전기 대비 공수 증감 원인과 급증 고객사/작업에 대한 핵심 분석 본문만 2~3문장)",
+  "risks": "(제목이나 이모지를 절대 쓰지 마십시오. 예정 시간 대비 초과 지연된 작업 건수와 고객사, 인력 쏠림, 야간/주말 근무 원인에 대한 본문만 2~3문장)",
+  "recommendations": "(제목이나 이모지를 절대 쓰지 마십시오. 현장 관리자가 즉시 취해야 할 인력 재배치, 고객사 난이도 재산정, 피로도 관리 등 실행 지침 본문만 2~3문장)"
 }}
+
+[중요]: 각 항목의 값(value)에는 '핵심 변화 & 집중 요인:', '현장 리스크 & 지연 진단:', '차기 운영 전략 & 액션 플랜:' 등의 제목이나 이모지(🎯, ⚠️, 💡 등)를 절대 적지 마십시오. 제목은 시스템 UI에서 표시되므로 오직 본문 내용만 작성해야 합니다.
 
 [정량 데이터 팩트 JSON]:
 {json.dumps(facts, ensure_ascii=False, indent=2)}
