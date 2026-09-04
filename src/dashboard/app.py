@@ -5148,16 +5148,37 @@ def main():
                 # 주별 추이 차트 (신규 추가!)
                 weekly_df = df.groupby("week_label")["actual_hours"].sum().reset_index()
                 if not weekly_df.empty:
+                    # 📅 주차 X축 표시 기간 산출 (예: 주차(Week / 8월 1일 ~ 8월 31일))
+                    week_axis_title = "주차(Week)"
+                    if selected_months and len(selected_months) == 1:
+                        try:
+                            s_dt = pd.to_datetime(selected_months[0] + "-01")
+                            e_dt = s_dt + pd.offsets.MonthEnd(1)
+                            week_axis_title = f"주차(Week / {s_dt.month}월 {s_dt.day}일 ~ {e_dt.month}월 {e_dt.day}일)"
+                        except Exception:
+                            week_axis_title = f"주차(Week / {month_desc})"
+                    elif selected_months:
+                        try:
+                            s_dt = pd.to_datetime(min(selected_months) + "-01")
+                            e_dt = pd.to_datetime(max(selected_months) + "-01") + pd.offsets.MonthEnd(1)
+                            week_axis_title = f"주차(Week / {s_dt.month}월 {s_dt.day}일 ~ {e_dt.month}월 {e_dt.day}일)"
+                        except Exception:
+                            week_axis_title = f"주차(Week / {month_desc})"
+
                     fig_weekly = px.bar(
                         weekly_df,
                         x="week_label",
                         y="actual_hours",
                         text="actual_hours",
-                        labels={"week_label": "주차(Week)", "actual_hours": "총 투입 시간(h)"},
+                        labels={"week_label": week_axis_title, "actual_hours": "총 투입 시간(h)"},
                         title="주차(Week)별 총 지원 시간 분포"
                     )
                     fig_weekly.update_traces(texttemplate='%{text}h', textposition='outside', marker_color='#42A5F5')
-                    fig_weekly.update_layout(height=350, xaxis=dict(tickangle=-30))
+                    fig_weekly.update_layout(
+                        height=350,
+                        margin=dict(l=40, r=40, t=50, b=40),
+                        xaxis=dict(tickangle=-30, title=week_axis_title)
+                    )
                     st.plotly_chart(fig_weekly, use_container_width=True)
 
             st.markdown("##### 📅 일자별 작업 시간 분포")
