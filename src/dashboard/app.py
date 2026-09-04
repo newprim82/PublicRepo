@@ -5238,7 +5238,7 @@ def main():
         
         team_summary["total_hours"] = team_summary["total_hours"].round(1)
         team_summary["avg_hours_per_person"] = (team_summary["total_hours"] / team_summary["worker_count"]).round(1)
-        team_summary = team_summary.sort_values(by="total_hours", ascending=False)
+        team_summary = team_summary.sort_values(by="total_hours", ascending=False).reset_index(drop=True)
         
         st.markdown("""<div style="background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-left: 4.5px solid #0284c7; border-radius: 6px; padding: 9px 15px; margin: 4px 0 14px 0; font-size: 13px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 8px;">
 <span>💡</span>
@@ -5253,13 +5253,13 @@ def main():
                 y="total_hours",
                 color="worker_team",
                 text="total_hours",
+                custom_data=["worker_team"],
                 labels={"worker_team": "팀", "total_hours": "총 지원 시간(h)"},
                 title="팀별 총 지원 시간(h) 비교"
             )
             fig_team_bar.update_traces(
                 texttemplate='%{text}h',
-                textposition='outside',
-                customdata=[[t] for t in team_summary['worker_team']]
+                textposition='outside'
             )
             fig_team_bar.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
             event_team_bar = st.plotly_chart(
@@ -5277,13 +5277,13 @@ def main():
                 y="avg_hours_per_person",
                 color="worker_team",
                 text="avg_hours_per_person",
+                custom_data=["worker_team"],
                 labels={"worker_team": "팀", "avg_hours_per_person": "1인당 평균 시간(h)"},
                 title="팀별 1인당 평균 지원 시간(h) 비교"
             )
             fig_team_avg.update_traces(
                 texttemplate='%{text}h',
-                textposition='outside',
-                customdata=[[t] for t in team_summary['worker_team']]
+                textposition='outside'
             )
             fig_team_avg.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
             event_team_avg = st.plotly_chart(
@@ -5322,23 +5322,40 @@ def main():
         last_avg_id = st.session_state.get("last_selected_team_avg")
         last_tbl_id = st.session_state.get("last_selected_team_tbl")
 
-        bar_target = None
-        if curr_bar_pt:
-            cdata = curr_bar_pt.get("customdata", [None])
-            bar_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-            if not bar_target:
-                bar_target = curr_bar_pt.get("x")
+        # 선택 해제 시 세션 상태 동기화
+        if curr_bar_pt is None and last_bar_id is not None:
+            st.session_state["last_selected_team_bar"] = None
+            last_bar_id = None
+        if curr_avg_pt is None and last_avg_id is not None:
+            st.session_state["last_selected_team_avg"] = None
+            last_avg_id = None
+        if curr_tbl_row is None and last_tbl_id is not None:
+            st.session_state["last_selected_team_tbl"] = None
+            last_tbl_id = None
 
-        avg_target = None
-        if curr_avg_pt:
-            cdata = curr_avg_pt.get("customdata", [None])
-            avg_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-            if not avg_target:
-                avg_target = curr_avg_pt.get("x")
+        def _extract_pt_team(pt):
+            if not pt:
+                return None
+            # 1. x축 범주 값 확인 (Plotly bar의 x축이 바로 팀명)
+            if "x" in pt and pt["x"] and str(pt["x"]).strip() and str(pt["x"]) != "None":
+                return str(pt["x"]).strip()
+            # 2. customdata 확인
+            if "customdata" in pt and pt["customdata"]:
+                cdata = pt["customdata"]
+                val = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+                if val and str(val).strip() and str(val) != "None":
+                    return str(val).strip()
+            # 3. legendgroup 확인
+            if "legendgroup" in pt and pt["legendgroup"]:
+                return str(pt["legendgroup"]).strip()
+            return None
+
+        bar_target = _extract_pt_team(curr_bar_pt)
+        avg_target = _extract_pt_team(curr_avg_pt)
 
         tbl_target = None
         if curr_tbl_row is not None and curr_tbl_row < len(team_summary):
-            tbl_target = team_summary.iloc[curr_tbl_row]["worker_team"]
+            tbl_target = str(team_summary.iloc[curr_tbl_row]["worker_team"]).strip()
 
         # 변경 감지
         bar_changed = (bar_target is not None) and (bar_target != last_bar_id)
@@ -5361,11 +5378,11 @@ def main():
             st.session_state["last_selected_team_bar"] = None
             st.session_state["last_selected_team_avg"] = None
             team_to_open = tbl_target
-        elif bar_target:
+        elif bar_target and (last_avg_id is None and last_tbl_id is None):
             team_to_open = bar_target
-        elif avg_target:
+        elif avg_target and (last_bar_id is None and last_tbl_id is None):
             team_to_open = avg_target
-        elif tbl_target:
+        elif tbl_target and (last_bar_id is None and last_avg_id is None):
             team_to_open = tbl_target
 
         if team_to_open and str(team_to_open).strip() and str(team_to_open).strip() != "None":
