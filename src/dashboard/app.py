@@ -1898,7 +1898,97 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 
                         comp_border = get_job_title_color(w_title)
                         comp_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
-                        st.markdown(comp_html, unsafe_allow_html=True)
+@st.dialog("🏢 팀별 세부 작업 원장 및 카카오톡 원본", width="large")
+def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
+    """팀 클릭 시 열리는 상세 작업 원장 모달 팝업"""
+    inject_dialog_title_style()
+    if team_logs_df.empty:
+        st.info(f"[{team_name}]의 작업 데이터가 없습니다.")
+        return
+
+    tot_h = round(team_logs_df["actual_hours"].sum(), 1)
+    tot_tasks = len(team_logs_df)
+    tot_w = team_logs_df["worker_name"].nunique()
+    tot_c = team_logs_df["client_name"].nunique()
+    comp_cnt = int((team_logs_df["status"] == "COMPLETED").sum())
+    pend_cnt = int((team_logs_df["status"] == "PENDING").sum())
+    night_cnt = int((team_logs_df["is_night_work"] == True).sum()) if "is_night_work" in team_logs_df.columns else 0
+
+    st.markdown(f"### 🏢 **{team_name}** 세부 작업 원장")
+    # 상단 요약 배너
+    st.markdown(
+        f"""<div style="display: flex; gap: 10px; margin-bottom: 16px; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 10px 14px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+<span style="color: #005073; font-weight: 700;">⏱️ 총 공수: <b>{tot_h}h</b> ({tot_tasks}건)</span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #4f46e5; font-weight: 700;">👥 투입 인원: <b>{tot_w}명</b></span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #d97706; font-weight: 700;">🏢 고객사: <b>{tot_c}개사</b></span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #dc2626; font-weight: 700;">🌙 야간작업: <b>{night_cnt}건</b></span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #0f5132; font-weight: 700;">✅ 완료 {comp_cnt}건 / ⏳ 진행 {pend_cnt}건</span>
+</div>""",
+        unsafe_allow_html=True
+    )
+
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        top_clients = team_logs_df.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(5).reset_index()
+        if not top_clients.empty:
+            fig1 = px.bar(top_clients, x="actual_hours", y="client_name", orientation="h", text="actual_hours", title=f"🏢 {team_name} 상위 고객사 투입 시간(h)")
+            fig1.update_layout(height=200, yaxis={'categoryorder': 'total ascending'}, margin=dict(l=20, r=20, t=35, b=20))
+            st.plotly_chart(fig1, use_container_width=True)
+    with c2:
+        top_workers = team_logs_df.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False).head(5).reset_index()
+        if not top_workers.empty:
+            fig2 = px.bar(top_workers, x="actual_hours", y="worker_name", orientation="h", text="actual_hours", title=f"👤 {team_name} 상위 팀원 투입 시간(h)")
+            fig2.update_layout(height=200, yaxis={'categoryorder': 'total ascending'}, margin=dict(l=20, r=20, t=35, b=20))
+            st.plotly_chart(fig2, use_container_width=True)
+
+    sorted_df = team_logs_df.sort_values(by="start_time", ascending=False).reset_index(drop=True)
+    disp_sorted_df = strip_tz(sorted_df.copy())
+    if "end_time" not in disp_sorted_df.columns:
+        disp_sorted_df["end_time"] = None
+    if "status" in disp_sorted_df.columns:
+        disp_sorted_df["status"] = disp_sorted_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_sorted_df["status"])
+
+    st.markdown("#### 📋 팀 전체 지원 작업 상세 원장")
+    st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
+
+    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
+    avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
+
+    sel_tbl = st.dataframe(
+        disp_sorted_df[avail_cols].rename(columns={
+            "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
+            "worker_name": "담당자",
+            "worker_team": "소속팀",
+            "client_name": "고객사",
+            "task_description": "작업내용",
+            "estimated_hours": "예정(h)",
+            "actual_hours": "소요(h)",
+            "status": "상태"
+        }),
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key=f"tbl_team_popup_{abs(hash(str(team_name))) % 100000}"
+    )
+
+    if sel_tbl and hasattr(sel_tbl, "selection") and sel_tbl.selection.rows:
+        sel_idx = sel_tbl.selection.rows[0]
+        sel_row = sorted_df.iloc[sel_idx]
+        st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
+        st.code(format_raw_chat_display(sel_row), language="text")
+
+    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(sorted_df)}건)", expanded=False):
+        for i, (_, r) in enumerate(sorted_df.iterrows()):
+            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정:{r.get('estimated_hours',0)}h ➔ 소요:{r.get('actual_hours',0)}h]**")
+            st.code(format_raw_chat_display(r), language="text")
+
+
 @st.dialog("📆 주차별 세부 지원 내역 및 카카오톡 원본", width="large")
 def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
     """주차별 막대 클릭 시 열리는 상세 작업 내역 모달 팝업"""
@@ -5150,6 +5240,11 @@ def main():
         team_summary["avg_hours_per_person"] = (team_summary["total_hours"] / team_summary["worker_count"]).round(1)
         team_summary = team_summary.sort_values(by="total_hours", ascending=False)
         
+        st.markdown("""<div style="background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-left: 4.5px solid #0284c7; border-radius: 6px; padding: 9px 15px; margin: 4px 0 14px 0; font-size: 13px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+<span>💡</span>
+<span><b>각 팀 막대(또는 아래 집계표의 행)를 클릭</b>하시면, 해당 팀의 <b>[실제 세부 지원 내역 원장 및 카카오톡 대화 원본 팝업]</b>이 바로 열립니다.</span>
+</div>""", unsafe_allow_html=True)
+
         col_t2_1, col_t2_2 = st.columns(2)
         with col_t2_1:
             fig_team_bar = px.bar(
@@ -5161,9 +5256,19 @@ def main():
                 labels={"worker_team": "팀", "total_hours": "총 지원 시간(h)"},
                 title="팀별 총 지원 시간(h) 비교"
             )
-            fig_team_bar.update_traces(texttemplate='%{text}h', textposition='outside')
-            fig_team_bar.update_layout(height=400, showlegend=False)
-            st.plotly_chart(fig_team_bar, use_container_width=True)
+            fig_team_bar.update_traces(
+                texttemplate='%{text}h',
+                textposition='outside',
+                customdata=[[t] for t in team_summary['worker_team']]
+            )
+            fig_team_bar.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
+            event_team_bar = st.plotly_chart(
+                fig_team_bar,
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode=["points"],
+                key="chart_team_total_hours_bar"
+            )
 
         with col_t2_2:
             fig_team_avg = px.bar(
@@ -5175,23 +5280,98 @@ def main():
                 labels={"worker_team": "팀", "avg_hours_per_person": "1인당 평균 시간(h)"},
                 title="팀별 1인당 평균 지원 시간(h) 비교"
             )
-            fig_team_avg.update_traces(texttemplate='%{text}h', textposition='outside')
-            fig_team_avg.update_layout(height=400, showlegend=False)
-            st.plotly_chart(fig_team_avg, use_container_width=True)
+            fig_team_avg.update_traces(
+                texttemplate='%{text}h',
+                textposition='outside',
+                customdata=[[t] for t in team_summary['worker_team']]
+            )
+            fig_team_avg.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
+            event_team_avg = st.plotly_chart(
+                fig_team_avg,
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode=["points"],
+                key="chart_team_avg_hours_bar"
+            )
 
         st.markdown("##### 📋 팀별 상세 집계 표")
-        st.dataframe(
-            team_summary.rename(columns={
-                "worker_team": "소속팀",
-                "total_hours": "총 투입시간(h)",
-                "total_tasks": "작업 건수",
-                "night_tasks": "야간 작업 건수",
-                "worker_count": "투입 인원(명)",
-                "avg_hours_per_person": "1인당 평균시간(h)"
-            }),
+        st.caption("💡 표에서 특정 팀 행을 클릭하셔도 해당 팀의 세부 작업 원장 팝업이 바로 열립니다.")
+        disp_team_summary = team_summary.rename(columns={
+            "worker_team": "소속팀",
+            "total_hours": "총 투입시간(h)",
+            "total_tasks": "작업 건수",
+            "night_tasks": "야간 작업 건수",
+            "worker_count": "투입 인원(명)",
+            "avg_hours_per_person": "1인당 평균시간(h)"
+        })
+        event_team_tbl = st.dataframe(
+            disp_team_summary,
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="tbl_team_summary_selection"
         )
+
+        # 🖱️ 팀 클릭 이벤트 감지 및 세부 작업 원장 모달 팝업 연동 (상호 배타적 단일 오픈)
+        curr_bar_pt = event_team_bar.selection.points[0] if (event_team_bar and hasattr(event_team_bar, "selection") and event_team_bar.selection.points) else None
+        curr_avg_pt = event_team_avg.selection.points[0] if (event_team_avg and hasattr(event_team_avg, "selection") and event_team_avg.selection.points) else None
+        curr_tbl_row = event_team_tbl.selection.rows[0] if (event_team_tbl and hasattr(event_team_tbl, "selection") and event_team_tbl.selection.rows) else None
+
+        last_bar_id = st.session_state.get("last_selected_team_bar")
+        last_avg_id = st.session_state.get("last_selected_team_avg")
+        last_tbl_id = st.session_state.get("last_selected_team_tbl")
+
+        bar_target = None
+        if curr_bar_pt:
+            cdata = curr_bar_pt.get("customdata", [None])
+            bar_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+            if not bar_target:
+                bar_target = curr_bar_pt.get("x")
+
+        avg_target = None
+        if curr_avg_pt:
+            cdata = curr_avg_pt.get("customdata", [None])
+            avg_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+            if not avg_target:
+                avg_target = curr_avg_pt.get("x")
+
+        tbl_target = None
+        if curr_tbl_row is not None and curr_tbl_row < len(team_summary):
+            tbl_target = team_summary.iloc[curr_tbl_row]["worker_team"]
+
+        # 변경 감지
+        bar_changed = (bar_target is not None) and (bar_target != last_bar_id)
+        avg_changed = (avg_target is not None) and (avg_target != last_avg_id)
+        tbl_changed = (tbl_target is not None) and (tbl_target != last_tbl_id)
+
+        team_to_open = None
+        if bar_changed:
+            st.session_state["last_selected_team_bar"] = bar_target
+            st.session_state["last_selected_team_avg"] = None
+            st.session_state["last_selected_team_tbl"] = None
+            team_to_open = bar_target
+        elif avg_changed:
+            st.session_state["last_selected_team_avg"] = avg_target
+            st.session_state["last_selected_team_bar"] = None
+            st.session_state["last_selected_team_tbl"] = None
+            team_to_open = avg_target
+        elif tbl_changed:
+            st.session_state["last_selected_team_tbl"] = tbl_target
+            st.session_state["last_selected_team_bar"] = None
+            st.session_state["last_selected_team_avg"] = None
+            team_to_open = tbl_target
+        elif bar_target:
+            team_to_open = bar_target
+        elif avg_target:
+            team_to_open = avg_target
+        elif tbl_target:
+            team_to_open = tbl_target
+
+        if team_to_open and str(team_to_open).strip() and str(team_to_open).strip() != "None":
+            team_target_df = team_df[team_df["worker_team"] == team_to_open]
+            if not team_target_df.empty:
+                show_team_work_logs_dialog(team_to_open, team_target_df)
 
     # ------------------------------------------
     # PAGE: 월별 / 주별 / 일별 추이 분석
