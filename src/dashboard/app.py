@@ -2815,6 +2815,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             show_team_work_logs_dialog(team_to_open, team_target_df)
 
 
+@st.fragment
 def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
     """[📅 작업 캘린더 & 밀도 히트맵] 탭 렌더링 컴포넌트"""
     if df.empty or "start_time" not in df.columns:
@@ -3373,8 +3374,11 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             """,
             unsafe_allow_html=True
         )
-        if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
-            show_email_report_dialog(selected_team)
+        @st.fragment
+        def render_email_report_button(team: str):
+            if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
+                show_email_report_dialog(team)
+        render_email_report_button(selected_team)
 
     st.write("")
 
@@ -5177,271 +5181,279 @@ def main():
         )
         st.markdown(criteria_panel_html, unsafe_allow_html=True)
 
-        # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링)
-        kpi = StatsService.compute_kpis(df)
-        kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
-        
-        with kpi_col1:
-            st.markdown(f"""
-            <div class="kpi-card kpi-card-hours">
-                <div class="kpi-title">⏱️ 총 지원 시간</div>
-                <div class="kpi-value" style="color: #005073;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
-                <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(" ", key="kpi_btn_hours", use_container_width=True, help="클릭하여 총 지원 시간 상세 내역 팝업 열기"):
-                show_kpi_total_hours_dialog(df)
+        # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링 - 독립 Fragment 부분 렌더링 적용)
+        @st.fragment
+        def render_kpi_cards_fragment(kpi_df: pd.DataFrame):
+            kpi = StatsService.compute_kpis(kpi_df)
+            kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
             
-        with kpi_col2:
-            st.markdown(f"""
-            <div class="kpi-card kpi-card-tasks">
-                <div class="kpi-title">📋 총 작업 건수</div>
-                <div class="kpi-value" style="color: #0284c7;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
-                <div class="kpi-badge badge-cyan">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#94a3b8;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(" ", key="kpi_btn_tasks", use_container_width=True, help="클릭하여 총 작업 건수 상세 팝업 열기"):
-                show_kpi_total_tasks_dialog(df)
-            
-        with kpi_col3:
-            st.markdown(f"""
-            <div class="kpi-card kpi-card-workers">
-                <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
-                <div class="kpi-value" style="color: #4f46e5;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
-                <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(" ", key="kpi_btn_workers", use_container_width=True, help="클릭하여 팀원별 공수 팝업 열기"):
-                show_kpi_workers_dialog(df)
-            
-        with kpi_col4:
-            total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
-            st.markdown(f"""
-            <div class="kpi-card kpi-card-urgent">
-                <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
-                <div class="kpi-value" style="color: #ea580c;">{total_urg}<span class="kpi-unit">건</span></div>
-                <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#94a3b8;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(" ", key="kpi_btn_urgent", use_container_width=True, help="클릭하여 야간/주말 긴급 작업 팝업 열기"):
-                show_kpi_urgent_dialog(df)
-            
-        with kpi_col5:
-            overdue_val = float(kpi.get('overdue_rate', 0))
-            overdue_cnt = int(kpi.get('overdue_tasks_count', 0))
-            is_danger = (overdue_val > 0) or (overdue_cnt > 0)
-            overdue_color = "#dc2626" if is_danger else "#16a34a"
-            overdue_cls = "kpi-card-overdue-danger" if is_danger else "kpi-card-overdue-safe"
-            badge_cls = "badge-red" if is_danger else "badge-green"
-            badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
-            st.markdown(f"""
-            <div class="kpi-card {overdue_cls}">
-                <div class="kpi-title">⚠️ 예정 시간 초과율</div>
-                <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
-                <div class="kpi-badge {badge_cls}">{badge_text}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button(" ", key="kpi_btn_overdue", use_container_width=True, help="클릭하여 예정 시간 초과 내역 팝업 열기"):
-                show_kpi_overdue_dialog(df)
+            with kpi_col1:
+                st.markdown(f"""
+                <div class="kpi-card kpi-card-hours">
+                    <div class="kpi-title">⏱️ 총 지원 시간</div>
+                    <div class="kpi-value" style="color: #005073;">{kpi['total_hours']:,}<span class="kpi-unit">시간</span></div>
+                    <div class="kpi-badge badge-cyan">⚡ 실시간 합산 집계</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(" ", key="kpi_btn_hours", use_container_width=True, help="클릭하여 총 지원 시간 상세 내역 팝업 열기"):
+                    show_kpi_total_hours_dialog(kpi_df)
+                
+            with kpi_col2:
+                st.markdown(f"""
+                <div class="kpi-card kpi-card-tasks">
+                    <div class="kpi-title">📋 총 작업 건수</div>
+                    <div class="kpi-value" style="color: #0284c7;">{kpi['total_tasks']:,}<span class="kpi-unit">건</span></div>
+                    <div class="kpi-badge badge-cyan">🟢 완료 {kpi['completed_tasks']}건 <span style="color:#94a3b8;">|</span> 🟡 진행 {kpi['pending_tasks']}건</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(" ", key="kpi_btn_tasks", use_container_width=True, help="클릭하여 총 작업 건수 상세 팝업 열기"):
+                    show_kpi_total_tasks_dialog(kpi_df)
+                
+            with kpi_col3:
+                st.markdown(f"""
+                <div class="kpi-card kpi-card-workers">
+                    <div class="kpi-title">👥 투입 인원 & 평균 공수</div>
+                    <div class="kpi-value" style="color: #4f46e5;">{kpi['active_workers']}<span class="kpi-unit">명</span></div>
+                    <div class="kpi-badge badge-purple">👤 1인당 평균 {kpi['avg_hours_per_worker']}h</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(" ", key="kpi_btn_workers", use_container_width=True, help="클릭하여 팀원별 공수 팝업 열기"):
+                    show_kpi_workers_dialog(kpi_df)
+                
+            with kpi_col4:
+                total_urg = kpi['night_tasks_count'] + kpi['weekend_tasks_count']
+                st.markdown(f"""
+                <div class="kpi-card kpi-card-urgent">
+                    <div class="kpi-title">🌙 야간 / 주말 긴급 작업</div>
+                    <div class="kpi-value" style="color: #ea580c;">{total_urg}<span class="kpi-unit">건</span></div>
+                    <div class="kpi-badge badge-amber">🌙 야간 {kpi['night_tasks_count']}건 <span style="color:#94a3b8;">|</span> 🏖️ 주말 {kpi['weekend_tasks_count']}건</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(" ", key="kpi_btn_urgent", use_container_width=True, help="클릭하여 야간/주말 긴급 작업 팝업 열기"):
+                    show_kpi_urgent_dialog(kpi_df)
+                
+            with kpi_col5:
+                overdue_val = float(kpi.get('overdue_rate', 0))
+                overdue_cnt = int(kpi.get('overdue_tasks_count', 0))
+                is_danger = (overdue_val > 0) or (overdue_cnt > 0)
+                overdue_color = "#dc2626" if is_danger else "#16a34a"
+                overdue_cls = "kpi-card-overdue-danger" if is_danger else "kpi-card-overdue-safe"
+                badge_cls = "badge-red" if is_danger else "badge-green"
+                badge_text = f"🚨 초과 {overdue_cnt}건 발생" if is_danger else "✅ 초과 없음"
+                st.markdown(f"""
+                <div class="kpi-card {overdue_cls}">
+                    <div class="kpi-title">⚠️ 예정 시간 초과율</div>
+                    <div class="kpi-value" style="color: {overdue_color};">{kpi['overdue_rate']}<span class="kpi-unit">%</span></div>
+                    <div class="kpi-badge {badge_cls}">{badge_text}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(" ", key="kpi_btn_overdue", use_container_width=True, help="클릭하여 예정 시간 초과 내역 팝업 열기"):
+                    show_kpi_overdue_dialog(kpi_df)
+
+        render_kpi_cards_fragment(df)
 
         # ----------------------------------------------------
         # 🚨 상단 과중 근무 실시간 감지 & 원클릭 보상휴가 팝업 배너
         # ----------------------------------------------------
-        if not df.empty and "week_label" in df.columns:
-            all_rewards = RewardLeaveService.get_all_reward_leaves()
-            danger_items = []
-            caution_items = []
-            rewarded_items = []
-            
-            # 주차별/팀원별 집계 (주 40시간 / 52시간 과중 근무 감지 시 [교육] 구분은 법정 시간에서 제외)
-            df_for_overwork = df[~df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in df.columns else df
-            wk_user_agg = df_for_overwork.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
-            for _, r in wk_user_agg.iterrows():
-                w_name = r["worker_name"]
-                w_lbl = r["week_label"]
-                val = round(r["actual_hours"], 1)
-                short_w = w_lbl.split(" ")[-2] if " " in w_lbl else w_lbl
-                if val >= 40.0:
-                    item = {
-                        "worker_name": w_name,
-                        "week_label": w_lbl,
-                        "short_w": short_w,
-                        "val": val,
-                        "is_52": (val >= 52.0)
-                    }
-                    if (w_name, w_lbl) in all_rewards:
-                        rewarded_items.append(item)
-                    elif val >= 52.0:
-                        danger_items.append(item)
-                    else:
-                        caution_items.append(item)
+        @st.fragment
+        def render_overwork_banner_fragment(ov_df: pd.DataFrame):
+            if not ov_df.empty and "week_label" in ov_df.columns:
+                all_rewards = RewardLeaveService.get_all_reward_leaves()
+                danger_items = []
+                caution_items = []
+                rewarded_items = []
+                
+                # 주차별/팀원별 집계 (주 40시간 / 52시간 과중 근무 감지 시 [교육] 구분은 법정 시간에서 제외)
+                df_for_overwork = ov_df[~ov_df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in ov_df.columns else ov_df
+                wk_user_agg = df_for_overwork.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
+                for _, r in wk_user_agg.iterrows():
+                    w_name = r["worker_name"]
+                    w_lbl = r["week_label"]
+                    val = round(r["actual_hours"], 1)
+                    short_w = w_lbl.split(" ")[-2] if " " in w_lbl else w_lbl
+                    if val >= 40.0:
+                        item = {
+                            "worker_name": w_name,
+                            "week_label": w_lbl,
+                            "short_w": short_w,
+                            "val": val,
+                            "is_52": (val >= 52.0)
+                        }
+                        if (w_name, w_lbl) in all_rewards:
+                            rewarded_items.append(item)
+                        elif val >= 52.0:
+                            danger_items.append(item)
+                        else:
+                            caution_items.append(item)
 
-            if danger_items or caution_items or rewarded_items:
-                with st.container(border=True):
-                    # 배너 내부 버튼/칩 글자 가독성 (52h: 빨간색, 40h: 주황색, 보상완료: 초록색 배경)
+                if danger_items or caution_items or rewarded_items:
+                    with st.container(border=True):
+                        # 배너 내부 버튼/칩 글자 가독성 (52h: 빨간색, 40h: 주황색, 보상완료: 초록색 배경)
+                        st.markdown("""
+                        <style>
+                            /* 🚨 주 52시간 초과 버튼 (빨간색 배경) */
+                            div.stButton > button[kind="primary"] {
+                                background-color: #dc2626 !important;
+                                border: 1.5px solid #b91c1c !important;
+                                border-radius: 6px !important;
+                                color: #ffffff !important;
+                                font-weight: 700 !important;
+                                font-size: 12px !important;
+                                padding: 4px 6px !important;
+                                box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3) !important;
+                            }
+                            div.stButton > button[kind="primary"] * {
+                                color: #ffffff !important;
+                                font-weight: 700 !important;
+                            }
+                            div.stButton > button[kind="primary"]:hover {
+                                background-color: #b91c1c !important;
+                                border-color: #991b1b !important;
+                            }
+
+                            /* ⚠️ 주 40시간 초과 버튼 (주황색 배경) */
+                            div.stButton > button[kind="secondary"],
+                            div.stButton > button {
+                                background-color: #ea580c !important;
+                                border: 1.5px solid #c2410c !important;
+                                border-radius: 6px !important;
+                                color: #ffffff !important;
+                                font-weight: 700 !important;
+                                font-size: 12px !important;
+                                padding: 4px 6px !important;
+                                box-shadow: 0 2px 5px rgba(234, 88, 12, 0.3) !important;
+                            }
+                            div.stButton > button[kind="secondary"] *,
+                            div.stButton > button * {
+                                color: #ffffff !important;
+                                font-weight: 700 !important;
+                            }
+                            div.stButton > button[kind="secondary"]:hover,
+                            div.stButton > button:hover {
+                                background-color: #c2410c !important;
+                                border-color: #9a3412 !important;
+                            }
+
+                            /* ✅ 과중근무 보상완료 버튼 (초록색 배경) */
+                            div.element-container:has(.reward-chip-zone) {
+                                display: none !important;
+                                height: 0px !important;
+                                margin: 0px !important;
+                                padding: 0px !important;
+                            }
+                            div[data-testid="stColumn"]:has(.reward-chip-zone) button,
+                            div[data-testid="column"]:has(.reward-chip-zone) button {
+                                background-color: #16a34a !important;
+                                border: 1.5px solid #15803d !important;
+                                border-radius: 6px !important;
+                                color: #ffffff !important;
+                                font-weight: 700 !important;
+                                font-size: 12px !important;
+                                padding: 4px 6px !important;
+                                box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3) !important;
+                            }
+                            div[data-testid="stColumn"]:has(.reward-chip-zone) button *,
+                            div[data-testid="column"]:has(.reward-chip-zone) button * {
+                                color: #ffffff !important;
+                                font-weight: 700 !important;
+                            }
+                            div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover,
+                            div[data-testid="column"]:has(.reward-chip-zone) button:hover {
+                                background-color: #15803d !important;
+                                border-color: #166534 !important;
+                            }
+
+                            /* 텍스트 줄바꿈 방지 및 가독성 최적화 */
+                            div.stButton > button {
+                                white-space: nowrap !important;
+                            }
+                            div.stButton > button *,
+                            div.stButton > button p,
+                            div.stButton > button span {
+                                white-space: nowrap !important;
+                            }
+                        </style>
+                        """, unsafe_allow_html=True)
+                        # 1행: 상단 알림 제목
+                        if danger_items or caution_items:
+                            st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
+                        else:
+                            st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span>🎉</span> <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px;">[과중 근무 보상 완료]</span> <span style="font-weight: 800; color: #16a34a;">초과 근무 팀원에 대한 보상 휴가 처리가 모두 완료되었습니다!</span></div>', unsafe_allow_html=True)
+
+                        st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid #fecaca;'></div>", unsafe_allow_html=True)
+                        
+                        # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경, 5개씩 넉넉하게 줄바꿈)
+                        if danger_items:
+                            col_d_lbl, col_d_chips = st.columns([1.4, 8.6])
+                            with col_d_lbl:
+                                st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#dc2626;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
+                            with col_d_chips:
+                                chunk_size = 5
+                                for i in range(0, len(danger_items), chunk_size):
+                                    chunk = danger_items[i:i + chunk_size]
+                                    d_cols = st.columns(chunk_size)
+                                    for c_idx, d_item in enumerate(chunk):
+                                        with d_cols[c_idx]:
+                                            if st.button(
+                                                f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)",
+                                                key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}",
+                                                type="primary",
+                                                use_container_width=True
+                                            ):
+                                                show_weekly_detail_dialog(d_item["worker_name"], ov_df, default_week_name=d_item["week_label"])
+
+                        # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경, 5개씩 넉넉하게 줄바꿈)
+                        if caution_items:
+                            col_c_lbl, col_c_chips = st.columns([1.4, 8.6])
+                            with col_c_lbl:
+                                st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#d97706;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
+                            with col_c_chips:
+                                chunk_size = 5
+                                for i in range(0, len(caution_items), chunk_size):
+                                    chunk = caution_items[i:i + chunk_size]
+                                    c_cols = st.columns(chunk_size)
+                                    for c_idx, c_item in enumerate(chunk):
+                                        with c_cols[c_idx]:
+                                            if st.button(
+                                                f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)",
+                                                key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}",
+                                                type="secondary",
+                                                use_container_width=True
+                                            ):
+                                                show_weekly_detail_dialog(c_item["worker_name"], ov_df, default_week_name=c_item["week_label"])
+
+                        # 4행: ✅ 과중근무 보상완료 팀원들 (있을 경우 - 초록색 배경, 5개씩 넉넉하게 줄바꿈)
+                        if rewarded_items:
+                            col_r_lbl, col_r_chips = st.columns([1.4, 8.6])
+                            with col_r_lbl:
+                                st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#16a34a;'>✅ 보상 완료 ({len(rewarded_items)}건):</div>", unsafe_allow_html=True)
+                            with col_r_chips:
+                                st.markdown('<span class="reward-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
+                                chunk_size = 5
+                                for i in range(0, len(rewarded_items), chunk_size):
+                                    chunk = rewarded_items[i:i + chunk_size]
+                                    r_cols = st.columns(chunk_size)
+                                    for c_idx, r_item in enumerate(chunk):
+                                        with r_cols[c_idx]:
+                                            if st.button(
+                                                f"✅ {r_item['worker_name']}({r_item['short_w']}:{r_item['val']}h)",
+                                                key=f"btn_chip_reward_{r_item['worker_name']}_{r_item['week_label']}",
+                                                use_container_width=True
+                                            ):
+                                                show_weekly_detail_dialog(r_item["worker_name"], ov_df, default_week_name=r_item["week_label"])
+                else:
+                    # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너
                     st.markdown("""
-                    <style>
-                        /* 🚨 주 52시간 초과 버튼 (빨간색 배경) */
-                        div.stButton > button[kind="primary"] {
-                            background-color: #dc2626 !important;
-                            border: 1.5px solid #b91c1c !important;
-                            border-radius: 6px !important;
-                            color: #ffffff !important;
-                            font-weight: 700 !important;
-                            font-size: 12px !important;
-                            padding: 4px 6px !important;
-                            box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3) !important;
-                        }
-                        div.stButton > button[kind="primary"] * {
-                            color: #ffffff !important;
-                            font-weight: 700 !important;
-                        }
-                        div.stButton > button[kind="primary"]:hover {
-                            background-color: #b91c1c !important;
-                            border-color: #991b1b !important;
-                        }
-
-                        /* ⚠️ 주 40시간 초과 버튼 (주황색 배경) */
-                        div.stButton > button[kind="secondary"],
-                        div.stButton > button {
-                            background-color: #ea580c !important;
-                            border: 1.5px solid #c2410c !important;
-                            border-radius: 6px !important;
-                            color: #ffffff !important;
-                            font-weight: 700 !important;
-                            font-size: 12px !important;
-                            padding: 4px 6px !important;
-                            box-shadow: 0 2px 5px rgba(234, 88, 12, 0.3) !important;
-                        }
-                        div.stButton > button[kind="secondary"] *,
-                        div.stButton > button * {
-                            color: #ffffff !important;
-                            font-weight: 700 !important;
-                        }
-                        div.stButton > button[kind="secondary"]:hover,
-                        div.stButton > button:hover {
-                            background-color: #c2410c !important;
-                            border-color: #9a3412 !important;
-                        }
-
-                        /* ✅ 과중근무 보상완료 버튼 (초록색 배경) */
-                        div.element-container:has(.reward-chip-zone) {
-                            display: none !important;
-                            height: 0px !important;
-                            margin: 0px !important;
-                            padding: 0px !important;
-                        }
-                        div[data-testid="stColumn"]:has(.reward-chip-zone) button,
-                        div[data-testid="column"]:has(.reward-chip-zone) button {
-                            background-color: #16a34a !important;
-                            border: 1.5px solid #15803d !important;
-                            border-radius: 6px !important;
-                            color: #ffffff !important;
-                            font-weight: 700 !important;
-                            font-size: 12px !important;
-                            padding: 4px 6px !important;
-                            box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3) !important;
-                        }
-                        div[data-testid="stColumn"]:has(.reward-chip-zone) button *,
-                        div[data-testid="column"]:has(.reward-chip-zone) button * {
-                            color: #ffffff !important;
-                            font-weight: 700 !important;
-                        }
-                        div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover,
-                        div[data-testid="column"]:has(.reward-chip-zone) button:hover {
-                            background-color: #15803d !important;
-                            border-color: #166534 !important;
-                        }
-
-                        /* 텍스트 줄바꿈 방지 및 가독성 최적화 */
-                        div.stButton > button {
-                            white-space: nowrap !important;
-                        }
-                        div.stButton > button *,
-                        div.stButton > button p,
-                        div.stButton > button span {
-                            white-space: nowrap !important;
-                        }
-                    </style>
-                    """, unsafe_allow_html=True)
-                    # 1행: 상단 알림 제목
-                    if danger_items or caution_items:
-                        st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
-                    else:
-                        st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span>🎉</span> <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px;">[과중 근무 보상 완료]</span> <span style="font-weight: 800; color: #16a34a;">초과 근무 팀원에 대한 보상 휴가 처리가 모두 완료되었습니다!</span></div>', unsafe_allow_html=True)
-
-                    st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid #fecaca;'></div>", unsafe_allow_html=True)
-                    
-                    # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경, 5개씩 넉넉하게 줄바꿈)
-                    if danger_items:
-                        col_d_lbl, col_d_chips = st.columns([1.4, 8.6])
-                        with col_d_lbl:
-                            st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#dc2626;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
-                        with col_d_chips:
-                            chunk_size = 5
-                            for i in range(0, len(danger_items), chunk_size):
-                                chunk = danger_items[i:i + chunk_size]
-                                d_cols = st.columns(chunk_size)
-                                for c_idx, d_item in enumerate(chunk):
-                                    with d_cols[c_idx]:
-                                        if st.button(
-                                            f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)",
-                                            key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}",
-                                            type="primary",
-                                            use_container_width=True
-                                        ):
-                                            show_weekly_detail_dialog(d_item["worker_name"], df, default_week_name=d_item["week_label"])
-
-                    # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경, 5개씩 넉넉하게 줄바꿈)
-                    if caution_items:
-                        col_c_lbl, col_c_chips = st.columns([1.4, 8.6])
-                        with col_c_lbl:
-                            st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#d97706;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
-                        with col_c_chips:
-                            chunk_size = 5
-                            for i in range(0, len(caution_items), chunk_size):
-                                chunk = caution_items[i:i + chunk_size]
-                                c_cols = st.columns(chunk_size)
-                                for c_idx, c_item in enumerate(chunk):
-                                    with c_cols[c_idx]:
-                                        if st.button(
-                                            f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)",
-                                            key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}",
-                                            type="secondary",
-                                            use_container_width=True
-                                        ):
-                                            show_weekly_detail_dialog(c_item["worker_name"], df, default_week_name=c_item["week_label"])
-
-                    # 4행: ✅ 과중근무 보상완료 팀원들 (있을 경우 - 초록색 배경, 5개씩 넉넉하게 줄바꿈)
-                    if rewarded_items:
-                        col_r_lbl, col_r_chips = st.columns([1.4, 8.6])
-                        with col_r_lbl:
-                            st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#16a34a;'>✅ 보상 완료 ({len(rewarded_items)}건):</div>", unsafe_allow_html=True)
-                        with col_r_chips:
-                            st.markdown('<span class="reward-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
-                            chunk_size = 5
-                            for i in range(0, len(rewarded_items), chunk_size):
-                                chunk = rewarded_items[i:i + chunk_size]
-                                r_cols = st.columns(chunk_size)
-                                for c_idx, r_item in enumerate(chunk):
-                                    with r_cols[c_idx]:
-                                        if st.button(
-                                            f"✅ {r_item['worker_name']}({r_item['short_w']}:{r_item['val']}h)",
-                                            key=f"btn_chip_reward_{r_item['worker_name']}_{r_item['week_label']}",
-                                            use_container_width=True
-                                        ):
-                                            show_weekly_detail_dialog(r_item["worker_name"], df, default_week_name=r_item["week_label"])
-            else:
-                # 🟢 과중 근무자가 없는 경우: 일체형 카드 배너 (상단 5개 카드와 간격 28px 정밀 일치)
-                st.markdown("""
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 18px 0 0 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
-                    <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
-                        <span style="font-size: 15px; line-height: 1;">🟢</span>
-                        <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
-                        <span style="color: #334155; font-size: 13px; line-height: 1; font-weight: 500;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 6px solid #16a34a; border-radius: 8px; padding: 10px 18px; margin: 18px 0 0 0; display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">
+                        <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
+                            <span style="font-size: 15px; line-height: 1;">🟢</span>
+                            <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
+                            <span style="color: #334155; font-size: 13px; line-height: 1; font-weight: 500;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
+                        </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+
+        render_overwork_banner_fragment(df)
 
         # 📌 과중 근무 배너와 회색선, 회색선과 LIVE 관제 사이 간격을 정확히 28px로 균일 배치
         st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
@@ -5573,197 +5585,202 @@ def main():
             st.markdown(f"##### 📆 {month_desc} - 주차(Week)별 팀원 투입 시간 현황 & 휴식 조율 모니터링")
             st.caption("선택된 월의 **각 주차별 투입 시간(h)**을 한눈에 비교하여, 한 주에 너무 많이 일한 팀원을 파악하고 다음 주 휴식을 조율할 수 있습니다. (💡 주 40h/52h 법정 기준에 따라 구분이 **[교육]**인 시간은 합산에서 제외됩니다.)")
 
-            if not df.empty and "week_label" in df.columns:
-                # 40시간 / 52시간 과중 업무 모니터링은 [교육] 구분 제외 기준으로 집계
-                df_for_pivot = df[~df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in df.columns else df
-                pivot_df = df_for_pivot.pivot_table(
-                    index=["worker_name", "worker_team"],
-                    columns="week_label",
-                    values="actual_hours",
-                    aggfunc="sum",
-                    fill_value=0.0
-                ).round(1)
+            @st.fragment
+            def render_weekly_matrix_section(mat_df: pd.DataFrame):
+                """주차별 팀원 투입 시간 매트릭스 표 및 클릭 시 세부 팝업 (화면 전체 새로고침 없는 독립 Fragment)"""
+                if not mat_df.empty and "week_label" in mat_df.columns:
+                    # 40시간 / 52시간 과중 업무 모니터링은 [교육] 구분 제외 기준으로 집계
+                    df_for_pivot = mat_df[~mat_df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in mat_df.columns else mat_df
+                    pivot_df = df_for_pivot.pivot_table(
+                        index=["worker_name", "worker_team"],
+                        columns="week_label",
+                        values="actual_hours",
+                        aggfunc="sum",
+                        fill_value=0.0
+                    ).round(1)
 
-                if not pivot_df.empty:
-                    week_cols = sorted(list(pivot_df.columns))
+                    if not pivot_df.empty:
+                        week_cols = sorted(list(pivot_df.columns))
 
-                    # 주간 최고(h) 및 기간 총시간(h) 계산
-                    pivot_df["주간 최고(h)"] = pivot_df[week_cols].max(axis=1).round(1)
-                    pivot_df["기간 총시간(h)"] = pivot_df[week_cols].sum(axis=1).round(1)
+                        # 주간 최고(h) 및 기간 총시간(h) 계산
+                        pivot_df["주간 최고(h)"] = pivot_df[week_cols].max(axis=1).round(1)
+                        pivot_df["기간 총시간(h)"] = pivot_df[week_cols].sum(axis=1).round(1)
 
-                    # 정렬 및 인덱스를 컬럼으로 리셋
-                    pivot_df = pivot_df.sort_values(by="기간 총시간(h)", ascending=False).reset_index()
-                    pivot_df = pivot_df.rename(columns={
-                        "worker_name": "담당자",
-                        "worker_team": "소속팀"
-                    })
+                        # 정렬 및 인덱스를 컬럼으로 리셋
+                        pivot_df = pivot_df.sort_values(by="기간 총시간(h)", ascending=False).reset_index()
+                        pivot_df = pivot_df.rename(columns={
+                            "worker_name": "담당자",
+                            "worker_team": "소속팀"
+                        })
 
-                    # 보상 휴가 지급 내역 전수 로드
-                    all_rewards = RewardLeaveService.get_all_reward_leaves()
+                        # 보상 휴가 지급 내역 전수 로드
+                        all_rewards = RewardLeaveService.get_all_reward_leaves()
 
-                    def check_overwork(row):
-                        w_name = row["담당자"]
-                        danger_52_weeks = []   # 52시간 이상 (빨간색)
-                        caution_40_weeks = []  # 40시간 이상 ~ 52시간 미만 (주황색)
-                        rewarded_weeks = []    # 보상 완료 (녹색)
+                        def check_overwork(row):
+                            w_name = row["담당자"]
+                            danger_52_weeks = []   # 52시간 이상 (빨간색)
+                            caution_40_weeks = []  # 40시간 이상 ~ 52시간 미만 (주황색)
+                            rewarded_weeks = []    # 보상 완료 (녹색)
 
-                        for c in week_cols:
-                            val = row[c]
-                            if val >= 40.0:
-                                short_w = c.split(" ")[-2] if " " in c else c
-                                is_rewarded = (w_name, c) in all_rewards
-                                if is_rewarded:
-                                    rewarded_weeks.append(f"{short_w}({val}h:보상완료)")
-                                elif val >= 52.0:
-                                    danger_52_weeks.append(f"{short_w}({val}h)")
-                                else:
-                                    caution_40_weeks.append(f"{short_w}({val}h)")
-
-                        if danger_52_weeks:
-                            # 52시간 초과 1건이라도 있으면 빨간색 경고
-                            all_unrewarded = danger_52_weeks + caution_40_weeks
-                            return "🚨 " + ", ".join(all_unrewarded)
-                        elif caution_40_weeks:
-                            # 40~52시간 초과인 경우 주황색 경고
-                            return "⚠️ " + ", ".join(caution_40_weeks)
-                        elif rewarded_weeks:
-                            # 모든 초과근무에 보상이 완료된 경우 녹색
-                            return "✅ " + ", ".join(rewarded_weeks)
-                        return "정상"
-
-                    pivot_df["🚨 과중업무 / 보상현황"] = pivot_df.apply(check_overwork, axis=1)
-
-                    # 컬럼 순서 변경: [담당자, 소속팀, 🚨 과중업무 / 보상현황, 주차별 컬럼들..., 주간 최고(h), 기간 총시간(h)]
-                    ordered_cols = ["담당자", "소속팀", "🚨 과중업무 / 보상현황"] + week_cols + ["주간 최고(h)", "기간 총시간(h)"]
-                    pivot_df = pivot_df[[c for c in ordered_cols if c in pivot_df.columns]]
-
-                    # 과중 업무 요약 알림 (52h 초과: 빨간색, 40h~52h: 주황색)
-                    danger_52_cnt = len(pivot_df[pivot_df["🚨 과중업무 / 보상현황"].str.startswith("🚨")])
-                    caution_40_cnt = len(pivot_df[pivot_df["🚨 과중업무 / 보상현황"].str.startswith("⚠️")])
-                    rewarded_cnt = len(pivot_df[pivot_df["🚨 과중업무 / 보상현황"].str.startswith("✅")])
-
-                    if danger_52_cnt > 0 or caution_40_cnt > 0:
-                        msg_parts = []
-                        if danger_52_cnt > 0:
-                            msg_parts.append(f"🚨 **주 52시간 초과 위험 {danger_52_cnt}명 (빨간색)**")
-                        if caution_40_cnt > 0:
-                            msg_parts.append(f"⚠️ **주 40시간 초과 주의 {caution_40_cnt}명 (주황색)**")
-                        st.warning(f"{' / '.join(msg_parts)}이 감지되었습니다. (보상 완료: {rewarded_cnt}명) 숫자를 클릭하여 보상 휴가를 등록하시면 **녹색**으로 바뀝니다.")
-                    elif rewarded_cnt > 0:
-                        st.success(f"🎉 모든 초과 근무자({rewarded_cnt}명)에게 **보상 휴가가 100% 정상 부여 완료**되었습니다! (녹색 전환)")
-                    else:
-                        st.info("💡 선택된 기간 동안 주 40시간을 초과한 과중 근무자가 없습니다.")
-
-                    # 스타일링: 52h 초과=빨간색(#D32F2F), 40h~52h=주황색(#EF6C00), 보상완료=녹색(#2E7D32)
-                    def style_overwork_badge(val):
-                        if isinstance(val, str):
-                            if "🚨" in val:
-                                return "background-color: #D32F2F; color: #FFFFFF; font-weight: 900; text-align: center;"
-                            elif "⚠️" in val:
-                                return "background-color: #EF6C00; color: #FFFFFF; font-weight: 900; text-align: center;"
-                            elif "✅" in val:
-                                return "background-color: #2E7D32; color: #FFFFFF; font-weight: 900; text-align: center;"
-                        return "color: #4CAF50; font-weight: 600; text-align: center;"
-
-                    numeric_cols = [c for c in week_cols + ["주간 최고(h)", "기간 총시간(h)"] if c in pivot_df.columns]
-
-                    def highlight_row_cells(row):
-                        styles = [''] * len(row)
-                        w_name = row["담당자"]
-                        for i, col in enumerate(row.index):
-                            if col in week_cols:
-                                val = row[col]
-                                if isinstance(val, (int, float)) and val >= 40.0:
-                                    is_rewarded = (w_name, col) in all_rewards
+                            for c in week_cols:
+                                val = row[c]
+                                if val >= 40.0:
+                                    short_w = c.split(" ")[-2] if " " in c else c
+                                    is_rewarded = (w_name, c) in all_rewards
                                     if is_rewarded:
-                                        styles[i] = "background-color: #C8E6C9; color: #1B5E20; font-weight: bold;"
+                                        rewarded_weeks.append(f"{short_w}({val}h:보상완료)")
                                     elif val >= 52.0:
-                                        # 52시간 이상 ➔ 빨간색
-                                        styles[i] = "background-color: #FFCDD2; color: #B71C1C; font-weight: bold;"
+                                        danger_52_weeks.append(f"{short_w}({val}h)")
                                     else:
-                                        # 40시간 이상 52시간 미만 ➔ 주황색
-                                        styles[i] = "background-color: #FFE0B2; color: #E65100; font-weight: bold;"
-                        return styles
+                                        caution_40_weeks.append(f"{short_w}({val}h)")
 
-                    styled_pivot = pivot_df.style.format(
-                        "{:.1f}", subset=numeric_cols
-                    ).map(
-                        style_overwork_badge,
-                        subset=["🚨 과중업무 / 보상현황"]
-                    ).apply(
-                        highlight_row_cells,
-                        axis=1
-                    )
+                            if danger_52_weeks:
+                                # 52시간 초과 1건이라도 있으면 빨간색 경고
+                                all_unrewarded = danger_52_weeks + caution_40_weeks
+                                return "🚨 " + ", ".join(all_unrewarded)
+                            elif caution_40_weeks:
+                                # 40~52시간 초과인 경우 주황색 경고
+                                return "⚠️ " + ", ".join(caution_40_weeks)
+                            elif rewarded_weeks:
+                                # 모든 초과근무에 보상이 완료된 경우 녹색
+                                return "✅ " + ", ".join(rewarded_weeks)
+                            return "정상"
 
-                    column_configs = {
-                        "담당자": st.column_config.TextColumn("담당자", width="small"),
-                        "소속팀": st.column_config.TextColumn("소속팀", width="small"),
-                        "🚨 과중업무 / 보상현황": st.column_config.TextColumn("🚨 과중업무 / 보상현황", width="medium"),
-                    }
-                    for num_col in numeric_cols:
-                        column_configs[num_col] = st.column_config.NumberColumn(num_col, format="%.1f", width="small")
+                        pivot_df["🚨 과중업무 / 보상현황"] = pivot_df.apply(check_overwork, axis=1)
 
-                    # 1. 주차별 매트릭스 표 렌더링 (특정 셀/숫자 클릭 시 해당 주차 팝업 즉시 연동)
-                    st.caption("💡 표에서 **원하는 숫자(예: 99.0)나 셀을 클릭**하시면, 해당 인원의 **그 주차 세부 작업 내역 팝업(새창)**이 즉시 열립니다.")
-                    selected_table = st.dataframe(
-                        styled_pivot,
-                        column_config=column_configs,
-                        use_container_width=True,
-                        hide_index=True,
-                        on_select="rerun",
-                        selection_mode="single-cell",
-                        key="weekly_matrix_selector"
-                    )
+                        # 컬럼 순서 변경: [담당자, 소속팀, 🚨 과중업무 / 보상현황, 주차별 컬럼들..., 주간 최고(h), 기간 총시간(h)]
+                        ordered_cols = ["담당자", "소속팀", "🚨 과중업무 / 보상현황"] + week_cols + ["주간 최고(h)", "기간 총시간(h)"]
+                        pivot_df = pivot_df[[c for c in ordered_cols if c in pivot_df.columns]]
 
-                    # 2. 셀/숫자 클릭 감지 시 모달 팝업 자동 실행 (1회성 클릭 이벤트만 감지하여 사이드바 조작 시 오작동 방지)
-                    target_w_name = None
-                    target_col_name = None
+                        # 과중 업무 요약 알림 (52h 초과: 빨간색, 40h~52h: 주황색)
+                        danger_52_cnt = len(pivot_df[pivot_df["🚨 과중업무 / 보상현황"].str.startswith("🚨")])
+                        caution_40_cnt = len(pivot_df[pivot_df["🚨 과중업무 / 보상현황"].str.startswith("⚠️")])
+                        rewarded_cnt = len(pivot_df[pivot_df["🚨 과중업무 / 보상현황"].str.startswith("✅")])
 
-                    sel_obj = None
-                    if selected_table and hasattr(selected_table, "selection"):
-                        sel_obj = selected_table.selection
-                    elif selected_table and isinstance(selected_table, dict):
-                        sel_obj = selected_table.get("selection")
+                        if danger_52_cnt > 0 or caution_40_cnt > 0:
+                            msg_parts = []
+                            if danger_52_cnt > 0:
+                                msg_parts.append(f"🚨 **주 52시간 초과 위험 {danger_52_cnt}명 (빨간색)**")
+                            if caution_40_cnt > 0:
+                                msg_parts.append(f"⚠️ **주 40시간 초과 주의 {caution_40_cnt}명 (주황색)**")
+                            st.warning(f"{' / '.join(msg_parts)}이 감지되었습니다. (보상 완료: {rewarded_cnt}명) 숫자를 클릭하여 보상 휴가를 등록하시면 **녹색**으로 바뀝니다.")
+                        elif rewarded_cnt > 0:
+                            st.success(f"🎉 모든 초과 근무자({rewarded_cnt}명)에게 **보상 휴가가 100% 정상 부여 완료**되었습니다! (녹색 전환)")
+                        else:
+                            st.info("💡 선택된 기간 동안 주 40시간을 초과한 과중 근무자가 없습니다.")
 
-                    if sel_obj:
-                        # 1) cells 필드 검사 (tuple list: [(row, col), ...])
-                        cells = getattr(sel_obj, "cells", None) if hasattr(sel_obj, "cells") else (sel_obj.get("cells") if isinstance(sel_obj, dict) else None)
-                        if cells and len(cells) > 0:
-                            first_cell = cells[0]
-                            if isinstance(first_cell, (tuple, list)) and len(first_cell) >= 2:
-                                r_idx, c_name = first_cell[0], first_cell[1]
-                                if r_idx is not None and r_idx < len(pivot_df):
-                                    target_w_name = pivot_df.iloc[r_idx]["담당자"]
-                                    target_col_name = c_name
-                            elif isinstance(first_cell, dict):
-                                r_idx = first_cell.get("row")
-                                c_name = first_cell.get("column")
-                                if r_idx is not None and r_idx < len(pivot_df):
-                                    target_w_name = pivot_df.iloc[r_idx]["담당자"]
-                                    target_col_name = c_name
+                        # 스타일링: 52h 초과=빨간색(#D32F2F), 40h~52h=주황색(#EF6C00), 보상완료=녹색(#2E7D32)
+                        def style_overwork_badge(val):
+                            if isinstance(val, str):
+                                if "🚨" in val:
+                                    return "background-color: #D32F2F; color: #FFFFFF; font-weight: 900; text-align: center;"
+                                elif "⚠️" in val:
+                                    return "background-color: #EF6C00; color: #FFFFFF; font-weight: 900; text-align: center;"
+                                elif "✅" in val:
+                                    return "background-color: #2E7D32; color: #FFFFFF; font-weight: 900; text-align: center;"
+                            return "color: #4CAF50; font-weight: 600; text-align: center;"
 
-                        # 2) rows & columns 필드 검사
-                        if not target_w_name:
-                            rows = getattr(sel_obj, "rows", None) if hasattr(sel_obj, "rows") else (sel_obj.get("rows") if isinstance(sel_obj, dict) else None)
-                            cols = getattr(sel_obj, "columns", None) if hasattr(sel_obj, "columns") else (sel_obj.get("columns") if isinstance(sel_obj, dict) else None)
-                            
-                            if rows and len(rows) > 0:
-                                r_idx = rows[0]
-                                if r_idx < len(pivot_df):
-                                    target_w_name = pivot_df.iloc[r_idx]["담당자"]
-                                    
-                            if cols and len(cols) > 0:
-                                target_col_name = cols[0]
+                        numeric_cols = [c for c in week_cols + ["주간 최고(h)", "기간 총시간(h)"] if c in pivot_df.columns]
 
-                    # 3. 새로운 셀 클릭 시에만 팝업 실행 (사이드바 조작 시에는 팝업 방지)
-                    current_click_token = f"{target_w_name}_{target_col_name}" if target_w_name else None
-                    last_click_token = st.session_state.get("_last_matrix_click_token")
+                        def highlight_row_cells(row):
+                            styles = [''] * len(row)
+                            w_name = row["담당자"]
+                            for i, col in enumerate(row.index):
+                                if col in week_cols:
+                                    val = row[col]
+                                    if isinstance(val, (int, float)) and val >= 40.0:
+                                        is_rewarded = (w_name, col) in all_rewards
+                                        if is_rewarded:
+                                            styles[i] = "background-color: #C8E6C9; color: #1B5E20; font-weight: bold;"
+                                        elif val >= 52.0:
+                                            # 52시간 이상 ➔ 빨간색
+                                            styles[i] = "background-color: #FFCDD2; color: #B71C1C; font-weight: bold;"
+                                        else:
+                                            # 40시간 이상 52시간 미만 ➔ 주황색
+                                            styles[i] = "background-color: #FFE0B2; color: #E65100; font-weight: bold;"
+                            return styles
 
-                    if current_click_token and current_click_token != last_click_token:
-                        st.session_state["_last_matrix_click_token"] = current_click_token
-                        show_weekly_detail_dialog(target_w_name, df, default_week_name=target_col_name)
-                    elif not current_click_token:
-                        st.session_state["_last_matrix_click_token"] = None
+                        styled_pivot = pivot_df.style.format(
+                            "{:.1f}", subset=numeric_cols
+                        ).map(
+                            style_overwork_badge,
+                            subset=["🚨 과중업무 / 보상현황"]
+                        ).apply(
+                            highlight_row_cells,
+                            axis=1
+                        )
+
+                        column_configs = {
+                            "담당자": st.column_config.TextColumn("담당자", width="small"),
+                            "소속팀": st.column_config.TextColumn("소속팀", width="small"),
+                            "🚨 과중업무 / 보상현황": st.column_config.TextColumn("🚨 과중업무 / 보상현황", width="medium"),
+                        }
+                        for num_col in numeric_cols:
+                            column_configs[num_col] = st.column_config.NumberColumn(num_col, format="%.1f", width="small")
+
+                        # 1. 주차별 매트릭스 표 렌더링 (특정 셀/숫자 클릭 시 해당 주차 팝업 즉시 연동)
+                        st.caption("💡 표에서 **원하는 숫자(예: 99.0)나 셀을 클릭**하시면, 해당 인원의 **그 주차 세부 작업 내역 팝업(새창)**이 즉시 열립니다.")
+                        selected_table = st.dataframe(
+                            styled_pivot,
+                            column_config=column_configs,
+                            use_container_width=True,
+                            hide_index=True,
+                            on_select="rerun",
+                            selection_mode="single-cell",
+                            key="weekly_matrix_selector"
+                        )
+
+                        # 2. 셀/숫자 클릭 감지 시 모달 팝업 자동 실행 (1회성 클릭 이벤트만 감지하여 사이드바 조작 시 오작동 방지)
+                        target_w_name = None
+                        target_col_name = None
+
+                        sel_obj = None
+                        if selected_table and hasattr(selected_table, "selection"):
+                            sel_obj = selected_table.selection
+                        elif selected_table and isinstance(selected_table, dict):
+                            sel_obj = selected_table.get("selection")
+
+                        if sel_obj:
+                            # 1) cells 필드 검사 (tuple list: [(row, col), ...])
+                            cells = getattr(sel_obj, "cells", None) if hasattr(sel_obj, "cells") else (sel_obj.get("cells") if isinstance(sel_obj, dict) else None)
+                            if cells and len(cells) > 0:
+                                first_cell = cells[0]
+                                if isinstance(first_cell, (tuple, list)) and len(first_cell) >= 2:
+                                    r_idx, c_name = first_cell[0], first_cell[1]
+                                    if r_idx is not None and r_idx < len(pivot_df):
+                                        target_w_name = pivot_df.iloc[r_idx]["담당자"]
+                                        target_col_name = c_name
+                                elif isinstance(first_cell, dict):
+                                    r_idx = first_cell.get("row")
+                                    c_name = first_cell.get("column")
+                                    if r_idx is not None and r_idx < len(pivot_df):
+                                        target_w_name = pivot_df.iloc[r_idx]["담당자"]
+                                        target_col_name = c_name
+
+                            # 2) rows & columns 필드 검사
+                            if not target_w_name:
+                                rows = getattr(sel_obj, "rows", None) if hasattr(sel_obj, "rows") else (sel_obj.get("rows") if isinstance(sel_obj, dict) else None)
+                                cols = getattr(sel_obj, "columns", None) if hasattr(sel_obj, "columns") else (sel_obj.get("columns") if isinstance(sel_obj, dict) else None)
+                                
+                                if rows and len(rows) > 0:
+                                    r_idx = rows[0]
+                                    if r_idx < len(pivot_df):
+                                        target_w_name = pivot_df.iloc[r_idx]["담당자"]
+                                        
+                                if cols and len(cols) > 0:
+                                    target_col_name = cols[0]
+
+                        # 3. 새로운 셀 클릭 시에만 팝업 실행 (사이드바 조작 시에는 팝업 방지)
+                        current_click_token = f"{target_w_name}_{target_col_name}" if target_w_name else None
+                        last_click_token = st.session_state.get("_last_matrix_click_token")
+
+                        if current_click_token and current_click_token != last_click_token:
+                            st.session_state["_last_matrix_click_token"] = current_click_token
+                            show_weekly_detail_dialog(target_w_name, mat_df, default_week_name=target_col_name)
+                        elif not current_click_token:
+                            st.session_state["_last_matrix_click_token"] = None
+
+            render_weekly_matrix_section(df)
 
     # ------------------------------------------
     # PAGE: 팀별 업무량 비교
