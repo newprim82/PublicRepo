@@ -2092,7 +2092,6 @@ def get_team_theme(team_name: str) -> dict:
 
 @st.fragment(run_every="60s")
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
-    """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 화면 깜빡임 없이 1분마다 독립 실행되는 실시간 관제 Fragment"""
     # 1분 주기 자동 실행 시 최신 DB(카카오톡 수집 데이터) 동기화 시도
     try:
         latest_df = db_manager.get_all_work_logs()
@@ -2100,7 +2099,6 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
             df_raw = latest_df
     except Exception:
         pass
-    """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 실시간 관제 대시보드 컴포넌트"""
     kst_now = get_current_kst_time()
     today_date = kst_now.date()
     kst_now_naive = kst_now.replace(tzinfo=None)
