@@ -2094,7 +2094,7 @@ def get_team_theme(team_name: str) -> dict:
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     # 1분 주기 자동 실행 시 최신 DB(카카오톡 수집 데이터) 동기화 시도
     try:
-        latest_df = db_manager.get_all_work_logs()
+        latest_df = db_manager.fetch_all_work_logs()
         if latest_df is not None and not latest_df.empty:
             df_raw = latest_df
     except Exception:
