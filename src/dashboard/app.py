@@ -4667,36 +4667,24 @@ def main():
 
         extra_chips_str = "".join(extra_chips)
 
-        # 🏛️ 메인 상단 고시인성 실시간 집계 기준 정보 패널 (5대 KPI 카드 상단)
-        criteria_panel_html = f"""
-        <div class="active-criteria-container">
-            <div class="criteria-left">
-                <div class="criteria-header">
-                    <span>🔍</span>
-                    <span>현재 집계 기준</span>
-                </div>
-                <div class="criteria-chips-wrapper">
-                    <div class="criteria-chip chip-period">
-                        <span class="chip-label">📅 대상 기간:</span>
-                        <span class="chip-value">{month_desc}</span>
-                    </div>
-                    <div class="criteria-chip chip-team">
-                        <span class="chip-label">🏢 소속 팀:</span>
-                        <span class="chip-value">{selected_team}</span>
-                    </div>
-                    <div class="criteria-chip chip-worker">
-                        <span class="chip-label">👤 담당 팀원:</span>
-                        <span class="chip-value">{worker_desc}</span>
-                    </div>
-                    {extra_chips_str}
-                </div>
-            </div>
-            <div class="criteria-count-badge">
-                <span style="color: #22c55e; font-size: 11px;">●</span>
-                <span>총 <b>{len(df):,}건</b> 집계 중</span>
-            </div>
-        </div>
-        """
+        # 🏛️ 메인 상단 고시인성 실시간 집계 기준 정보 패널 (들여쓰기 마크다운 코드블록 오인식 방지 인라인 HTML)
+        criteria_panel_html = (
+            f'<div class="active-criteria-container">'
+            f'<div class="criteria-left">'
+            f'<div class="criteria-header"><span>🔍</span><span>현재 집계 기준</span></div>'
+            f'<div class="criteria-chips-wrapper">'
+            f'<div class="criteria-chip chip-period"><span class="chip-label">📅 대상 기간:</span><span class="chip-value">{month_desc}</span></div>'
+            f'<div class="criteria-chip chip-team"><span class="chip-label">🏢 소속 팀:</span><span class="chip-value">{selected_team}</span></div>'
+            f'<div class="criteria-chip chip-worker"><span class="chip-label">👤 담당 팀원:</span><span class="chip-value">{worker_desc}</span></div>'
+            f'{extra_chips_str}'
+            f'</div>'
+            f'</div>'
+            f'<div class="criteria-count-badge">'
+            f'<span style="color: #22c55e; font-size: 11px;">●</span>'
+            f'<span>총 <b>{len(df):,}건</b> 집계 중</span>'
+            f'</div>'
+            f'</div>'
+        )
         st.markdown(criteria_panel_html, unsafe_allow_html=True)
 
         # 핵심 KPI 카드 (프리미엄 네온 글래스모피즘 카드 렌더링)
