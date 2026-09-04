@@ -195,25 +195,28 @@ class AIBriefingService:
 [정량 데이터 팩트 JSON]:
 {json.dumps(facts, ensure_ascii=False, indent=2)}
 """
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "temperature": 0.2,
-                    "response_mime_type": "application/json"
+        model_candidates = ["gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-flash-latest"]
+        for model in model_candidates:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+                headers = {"Content-Type": "application/json"}
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.2,
+                        "response_mime_type": "application/json"
+                    }
                 }
-            }
-            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=10) as response:
-                res_data = json.loads(response.read().decode("utf-8"))
-                text_content = res_data["candidates"][0]["content"]["parts"][0]["text"]
-                parsed = json.loads(text_content)
-                parsed["source"] = "✨ Gemini AI 심층 분석"
-                return parsed
-        except Exception:
-            return None
+                req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    res_data = json.loads(response.read().decode("utf-8"))
+                    text_content = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                    parsed = json.loads(text_content)
+                    parsed["source"] = "✨ Gemini AI 심층 분석"
+                    return parsed
+            except Exception:
+                continue
+        return None
 
     @classmethod
     def _generate_fact_based_rule_briefing(cls, facts: Dict[str, Any]) -> Dict[str, str]:
