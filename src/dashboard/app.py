@@ -2570,7 +2570,7 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
 
     # 4. 결과 표출: 인터랙티브 테이블 뷰 및 엑셀(XLSX) 다운로드 단독 노출
     target_cols = [
-        "id", "worker_name", "worker_team", "worker_title", "client_name", 
+        "worker_name", "worker_team", "worker_title", "client_name", 
         "task_description", "start_time", "end_time", "actual_hours", 
         "estimated_hours", "status", "is_night_work", "is_weekend_work", "remarks"
     ]
@@ -2617,7 +2617,7 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         key="dl_smart_search_xlsx"
     )
 
-    st.dataframe(display_df, use_container_width=True, height=520)
+    st.dataframe(display_df, use_container_width=True, height=520, hide_index=True)
 
 
 @st.dialog("📧 주간 Executive Summary 메일 발송", width="medium")
