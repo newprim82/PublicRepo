@@ -69,9 +69,12 @@ class EmailReportService:
             
         current_week = target_week_label if (target_week_label and target_week_label in available_weeks) else available_weeks[-1]
         
+        def is_same_team(t1, t2):
+            return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
+
         df_active = df[df["week_label"] == current_week].copy()
-        if selected_team != "전체":
-            df_active = df_active[df_active["worker_team"] == selected_team]
+        if selected_team not in ["전체", "전체 팀"]:
+            df_active = df_active[df_active["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
             
         cur_min_dt = df_active["start_time"].min() if not df_active.empty else None
         prev_df = pd.DataFrame()
@@ -83,8 +86,8 @@ class EmailReportService:
             
             raw_dt = df["start_time"]
             prev_df = df[(raw_dt >= prev_monday_start) & (raw_dt <= prev_sunday_end)].copy()
-            if selected_team != "전체" and not prev_df.empty:
-                prev_df = prev_df[prev_df["worker_team"] == selected_team]
+            if selected_team not in ["전체", "전체 팀"] and not prev_df.empty:
+                prev_df = prev_df[prev_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
         tot_hours = round(df_active["actual_hours"].sum(), 1) if not df_active.empty else 0.0
         tot_cnt = len(df_active)
@@ -163,7 +166,7 @@ class EmailReportService:
                 else:
                     caution_detail_map[w] = f"{w}({worker_hours.get(w, 0.0):.1f}h)"
 
-        client_agg = df_active.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(5) if not df_active.empty else pd.Series()
+        client_agg = df_active.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False) if not df_active.empty else pd.Series()
         top_clients_summary = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in client_agg.head(3).items()]) if not client_agg.empty else "없음"
         top3_share = round((client_agg.head(3).sum() / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
 
@@ -172,7 +175,7 @@ class EmailReportService:
         night_pct = round((night_hours / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
         wknd_pct = round((wknd_hours / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
 
-        worker_agg = df_active.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False).head(5) if not df_active.empty else pd.Series()
+        worker_agg = df_active.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False) if not df_active.empty else pd.Series()
 
         subject = f"📊 [주간 업무 실적 요약] {selected_team} - {current_week}"
 
@@ -306,7 +309,7 @@ class EmailReportService:
                             </tr>
                         </table>
 
-                        <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 8px;">🏢 4. 주요 고객사 공수 투입 Top 5</div>
+                        <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 8px;">🏢 4. 고객사별 공수 투입 현황 (전체 {len(client_agg)}개사)</div>
                         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-bottom: 24px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
                             <thead>
                                 <tr style="background-color: #f1f5f9; color: #334155; font-size: 12px; font-weight: bold; border-bottom: 1.5px solid #cbd5e1;">
@@ -322,7 +325,7 @@ class EmailReportService:
                             </tbody>
                         </table>
 
-                        <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 8px;">👥 5. 최다 공수 투입 핵심 엔지니어 Top 5</div>
+                        <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 8px;">👥 5. 팀원별 공수 투입 현황 (전체 {len(worker_agg)}명)</div>
                         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-bottom: 16px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
                             <thead>
                                 <tr style="background-color: #f1f5f9; color: #334155; font-size: 12px; font-weight: bold; border-bottom: 1.5px solid #cbd5e1;">
