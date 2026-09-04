@@ -1956,7 +1956,6 @@ LIVE_PROGRESS_ANIMATION_AND_TIMER = """
 <style>
 .live-progress-bar {
     border-radius: 5px !important;
-    transition: width 0.8s ease-in-out !important;
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
@@ -1976,7 +1975,7 @@ LIVE_PROGRESS_ANIMATION_AND_TIMER = """
         rgba(255, 255, 255, 0.35) 50%,
         rgba(255, 255, 255, 0) 100%
     ) !important;
-    animation: liveShimmerFlow 2s infinite linear !important;
+    animation: liveShimmerFlow 2.2s infinite linear !important;
     pointer-events: none !important;
 }
 @keyframes liveShimmerFlow {
@@ -1984,68 +1983,6 @@ LIVE_PROGRESS_ANIMATION_AND_TIMER = """
     100% { transform: translateX(100%); }
 }
 </style>
-<script>
-(function() {
-    function updateLiveTaskProgress() {
-        const now = new Date();
-        const cards = document.querySelectorAll('.live-task-card');
-        if (!cards || cards.length === 0) return;
-
-        cards.forEach(card => {
-            const startStr = card.getAttribute('data-start');
-            const estHours = parseFloat(card.getAttribute('data-est') || '0');
-            const isSingleView = card.getAttribute('data-single-view') === 'true';
-
-            if (!startStr) return;
-            const startTime = new Date(startStr);
-            if (isNaN(startTime.getTime())) return;
-
-            const diffSec = Math.max(0, Math.floor((now - startTime) / 1000));
-            const elapsedMins = Math.floor(diffSec / 60);
-            const elapsedHours = (elapsedMins / 60).toFixed(1);
-
-            let rawPct = 50;
-            if (estHours > 0) {
-                rawPct = Math.round((parseFloat(elapsedHours) / estHours) * 100);
-            } else if (parseFloat(elapsedHours) > 0) {
-                rawPct = 100;
-            }
-            const barWidthPct = Math.min(100, Math.max(5, rawPct));
-            const isOvertime = estHours > 0 && parseFloat(elapsedHours) > estHours;
-
-            const progressBar = card.querySelector('.live-progress-bar');
-            if (progressBar) {
-                progressBar.style.width = barWidthPct + '%';
-            }
-
-            const pctBadge = card.querySelector('.live-pct-badge');
-            if (pctBadge) {
-                pctBadge.textContent = rawPct + '%';
-            }
-
-            const elapsedElem = card.querySelector('.live-elapsed-time');
-            if (elapsedElem) {
-                if (isSingleView) {
-                    elapsedElem.innerHTML = `⏱️ 경과: <b>${elapsedHours}h</b> (${elapsedMins}분) ${isOvertime ? '⚠️ 초과' : ''}`;
-                } else {
-                    elapsedElem.innerHTML = `⏱️ 경과 ${elapsedHours}h (${elapsedMins}분) ${isOvertime ? '⚠️' : ''}`;
-                }
-                elapsedElem.style.color = isOvertime ? '#dc2626' : '#0f5132';
-                if (isOvertime) {
-                    elapsedElem.style.fontWeight = '700';
-                }
-            }
-        });
-    }
-
-    if (window._liveTaskProgressTimer) {
-        clearInterval(window._liveTaskProgressTimer);
-    }
-    // 60초(1분)마다 화면 깜빡임 0.00%로 프로그레스 바 및 경과 시간 갱신
-    window._liveTaskProgressTimer = setInterval(updateLiveTaskProgress, 60000);
-    setTimeout(updateLiveTaskProgress, 1000);
-})();
-</script>
 """
 
 
@@ -2153,7 +2090,16 @@ def get_team_theme(team_name: str) -> dict:
         }
 
 
+@st.fragment(run_every="60s")
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
+    """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 화면 깜빡임 없이 1분마다 독립 실행되는 실시간 관제 Fragment"""
+    # 1분 주기 자동 실행 시 최신 DB(카카오톡 수집 데이터) 동기화 시도
+    try:
+        latest_df = db_manager.get_all_work_logs()
+        if latest_df is not None and not latest_df.empty:
+            df_raw = latest_df
+    except Exception:
+        pass
     """[🟢 오늘 실시간 작업 현황 (Today Live Board)] 실시간 관제 대시보드 컴포넌트"""
     kst_now = get_current_kst_time()
     today_date = kst_now.date()
