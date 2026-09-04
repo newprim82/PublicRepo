@@ -244,7 +244,15 @@ class WorkLogMatcher:
                             # 이전 미완료 작업들을 예정시간 기준으로 자동 완료 전환
                             for prev in prev_different_starts:
                                 pending_starts.remove(prev)
-                                auto_actual = prev.estimated_minutes if prev.estimated_minutes > 0 else 60
+                                if prev.estimated_minutes > 0:
+                                    auto_actual = prev.estimated_minutes
+                                else:
+                                    # 예정시간이 생략된 경우: (다음 시작 보고 시각 - 이전 시작 보고 시각)
+                                    diff_mins = int((ts.timestamp - prev.timestamp).total_seconds() / 60.0)
+                                    if 10 <= diff_mins <= 16 * 60:
+                                        auto_actual = diff_mins
+                                    else:
+                                        auto_actual = 60
                                 auto_end_time = prev.timestamp + timedelta(minutes=auto_actual)
                                 
                                 msg_hash = generate_msg_hash(
