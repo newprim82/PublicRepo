@@ -895,84 +895,6 @@ st.markdown("""
         color: #0f172a !important;
     }
 
-    /* 📻 본문(Main) 라디오 버튼 프리미엄 칩 & 선명한 텍스트 스타일 (시인성 100% 보장) */
-    div[data-testid="stMain"] div[data-testid="stRadio"] > label,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] > label {
-        color: #002d42 !important;
-        font-size: 13.5px !important;
-        font-weight: 800 !important;
-    }
-    div[data-testid="stMain"] div[data-testid="stRadio"] > label p,
-    div[data-testid="stMain"] div[data-testid="stRadio"] > label span,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] > label p,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] > label span {
-        color: #002d42 !important;
-        font-size: 13.5px !important;
-        font-weight: 800 !important;
-    }
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"],
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background: #ffffff !important;
-        border: 1.5px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        padding: 6px 12px !important;
-        display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 8px !important;
-        box-shadow: 0 2px 5px rgba(0, 45, 66, 0.04) !important;
-        margin-bottom: 8px !important;
-    }
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        background: #f8fafc !important;
-        border: 1.2px solid #cbd5e1 !important;
-        border-radius: 6px !important;
-        padding: 5px 12px !important;
-        margin: 0 !important;
-        cursor: pointer !important;
-        transition: all 0.15s ease-in-out !important;
-    }
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:hover,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
-        background: #e2e8f0 !important;
-        border-color: #0284c7 !important;
-    }
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label p,
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label span,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label p,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label span {
-        color: #002d42 !important;
-        font-size: 13px !important;
-        font-weight: 700 !important;
-    }
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked),
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
-        background: #005073 !important;
-        border-color: #002d42 !important;
-    }
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p,
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span,
-    div[data-testid="stMain"] div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) span,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) span {
-        color: #ffffff !important;
-        font-weight: 900 !important;
-    }
-
-    /* 💡 본문 캡션 및 안내 문구 가독성 */
-    div[data-testid="stMain"] [data-testid="stCaptionContainer"],
-    div[data-testid="stMain"] [data-testid="stCaptionContainer"] p,
-    div[data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) [data-testid="stCaptionContainer"] p {
-        color: #334155 !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-    }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -4642,6 +4564,52 @@ def main():
         worker_summary = StatsService.get_worker_summary(df)
         
         if not worker_summary.empty:
+            st.markdown(
+                """
+                <style>
+                div.st-key-radio_worker_view > label p,
+                div.st-key-radio_worker_orientation > label p {
+                    color: #002d42 !important;
+                    font-size: 13.5px !important;
+                    font-weight: 800 !important;
+                }
+                div.st-key-radio_worker_view div[role="radiogroup"] label p,
+                div.st-key-radio_worker_orientation div[role="radiogroup"] label p {
+                    color: #002d42 !important;
+                    font-size: 13px !important;
+                    font-weight: 700 !important;
+                }
+                div.st-key-radio_worker_view div[role="radiogroup"] label,
+                div.st-key-radio_worker_orientation div[role="radiogroup"] label {
+                    background: #f1f5f9 !important;
+                    border: 1px solid #cbd5e1 !important;
+                    border-radius: 6px !important;
+                    padding: 3px 10px !important;
+                    cursor: pointer !important;
+                }
+                div.st-key-radio_worker_view div[role="radiogroup"] label:hover,
+                div.st-key-radio_worker_orientation div[role="radiogroup"] label:hover {
+                    background: #e2e8f0 !important;
+                    border-color: #0284c7 !important;
+                }
+                div.st-key-radio_worker_view div[role="radiogroup"] label[data-checked="true"],
+                div.st-key-radio_worker_view div[role="radiogroup"] label:has(input:checked),
+                div.st-key-radio_worker_orientation div[role="radiogroup"] label[data-checked="true"],
+                div.st-key-radio_worker_orientation div[role="radiogroup"] label:has(input:checked) {
+                    background: #005073 !important;
+                    border-color: #002d42 !important;
+                }
+                div.st-key-radio_worker_view div[role="radiogroup"] label[data-checked="true"] p,
+                div.st-key-radio_worker_view div[role="radiogroup"] label:has(input:checked) p,
+                div.st-key-radio_worker_orientation div[role="radiogroup"] label[data-checked="true"] p,
+                div.st-key-radio_worker_orientation div[role="radiogroup"] label:has(input:checked) p {
+                    color: #ffffff !important;
+                    font-weight: 800 !important;
+                }
+                </style>
+                """,
+                unsafe_allow_html=True
+            )
             ctrl_col1, ctrl_col2 = st.columns([2, 1])
             with ctrl_col1:
                 total_workers_cnt = len(worker_summary)
@@ -4651,9 +4619,9 @@ def main():
                 if total_workers_cnt > 30:
                     view_options.insert(1, "상위 30명")
                 
-                selected_view = st.radio("📊 표시 인원 범위:", options=view_options, horizontal=True)
+                selected_view = st.radio("📊 표시 인원 범위:", options=view_options, horizontal=True, key="radio_worker_view")
             with ctrl_col2:
-                chart_orientation = st.radio("📐 차트 방향:", options=["가로형 (이름 안 겹침 - 권장)", "세로형 (세로 90도 회전)"], horizontal=True)
+                chart_orientation = st.radio("📐 차트 방향:", options=["가로형 (이름 안 겹침 - 권장)", "세로형 (세로 90도 회전)"], horizontal=True, key="radio_worker_orientation")
 
             if selected_view == "상위 15명":
                 display_summary = worker_summary.head(15).copy()
