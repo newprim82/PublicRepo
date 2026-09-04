@@ -3137,7 +3137,7 @@ def render_login_page():
             return
 
         with st.form("admin_login_form", clear_on_submit=False):
-            u_input = st.text_input("👤 관리자 아이디 (ID)", placeholder="아이디 입력 (newprim)", key="login_id_field")
+            u_input = st.text_input("👤 관리자 아이디 (ID)", placeholder="아이디 입력", key="login_id_field")
             p_input = st.text_input("🔑 비밀번호 (Password)", type="password", placeholder="비밀번호 입력", key="login_pw_field")
             
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
