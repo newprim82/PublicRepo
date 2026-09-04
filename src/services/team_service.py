@@ -1,4 +1,5 @@
 import sqlite3
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import pandas as pd
@@ -11,6 +12,19 @@ DEFAULT_TITLES = ["사원", "대리", "과장", "수석"]
 UNASSIGNED_TEAM = "미지정"
 
 class TeamService:
+    # ⚡ [인메모리 캐시] 사용자 PC의 RAM에 보관하여 Supabase 반복 네트워크 호출(1회당 200~400ms)을 0ms로 단축
+    _team_members_cache: Optional[Dict[str, Dict[str, str]]] = None
+    _all_teams_cache: Optional[List[str]] = None
+    _cache_time: float = 0.0
+    CACHE_TTL: float = 60.0  # 60초 유효시간 (데이터 변경 시 즉시 무효화)
+
+    @classmethod
+    def clear_cache(cls):
+        """인메모리 캐시 초기화 (팀원 정보 수정/저장/삭제 시 즉시 호출)"""
+        cls._team_members_cache = None
+        cls._all_teams_cache = None
+        cls._cache_time = 0.0
+
     @staticmethod
     def init_team_table():
         """로컬 SQLite에 team_members 및 custom_teams 테이블 생성 및 컬럼 마이그레이션"""
@@ -41,10 +55,14 @@ class TeamService:
         conn.commit()
         conn.close()
 
-    @staticmethod
-    def get_all_teams() -> List[str]:
-        """기본 팀 및 사용자가 직접 생성한 커스텀 팀 전체 목록을 반환"""
-        TeamService.init_team_table()
+    @classmethod
+    def get_all_teams(cls) -> List[str]:
+        """기본 팀 및 사용자가 직접 생성한 커스텀 팀 전체 목록을 반환 (RAM 캐싱)"""
+        now = time.time()
+        if cls._all_teams_cache is not None and (now - cls._cache_time < cls.CACHE_TTL):
+            return list(cls._all_teams_cache)
+
+        cls.init_team_table()
         teams = list(DEFAULT_TEAMS)
         
         # 1. 로컬 custom_teams 및 team_members에서 등록된 팀 조회
@@ -77,16 +95,18 @@ class TeamService:
             except Exception:
                 pass
                 
+        cls._all_teams_cache = list(teams)
         return teams
 
-    @staticmethod
-    def add_custom_team(team_name: str) -> bool:
+    @classmethod
+    def add_custom_team(cls, team_name: str) -> bool:
         """신규 커스텀 팀 생성/추가"""
         t = team_name.strip()
         if not t or t == UNASSIGNED_TEAM:
             return False
             
-        TeamService.init_team_table()
+        cls.init_team_table()
+        cls.clear_cache()
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cursor = conn.cursor()
@@ -97,14 +117,15 @@ class TeamService:
         except Exception:
             return False
 
-    @staticmethod
-    def delete_custom_team(team_name: str) -> bool:
+    @classmethod
+    def delete_custom_team(cls, team_name: str) -> bool:
         """커스텀 팀 삭제 (소속된 인원은 '미지정'으로 전환)"""
         t = team_name.strip()
         if not t or t in DEFAULT_TEAMS:
             return False
             
-        TeamService.clear_team_all_members(t)
+        cls.clear_team_all_members(t)
+        cls.clear_cache()
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cursor = conn.cursor()
@@ -115,10 +136,14 @@ class TeamService:
         except Exception:
             return False
 
-    @staticmethod
-    def get_team_members_info() -> Dict[str, Dict[str, str]]:
-        """팀원별 소속팀 및 직급 딕셔너리 반환 { '김시우': {'team': '기술 1팀', 'title': '대리'}, ... }"""
-        TeamService.init_team_table()
+    @classmethod
+    def get_team_members_info(cls) -> Dict[str, Dict[str, str]]:
+        """팀원별 소속팀 및 직급 딕셔너리 반환 (RAM 캐싱으로 Supabase 네트워크 지연 0ms 제거)"""
+        now = time.time()
+        if cls._team_members_cache is not None and (now - cls._cache_time < cls.CACHE_TTL):
+            return dict(cls._team_members_cache)
+
+        cls.init_team_table()
         info_map = {}
 
         # 1. Supabase 조회 시도
@@ -131,6 +156,8 @@ class TeamService:
                         "title": row.get("job_title") or ""
                     }
                 if info_map:
+                    cls._team_members_cache = dict(info_map)
+                    cls._cache_time = now
                     return info_map
             except Exception as e:
                 print(f"[Supabase 팀원 조회 알림]: {e}")
@@ -145,18 +172,21 @@ class TeamService:
                 "title": j_title or ""
             }
         conn.close()
+
+        cls._team_members_cache = dict(info_map)
+        cls._cache_time = now
         return info_map
 
-    @staticmethod
-    def get_team_mappings() -> Dict[str, str]:
+    @classmethod
+    def get_team_mappings(cls) -> Dict[str, str]:
         """팀원별 소속팀 딕셔너리 반환 { '김시우': '기술 1팀', ... }"""
-        info_map = TeamService.get_team_members_info()
+        info_map = cls.get_team_members_info()
         return {w: data["team"] for w, data in info_map.items()}
 
-    @staticmethod
-    def get_title_mappings() -> Dict[str, str]:
+    @classmethod
+    def get_title_mappings(cls) -> Dict[str, str]:
         """팀원별 직급 딕셔너리 반환 { '김시우': '대리', ... }"""
-        info_map = TeamService.get_team_members_info()
+        info_map = cls.get_team_members_info()
         return {w: data["title"] for w, data in info_map.items()}
 
     @staticmethod
@@ -196,6 +226,7 @@ class TeamService:
         cursor.execute("UPDATE work_logs SET worker_team=?, worker_title=? WHERE worker_name=?", (target_team, target_title, worker_name))
         conn.commit()
         conn.close()
+        TeamService.clear_cache()
 
     @staticmethod
     def save_team_members(team_name: str, worker_names: List[str]):

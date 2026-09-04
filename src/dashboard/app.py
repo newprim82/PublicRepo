@@ -1165,9 +1165,17 @@ def load_data() -> pd.DataFrame:
 
 
 def clear_all_web_caches():
-    """DB 데이터는 절대 건드리지 않고, Streamlit 웹 메모리 캐시만 깨끗하게 초기화"""
+    """DB 데이터는 절대 건드리지 않고, Streamlit 웹 메모리 캐시 및 인메모리 RAM 캐시를 깨끗하게 초기화"""
     st.cache_data.clear()
     st.cache_resource.clear()
+    try:
+        TeamService.clear_cache()
+    except Exception:
+        pass
+    try:
+        RewardLeaveService.clear_cache()
+    except Exception:
+        pass
     for key in list(st.session_state.keys()):
         if key not in ["selected_menu"]:
             del st.session_state[key]
@@ -4189,9 +4197,12 @@ def render_login_page():
             st.success(f"✅ 현재 **{current_admin}** 계정으로 로그인되어 있습니다.")
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                if st.button("🏠 대시보드로 이동", use_container_width=True, type="primary"):
-                    st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-                    st.rerun()
+                st.button(
+                    "🏠 대시보드로 이동",
+                    use_container_width=True,
+                    type="primary",
+                    on_click=lambda: st.session_state.update({"current_page": "🏠 실시간 분석 대시보드"})
+                )
             with col_b2:
                 if st.button("🚪 로그아웃", use_container_width=True):
                     AuthManager.logout()
@@ -4546,6 +4557,11 @@ def main():
     if "current_page" not in st.session_state:
         st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
 
+    def set_nav_page(target_page: str):
+        """사이드바 메뉴 클릭 즉시 1차 패스에서 목적지 페이지로 다이렉트 전환 (2연속 중복 Rerun 완전 제거)"""
+        if st.session_state.get("current_page") != target_page:
+            st.session_state["current_page"] = target_page
+
     # ==========================================
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
@@ -4558,17 +4574,22 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (위아래 30px 간격)
+        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (위아래 30px 간격, on_click 콜백으로 0.1초 즉시 전환)
         st.markdown('<div style="height: 30px;"></div><span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
         is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
-        if st.button("🏠 실시간 분석 대시보드", key="btn_top_home_dashboard", type="primary" if is_main_active else "secondary", use_container_width=True):
-            st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
-            st.rerun()
+        st.button(
+            "🏠 실시간 분석 대시보드",
+            key="btn_top_home_dashboard",
+            type="primary" if is_main_active else "secondary",
+            use_container_width=True,
+            on_click=set_nav_page,
+            args=("🏠 실시간 분석 대시보드",)
+        )
         st.markdown('<div style="height: 30px;"></div>', unsafe_allow_html=True)
 
         is_auth = AuthManager.is_authenticated()
 
-        # 1. 📂 메인 메뉴 (로그인 시에만 노출)
+        # 1. 📂 메인 메뉴 (로그인 시에만 노출, on_click 콜백 즉시 전환)
         if is_auth:
             with st.expander("⚙ 관리", expanded=False):
                 main_menu_items = [
@@ -4578,9 +4599,14 @@ def main():
                 for m_item in main_menu_items:
                     is_active = (st.session_state["current_page"] == m_item)
                     btn_prefix = "▸ " if is_active else "  "
-                    if st.button(f"{btn_prefix}{m_item}", key=f"nav_main_{m_item}", use_container_width=True, type="primary" if is_active else "secondary"):
-                        st.session_state["current_page"] = m_item
-                        st.rerun()
+                    st.button(
+                        f"{btn_prefix}{m_item}",
+                        key=f"nav_main_{m_item}",
+                        use_container_width=True,
+                        type="primary" if is_active else "secondary",
+                        on_click=set_nav_page,
+                        args=(m_item,)
+                    )
 
         # 2. 🔍 조회 기준
         with st.expander("🔍 조회 기준", expanded=True):
@@ -4716,9 +4742,14 @@ def main():
             for d_item in detail_menu_items:
                 is_active = (st.session_state["current_page"] == d_item)
                 btn_prefix = "▸ " if is_active else "  "
-                if st.button(f"{btn_prefix}{d_item}", key=f"nav_detail_{d_item}", use_container_width=True, type="primary" if is_active else "secondary"):
-                    st.session_state["current_page"] = d_item
-                    st.rerun()
+                st.button(
+                    f"{btn_prefix}{d_item}",
+                    key=f"nav_detail_{d_item}",
+                    use_container_width=True,
+                    type="primary" if is_active else "secondary",
+                    on_click=set_nav_page,
+                    args=(d_item,)
+                )
 
         # 4. 🤖 카카오톡 실시간 연동 (로그인 시에만 노출)
         if is_auth:
@@ -4852,7 +4883,7 @@ def main():
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
                     if st.button("🔄 새로고침", use_container_width=True):
-                        st.cache_data.clear()
+                        clear_all_web_caches()
                         st.rerun()
                 with col_btn2:
                     if st.button("🧹 캐시 초기화", use_container_width=True):
@@ -4864,9 +4895,14 @@ def main():
         st.markdown('<div style="height: 25px;"></div><div style="border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;"></div>', unsafe_allow_html=True)
         if not is_auth:
             is_login_active = (st.session_state.get("current_page") == "🔐 시스템 로그인")
-            if st.button("🔑 Login", key="btn_sidebar_standalone_login", type="primary" if is_login_active else "secondary", use_container_width=True):
-                st.session_state["current_page"] = "🔐 시스템 로그인"
-                st.rerun()
+            st.button(
+                "🔑 Login",
+                key="btn_sidebar_standalone_login",
+                type="primary" if is_login_active else "secondary",
+                use_container_width=True,
+                on_click=set_nav_page,
+                args=("🔐 시스템 로그인",)
+            )
         else:
             current_admin = AuthManager.get_current_user() or "newprim"
             if st.button(f"🚪 Logout ({current_admin})", key="btn_sidebar_standalone_logout", use_container_width=True):
