@@ -3015,8 +3015,9 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     )
     st.plotly_chart(fig_peak, use_container_width=True)
 
+@st.fragment
 def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
-    """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기"""
+    """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기 (독립 Fragment)"""
     # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입 (모든 버전의 Streamlit expander 및 input 완벽 호환)
     st.markdown("""
     <style>
@@ -3330,8 +3331,9 @@ def show_email_report_dialog(selected_team: str):
                 st.error(send_msg)
 
 
+@st.fragment
 def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
-    """[📊 경영진 보고용 Executive Summary] 주간/월간 회의 및 임원 보고용 핵심 요약 & 메일 발송"""
+    """[📊 경영진 보고용 Executive Summary] 주간/월간 회의 및 임원 보고용 핵심 요약 & 메일 발송 (독립 Fragment)"""
     if df.empty:
         st.info("표시할 보고서 데이터가 없습니다.")
         return
