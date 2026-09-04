@@ -3068,8 +3068,14 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
 
     # 🌟 [요구사항 반영] 사이드바 기간 필터에 구애받지 않고, 전체 DB(df_raw)에서 선택된 팀의 모든 조회 가능 월 추출
     base_cal_df = df_raw.copy()
-    if selected_team != "전체 팀" and "worker_team" in base_cal_df.columns:
-        base_cal_df = base_cal_df[base_cal_df["worker_team"] == selected_team]
+    def is_same_team(t1, t2):
+        return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
+
+    if selected_team not in ["전체", "전체 팀"] and "worker_name" in base_cal_df.columns:
+        t_mappings = TeamService.get_team_mappings()
+        if t_mappings:
+            base_cal_df["worker_team"] = base_cal_df["worker_name"].map(t_mappings).fillna(base_cal_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+        base_cal_df = base_cal_df[base_cal_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
     if base_cal_df.empty or "start_time" not in base_cal_df.columns:
         st.info("조회 가능한 작업 데이터가 없습니다.")
@@ -3390,9 +3396,13 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             filtered_df["remarks"].fillna("").astype(str).str.lower().str.contains(kw, na=False)
         ]
 
+    # 팀명 공백 무관 안전 비교 헬퍼
+    def is_same_team(t1, t2):
+        return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
+
     # 팀 필터
-    if sel_team != "전체 팀":
-        filtered_df = filtered_df[filtered_df["worker_team"] == sel_team]
+    if sel_team not in ["전체", "전체 팀"]:
+        filtered_df = filtered_df[filtered_df["worker_team"].apply(lambda t: is_same_team(t, sel_team))]
 
     # 근무/상태 유형 필터
     if sel_type == "⏳ 실시간 진행중":
@@ -3672,6 +3682,10 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     else:
         sel_period = "📅 월간 전체 종합"
 
+    # 팀명 공백 무관 안전 비교 헬퍼
+    def is_same_team(t1, t2):
+        return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
+
     # 선택된 주기에 따른 활성 데이터셋(df_active) 및 전기 비교 데이터(prev_df) 분기
     if sel_period != "📅 월간 전체 종합":
         target_week = sel_period.replace("📌 ", "").strip()
@@ -3681,9 +3695,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         else:
             df_active = df_scope[df_scope["week_label"] == target_week].copy()
 
-        if selected_team != "전체" and not df_active.empty:
-            df_active["worker_team"] = df_active["worker_team"].fillna(df_active["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
-            df_active = df_active[df_active["worker_team"] == selected_team]
+        if selected_team not in ["전체", "전체 팀"] and not df_active.empty:
+            df_active["worker_team"] = df_active["worker_name"].map(team_mappings).fillna(df_active.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+            df_active = df_active[df_active["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
         current_period_label = f"{selected_team} - {target_week}"
         is_weekly_view = True
@@ -3697,9 +3711,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                 prev_df = df_raw[df_raw["week_label"] == prev_week_label].copy()
             else:
                 prev_df = df_scope[df_scope["week_label"] == prev_week_label].copy()
-            if selected_team != "전체" and not prev_df.empty:
-                prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
-                prev_df = prev_df[prev_df["worker_team"] == selected_team]
+            if selected_team not in ["전체", "전체 팀"] and not prev_df.empty:
+                prev_df["worker_team"] = prev_df["worker_name"].map(team_mappings).fillna(prev_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+                prev_df = prev_df[prev_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
         else:
             # 💡 월 첫 주차인 경우 -> 지난달 마지막 주차 (직전 7일 날짜 범위)를 df_raw 전체에서 추출!
             if "start_time" in df_active.columns and pd.notna(df_active["start_time"].min()):
@@ -3712,9 +3726,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                 if "start_time" in df_raw.columns:
                     raw_dt = pd.to_datetime(df_raw["start_time"], errors="coerce")
                     prev_df = df_raw[(raw_dt >= prev_monday_start) & (raw_dt <= prev_sunday_end)].copy()
-                    if selected_team != "전체" and not prev_df.empty:
-                        prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
-                        prev_df = prev_df[prev_df["worker_team"] == selected_team]
+                    if selected_team not in ["전체", "전체 팀"] and not prev_df.empty:
+                        prev_df["worker_team"] = prev_df["worker_name"].map(team_mappings).fillna(prev_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+                        prev_df = prev_df[prev_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
     else:
         # ★ 사용자 지정 규칙: '월간 전체 종합'은 우측에 있는 모든 주차(available_weeks)를 기준으로 온전하게 집계! ★
         if available_weeks and "week_label" in df_raw.columns:
@@ -3724,9 +3738,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         else:
             df_active = df_scope.copy()
 
-        if selected_team != "전체" and not df_active.empty:
-            df_active["worker_team"] = df_active["worker_team"].fillna(df_active["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
-            df_active = df_active[df_active["worker_team"] == selected_team]
+        if selected_team not in ["전체", "전체 팀"] and not df_active.empty:
+            df_active["worker_team"] = df_active["worker_name"].map(team_mappings).fillna(df_active.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+            df_active = df_active[df_active["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
         current_period_label = f"{selected_team} - {month_desc} 월간 전체" if month_desc else f"{selected_team} - 월간 전체"
         is_weekly_view = False
@@ -3741,9 +3755,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             prev_end = cur_min_dt - pd.Timedelta(seconds=1)
 
             prev_df = df_raw[(df_raw["start_time"] >= prev_start) & (df_raw["start_time"] <= prev_end)].copy()
-            if selected_team != "전체" and not prev_df.empty:
-                prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
-                prev_df = prev_df[prev_df["worker_team"] == selected_team]
+            if selected_team not in ["전체", "전체 팀"] and not prev_df.empty:
+                prev_df["worker_team"] = prev_df["worker_name"].map(team_mappings).fillna(prev_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+                prev_df = prev_df[prev_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
     # ----------------------------------------------------
     # 핵심 지표 산출
