@@ -564,10 +564,15 @@ st.markdown("""
         padding-bottom: 0px !important;
     }
     /* 🌲 APIC 트리 노드 (Expander = 폴더/카테고리 헤더) */
-    [data-testid="stSidebar"] [data-testid="stExpander"] {
+    [data-testid="stSidebar"] [data-testid="stExpander"],
+    [data-testid="stSidebar"] details,
+    [data-testid="stSidebar"] details[data-testid="stExpander"] {
         margin-top: 0px !important;
         margin-bottom: 0px !important;
         border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        background-color: transparent !important;
     }
     [data-testid="stSidebar"] details,
     [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] {
@@ -577,39 +582,57 @@ st.markdown("""
         background: transparent !important;
         padding-top: 0px !important;
         padding-bottom: 0px !important;
+        box-shadow: none !important;
     }
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary {
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary,
+    [data-testid="stSidebar"] details[data-testid="stExpander"] summary,
+    [data-testid="stSidebar"] details summary,
+    [data-testid="stSidebar"] [data-testid="stExpanderSummary"],
+    [data-testid="stSidebar"] .streamlit-expanderHeader {
         font-weight: 800 !important;
         font-size: 13px !important;
         color: #ffffff !important;
+        background: transparent !important;
         background-color: transparent !important;
+        background-image: none !important;
+        border: none !important;
         border-radius: 0px !important;
         border-bottom: 1px solid #1a5a73 !important;
         padding: 8px 8px 6px 8px !important;
         min-height: 28px !important;
+        box-shadow: none !important;
         display: flex !important;
         align-items: center !important;
         letter-spacing: 0.3px !important;
         text-transform: uppercase !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary *,
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary p,
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary span {
+    [data-testid="stSidebar"] details[data-testid="stExpander"] summary *,
+    [data-testid="stSidebar"] [data-testid="stExpanderSummary"] *,
+    [data-testid="stSidebar"] .streamlit-expanderHeader * {
         font-weight: 800 !important;
+        font-size: 13px !important;
         color: #ffffff !important;
+        background: transparent !important;
+        background-color: transparent !important;
     }
     [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover,
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover * {
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover *,
+    [data-testid="stSidebar"] details[data-testid="stExpander"] summary:hover,
+    [data-testid="stSidebar"] details[data-testid="stExpander"] summary:hover * {
         color: #00b4d8 !important;
+        background: rgba(0, 180, 216, 0.06) !important;
         background-color: rgba(0, 180, 216, 0.06) !important;
     }
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary svg {
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary svg,
+    [data-testid="stSidebar"] details[data-testid="stExpander"] summary svg {
         fill: #4a7b94 !important;
         color: #4a7b94 !important;
         width: 14px !important;
         height: 14px !important;
     }
-    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover svg {
+    [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover svg,
+    [data-testid="stSidebar"] details[data-testid="stExpander"] summary:hover svg {
         fill: #00b4d8 !important;
         color: #00b4d8 !important;
     }
@@ -2347,13 +2370,13 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입 (모든 버전의 Streamlit expander 및 input 완벽 호환)
     st.markdown("""
     <style>
-        /* 1. 상세 검색 필터 expander 헤더 (Cisco 딥 네이비 바 + 볼드 화이트 글자) */
-        [data-testid="stExpander"] details summary,
-        [data-testid="stExpander"] summary,
-        [data-testid="stExpanderSummary"],
-        .streamlit-expanderHeader,
-        div.streamlit-expanderHeader,
-        details[data-testid="stExpander"] summary {
+        /* 1. 상세 검색 필터 expander 헤더 (본문 stMain 영역에만 한정 격리하여 사이드바 오염 방지) */
+        div[data-testid="stMain"] [data-testid="stExpander"] details summary,
+        div[data-testid="stMain"] [data-testid="stExpander"] summary,
+        div[data-testid="stMain"] [data-testid="stExpanderSummary"],
+        div[data-testid="stMain"] .streamlit-expanderHeader,
+        div[data-testid="stMain"] div.streamlit-expanderHeader,
+        div[data-testid="stMain"] details[data-testid="stExpander"] summary {
             background: linear-gradient(135deg, #002233 0%, #004d71 100%) !important;
             background-color: #002d42 !important;
             border: 1px solid #005f8a !important;
@@ -2363,11 +2386,11 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             padding: 10px 16px !important;
             box-shadow: 0 2px 6px rgba(0, 34, 51, 0.15) !important;
         }
-        [data-testid="stExpander"] details summary *,
-        [data-testid="stExpander"] summary *,
-        [data-testid="stExpanderSummary"] *,
-        .streamlit-expanderHeader *,
-        details[data-testid="stExpander"] summary * {
+        div[data-testid="stMain"] [data-testid="stExpander"] details summary *,
+        div[data-testid="stMain"] [data-testid="stExpander"] summary *,
+        div[data-testid="stMain"] [data-testid="stExpanderSummary"] *,
+        div[data-testid="stMain"] .streamlit-expanderHeader *,
+        div[data-testid="stMain"] details[data-testid="stExpander"] summary * {
             color: #ffffff !important;
             font-weight: 800 !important;
             font-size: 13.5px !important;
