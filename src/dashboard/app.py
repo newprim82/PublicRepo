@@ -229,6 +229,49 @@ st.markdown("""
         max-width: 100% !important;
     }
 
+    /* 🔘 시스템 표준 프리미엄 버튼 기본 스타일 (메일 발송 버튼 테마로 완전 일원화) */
+    div[data-testid="stButton"] > button,
+    .stButton > button,
+    button[kind="secondary"] {
+        background-color: #004060 !important;
+        background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 6px !important;
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        height: 38px !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stButton"] > button p,
+    div[data-testid="stButton"] > button span,
+    .stButton > button p,
+    .stButton > button span,
+    button[kind="secondary"] p,
+    button[kind="secondary"] span {
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        font-size: 13.5px !important;
+        letter-spacing: -0.2px !important;
+    }
+    div[data-testid="stButton"] > button:hover,
+    .stButton > button:hover,
+    button[kind="secondary"]:hover {
+        background-color: #00608a !important;
+        background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
+        border-color: #38bdf8 !important;
+        color: #FFFFFF !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+        transform: translateY(-1px) !important;
+    }
+    div[data-testid="stButton"] > button:hover p,
+    div[data-testid="stButton"] > button:hover span,
+    .stButton > button:hover p,
+    .stButton > button:hover span {
+        color: #FFFFFF !important;
+    }
+
     /* 🏛️ Cisco ACI 스타일 필터 배지 */
     .filter-badge {
         background-color: #e0f2fe !important;
@@ -2742,7 +2785,45 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     b_col1, b_col2 = st.columns([4.2, 0.8])
     with b_col2:
-        re_analyze = st.button("🔄 AI 재분석", key="btn_refresh_ai_briefing", help="최신 작업 데이터를 기반으로 다차원 이상치 및 AI 브리핑을 실시간 재산출합니다.")
+        st.markdown(
+            """
+            <style>
+            div.st-key-btn_refresh_ai_briefing button {
+                background-color: #004060 !important;
+                background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
+                color: #FFFFFF !important;
+                border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                border-radius: 6px !important;
+                font-size: 13px !important;
+                font-weight: 800 !important;
+                height: 38px !important;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+                transition: all 0.2s ease !important;
+            }
+            div.st-key-btn_refresh_ai_briefing button p,
+            div.st-key-btn_refresh_ai_briefing button span {
+                color: #FFFFFF !important;
+                font-weight: 800 !important;
+                font-size: 13px !important;
+                letter-spacing: -0.2px !important;
+            }
+            div.st-key-btn_refresh_ai_briefing button:hover {
+                background-color: #00608a !important;
+                background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
+                border-color: #38bdf8 !important;
+                color: #FFFFFF !important;
+                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+                transform: translateY(-1px) !important;
+            }
+            div.st-key-btn_refresh_ai_briefing button:hover p,
+            div.st-key-btn_refresh_ai_briefing button:hover span {
+                color: #FFFFFF !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        re_analyze = st.button("🔄 AI 재분석", use_container_width=True, key="btn_refresh_ai_briefing", help="최신 작업 데이터를 기반으로 다차원 이상치 및 AI 브리핑을 실시간 재산출합니다.")
 
     with st.spinner("✨ 다차원 작업 패턴 분석 및 경영진 브리핑 생성 중..."):
         ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze)
