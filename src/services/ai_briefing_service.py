@@ -158,7 +158,7 @@ class AIBriefingService:
         return cleaned
 
     @classmethod
-    def generate_briefing(cls, facts: Dict[str, Any], force_refresh: bool = False, api_key: Optional[str] = None) -> Dict[str, str]:
+    def generate_briefing(cls, facts: Dict[str, Any], force_refresh: bool = False, api_key: Optional[str] = None, allow_ai_call: bool = False) -> Dict[str, str]:
         cache_key = (
             f"ai_briefing_{facts.get('period_label', '')}_{facts.get('selected_team', '')}_"
             f"{facts.get('total_hours', 0)}_{facts.get('total_workers', 0)}_{facts.get('total_clients', 0)}_"
@@ -199,9 +199,11 @@ class AIBriefingService:
                 pass
 
         briefing = None
-        if final_key:
+        # ★ 토큰 절약 모드: 사용자가 [🔄 AI 재분석]을 직접 클릭했거나 allow_ai_call이 True일 때만 Gemini API 호출 ★
+        if final_key and (allow_ai_call or force_refresh):
             briefing = cls._call_gemini_api(facts, final_key)
 
+        # Gemini 호출 대상이 아니거나(기본 조회) API 실패 시 팩트 기반 규칙 엔진(토큰 0소모)으로 즉시 생성
         if not briefing:
             briefing = cls._generate_fact_based_rule_briefing(facts)
 
@@ -215,7 +217,6 @@ class AIBriefingService:
                 st.session_state[cache_key] = briefing
             except Exception:
                 pass
-
         return briefing
 
     @classmethod

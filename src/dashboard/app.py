@@ -2836,11 +2836,25 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     # ----------------------------------------------------
     # 🌟 다차원 팩트 추출(2번) + AI 심층 분석(1번) 결합 브리핑 생성
     # ----------------------------------------------------
-    from src.services.ai_briefing_service import FactExtractor, AIBriefingService
+    import importlib
+    import src.services.ai_briefing_service as ai_module
+    importlib.reload(ai_module)
+    FactExtractor = ai_module.FactExtractor
+    AIBriefingService = ai_module.AIBriefingService
 
     facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_period_label)
 
     b_col1, b_col2 = st.columns([4.2, 0.8])
+    with b_col1:
+        st.markdown(f"""
+        <div style="display: flex; align-items: center; justify-content: space-between; height: 100%; min-height: 42px; padding-top: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 16.5px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">📑 경영진 핵심 요약 브리핑 & 액션 아이템</span>
+                <span style="font-size: 12px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 700;">조회 기준: {current_period_label}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     with b_col2:
         st.markdown(
             """
@@ -2892,38 +2906,63 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         if gemini_api_key:
             os.environ["GEMINI_API_KEY"] = gemini_api_key
 
-        re_analyze = st.button("🔄 AI 재분석", use_container_width=True, key="btn_refresh_ai_briefing", help="최신 작업 데이터를 기반으로 다차원 이상치 및 AI 브리핑을 실시간 재산출합니다.")
+        re_analyze = st.button("🔄 AI 재분석", use_container_width=True, key="btn_refresh_ai_briefing", help="클릭 시 Gemini AI API를 호출하여 심층 컨설팅 브리핑을 생성합니다 (토큰 소모).")
 
-    # 🔄 Streamlit Cloud 프로세스 캐시 핫 리로드
-    import importlib
-    import src.services.ai_briefing_service as ai_module
-    importlib.reload(ai_module)
-    FactExtractor = ai_module.FactExtractor
-    AIBriefingService = ai_module.AIBriefingService
+    # ★ 옵션 2 토큰 절약 모드: [🔄 AI 재분석] 버튼을 클릭했을 때만 Gemini API 호출 (토큰 소모) ★
+    if re_analyze:
+        with st.spinner("✨ Gemini AI가 현장 데이터를 심층 분석 중입니다 (API 토큰 소모)..."):
+            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=True, api_key=gemini_api_key, allow_ai_call=True)
+    else:
+        # 평소 조회 변경 시: 토큰 소모 없이 팩트 기반 규칙 엔진 또는 이전 Gemini 캐시 표출 (0초 딜레이)
+        ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=False, api_key=gemini_api_key, allow_ai_call=False)
 
-    with st.spinner("✨ 다차원 작업 패턴 분석 및 경영진 브리핑 생성 중..."):
-        try:
-            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze, api_key=gemini_api_key)
-        except TypeError:
-            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze)
+    briefing_source = ai_briefing.get("source", "")
+    is_gemini = "Gemini" in briefing_source
 
-    briefing_source_tag = ai_briefing.get("source", "📊 다차원 팩트 분석 엔진")
+    if is_gemini:
+        badge_html = """
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11.5px; color: #15803d; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; padding: 3px 12px; border-radius: 20px; font-weight: 800; box-shadow: 0 1px 3px rgba(34,197,94,0.1);">
+                ✨ Gemini AI 심층 분석 완료
+            </span>
+        </div>
+        """
+        notice_banner_html = ""
+    else:
+        badge_html = """
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11px; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 3px 10px; border-radius: 20px; font-weight: 700;">
+                📊 팩트 기반 규칙 브리핑 (토큰 0 소모)
+            </span>
+        </div>
+        """
+        notice_banner_html = """
+        <div style="margin-bottom: 14px; background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px dashed #0284c7; border-radius: 8px; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 15px;">💡</span>
+                <span style="font-size: 12.5px; color: #0369a1; font-weight: 700;">
+                    현재는 <b>토큰 소모가 없는 팩트 규칙 분석</b> 상태입니다. Gemini의 심층 원인 진단과 컨설팅 제언이 필요하시면 우측 상단의 <b>[🔄 AI 재분석]</b> 버튼을 눌러주세요.
+                </span>
+            </div>
+            <span style="font-size: 11px; color: #0284c7; background: #ffffff; border: 1px solid #bae6fd; padding: 2px 8px; border-radius: 4px; font-weight: 800;">
+                클릭 시 토큰 소모
+            </span>
+        </div>
+        """
 
     briefing_overview = AIBriefingService.clean_briefing_text(ai_briefing.get('overview', ''))
     briefing_risks = AIBriefingService.clean_briefing_text(ai_briefing.get('risks', ''))
     briefing_recomms = AIBriefingService.clean_briefing_text(ai_briefing.get('recommendations', ''))
 
     briefing_html = f"""
-    <div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 6px solid #005073; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0, 45, 66, 0.06);">
-        <div style="font-size: 16px; font-weight: 800; color: #002d42; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 6px solid #005073; border-radius: 12px; padding: 18px 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0, 45, 66, 0.06);">
+        <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;">
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span>📑 [경영진 핵심 요약 브리핑 & 액션 아이템]</span>
-                <span style="font-size: 12px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 700;">조회 기준: {current_period_label}</span>
+                <span style="font-size: 15px; font-weight: 800; color: #002d42;">📋 핵심 운영 진단 & 전략 지침</span>
             </div>
-            <div style="font-size: 12px; color: #005073; background: #f0fdf4; border: 1px solid #86efac; padding: 2px 8px; border-radius: 4px; font-weight: 700;">
-                {briefing_source_tag}
-            </div>
+            {badge_html}
         </div>
+        {notice_banner_html}
         <div style="font-size: 13.5px; color: #1e293b; line-height: 1.85;">
             <div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #0284c7;">
                 📌 <b>핵심 변화 & 집중 요인</b>: {briefing_overview}
