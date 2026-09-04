@@ -2464,8 +2464,8 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         st.info("표시할 보고서 데이터가 없습니다.")
         return
 
-    # 상단 헤더 & 주간 리포트 이메일 발송 툴바 (고대비 선명한 버튼 스타일)
-    h_col1, h_col2 = st.columns([3.8, 1.2])
+    # 상단 헤더 & 주간 리포트 이메일 발송 툴바 (AI 재분석 버튼과 동일한 0.8 컬럼 너비로 완벽 통일)
+    h_col1, h_col2 = st.columns([4.2, 0.8])
     with h_col1:
         st.markdown(f"### 📊 {selected_team} - Summary")
         st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑 및 주간 정기 이메일 발송을 제공합니다.")
