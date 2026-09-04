@@ -2843,11 +2843,23 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             pass
         if not gemini_api_key:
             gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if gemini_api_key:
+            os.environ["GEMINI_API_KEY"] = gemini_api_key
 
         re_analyze = st.button("🔄 AI 재분석", use_container_width=True, key="btn_refresh_ai_briefing", help="최신 작업 데이터를 기반으로 다차원 이상치 및 AI 브리핑을 실시간 재산출합니다.")
 
+    # 🔄 Streamlit Cloud 프로세스 캐시 핫 리로드
+    import importlib
+    import src.services.ai_briefing_service as ai_module
+    importlib.reload(ai_module)
+    FactExtractor = ai_module.FactExtractor
+    AIBriefingService = ai_module.AIBriefingService
+
     with st.spinner("✨ 다차원 작업 패턴 분석 및 경영진 브리핑 생성 중..."):
-        ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze, api_key=gemini_api_key)
+        try:
+            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze, api_key=gemini_api_key)
+        except TypeError:
+            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze)
 
     briefing_source_tag = ai_briefing.get("source", "📊 다차원 팩트 분석 엔진")
 
