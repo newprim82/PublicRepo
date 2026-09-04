@@ -159,7 +159,11 @@ class AIBriefingService:
 
     @classmethod
     def generate_briefing(cls, facts: Dict[str, Any], force_refresh: bool = False, api_key: Optional[str] = None) -> Dict[str, str]:
-        cache_key = f"ai_briefing_{facts.get('period_label', '')}_{facts.get('selected_team', '')}"
+        cache_key = (
+            f"ai_briefing_{facts.get('period_label', '')}_{facts.get('selected_team', '')}_"
+            f"{facts.get('total_hours', 0)}_{facts.get('total_workers', 0)}_{facts.get('total_clients', 0)}_"
+            f"{facts.get('start_date', '')}_{facts.get('end_date', '')}"
+        )
         if force_refresh and st is not None:
             try:
                 if cache_key in st.session_state:

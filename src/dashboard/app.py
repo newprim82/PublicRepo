@@ -2458,11 +2458,15 @@ def show_email_report_dialog(selected_team: str):
                 st.error(send_msg)
 
 
-def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict):
+def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
     """[📊 경영진 보고용 Executive Summary] 주간/월간 회의 및 임원 보고용 핵심 요약 & 메일 발송"""
     if df.empty:
         st.info("표시할 보고서 데이터가 없습니다.")
         return
+
+    if not month_desc and "month_str" in df.columns:
+        m_list = [str(m) for m in df["month_str"].dropna().unique() if str(m).strip()]
+        month_desc = ", ".join(m_list) if m_list else ""
 
     # 상단 헤더 & 주간 리포트 이메일 발송 툴바 (AI 재분석 버튼과 동일한 0.8 컬럼 너비로 완벽 통일)
     h_col1, h_col2 = st.columns([4.2, 0.8])
@@ -2649,7 +2653,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             df_active["worker_team"] = df_active["worker_team"].fillna(df_active["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
             df_active = df_active[df_active["worker_team"] == selected_team]
 
-        current_period_label = f"{selected_team} - 월간 전체"
+        current_period_label = f"{selected_team} - {month_desc} 월간 전체" if month_desc else f"{selected_team} - 월간 전체"
         is_weekly_view = False
 
         # 직전 월 데이터 산출 (MoM 전월 대비 계산)
@@ -4540,7 +4544,7 @@ def main():
         render_smart_search_tab(df_raw, team_mappings)
 
     elif curr_page == "📊 Summary":
-        render_executive_summary_tab(df, df_raw, selected_team, team_mappings)
+        render_executive_summary_tab(df, df_raw, selected_team, team_mappings, month_desc=month_desc)
 
     elif curr_page == "👤 팀원별 업무량 분석":
         st.subheader(f"👤 {selected_team} - 팀원별 총 작업 시간 및 업무 집중도 ({month_desc})")
