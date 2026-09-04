@@ -1,3 +1,4 @@
+import re
 import hashlib
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
@@ -184,6 +185,34 @@ def generate_msg_hash(worker_name: str, client_name: str, start_dt: datetime, ta
     return hashlib.sha256(unique_str.encode('utf-8')).hexdigest()[:16]
 
 
+def get_pending_timeout_hours(p_start) -> float:
+    """
+    미완료 시작 보고의 자동 완료 대기 제한 시간(hours) 산출:
+    - 기본 일반 당일 작업 (1일 이하, <= 9h): 48.0시간 (2일)
+    - 다일(Multi-day) 장기 작업 (1.5days 이상 또는 13.5h 이상):
+      공식: max(48.0, (예정일수 * 24.0) + 48.0)  (여유 +48시간 보장)
+      예: 3days (27h) -> (3.0 * 24.0) + 48.0 = 120.0시간 (5일 동안 PENDING 대기 유지)
+    """
+    raw_msg = getattr(p_start, "raw_message", "") or ""
+    est_mins = getattr(p_start, "estimated_minutes", 0) or 0
+
+    # 1. 메시지 본문에서 'N days / N일' 패턴 직접 탐색
+    m_day = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_msg, re.IGNORECASE)
+    if m_day:
+        try:
+            est_days = float(m_day.group(1))
+        except ValueError:
+            est_days = 1.0
+    elif est_mins >= 810:  # 1.5일(13.5시간) 이상
+        est_days = est_mins / 540.0
+    else:
+        est_days = 1.0
+
+    if est_days >= 1.5:
+        return max(48.0, (est_days * 24.0) + 48.0)
+    return 48.0
+
+
 class WorkLogMatcher:
     @classmethod
     def match_messages(cls, raw_messages: List[RawKakaoMessage]) -> List[WorkLogRecord]:
@@ -344,7 +373,8 @@ class WorkLogMatcher:
                                 task_end.timestamp = adj_end_time
 
                             time_diff = (task_end.timestamp - p_start.timestamp).total_seconds()
-                            if 0 <= time_diff <= 120 * 3600:
+                            match_timeout_hours = max(120.0, get_pending_timeout_hours(p_start))
+                            if 0 <= time_diff <= match_timeout_hours * 3600:
                                 matched_group_id = p_start.task_group_id
                                 break
                                 
@@ -406,7 +436,7 @@ class WorkLogMatcher:
                         )
                         matched_records.append(record)
                         
-        # 3. 잔여 미완료 시작 보고들 처리 (48시간 경과 시 시작 내용 기준으로 COMPLETED 자동 전환)
+        # 3. 잔여 미완료 시작 보고들 처리 (기본 48시간, 다일 작업은 (예정일수*24h)+48h 경과 시 COMPLETED 자동 전환)
         latest_ref_time = max([m.timestamp for m in raw_messages]) if raw_messages else datetime.now()
         
         for p_start in pending_starts:
@@ -420,9 +450,10 @@ class WorkLogMatcher:
             is_weekend = check_is_weekend_work(p_start.timestamp, None, p_start.raw_message, p_start.estimated_minutes, p_start.estimated_minutes)
             
             time_diff_hours = (latest_ref_time - p_start.timestamp).total_seconds() / 3600.0
+            threshold_hours = get_pending_timeout_hours(p_start)
             
-            if time_diff_hours >= 48.0:
-                # 48시간 경과: 시작 보고 내용(예정시간) 기준으로 COMPLETED 자동 전환
+            if time_diff_hours >= threshold_hours:
+                # 대기 타임아웃 경과: 시작 보고 내용(예정시간) 기준으로 COMPLETED 자동 전환
                 auto_actual = p_start.estimated_minutes if p_start.estimated_minutes > 0 else 60
                 auto_end_time = p_start.timestamp + timedelta(minutes=auto_actual)
                 
@@ -443,10 +474,10 @@ class WorkLogMatcher:
                     is_night_work=is_night,
                     is_weekend_work=is_weekend,
                     raw_start_message=p_start.raw_message,
-                    raw_end_message="[자동완료] 48시간 경과로 시작보고 기준 완료 처리"
+                    raw_end_message=f"[자동완료] {int(threshold_hours)}시간 경과로 시작보고 기준 완료 처리"
                 )
             else:
-                # 48시간 이내: 현재 진행 중(PENDING) 유지
+                # 대기 타임아웃 이내: 현재 진행 중(PENDING) 유지
                 record = WorkLogRecord(
                     msg_hash=msg_hash,
                     log_type=p_start.log_type,
