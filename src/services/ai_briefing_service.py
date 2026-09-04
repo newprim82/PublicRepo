@@ -146,7 +146,7 @@ class AIBriefingService:
     """1단계 추출 팩트를 바탕으로 LLM(Gemini) 또는 자체 동적 알고리즘을 통해 심층 브리핑을 완성하는 서비스"""
 
     @classmethod
-    def generate_briefing(cls, facts: Dict[str, Any], force_refresh: bool = False) -> Dict[str, str]:
+    def generate_briefing(cls, facts: Dict[str, Any], force_refresh: bool = False, api_key: Optional[str] = None) -> Dict[str, str]:
         cache_key = f"ai_briefing_{facts.get('period_label', '')}_{facts.get('selected_team', '')}"
         if force_refresh and st is not None:
             try:
@@ -161,24 +161,25 @@ class AIBriefingService:
             except Exception:
                 pass
 
-        api_key = os.getenv("GEMINI_API_KEY", "").strip()
-        if not api_key:
+        final_key = (api_key or "").strip()
+        if not final_key:
+            final_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not final_key and st is not None:
             try:
-                from ..config import config
-                api_key = config.GEMINI_API_KEY
+                if hasattr(st, "secrets"):
+                    final_key = str(st.secrets.get("GEMINI_API_KEY", "")).strip()
             except Exception:
                 pass
-
-        if not api_key and st is not None:
+        if not final_key:
             try:
-                if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
-                    api_key = str(st.secrets["GEMINI_API_KEY"]).strip()
+                from ..config import config
+                final_key = (config.GEMINI_API_KEY or "").strip()
             except Exception:
                 pass
 
         briefing = None
-        if api_key:
-            briefing = cls._call_gemini_api(facts, api_key)
+        if final_key:
+            briefing = cls._call_gemini_api(facts, final_key)
 
         if not briefing:
             briefing = cls._generate_fact_based_rule_briefing(facts)

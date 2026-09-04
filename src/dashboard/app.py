@@ -2834,10 +2834,20 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
             """,
             unsafe_allow_html=True
         )
+        # 🔑 Gemini API 키 감지 (Streamlit Secrets / 환경변수)
+        gemini_api_key = ""
+        try:
+            if hasattr(st, "secrets"):
+                gemini_api_key = str(st.secrets.get("GEMINI_API_KEY", "")).strip()
+        except Exception:
+            pass
+        if not gemini_api_key:
+            gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+
         re_analyze = st.button("🔄 AI 재분석", use_container_width=True, key="btn_refresh_ai_briefing", help="최신 작업 데이터를 기반으로 다차원 이상치 및 AI 브리핑을 실시간 재산출합니다.")
 
     with st.spinner("✨ 다차원 작업 패턴 분석 및 경영진 브리핑 생성 중..."):
-        ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze)
+        ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=re_analyze, api_key=gemini_api_key)
 
     briefing_source_tag = ai_briefing.get("source", "📊 다차원 팩트 분석 엔진")
 
