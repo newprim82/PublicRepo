@@ -2920,62 +2920,36 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     is_gemini = "Gemini" in briefing_source
 
     if is_gemini:
-        badge_html = """
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 11.5px; color: #15803d; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; padding: 3px 12px; border-radius: 20px; font-weight: 800; box-shadow: 0 1px 3px rgba(34,197,94,0.1);">
-                ✨ Gemini AI 심층 분석 완료
-            </span>
-        </div>
-        """
+        badge_html = '<span style="font-size: 11.5px; color: #15803d; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #86efac; padding: 3px 12px; border-radius: 20px; font-weight: 800; box-shadow: 0 1px 3px rgba(34,197,94,0.1);">✨ Gemini AI 심층 분석 완료</span>'
         notice_banner_html = ""
     else:
-        badge_html = """
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 11px; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 3px 10px; border-radius: 20px; font-weight: 700;">
-                📊 팩트 기반 규칙 브리핑 (토큰 0 소모)
-            </span>
-        </div>
-        """
-        notice_banner_html = """
-        <div style="margin-bottom: 14px; background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px dashed #0284c7; border-radius: 8px; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 15px;">💡</span>
-                <span style="font-size: 12.5px; color: #0369a1; font-weight: 700;">
-                    현재는 <b>토큰 소모가 없는 팩트 규칙 분석</b> 상태입니다. Gemini의 심층 원인 진단과 컨설팅 제언이 필요하시면 우측 상단의 <b>[🔄 AI 재분석]</b> 버튼을 눌러주세요.
-                </span>
-            </div>
-            <span style="font-size: 11px; color: #0284c7; background: #ffffff; border: 1px solid #bae6fd; padding: 2px 8px; border-radius: 4px; font-weight: 800;">
-                클릭 시 토큰 소모
-            </span>
-        </div>
-        """
+        badge_html = '<span style="font-size: 11px; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 3px 10px; border-radius: 20px; font-weight: 700;">📊 팩트 기반 규칙 브리핑 (토큰 0 소모)</span>'
+        notice_banner_html = '<div style="margin-bottom: 14px; background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px dashed #0284c7; border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 16px;">💡</span><span style="font-size: 12.5px; color: #0369a1; font-weight: 700;">현재는 <b>토큰 소모가 없는 팩트 규칙 분석</b> 상태입니다. Gemini의 심층 원인 진단과 컨설팅 제언이 필요하시면 우측 상단의 <b>[🔄 AI 재분석]</b> 버튼을 눌러주세요.</span></div><span style="font-size: 11px; color: #0284c7; background: #ffffff; border: 1px solid #bae6fd; padding: 3px 8px; border-radius: 4px; font-weight: 800; white-space: nowrap;">⚡ 클릭 시 토큰 소모</span></div>'
 
     briefing_overview = AIBriefingService.clean_briefing_text(ai_briefing.get('overview', ''))
     briefing_risks = AIBriefingService.clean_briefing_text(ai_briefing.get('risks', ''))
     briefing_recomms = AIBriefingService.clean_briefing_text(ai_briefing.get('recommendations', ''))
 
-    briefing_html = f"""
-    <div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 6px solid #005073; border-radius: 12px; padding: 18px 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0, 45, 66, 0.06);">
-        <div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 15px; font-weight: 800; color: #002d42;">📋 핵심 운영 진단 & 전략 지침</span>
-            </div>
-            {badge_html}
-        </div>
-        {notice_banner_html}
-        <div style="font-size: 13.5px; color: #1e293b; line-height: 1.85;">
-            <div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #0284c7;">
-                📌 <b>핵심 변화 & 집중 요인</b>: {briefing_overview}
-            </div>
-            <div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #f59e0b;">
-                ⚠️ <b>현장 리스크 & 지연 진단</b>: {briefing_risks}
-            </div>
-            <div style="background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #10b981;">
-                💡 <b>차기 운영 전략 & 액션 플랜</b>: {briefing_recomms}
-            </div>
-        </div>
-    </div>
-    """
+    briefing_html = f"""<div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 6px solid #005073; border-radius: 12px; padding: 18px 24px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0, 45, 66, 0.06);">
+<div style="margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span style="font-size: 15px; font-weight: 800; color: #002d42;">📋 핵심 운영 진단 & 전략 지침</span>
+</div>
+{badge_html}
+</div>
+{notice_banner_html}
+<div style="font-size: 13.5px; color: #1e293b; line-height: 1.85;">
+<div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #0284c7;">
+📌 <b>핵심 변화 & 집중 요인</b>: {briefing_overview}
+</div>
+<div style="margin-bottom: 10px; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #f59e0b;">
+⚠️ <b>현장 리스크 & 지연 진단</b>: {briefing_risks}
+</div>
+<div style="background: #f8fafc; padding: 12px 16px; border-radius: 8px; border-left: 3.5px solid #10b981;">
+💡 <b>차기 운영 전략 & 액션 플랜</b>: {briefing_recomms}
+</div>
+</div>
+</div>"""
     st.markdown(briefing_html, unsafe_allow_html=True)
 
     # =========================================================================
