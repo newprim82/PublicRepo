@@ -2979,38 +2979,33 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     st.markdown("#### ⚖️ 2. 인력 운영 건전성 & 법정 근로시간 거버넌스")
     st.caption("주 52시간 근로시간 규정 준수 현황과 야간·주말 비정규 투입 비중을 진단합니다.")
 
-    gov_c1, gov_c2, gov_c3 = st.columns(3)
     danger_str_list = [danger_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in danger_names]
     caution_str_list = [caution_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in caution_names]
     safe_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in safe_names]
 
-    with gov_c1:
-        danger_text = ', '.join(danger_str_list) if danger_str_list else '초과 인원 없음 (안전)'
-        st.markdown(f"""
-        <div style="background: #ffffff; border: 1.5px solid {'#fca5a5' if danger_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#dc2626' if danger_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+    danger_text = ', '.join(danger_str_list) if danger_str_list else '초과 인원 없음 (안전)'
+    caution_text = ', '.join(caution_str_list) if caution_str_list else '주의 대상자 없음 (안전)'
+    safe_text = ', '.join(safe_str_list) if safe_str_list else '해당 인원 없음'
+
+    st.markdown(f"""
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; margin-top: 4px;">
+        <div style="display: flex; flex-direction: column; justify-content: flex-start; background: #ffffff; border: 1.5px solid {'#fca5a5' if danger_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#dc2626' if danger_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); height: 100%; box-sizing: border-box;">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">🚨 주 52시간 초과 위험군</div>
             <div style="font-size: 22px; font-weight: 900; color: {'#dc2626' if danger_cnt > 0 else '#16a34a'}; margin-top: 2px;">{danger_cnt}명</div>
-            <div style="font-size: 11.5px; color: {'#dc2626' if danger_cnt > 0 else '#64748b'}; margin-top: 4px; word-break: break-word; font-weight: 600;">{danger_text}</div>
+            <div style="font-size: 11.5px; color: {'#dc2626' if danger_cnt > 0 else '#64748b'}; margin-top: 4px; word-break: break-word; font-weight: 600; line-height: 1.5;">{danger_text}</div>
         </div>
-        """, unsafe_allow_html=True)
-    with gov_c2:
-        caution_text = ', '.join(caution_str_list) if caution_str_list else '주의 대상자 없음 (안전)'
-        st.markdown(f"""
-        <div style="background: #ffffff; border: 1.5px solid {'#fde68a' if caution_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#d97706' if caution_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display: flex; flex-direction: column; justify-content: flex-start; background: #ffffff; border: 1.5px solid {'#fde68a' if caution_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#d97706' if caution_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); height: 100%; box-sizing: border-box;">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">⚠️ 주 40~52시간 관리 주의군</div>
             <div style="font-size: 22px; font-weight: 900; color: {'#d97706' if caution_cnt > 0 else '#16a34a'}; margin-top: 2px;">{caution_cnt}명</div>
-            <div style="font-size: 11.5px; color: {'#d97706' if caution_cnt > 0 else '#64748b'}; margin-top: 4px; word-break: break-word; font-weight: 600;">{caution_text}</div>
+            <div style="font-size: 11.5px; color: {'#d97706' if caution_cnt > 0 else '#64748b'}; margin-top: 4px; word-break: break-word; font-weight: 600; line-height: 1.5;">{caution_text}</div>
         </div>
-        """, unsafe_allow_html=True)
-    with gov_c3:
-        safe_text = ', '.join(safe_str_list) if safe_str_list else '해당 인원 없음'
-        st.markdown(f"""
-        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="display: flex; flex-direction: column; justify-content: flex-start; background: #ffffff; border: 1.5px solid #e2e8f0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); height: 100%; box-sizing: border-box;">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">🟢 안정적 근로시간 준수군</div>
             <div style="font-size: 22px; font-weight: 900; color: #16a34a; margin-top: 2px;">{safe_cnt}명</div>
-            <div style="font-size: 11.5px; color: #16a34a; margin-top: 4px; word-break: break-word; font-weight: 600;">{safe_text}</div>
+            <div style="font-size: 11.5px; color: #16a34a; margin-top: 4px; word-break: break-word; font-weight: 600; line-height: 1.5;">{safe_text}</div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
     st.write("")
     st.divider()
