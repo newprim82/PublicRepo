@@ -1899,6 +1899,92 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                         comp_border = get_job_title_color(w_title)
                         comp_html = f"""<div style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">✅ {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: #005073; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{t_desc}</div></div>"""
                         st.markdown(comp_html, unsafe_allow_html=True)
+@st.dialog("📆 주차별 세부 지원 내역 및 카카오톡 원본", width="large")
+def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
+    """주차별 막대 클릭 시 열리는 상세 작업 내역 모달 팝업"""
+    inject_dialog_title_style()
+    if week_df.empty:
+        st.info("해당 주차의 작업 데이터가 없습니다.")
+        return
+
+    tot_h = round(week_df["actual_hours"].sum(), 1)
+    tot_tasks = len(week_df)
+    tot_w = week_df["worker_name"].nunique()
+    tot_c = week_df["client_name"].nunique()
+    comp_cnt = int((week_df["status"] == "COMPLETED").sum())
+    pend_cnt = int((week_df["status"] == "PENDING").sum())
+
+    st.markdown(f"### 📆 **{week_title}** 세부 지원 내역")
+    # 상단 요약 배너
+    st.markdown(
+        f"""<div style="display: flex; gap: 10px; margin-bottom: 16px; background: #ffffff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 10px 14px; flex-wrap: wrap; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+<span style="color: #005073; font-weight: 700;">⏱️ 총 공수: <b>{tot_h}h</b> ({tot_tasks}건)</span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #4f46e5; font-weight: 700;">👥 투입 인원: <b>{tot_w}명</b></span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #d97706; font-weight: 700;">🏢 고객사: <b>{tot_c}개사</b></span>
+<span style="color: #cbd5e1;">|</span>
+<span style="color: #0f5132; font-weight: 700;">✅ 완료 {comp_cnt}건 / ⏳ 진행 {pend_cnt}건</span>
+</div>""",
+        unsafe_allow_html=True
+    )
+
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        top_clients = week_df.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(5).reset_index()
+        if not top_clients.empty:
+            fig1 = px.bar(top_clients, x="actual_hours", y="client_name", orientation="h", text="actual_hours", title="🏢 상위 고객사 투입 시간(h)")
+            fig1.update_layout(height=200, yaxis={'categoryorder': 'total ascending'}, margin=dict(l=20, r=20, t=35, b=20))
+            st.plotly_chart(fig1, use_container_width=True)
+    with c2:
+        top_workers = week_df.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False).head(5).reset_index()
+        if not top_workers.empty:
+            fig2 = px.bar(top_workers, x="actual_hours", y="worker_name", orientation="h", text="actual_hours", title="👤 상위 담당자 투입 시간(h)")
+            fig2.update_layout(height=200, yaxis={'categoryorder': 'total ascending'}, margin=dict(l=20, r=20, t=35, b=20))
+            st.plotly_chart(fig2, use_container_width=True)
+
+    sorted_df = week_df.sort_values(by="start_time", ascending=False).reset_index(drop=True)
+    disp_sorted_df = strip_tz(sorted_df.copy())
+    if "end_time" not in disp_sorted_df.columns:
+        disp_sorted_df["end_time"] = None
+    if "status" in disp_sorted_df.columns:
+        disp_sorted_df["status"] = disp_sorted_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_sorted_df["status"])
+
+    st.markdown("#### 📋 해당 주차 전체 작업 상세 목록")
+    st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
+
+    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
+    avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
+
+    sel_tbl = st.dataframe(
+        disp_sorted_df[avail_cols].rename(columns={
+            "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
+            "worker_name": "담당자",
+            "worker_team": "소속팀",
+            "client_name": "고객사",
+            "task_description": "작업내용",
+            "estimated_hours": "예정(h)",
+            "actual_hours": "소요(h)",
+            "status": "상태"
+        }),
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key=f"tbl_week_popup_{abs(hash(week_title)) % 100000}"
+    )
+
+    if sel_tbl and hasattr(sel_tbl, "selection") and sel_tbl.selection.rows:
+        sel_idx = sel_tbl.selection.rows[0]
+        sel_row = sorted_df.iloc[sel_idx]
+        st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
+        st.code(format_raw_chat_display(sel_row), language="text")
+
+    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(sorted_df)}건)", expanded=False):
+        for i, (_, r) in enumerate(sorted_df.iterrows()):
+            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정:{r.get('estimated_hours',0)}h ➔ 소요:{r.get('actual_hours',0)}h]**")
+            st.code(format_raw_chat_display(r), language="text")
 
 
 @st.dialog("📅 일자별 세부 작업 내역", width="large")
@@ -5117,6 +5203,10 @@ def main():
             monthly_trend = monthly_trend.sort_values(by="month_str")
         
         if not df.empty:
+            st.markdown("""<div style="background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-left: 4.5px solid #0284c7; border-radius: 6px; padding: 9px 15px; margin: 4px 0 14px 0; font-size: 13px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+<span>💡</span>
+<span><b>그래프의 막대(주차 / 일자)를 클릭</b>하시면, 해당 기간의 <b>[실제 세부 지원 내역 목록 및 카카오톡 원본 대화 팝업]</b>이 바로 열립니다.</span>
+</div>""", unsafe_allow_html=True)
             col_t3_1, col_t3_2 = st.columns(2)
             with col_t3_1:
                 if not monthly_trend.empty:
@@ -5144,6 +5234,9 @@ def main():
                     )
                     st.plotly_chart(fig_monthly, use_container_width=True)
                 
+            event_weekly = None
+            event_daily = None
+
             with col_t3_2:
                 # 주별 추이 차트 (신규 추가!)
                 weekly_df = df.groupby("week_label")["actual_hours"].sum().reset_index()
@@ -5173,25 +5266,83 @@ def main():
                         labels={"week_label": week_axis_title, "actual_hours": "총 투입 시간(h)"},
                         title="주차(Week)별 총 지원 시간 분포"
                     )
-                    fig_weekly.update_traces(texttemplate='%{text}h', textposition='outside', marker_color='#42A5F5')
+                    fig_weekly.update_traces(
+                        texttemplate='%{text}h',
+                        textposition='outside',
+                        marker_color='#42A5F5',
+                        customdata=[[w] for w in weekly_df['week_label']]
+                    )
                     fig_weekly.update_layout(
                         height=350,
                         margin=dict(l=40, r=40, t=50, b=40),
                         xaxis=dict(tickangle=-30, title=week_axis_title)
                     )
-                    st.plotly_chart(fig_weekly, use_container_width=True)
+                    event_weekly = st.plotly_chart(
+                        fig_weekly,
+                        use_container_width=True,
+                        on_select="rerun",
+                        selection_mode=["points"],
+                        key="chart_trend_weekly_bar"
+                    )
 
             st.markdown("##### 📅 일자별 작업 시간 분포")
             daily_df = df.groupby("date_str")["actual_hours"].sum().reset_index()
+            daily_df = daily_df.sort_values(by="date_str")
             fig_daily = px.bar(
                 daily_df,
                 x="date_str",
                 y="actual_hours",
+                text="actual_hours",
                 labels={"date_str": "일자", "actual_hours": "작업 시간(h)"},
                 title="일자별 작업 시간 분포"
             )
-            fig_daily.update_layout(height=320)
-            st.plotly_chart(fig_daily, use_container_width=True)
+            fig_daily.update_traces(
+                texttemplate='%{text}h',
+                textposition='outside',
+                marker_color='#60A5FA',
+                customdata=[[d] for d in daily_df['date_str']]
+            )
+            fig_daily.update_layout(
+                height=320,
+                margin=dict(l=40, r=40, t=50, b=40),
+                xaxis=dict(type='category', title="작업 일자")
+            )
+            event_daily = st.plotly_chart(
+                fig_daily,
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode=["points"],
+                key="chart_trend_daily_bar"
+            )
+
+            # 🖱️ 클릭 이벤트 감지 및 세부 작업 내역 모달 팝업 연동
+            # 1. 주차별 막대 클릭 시: 해당 주차 전체 작업 지원 내역 모달 팝업
+            if event_weekly and hasattr(event_weekly, "selection") and event_weekly.selection.points:
+                pt_w = event_weekly.selection.points[0]
+                target_wk = None
+                if "customdata" in pt_w and pt_w["customdata"]:
+                    cdata = pt_w["customdata"]
+                    target_wk = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+                elif "x" in pt_w:
+                    target_wk = pt_w["x"]
+                if target_wk:
+                    target_df = df[df["week_label"] == target_wk]
+                    if not target_df.empty:
+                        show_week_summary_dialog(target_wk, target_df)
+
+            # 2. 일자별 막대 클릭 시: 해당 일자 전체 작업 지원 내역 모달 팝업
+            if event_daily and hasattr(event_daily, "selection") and event_daily.selection.points:
+                pt_d = event_daily.selection.points[0]
+                target_dt = None
+                if "customdata" in pt_d and pt_d["customdata"]:
+                    cdata = pt_d["customdata"]
+                    target_dt = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+                elif "x" in pt_d:
+                    target_dt = pt_d["x"]
+                if target_dt:
+                    target_df = df[df["date_str"] == target_dt]
+                    if not target_df.empty:
+                        show_calendar_day_dialog(target_dt, target_df)
 
     # ------------------------------------------
     # PAGE: 고객사별 공수 분포
