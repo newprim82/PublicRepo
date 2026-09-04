@@ -118,14 +118,15 @@ class EmailReportService:
         delta_clients_str = calc_delta(tot_clients, prev_tot_clients)
 
         danger_names, caution_names, safe_names = [], [], []
+        worker_hours = df_active.groupby("worker_name")["actual_hours"].sum().to_dict() if ("worker_name" in df_active.columns and not df_active.empty) else {}
         if not df_active.empty:
             all_active = list(df_active["worker_name"].dropna().unique())
             wk_agg = df_active.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
             danger_workers = wk_agg[wk_agg["actual_hours"] > 52]["worker_name"].unique()
             caution_workers = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]["worker_name"].unique()
-            danger_names = list(danger_workers)
-            caution_names = [w for w in caution_workers if w not in danger_names]
-            safe_names = [w for w in all_active if w not in danger_names and w not in caution_names]
+            danger_names = sorted(list(danger_workers), key=lambda w: worker_hours.get(w, 0.0), reverse=True)
+            caution_names = sorted([w for w in caution_workers if w not in danger_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
+            safe_names = sorted([w for w in all_active if w not in danger_names and w not in caution_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
 
         client_agg = df_active.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(5) if not df_active.empty else pd.Series()
         top_clients_summary = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in client_agg.head(3).items()]) if not client_agg.empty else "없음"
@@ -173,7 +174,11 @@ class EmailReportService:
             </tr>
             """
 
-        danger_badge = f"<span style='color: #dc2626; font-weight: bold;'>🚨 52h 초과({len(danger_names)}명: {', '.join(danger_names)})</span>" if danger_names else "<span style='color: #16a34a; font-weight: bold;'>🟢 52h 초과 없음 (안전)</span>"
+        danger_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in danger_names]
+        caution_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in caution_names]
+        safe_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in safe_names]
+
+        danger_badge = f"<span style='color: #dc2626; font-weight: bold;'>🚨 52h 초과({len(danger_names)}명: {', '.join(danger_str_list)})</span>" if danger_names else "<span style='color: #16a34a; font-weight: bold;'>🟢 52h 초과 없음 (안전)</span>"
 
         # 🌟 다차원 팩트 추출(2번) + AI 브리핑(1번) 연동
         facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_week)
@@ -251,17 +256,17 @@ class EmailReportService:
                                 <td width="33.3%" style="background: #ffffff; border: 1px solid #fca5a5; border-left: 4px solid #dc2626; border-radius: 6px; padding: 10px 12px;">
                                     <div style="font-size: 11px; font-weight: bold; color: #64748b;">🚨 주 52h 초과 위험군</div>
                                     <div style="font-size: 18px; font-weight: 900; color: #dc2626; margin: 2px 0;">{len(danger_names)}명</div>
-                                    <div style="font-size: 11px; color: #dc2626; font-weight: 600;">{', '.join(danger_names) if danger_names else '초과자 없음'}</div>
+                                    <div style="font-size: 11px; color: #dc2626; font-weight: 600;">{', '.join(danger_str_list) if danger_str_list else '초과자 없음'}</div>
                                 </td>
                                 <td width="33.3%" style="background: #ffffff; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 6px; padding: 10px 12px;">
                                     <div style="font-size: 11px; font-weight: bold; color: #64748b;">⚠️ 주 40~52h 관리 주의군</div>
                                     <div style="font-size: 18px; font-weight: 900; color: #d97706; margin: 2px 0;">{len(caution_names)}명</div>
-                                    <div style="font-size: 11px; color: #d97706; font-weight: 600;">{', '.join(caution_names) if caution_names else '주의자 없음'}</div>
+                                    <div style="font-size: 11px; color: #d97706; font-weight: 600;">{', '.join(caution_str_list) if caution_str_list else '주의자 없음'}</div>
                                 </td>
                                 <td width="33.3%" style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid #16a34a; border-radius: 6px; padding: 10px 12px;">
                                     <div style="font-size: 11px; font-weight: bold; color: #64748b;">🟢 정상 준수군 (40h 이하)</div>
                                     <div style="font-size: 18px; font-weight: 900; color: #16a34a; margin: 2px 0;">{len(safe_names)}명</div>
-                                    <div style="font-size: 11px; color: #16a34a; font-weight: 600;">{', '.join(safe_names) if safe_names else '해당 없음'}</div>
+                                    <div style="font-size: 11px; color: #16a34a; font-weight: 600;">{', '.join(safe_str_list) if safe_str_list else '해당 없음'}</div>
                                 </td>
                             </tr>
                         </table>

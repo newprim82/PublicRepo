@@ -2769,15 +2769,16 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     danger_names = []
     caution_names = []
     safe_names = []
+    worker_hours = df_active.groupby("worker_name")["actual_hours"].sum().to_dict() if ("worker_name" in df_active.columns and not df_active.empty) else {}
     if "worker_name" in df_active.columns and not df_active.empty:
         all_active_workers = list(df_active["worker_name"].dropna().unique())
         if "week_label" in df_active.columns:
             wk_agg = df_active.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
             danger_workers = wk_agg[wk_agg["actual_hours"] > 52]["worker_name"].unique()
             caution_workers = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]["worker_name"].unique()
-            danger_names = list(danger_workers)
-            caution_names = [w for w in caution_workers if w not in danger_names]
-        safe_names = [w for w in all_active_workers if w not in danger_names and w not in caution_names]
+            danger_names = sorted(list(danger_workers), key=lambda w: worker_hours.get(w, 0.0), reverse=True)
+            caution_names = sorted([w for w in caution_workers if w not in danger_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
+        safe_names = sorted([w for w in all_active_workers if w not in danger_names and w not in caution_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
 
     danger_cnt = len(danger_names)
     caution_cnt = len(caution_names)
@@ -2785,7 +2786,8 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     top3_share = round((client_agg.head(3).sum() / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
 
-    risk_status_html = "<span style='color:#16a34a; font-weight:800;'>🟢 법정 근로시간 안정 (주 52시간 초과 인원 없음)</span>" if danger_cnt == 0 else f"<span style='color:#dc2626; font-weight:800;'>🚨 주 52시간 초과 주의 ({danger_cnt}명: {', '.join(danger_names)})</span>"
+    danger_desc_inline = ', '.join([f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in danger_names])
+    risk_status_html = "<span style='color:#16a34a; font-weight:800;'>🟢 법정 근로시간 안정 (주 52시간 초과 인원 없음)</span>" if danger_cnt == 0 else f"<span style='color:#dc2626; font-weight:800;'>🚨 주 52시간 초과 주의 ({danger_cnt}명: {danger_desc_inline})</span>"
 
     # ----------------------------------------------------
     # 🌟 다차원 팩트 추출(2번) + AI 심층 분석(1번) 결합 브리핑 생성
@@ -2938,8 +2940,12 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     st.caption("주 52시간 근로시간 규정 준수 현황과 야간·주말 비정규 투입 비중을 진단합니다.")
 
     gov_c1, gov_c2, gov_c3 = st.columns(3)
+    danger_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in danger_names]
+    caution_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in caution_names]
+    safe_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in safe_names]
+
     with gov_c1:
-        danger_text = ', '.join(danger_names) if danger_names else '초과 인원 없음 (안전)'
+        danger_text = ', '.join(danger_str_list) if danger_str_list else '초과 인원 없음 (안전)'
         st.markdown(f"""
         <div style="background: #ffffff; border: 1.5px solid {'#fca5a5' if danger_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#dc2626' if danger_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">🚨 주 52시간 초과 위험군</div>
@@ -2948,7 +2954,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         </div>
         """, unsafe_allow_html=True)
     with gov_c2:
-        caution_text = ', '.join(caution_names) if caution_names else '주의 대상자 없음 (안전)'
+        caution_text = ', '.join(caution_str_list) if caution_str_list else '주의 대상자 없음 (안전)'
         st.markdown(f"""
         <div style="background: #ffffff; border: 1.5px solid {'#fde68a' if caution_cnt > 0 else '#e2e8f0'}; border-left: 4px solid {'#d97706' if caution_cnt > 0 else '#16a34a'}; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">⚠️ 주 40~52시간 관리 주의군</div>
@@ -2957,7 +2963,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         </div>
         """, unsafe_allow_html=True)
     with gov_c3:
-        safe_text = ', '.join(safe_names) if safe_names else '해당 인원 없음'
+        safe_text = ', '.join(safe_str_list) if safe_str_list else '해당 인원 없음'
         st.markdown(f"""
         <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-left: 4px solid #16a34a; border-radius: 8px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
             <div style="font-size: 12px; font-weight: 700; color: #64748b;">🟢 안정적 근로시간 준수군</div>
