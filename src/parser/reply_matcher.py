@@ -174,8 +174,12 @@ def check_is_weekend_work(
     return weekend_minutes >= 60.0
 
 
+from ..services.client_normalizer import normalize_client_name
+
+
 def generate_msg_hash(worker_name: str, client_name: str, start_dt: datetime, task_desc: str) -> str:
-    unique_str = f"{worker_name.strip()}_{client_name.strip()}_{start_dt.strftime('%Y%m%d_%H%M')}_{task_desc.strip()[:20]}"
+    norm_client = normalize_client_name(client_name) if client_name else ""
+    unique_str = f"{worker_name.strip()}_{norm_client.strip()}_{start_dt.strftime('%Y%m%d_%H%M')}_{task_desc.strip()[:20]}"
     return hashlib.sha256(unique_str.encode('utf-8')).hexdigest()[:16]
 
 

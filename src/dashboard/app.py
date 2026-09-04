@@ -955,9 +955,20 @@ def load_data() -> pd.DataFrame:
         if title_mappings:
             df["worker_title"] = df["worker_name"].map(title_mappings).fillna(df.get("worker_title", ""))
             
-        # 🏢 고객사명 대소문자/띄어쓰기 표준화 (예: kb신용정보, KB 신용정보 -> KB신용정보)
+        # 🏢 고객사명 대소문자/띄어쓰기 표준화 (예: kb신용정보, KB 신용정보 -> KB신용정보, 아리스타 -> Arista)
         if "client_name" in df.columns:
             df["client_name"] = df["client_name"].apply(normalize_client_name)
+
+        # 🛡️ 의미론적 중복 작업 통합 제거 (Semantic Deduplication)
+        # 작업자 + 시작 일시 + 정규화된 고객사명 + 작업내용이 동일한 레코드는
+        # 카카오톡 재전송 또는 과거 미정규화 해시 불일치로 인한 중복이므로 가장 최신/완료된 레코드 1건만 유지
+        dup_subset = ["worker_name", "start_time", "client_name", "task_description"]
+        if all(c in df.columns for c in dup_subset):
+            # status COMPLETED 우선, id 최신순 정렬 후 중복 제거
+            sort_cols = [c for c in ["status", "id"] if c in df.columns]
+            if sort_cols:
+                df = df.sort_values(by=sort_cols, ascending=[False] * len(sort_cols))
+            df = df.drop_duplicates(subset=dup_subset, keep="first").reset_index(drop=True)
             
         # week_str, week_label 안전 보장
         if "start_time" in df.columns:
