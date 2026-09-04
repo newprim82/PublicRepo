@@ -2637,7 +2637,18 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
                         prev_df["worker_team"] = prev_df["worker_team"].fillna(prev_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
                         prev_df = prev_df[prev_df["worker_team"] == selected_team]
     else:
-        df_active = df_scope.copy()
+        # ★ 사용자 지정 규칙: '월간 전체 종합'은 우측에 있는 모든 주차(available_weeks)를 기준으로 온전하게 집계! ★
+        if available_weeks and "week_label" in df_raw.columns:
+            df_active = df_raw[df_raw["week_label"].isin(available_weeks)].copy()
+            if "msg_hash" in df_active.columns:
+                df_active = df_active.drop_duplicates(subset=["msg_hash"])
+        else:
+            df_active = df_scope.copy()
+
+        if selected_team != "전체" and not df_active.empty:
+            df_active["worker_team"] = df_active["worker_team"].fillna(df_active["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
+            df_active = df_active[df_active["worker_team"] == selected_team]
+
         current_period_label = f"{selected_team} - 월간 전체"
         is_weekly_view = False
 
