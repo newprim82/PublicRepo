@@ -1954,24 +1954,34 @@ def get_job_title_rank(title: str) -> int:
 
 LIVE_PROGRESS_ANIMATION_AND_TIMER = """
 <style>
-@keyframes liveProgressBarStripes {
-    0% { background-position: 0 0; }
-    100% { background-position: 36px 0; }
-}
-.live-progress-fill {
-    background-image: linear-gradient(
-        45deg,
-        rgba(255, 255, 255, 0.22) 25%,
-        transparent 25%,
-        transparent 50%,
-        rgba(255, 255, 255, 0.22) 50%,
-        rgba(255, 255, 255, 0.22) 75%,
-        transparent 75%,
-        transparent
-    ) !important;
-    background-size: 36px 36px !important;
-    animation: liveProgressBarStripes 2s linear infinite !important;
+.live-progress-bar {
+    border-radius: 5px !important;
     transition: width 0.8s ease-in-out !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    overflow: hidden !important;
+}
+.live-progress-bar::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.35) 50%,
+        rgba(255, 255, 255, 0) 100%
+    ) !important;
+    animation: liveShimmerFlow 2s infinite linear !important;
+    pointer-events: none !important;
+}
+@keyframes liveShimmerFlow {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
 }
 </style>
 <script>
