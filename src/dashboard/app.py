@@ -4615,7 +4615,7 @@ def main():
             )
 
         display_cols = [
-            "start_time", "status", "log_type", "worker_name", "worker_company", "worker_team",
+            "start_time", "status", "log_type", "worker_name", "worker_team",
             "client_name", "task_description", "estimated_hours", "actual_hours", "is_night_work", "is_weekend_work"
         ]
         available_display_cols = [c for c in display_cols if c in df.columns]
@@ -4629,7 +4629,6 @@ def main():
                 "status": "상태",
                 "log_type": "구분",
                 "worker_name": "담당자",
-                "worker_company": "소속",
                 "worker_team": "소속팀",
                 "client_name": "고객사",
                 "task_description": "작업내용",
@@ -5238,12 +5237,11 @@ def main():
                 "weekend_tasks": "주말 작업 건수",
                 "night_tasks": "야간 작업 건수",
                 "avg_hours": "건당 평균시간(h)",
-                "company": "회사",
                 "team": "소속팀",
                 "title": "직급"
             })
             col_order = [
-                "담당자", "소속팀", "직급", "회사",
+                "담당자", "소속팀", "직급",
                 "총 투입시간(h)", "작업 건수",
                 "평일 주간 건수", "평일 야간 건수", "주말 작업 건수", "야간 작업 건수",
                 "건당 평균시간(h)"

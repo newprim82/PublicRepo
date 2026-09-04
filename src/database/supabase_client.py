@@ -54,7 +54,6 @@ class DatabaseManager:
                 msg_hash TEXT UNIQUE NOT NULL,
                 log_type TEXT,
                 worker_name TEXT NOT NULL,
-                worker_company TEXT,
                 worker_title TEXT,
                 worker_team TEXT,
                 client_name TEXT NOT NULL,
@@ -121,7 +120,6 @@ class DatabaseManager:
                         msg_hash=s["msg_hash"],
                         log_type=s.get("log_type") or "작업",
                         worker_name=s.get("worker_name") or "",
-                        worker_company=s.get("worker_company") or "",
                         worker_title=s.get("worker_title") or "",
                         worker_team=s.get("worker_team") or "",
                         client_name=s.get("client_name") or "",
@@ -145,19 +143,20 @@ class DatabaseManager:
             try:
                 payloads = []
                 for r in records:
+                    st_str = r.start_time.strftime("%Y-%m-%d %H:%M") if hasattr(r.start_time, "strftime") else str(r.start_time)[:16]
+                    ed_str = (r.end_time.strftime("%Y-%m-%d %H:%M") if hasattr(r.end_time, "strftime") else str(r.end_time)[:16]) if r.end_time else None
                     payloads.append({
                         "msg_hash": r.msg_hash,
                         "log_type": r.log_type,
                         "worker_name": r.worker_name,
-                        "worker_company": r.worker_company,
                         "worker_title": r.worker_title,
                         "worker_team": r.worker_team,
                         "client_name": r.client_name,
                         "task_description": r.task_description,
                         "estimated_minutes": r.estimated_minutes,
                         "actual_minutes": r.actual_minutes,
-                        "start_time": r.start_time.isoformat(),
-                        "end_time": r.end_time.isoformat() if r.end_time else None,
+                        "start_time": st_str,
+                        "end_time": ed_str,
                         "status": r.status,
                         "is_night_work": r.is_night_work,
                         "is_weekend_work": r.is_weekend_work,
@@ -179,13 +178,15 @@ class DatabaseManager:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cursor = conn.cursor()
             for r in records:
+                st_str = r.start_time.strftime("%Y-%m-%d %H:%M") if hasattr(r.start_time, "strftime") else str(r.start_time)[:16]
+                ed_str = (r.end_time.strftime("%Y-%m-%d %H:%M") if hasattr(r.end_time, "strftime") else str(r.end_time)[:16]) if r.end_time else None
                 cursor.execute("""
                     INSERT INTO work_logs (
-                        msg_hash, log_type, worker_name, worker_company, worker_title, worker_team,
+                        msg_hash, log_type, worker_name, worker_title, worker_team,
                         client_name, task_description, estimated_minutes, actual_minutes,
                         start_time, end_time, status, is_night_work, is_weekend_work,
                         raw_start_message, raw_end_message
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(msg_hash) DO UPDATE SET
                         actual_minutes=excluded.actual_minutes,
                         end_time=excluded.end_time,
@@ -193,9 +194,9 @@ class DatabaseManager:
                         is_night_work=excluded.is_night_work,
                         raw_end_message=excluded.raw_end_message
                 """, (
-                    r.msg_hash, r.log_type, r.worker_name, r.worker_company, r.worker_title, r.worker_team,
+                    r.msg_hash, r.log_type, r.worker_name, r.worker_title, r.worker_team,
                     r.client_name, r.task_description, r.estimated_minutes, r.actual_minutes,
-                    r.start_time.isoformat(), r.end_time.isoformat() if r.end_time else None,
+                    st_str, ed_str,
                     r.status, 1 if r.is_night_work else 0, 1 if r.is_weekend_work else 0,
                     r.raw_start_message, r.raw_end_message
                 ))
@@ -258,13 +259,16 @@ class DatabaseManager:
                 msg_hash = r.get("msg_hash", "")
                 if not msg_hash:
                     continue
+                st_val = str(r.get("start_time", ""))[:16]
+                ed_raw = r.get("end_time")
+                ed_val = str(ed_raw)[:16] if pd.notna(ed_raw) and ed_raw else ""
                 cursor.execute("""
                     INSERT INTO work_logs (
-                        msg_hash, log_type, worker_name, worker_company, worker_title, worker_team,
+                        msg_hash, log_type, worker_name, worker_title, worker_team,
                         client_name, task_description, estimated_minutes, actual_minutes,
                         start_time, end_time, status, is_night_work, is_weekend_work,
                         raw_start_message, raw_end_message
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(msg_hash) DO UPDATE SET
                         actual_minutes=excluded.actual_minutes,
                         end_time=excluded.end_time,
@@ -273,10 +277,10 @@ class DatabaseManager:
                         raw_end_message=excluded.raw_end_message
                 """, (
                     str(msg_hash), str(r.get("log_type", "작업")), str(r.get("worker_name", "")),
-                    str(r.get("worker_company", "")), str(r.get("worker_title", "")), str(r.get("worker_team", "")),
+                    str(r.get("worker_title", "")), str(r.get("worker_team", "")),
                     str(r.get("client_name", "")), str(r.get("task_description", "")),
                     int(r.get("estimated_minutes", 0) or 0), int(r.get("actual_minutes", 0) or 0),
-                    str(r.get("start_time", "")), str(r.get("end_time", "") or ""),
+                    st_val, ed_val,
                     str(r.get("status", "COMPLETED")),
                     1 if r.get("is_night_work") else 0,
                     1 if r.get("is_weekend_work") else 0,
@@ -291,7 +295,7 @@ class DatabaseManager:
     def _process_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty:
             return pd.DataFrame(columns=[
-                "id", "msg_hash", "log_type", "worker_name", "worker_company", "worker_title", "worker_team",
+                "id", "msg_hash", "log_type", "worker_name", "worker_title", "worker_team",
                 "client_name", "task_description", "estimated_minutes", "actual_minutes",
                 "start_time", "end_time", "status", "is_night_work", "is_weekend_work",
                 "actual_hours", "estimated_hours", "month_str", "date_str", "week_str", "week_label"

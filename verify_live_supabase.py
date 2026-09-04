@@ -47,7 +47,6 @@ def run_verification():
         msg_hash=test_hash,
         log_type="지원",
         worker_name="검증봇",
-        worker_company="상상인",
         worker_title="사원",
         worker_team="기술 1팀",
         client_name="Supabase실시간검증",

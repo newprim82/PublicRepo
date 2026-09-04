@@ -49,19 +49,20 @@ def sync_local_to_supabase():
     if not df_logs.empty:
         payloads = []
         for idx, r in df_logs.iterrows():
+            st_val = str(r["start_time"]).replace("T", " ")[:16]
+            ed_val = str(r["end_time"]).replace("T", " ")[:16] if pd.notna(r["end_time"]) and r["end_time"] else None
             payloads.append({
                 "msg_hash": r["msg_hash"],
                 "log_type": r["log_type"],
                 "worker_name": r["worker_name"],
-                "worker_company": r["worker_company"],
                 "worker_title": r["worker_title"],
                 "worker_team": r["worker_team"],
                 "client_name": r["client_name"],
                 "task_description": r["task_description"],
                 "estimated_minutes": int(r["estimated_minutes"]),
                 "actual_minutes": int(r["actual_minutes"]),
-                "start_time": r["start_time"],
-                "end_time": r["end_time"] if pd.notna(r["end_time"]) else None,
+                "start_time": st_val,
+                "end_time": ed_val,
                 "status": r["status"],
                 "is_night_work": bool(r["is_night_work"]),
                 "is_weekend_work": bool(r["is_weekend_work"]),

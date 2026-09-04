@@ -16,7 +16,6 @@ class WorkLogRecord:
     msg_hash: str
     log_type: str
     worker_name: str
-    worker_company: str
     worker_title: str
     worker_team: str
     client_name: str
@@ -30,11 +29,13 @@ class WorkLogRecord:
     is_weekend_work: bool
     raw_start_message: str
     raw_end_message: str
+    worker_company: str = ""          # 하위 호환용 (DB 저장 및 표출 대상 제외)
 
     def to_dict(self) -> dict:
         d = asdict(self)
-        d['start_time'] = self.start_time.isoformat()
-        d['end_time'] = self.end_time.isoformat() if self.end_time else None
+        d['start_time'] = self.start_time.strftime("%Y-%m-%d %H:%M")
+        d['end_time'] = self.end_time.strftime("%Y-%m-%d %H:%M") if self.end_time else None
+        d.pop('worker_company', None)
         return d
 
 

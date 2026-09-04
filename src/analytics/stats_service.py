@@ -75,7 +75,6 @@ class StatsService:
             weekday_day_tasks=("is_weekday_day_flag", "sum"),
             night_tasks=("is_night_work", "sum"),
             avg_hours=("actual_hours", "mean"),
-            company=("worker_company", "first") if "worker_company" in df_calc.columns else ("worker_name", lambda x: ""),
             team=("worker_team", "first") if "worker_team" in df_calc.columns else ("worker_name", lambda x: ""),
             title=("worker_title", "first") if "worker_title" in df_calc.columns else ("worker_name", lambda x: "")
         ).reset_index()
