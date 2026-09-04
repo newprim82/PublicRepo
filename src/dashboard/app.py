@@ -2340,6 +2340,481 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
             st.code(format_raw_chat_display(r), language="text")
 
 
+@st.fragment
+def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFrame, target_months: list, selected_months: list, month_desc: str):
+    """월별/주별/일별 추이 인터랙티브 차트 및 클릭 시 팝업 렌더링 (화면 전체 새로고침 없이 독립 Fragment 동작)"""
+    col_t3_1, col_t3_2 = st.columns(2)
+    with col_t3_1:
+        if not monthly_trend.empty:
+            range_label = f"{target_months[0]} ~ {target_months[-1]}" if len(target_months) >= 3 else ""
+            fig_monthly = px.line(
+                monthly_trend,
+                x="month_str",
+                y="total_hours",
+                markers=True,
+                text="total_hours",
+                labels={"month_str": "월", "total_hours": "총 지원 시간(h)"},
+                title=f"월별 총 지원 시간(h) 변동 추이 (지난 2달 포함 3개월 비교: {range_label})"
+            )
+            fig_monthly.update_traces(
+                line_color="#0284c7",
+                line_width=3,
+                texttemplate='%{text}h',
+                textposition='top center',
+                marker=dict(size=9, color="#005073", line=dict(width=2, color="#ffffff"))
+            )
+            fig_monthly.update_layout(
+                height=350,
+                margin=dict(l=40, r=40, t=50, b=40),
+                xaxis=dict(type='category', title="조회 월")
+            )
+            st.plotly_chart(fig_monthly, use_container_width=True)
+        
+    event_weekly = None
+    event_daily = None
+
+    with col_t3_2:
+        weekly_df = df.groupby("week_label")["actual_hours"].sum().reset_index()
+        if not weekly_df.empty:
+            week_axis_title = "주차(Week)"
+            if selected_months and len(selected_months) == 1:
+                try:
+                    s_dt = pd.to_datetime(selected_months[0] + "-01")
+                    e_dt = s_dt + pd.offsets.MonthEnd(1)
+                    week_axis_title = f"주차(Week / {s_dt.month}월 {s_dt.day}일 ~ {e_dt.month}월 {e_dt.day}일)"
+                except Exception:
+                    week_axis_title = f"주차(Week / {month_desc})"
+            elif selected_months:
+                try:
+                    s_dt = pd.to_datetime(min(selected_months) + "-01")
+                    e_dt = pd.to_datetime(max(selected_months) + "-01") + pd.offsets.MonthEnd(1)
+                    week_axis_title = f"주차(Week / {s_dt.month}월 {s_dt.day}일 ~ {e_dt.month}월 {e_dt.day}일)"
+                except Exception:
+                    week_axis_title = f"주차(Week / {month_desc})"
+
+            fig_weekly = px.bar(
+                weekly_df,
+                x="week_label",
+                y="actual_hours",
+                text="actual_hours",
+                labels={"week_label": week_axis_title, "actual_hours": "총 투입 시간(h)"},
+                title="주차(Week)별 총 지원 시간 분포"
+            )
+            fig_weekly.update_traces(
+                texttemplate='%{text}h',
+                textposition='outside',
+                marker_color='#42A5F5',
+                customdata=[[w] for w in weekly_df['week_label']]
+            )
+            fig_weekly.update_layout(
+                height=350,
+                margin=dict(l=40, r=40, t=50, b=40),
+                xaxis=dict(tickangle=-30, title=week_axis_title)
+            )
+            event_weekly = st.plotly_chart(
+                fig_weekly,
+                use_container_width=True,
+                on_select="rerun",
+                selection_mode=["points"],
+                key="chart_trend_weekly_bar"
+            )
+
+    st.markdown("##### 📅 일자별 작업 시간 분포")
+    daily_df = df.groupby("date_str")["actual_hours"].sum().reset_index()
+    daily_df = daily_df.sort_values(by="date_str")
+    fig_daily = px.bar(
+        daily_df,
+        x="date_str",
+        y="actual_hours",
+        text="actual_hours",
+        labels={"date_str": "일자", "actual_hours": "작업 시간(h)"},
+        title="일자별 작업 시간 분포"
+    )
+    fig_daily.update_traces(
+        texttemplate='%{text}h',
+        textposition='outside',
+        marker_color='#60A5FA',
+        customdata=[[d] for d in daily_df['date_str']]
+    )
+    fig_daily.update_layout(
+        height=320,
+        margin=dict(l=40, r=40, t=50, b=40),
+        xaxis=dict(type='category', title="작업 일자")
+    )
+    event_daily = st.plotly_chart(
+        fig_daily,
+        use_container_width=True,
+        on_select="rerun",
+        selection_mode=["points"],
+        key="chart_trend_daily_bar"
+    )
+
+    # 🖱️ 클릭 이벤트 감지 및 세부 작업 내역 모달 팝업 연동
+    curr_wk_pt = event_weekly.selection.points[0] if (event_weekly and hasattr(event_weekly, "selection") and event_weekly.selection.points) else None
+    curr_day_pt = event_daily.selection.points[0] if (event_daily and hasattr(event_daily, "selection") and event_daily.selection.points) else None
+
+    last_wk_id = st.session_state.get("last_selected_trend_week")
+    last_day_id = st.session_state.get("last_selected_trend_day")
+
+    wk_target = None
+    if curr_wk_pt:
+        if "customdata" in curr_wk_pt and curr_wk_pt["customdata"]:
+            cdata = curr_wk_pt["customdata"]
+            wk_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+        elif "x" in curr_wk_pt:
+            wk_target = curr_wk_pt["x"]
+
+    day_target = None
+    if curr_day_pt:
+        if "customdata" in curr_day_pt and curr_day_pt["customdata"]:
+            cdata = curr_day_pt["customdata"]
+            day_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+        elif "x" in curr_day_pt:
+            day_target = curr_day_pt["x"]
+
+    wk_changed = (wk_target is not None) and (wk_target != last_wk_id)
+    day_changed = (day_target is not None) and (day_target != last_day_id)
+
+    dialog_to_open = None
+    if day_changed:
+        st.session_state["last_selected_trend_day"] = day_target
+        st.session_state["last_selected_trend_week"] = None
+        dialog_to_open = ("day", day_target)
+    elif wk_changed:
+        st.session_state["last_selected_trend_week"] = wk_target
+        st.session_state["last_selected_trend_day"] = None
+        dialog_to_open = ("week", wk_target)
+    elif day_target and not wk_target:
+        dialog_to_open = ("day", day_target)
+    elif wk_target and not day_target:
+        dialog_to_open = ("week", wk_target)
+
+    if dialog_to_open:
+        dtype, dval = dialog_to_open
+        if dtype == "week" and dval:
+            target_df = df[df["week_label"] == dval]
+            if not target_df.empty:
+                show_week_summary_dialog(dval, target_df)
+        elif dtype == "day" and dval:
+            target_df = df[df["date_str"] == dval]
+            if not target_df.empty:
+                show_calendar_day_dialog(dval, target_df)
+
+
+@st.fragment
+def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataFrame, chart_orientation: str, selected_view: str):
+    """팀원별 업무량 랭킹 & 작업 유형 차트 (화면 전체 새로고침 없는 독립 Fragment)"""
+    chart_height = max(450, len(display_summary) * 28)
+    col_t1_left, col_t1_right = st.columns(2)
+    
+    event_left = None
+    event_right = None
+
+    if "가로형" in chart_orientation:
+        with col_t1_left:
+            sorted_for_h_bar = display_summary.sort_values(by="total_hours", ascending=True)
+            fig_worker = px.bar(
+                sorted_for_h_bar,
+                x="total_hours",
+                y="worker_name",
+                orientation="h",
+                color="total_hours",
+                color_continuous_scale="Blues",
+                text="total_hours",
+                labels={"worker_name": "담당자", "total_hours": "총 투입 시간(h)"},
+                title=f"팀원별 총 지원 시간(h) 순위 ({selected_view})"
+            )
+            fig_worker.update_traces(
+                texttemplate='%{text}h',
+                textposition='outside',
+                customdata=[[w] for w in sorted_for_h_bar['worker_name']]
+            )
+            fig_worker.update_layout(
+                height=chart_height,
+                margin=dict(l=100, r=40, t=50, b=30),
+                yaxis=dict(tickfont=dict(size=12, family="Malgun Gothic, Arial"))
+            )
+            event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_left_h")
+
+        with col_t1_right:
+            sorted_for_h_bar = display_summary.sort_values(by="total_hours", ascending=True)
+            fig_night = go.Figure(data=[
+                go.Bar(
+                    name='☀️ 평일 주간',
+                    y=sorted_for_h_bar['worker_name'],
+                    x=sorted_for_h_bar.get('weekday_day_tasks', sorted_for_h_bar['total_tasks'] - sorted_for_h_bar['night_tasks'] - sorted_for_h_bar['weekend_tasks']),
+                    orientation='h',
+                    marker_color='#42A5F5',
+                    customdata=[[w, '☀️ 평일 주간'] for w in sorted_for_h_bar['worker_name']]
+                ),
+                go.Bar(
+                    name='🌙 평일 야간 (18시~06시)',
+                    y=sorted_for_h_bar['worker_name'],
+                    x=sorted_for_h_bar.get('weekday_night_tasks', sorted_for_h_bar['night_tasks']),
+                    orientation='h',
+                    marker_color='#E53935',
+                    customdata=[[w, '🌙 평일 야간'] for w in sorted_for_h_bar['worker_name']]
+                ),
+                go.Bar(
+                    name='🏖️ 주말 작업 (야간포함)',
+                    y=sorted_for_h_bar['worker_name'],
+                    x=sorted_for_h_bar['weekend_tasks'],
+                    orientation='h',
+                    marker_color='#FFD600',
+                    customdata=[[w, '🏖️ 주말 작업'] for w in sorted_for_h_bar['worker_name']]
+                )
+            ])
+            fig_night.update_layout(
+                barmode='stack',
+                title=f"팀원별 평일 주간 vs 평일 야간 vs 주말 작업 건수 ({selected_view})",
+                height=chart_height,
+                margin=dict(l=100, r=40, t=50, b=30),
+                yaxis=dict(tickfont=dict(size=12, family="Malgun Gothic, Arial")),
+                xaxis_title="작업 건수(건)"
+            )
+            event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_right_h")
+    else:
+        with col_t1_left:
+            fig_worker = px.bar(
+                display_summary,
+                x="worker_name",
+                y="total_hours",
+                color="total_hours",
+                color_continuous_scale="Blues",
+                text="total_hours",
+                labels={"worker_name": "담당자", "total_hours": "총 투입 시간(h)"},
+                title=f"팀원별 총 지원 시간(h) 순위 ({selected_view})"
+            )
+            fig_worker.update_traces(
+                texttemplate='%{text}h',
+                textposition='outside',
+                customdata=[[w] for w in display_summary['worker_name']]
+            )
+            fig_worker.update_layout(
+                height=450,
+                xaxis=dict(tickangle=-90, tickfont=dict(size=11, family="Malgun Gothic, Arial"), dtick=1)
+            )
+            event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_left_v")
+
+        with col_t1_right:
+            fig_night = go.Figure(data=[
+                go.Bar(
+                    name='☀️ 평일 주간',
+                    x=display_summary['worker_name'],
+                    y=display_summary.get('weekday_day_tasks', display_summary['total_tasks'] - display_summary['night_tasks'] - display_summary['weekend_tasks']),
+                    marker_color='#42A5F5',
+                    customdata=[[w, '☀️ 평일 주간'] for w in display_summary['worker_name']]
+                ),
+                go.Bar(
+                    name='🌙 평일 야간 (18시~06시)',
+                    x=display_summary['worker_name'],
+                    y=display_summary.get('weekday_night_tasks', display_summary['night_tasks']),
+                    marker_color='#E53935',
+                    customdata=[[w, '🌙 평일 야간'] for w in display_summary['worker_name']]
+                ),
+                go.Bar(
+                    name='🏖️ 주말 작업 (야간포함)',
+                    x=display_summary['worker_name'],
+                    y=display_summary['weekend_tasks'],
+                    marker_color='#FFD600',
+                    customdata=[[w, '🏖️ 주말 작업'] for w in display_summary['worker_name']]
+                )
+            ])
+            fig_night.update_layout(
+                barmode='stack',
+                title=f"팀원별 평일 주간 vs 평일 야간 vs 주말 작업 건수 ({selected_view})",
+                height=450,
+                xaxis=dict(tickangle=-90, tickfont=dict(size=11, family="Malgun Gothic, Arial"), dtick=1),
+                yaxis_title="작업 건수(건)"
+            )
+            event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_right_v")
+
+    # 🌟 [차트 클릭 인터랙션 핸들링]
+    if event_left and hasattr(event_left, "selection") and event_left.selection.points:
+        pt_l = event_left.selection.points[0]
+        target_w = None
+        if "customdata" in pt_l and pt_l["customdata"]:
+            cdata = pt_l["customdata"]
+            target_w = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+        elif "y" in pt_l and "가로형" in chart_orientation:
+            target_w = pt_l["y"]
+        elif "x" in pt_l:
+            target_w = pt_l["x"]
+        if target_w:
+            show_worker_all_tasks_dialog(target_w, df)
+
+    if event_right and hasattr(event_right, "selection") and event_right.selection.points:
+        pt_r = event_right.selection.points[0]
+        target_w = None
+        target_cat = "☀️ 평일 주간"
+        
+        if "customdata" in pt_r and pt_r["customdata"]:
+            cdata = pt_r["customdata"]
+            if isinstance(cdata, (list, tuple)) and len(cdata) >= 2:
+                target_w, target_cat = cdata[0], cdata[1]
+            elif isinstance(cdata, (list, tuple)):
+                target_w = cdata[0]
+            else:
+                target_w = cdata
+        if not target_w:
+            target_w = pt_r.get("y") if "가로형" in chart_orientation else pt_r.get("x")
+        
+        curve_no = pt_r.get("curve_number", 0)
+        if curve_no == 1:
+            target_cat = "🌙 평일 야간"
+        elif curve_no == 2:
+            target_cat = "🏖️ 주말 작업"
+        elif curve_no == 0:
+            target_cat = "☀️ 평일 주간"
+
+        if target_w:
+            show_worker_category_tasks_dialog(target_w, target_cat, df)
+
+
+@st.fragment
+def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.DataFrame):
+    """팀별 업무량 비교 차트 및 상세 표 (화면 전체 새로고침 없는 독립 Fragment)"""
+    col_t2_1, col_t2_2 = st.columns(2)
+    with col_t2_1:
+        fig_team_bar = px.bar(
+            team_summary,
+            x="worker_team",
+            y="total_hours",
+            color="worker_team",
+            text="total_hours",
+            custom_data=["worker_team"],
+            labels={"worker_team": "팀", "total_hours": "총 지원 시간(h)"},
+            title="팀별 총 지원 시간(h) 비교"
+        )
+        fig_team_bar.update_traces(
+            texttemplate='%{text}h',
+            textposition='outside'
+        )
+        fig_team_bar.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
+        event_team_bar = st.plotly_chart(
+            fig_team_bar,
+            use_container_width=True,
+            on_select="rerun",
+            selection_mode=["points"],
+            key="chart_team_total_hours_bar"
+        )
+
+    with col_t2_2:
+        fig_team_avg = px.bar(
+            team_summary,
+            x="worker_team",
+            y="avg_hours_per_person",
+            color="worker_team",
+            text="avg_hours_per_person",
+            custom_data=["worker_team"],
+            labels={"worker_team": "팀", "avg_hours_per_person": "1인당 평균 시간(h)"},
+            title="팀별 1인당 평균 지원 시간(h) 비교"
+        )
+        fig_team_avg.update_traces(
+            texttemplate='%{text}h',
+            textposition='outside'
+        )
+        fig_team_avg.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
+        event_team_avg = st.plotly_chart(
+            fig_team_avg,
+            use_container_width=True,
+            on_select="rerun",
+            selection_mode=["points"],
+            key="chart_team_avg_hours_bar"
+        )
+
+    st.markdown("##### 📋 팀별 상세 집계 표")
+    st.caption("💡 표에서 특정 팀 행을 클릭하셔도 해당 팀의 세부 작업 원장 팝업이 바로 열립니다.")
+    disp_team_summary = team_summary.rename(columns={
+        "worker_team": "소속팀",
+        "total_hours": "총 투입시간(h)",
+        "total_tasks": "작업 건수",
+        "night_tasks": "야간 작업 건수",
+        "worker_count": "투입 인원(명)",
+        "avg_hours_per_person": "1인당 평균시간(h)"
+    })
+    event_team_tbl = st.dataframe(
+        disp_team_summary,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="tbl_team_summary_selection"
+    )
+
+    # 🖱️ 팀 클릭 이벤트 감지 및 세부 작업 원장 모달 팝업 연동
+    curr_bar_pt = event_team_bar.selection.points[0] if (event_team_bar and hasattr(event_team_bar, "selection") and event_team_bar.selection.points) else None
+    curr_avg_pt = event_team_avg.selection.points[0] if (event_team_avg and hasattr(event_team_avg, "selection") and event_team_avg.selection.points) else None
+    curr_tbl_row = event_team_tbl.selection.rows[0] if (event_team_tbl and hasattr(event_team_tbl, "selection") and event_team_tbl.selection.rows) else None
+
+    last_bar_id = st.session_state.get("last_selected_team_bar")
+    last_avg_id = st.session_state.get("last_selected_team_avg")
+    last_tbl_id = st.session_state.get("last_selected_team_tbl")
+
+    if curr_bar_pt is None and last_bar_id is not None:
+        st.session_state["last_selected_team_bar"] = None
+        last_bar_id = None
+    if curr_avg_pt is None and last_avg_id is not None:
+        st.session_state["last_selected_team_avg"] = None
+        last_avg_id = None
+    if curr_tbl_row is None and last_tbl_id is not None:
+        st.session_state["last_selected_team_tbl"] = None
+        last_tbl_id = None
+
+    def _extract_pt_team(pt):
+        if not pt:
+            return None
+        if "x" in pt and pt["x"] and str(pt["x"]).strip() and str(pt["x"]) != "None":
+            return str(pt["x"]).strip()
+        if "customdata" in pt and pt["customdata"]:
+            cdata = pt["customdata"]
+            val = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
+            if val and str(val).strip() and str(val) != "None":
+                return str(val).strip()
+        if "legendgroup" in pt and pt["legendgroup"]:
+            return str(pt["legendgroup"]).strip()
+        return None
+
+    bar_target = _extract_pt_team(curr_bar_pt)
+    avg_target = _extract_pt_team(curr_avg_pt)
+
+    tbl_target = None
+    if curr_tbl_row is not None and curr_tbl_row < len(team_summary):
+        tbl_target = str(team_summary.iloc[curr_tbl_row]["worker_team"]).strip()
+
+    bar_changed = (bar_target is not None) and (bar_target != last_bar_id)
+    avg_changed = (avg_target is not None) and (avg_target != last_avg_id)
+    tbl_changed = (tbl_target is not None) and (tbl_target != last_tbl_id)
+
+    team_to_open = None
+    if bar_changed:
+        st.session_state["last_selected_team_bar"] = bar_target
+        st.session_state["last_selected_team_avg"] = None
+        st.session_state["last_selected_team_tbl"] = None
+        team_to_open = bar_target
+    elif avg_changed:
+        st.session_state["last_selected_team_avg"] = avg_target
+        st.session_state["last_selected_team_bar"] = None
+        st.session_state["last_selected_team_tbl"] = None
+        team_to_open = avg_target
+    elif tbl_changed:
+        st.session_state["last_selected_team_tbl"] = tbl_target
+        st.session_state["last_selected_team_bar"] = None
+        st.session_state["last_selected_team_avg"] = None
+        team_to_open = tbl_target
+    elif bar_target and (last_avg_id is None and last_tbl_id is None):
+        team_to_open = bar_target
+    elif avg_target and (last_bar_id is None and last_tbl_id is None):
+        team_to_open = avg_target
+    elif tbl_target and (last_bar_id is None and last_avg_id is None):
+        team_to_open = tbl_target
+
+    if team_to_open and str(team_to_open).strip() and str(team_to_open).strip() != "None":
+        team_target_df = team_df[team_df["worker_team"] == team_to_open]
+        if not team_target_df.empty:
+            show_team_work_logs_dialog(team_to_open, team_target_df)
+
+
 def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
     """[📅 작업 캘린더 & 밀도 히트맵] 탭 렌더링 컴포넌트"""
     if df.empty or "start_time" not in df.columns:
@@ -5059,173 +5534,7 @@ def main():
 <span><b>그래프의 막대(세그먼트)를 클릭</b>하시면, <b>[왼쪽 그래프: 개인 전체 작업 내역]</b>, <b>[오른쪽 그래프: 평일 주간/야간/주말별 상세 내역 및 카카오톡 원본]</b> 팝업이 바로 열립니다.</span>
 </div>""", unsafe_allow_html=True)
             
-            chart_height = max(450, len(display_summary) * 28)
-            col_t1_left, col_t1_right = st.columns(2)
-            
-            event_left = None
-            event_right = None
-
-            if "가로형" in chart_orientation:
-                with col_t1_left:
-                    sorted_for_h_bar = display_summary.sort_values(by="total_hours", ascending=True)
-                    fig_worker = px.bar(
-                        sorted_for_h_bar,
-                        x="total_hours",
-                        y="worker_name",
-                        orientation="h",
-                        color="total_hours",
-                        color_continuous_scale="Blues",
-                        text="total_hours",
-                        labels={"worker_name": "담당자", "total_hours": "총 투입 시간(h)"},
-                        title=f"팀원별 총 지원 시간(h) 순위 ({selected_view})"
-                    )
-                    fig_worker.update_traces(
-                        texttemplate='%{text}h',
-                        textposition='outside',
-                        customdata=[[w] for w in sorted_for_h_bar['worker_name']]
-                    )
-                    fig_worker.update_layout(
-                        height=chart_height,
-                        margin=dict(l=100, r=40, t=50, b=30),
-                        yaxis=dict(tickfont=dict(size=12, family="Malgun Gothic, Arial"))
-                    )
-                    event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_left_h")
-
-                with col_t1_right:
-                    sorted_for_h_bar = display_summary.sort_values(by="total_hours", ascending=True)
-                    fig_night = go.Figure(data=[
-                        go.Bar(
-                            name='☀️ 평일 주간',
-                            y=sorted_for_h_bar['worker_name'],
-                            x=sorted_for_h_bar.get('weekday_day_tasks', sorted_for_h_bar['total_tasks'] - sorted_for_h_bar['night_tasks'] - sorted_for_h_bar['weekend_tasks']),
-                            orientation='h',
-                            marker_color='#42A5F5',
-                            customdata=[[w, '☀️ 평일 주간'] for w in sorted_for_h_bar['worker_name']]
-                        ),
-                        go.Bar(
-                            name='🌙 평일 야간 (18시~06시)',
-                            y=sorted_for_h_bar['worker_name'],
-                            x=sorted_for_h_bar.get('weekday_night_tasks', sorted_for_h_bar['night_tasks']),
-                            orientation='h',
-                            marker_color='#E53935',
-                            customdata=[[w, '🌙 평일 야간'] for w in sorted_for_h_bar['worker_name']]
-                        ),
-                        go.Bar(
-                            name='🏖️ 주말 작업 (야간포함)',
-                            y=sorted_for_h_bar['worker_name'],
-                            x=sorted_for_h_bar['weekend_tasks'],
-                            orientation='h',
-                            marker_color='#FFD600',
-                            customdata=[[w, '🏖️ 주말 작업'] for w in sorted_for_h_bar['worker_name']]
-                        )
-                    ])
-                    fig_night.update_layout(
-                        barmode='stack',
-                        title=f"팀원별 평일 주간 vs 평일 야간 vs 주말 작업 건수 ({selected_view})",
-                        height=chart_height,
-                        margin=dict(l=100, r=40, t=50, b=30),
-                        yaxis=dict(tickfont=dict(size=12, family="Malgun Gothic, Arial")),
-                        xaxis_title="작업 건수(건)"
-                    )
-                    event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_right_h")
-            else:
-                with col_t1_left:
-                    fig_worker = px.bar(
-                        display_summary,
-                        x="worker_name",
-                        y="total_hours",
-                        color="total_hours",
-                        color_continuous_scale="Blues",
-                        text="total_hours",
-                        labels={"worker_name": "담당자", "total_hours": "총 투입 시간(h)"},
-                        title=f"팀원별 총 지원 시간(h) 순위 ({selected_view})"
-                    )
-                    fig_worker.update_traces(
-                        texttemplate='%{text}h',
-                        textposition='outside',
-                        customdata=[[w] for w in display_summary['worker_name']]
-                    )
-                    fig_worker.update_layout(
-                        height=450,
-                        xaxis=dict(tickangle=-90, tickfont=dict(size=11, family="Malgun Gothic, Arial"), dtick=1)
-                    )
-                    event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_left_v")
-
-                with col_t1_right:
-                    fig_night = go.Figure(data=[
-                        go.Bar(
-                            name='☀️ 평일 주간',
-                            x=display_summary['worker_name'],
-                            y=display_summary.get('weekday_day_tasks', display_summary['total_tasks'] - display_summary['night_tasks'] - display_summary['weekend_tasks']),
-                            marker_color='#42A5F5',
-                            customdata=[[w, '☀️ 평일 주간'] for w in display_summary['worker_name']]
-                        ),
-                        go.Bar(
-                            name='🌙 평일 야간 (18시~06시)',
-                            x=display_summary['worker_name'],
-                            y=display_summary.get('weekday_night_tasks', display_summary['night_tasks']),
-                            marker_color='#E53935',
-                            customdata=[[w, '🌙 평일 야간'] for w in display_summary['worker_name']]
-                        ),
-                        go.Bar(
-                            name='🏖️ 주말 작업 (야간포함)',
-                            x=display_summary['worker_name'],
-                            y=display_summary['weekend_tasks'],
-                            marker_color='#FFD600',
-                            customdata=[[w, '🏖️ 주말 작업'] for w in display_summary['worker_name']]
-                        )
-                    ])
-                    fig_night.update_layout(
-                        barmode='stack',
-                        title=f"팀원별 평일 주간 vs 평일 야간 vs 주말 작업 건수 ({selected_view})",
-                        height=450,
-                        xaxis=dict(tickangle=-90, tickfont=dict(size=11, family="Malgun Gothic, Arial"), dtick=1),
-                        yaxis_title="작업 건수(건)"
-                    )
-                    event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_right_v")
-
-            # 🌟 [차트 클릭 인터랙션 핸들링]
-            # 1. 왼쪽 그래프 클릭 시: 해당 담당자 전체 작업 내역 팝업
-            if event_left and hasattr(event_left, "selection") and event_left.selection.points:
-                pt_l = event_left.selection.points[0]
-                target_w = None
-                if "customdata" in pt_l and pt_l["customdata"]:
-                    cdata = pt_l["customdata"]
-                    target_w = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-                elif "y" in pt_l and "가로형" in chart_orientation:
-                    target_w = pt_l["y"]
-                elif "x" in pt_l:
-                    target_w = pt_l["x"]
-                if target_w:
-                    show_worker_all_tasks_dialog(target_w, df)
-
-            # 2. 오른쪽 그래프 클릭 시: 해당 담당자의 평일 주간 / 평일 야간 / 주말 작업별 세부 내역 팝업
-            if event_right and hasattr(event_right, "selection") and event_right.selection.points:
-                pt_r = event_right.selection.points[0]
-                target_w = None
-                target_cat = "☀️ 평일 주간"
-                
-                if "customdata" in pt_r and pt_r["customdata"]:
-                    cdata = pt_r["customdata"]
-                    if isinstance(cdata, (list, tuple)) and len(cdata) >= 2:
-                        target_w, target_cat = cdata[0], cdata[1]
-                    elif isinstance(cdata, (list, tuple)):
-                        target_w = cdata[0]
-                    else:
-                        target_w = cdata
-                if not target_w:
-                    target_w = pt_r.get("y") if "가로형" in chart_orientation else pt_r.get("x")
-                
-                curve_no = pt_r.get("curve_number", 0)
-                if curve_no == 1:
-                    target_cat = "🌙 평일 야간"
-                elif curve_no == 2:
-                    target_cat = "🏖️ 주말 작업"
-                elif curve_no == 0:
-                    target_cat = "☀️ 평일 주간"
-
-                if target_w:
-                    show_worker_category_tasks_dialog(target_w, target_cat, df)
+            render_worker_charts_interactive(display_summary, df, chart_orientation, selected_view)
 
             st.markdown("##### 📊 팀원별 종합 통계 현황판")
             disp_worker_summary = worker_summary.rename(columns={
@@ -5481,150 +5790,7 @@ def main():
 <span><b>각 팀 막대(또는 아래 집계표의 행)를 클릭</b>하시면, 해당 팀의 <b>[실제 세부 지원 내역 원장 및 카카오톡 대화 원본 팝업]</b>이 바로 열립니다.</span>
 </div>""", unsafe_allow_html=True)
 
-        col_t2_1, col_t2_2 = st.columns(2)
-        with col_t2_1:
-            fig_team_bar = px.bar(
-                team_summary,
-                x="worker_team",
-                y="total_hours",
-                color="worker_team",
-                text="total_hours",
-                custom_data=["worker_team"],
-                labels={"worker_team": "팀", "total_hours": "총 지원 시간(h)"},
-                title="팀별 총 지원 시간(h) 비교"
-            )
-            fig_team_bar.update_traces(
-                texttemplate='%{text}h',
-                textposition='outside'
-            )
-            fig_team_bar.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
-            event_team_bar = st.plotly_chart(
-                fig_team_bar,
-                use_container_width=True,
-                on_select="rerun",
-                selection_mode=["points"],
-                key="chart_team_total_hours_bar"
-            )
-
-        with col_t2_2:
-            fig_team_avg = px.bar(
-                team_summary,
-                x="worker_team",
-                y="avg_hours_per_person",
-                color="worker_team",
-                text="avg_hours_per_person",
-                custom_data=["worker_team"],
-                labels={"worker_team": "팀", "avg_hours_per_person": "1인당 평균 시간(h)"},
-                title="팀별 1인당 평균 지원 시간(h) 비교"
-            )
-            fig_team_avg.update_traces(
-                texttemplate='%{text}h',
-                textposition='outside'
-            )
-            fig_team_avg.update_layout(height=400, showlegend=False, xaxis=dict(type='category'))
-            event_team_avg = st.plotly_chart(
-                fig_team_avg,
-                use_container_width=True,
-                on_select="rerun",
-                selection_mode=["points"],
-                key="chart_team_avg_hours_bar"
-            )
-
-        st.markdown("##### 📋 팀별 상세 집계 표")
-        st.caption("💡 표에서 특정 팀 행을 클릭하셔도 해당 팀의 세부 작업 원장 팝업이 바로 열립니다.")
-        disp_team_summary = team_summary.rename(columns={
-            "worker_team": "소속팀",
-            "total_hours": "총 투입시간(h)",
-            "total_tasks": "작업 건수",
-            "night_tasks": "야간 작업 건수",
-            "worker_count": "투입 인원(명)",
-            "avg_hours_per_person": "1인당 평균시간(h)"
-        })
-        event_team_tbl = st.dataframe(
-            disp_team_summary,
-            use_container_width=True,
-            hide_index=True,
-            on_select="rerun",
-            selection_mode="single-row",
-            key="tbl_team_summary_selection"
-        )
-
-        # 🖱️ 팀 클릭 이벤트 감지 및 세부 작업 원장 모달 팝업 연동 (상호 배타적 단일 오픈)
-        curr_bar_pt = event_team_bar.selection.points[0] if (event_team_bar and hasattr(event_team_bar, "selection") and event_team_bar.selection.points) else None
-        curr_avg_pt = event_team_avg.selection.points[0] if (event_team_avg and hasattr(event_team_avg, "selection") and event_team_avg.selection.points) else None
-        curr_tbl_row = event_team_tbl.selection.rows[0] if (event_team_tbl and hasattr(event_team_tbl, "selection") and event_team_tbl.selection.rows) else None
-
-        last_bar_id = st.session_state.get("last_selected_team_bar")
-        last_avg_id = st.session_state.get("last_selected_team_avg")
-        last_tbl_id = st.session_state.get("last_selected_team_tbl")
-
-        # 선택 해제 시 세션 상태 동기화
-        if curr_bar_pt is None and last_bar_id is not None:
-            st.session_state["last_selected_team_bar"] = None
-            last_bar_id = None
-        if curr_avg_pt is None and last_avg_id is not None:
-            st.session_state["last_selected_team_avg"] = None
-            last_avg_id = None
-        if curr_tbl_row is None and last_tbl_id is not None:
-            st.session_state["last_selected_team_tbl"] = None
-            last_tbl_id = None
-
-        def _extract_pt_team(pt):
-            if not pt:
-                return None
-            # 1. x축 범주 값 확인 (Plotly bar의 x축이 바로 팀명)
-            if "x" in pt and pt["x"] and str(pt["x"]).strip() and str(pt["x"]) != "None":
-                return str(pt["x"]).strip()
-            # 2. customdata 확인
-            if "customdata" in pt and pt["customdata"]:
-                cdata = pt["customdata"]
-                val = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-                if val and str(val).strip() and str(val) != "None":
-                    return str(val).strip()
-            # 3. legendgroup 확인
-            if "legendgroup" in pt and pt["legendgroup"]:
-                return str(pt["legendgroup"]).strip()
-            return None
-
-        bar_target = _extract_pt_team(curr_bar_pt)
-        avg_target = _extract_pt_team(curr_avg_pt)
-
-        tbl_target = None
-        if curr_tbl_row is not None and curr_tbl_row < len(team_summary):
-            tbl_target = str(team_summary.iloc[curr_tbl_row]["worker_team"]).strip()
-
-        # 변경 감지
-        bar_changed = (bar_target is not None) and (bar_target != last_bar_id)
-        avg_changed = (avg_target is not None) and (avg_target != last_avg_id)
-        tbl_changed = (tbl_target is not None) and (tbl_target != last_tbl_id)
-
-        team_to_open = None
-        if bar_changed:
-            st.session_state["last_selected_team_bar"] = bar_target
-            st.session_state["last_selected_team_avg"] = None
-            st.session_state["last_selected_team_tbl"] = None
-            team_to_open = bar_target
-        elif avg_changed:
-            st.session_state["last_selected_team_avg"] = avg_target
-            st.session_state["last_selected_team_bar"] = None
-            st.session_state["last_selected_team_tbl"] = None
-            team_to_open = avg_target
-        elif tbl_changed:
-            st.session_state["last_selected_team_tbl"] = tbl_target
-            st.session_state["last_selected_team_bar"] = None
-            st.session_state["last_selected_team_avg"] = None
-            team_to_open = tbl_target
-        elif bar_target and (last_avg_id is None and last_tbl_id is None):
-            team_to_open = bar_target
-        elif avg_target and (last_bar_id is None and last_tbl_id is None):
-            team_to_open = avg_target
-        elif tbl_target and (last_bar_id is None and last_avg_id is None):
-            team_to_open = tbl_target
-
-        if team_to_open and str(team_to_open).strip() and str(team_to_open).strip() != "None":
-            team_target_df = team_df[team_df["worker_team"] == team_to_open]
-            if not team_target_df.empty:
-                show_team_work_logs_dialog(team_to_open, team_target_df)
+        render_team_comparison_interactive(team_summary, team_df)
 
     # ------------------------------------------
     # PAGE: 월별 / 주별 / 일별 추이 분석
@@ -5663,168 +5829,7 @@ def main():
 <span>💡</span>
 <span><b>그래프의 막대(주차 / 일자)를 클릭</b>하시면, 해당 기간의 <b>[실제 세부 지원 내역 목록 및 카카오톡 원본 대화 팝업]</b>이 바로 열립니다.</span>
 </div>""", unsafe_allow_html=True)
-            col_t3_1, col_t3_2 = st.columns(2)
-            with col_t3_1:
-                if not monthly_trend.empty:
-                    range_label = f"{target_months[0]} ~ {target_months[-1]}" if len(target_months) >= 3 else ""
-                    fig_monthly = px.line(
-                        monthly_trend,
-                        x="month_str",
-                        y="total_hours",
-                        markers=True,
-                        text="total_hours",
-                        labels={"month_str": "월", "total_hours": "총 지원 시간(h)"},
-                        title=f"월별 총 지원 시간(h) 변동 추이 (지난 2달 포함 3개월 비교: {range_label})"
-                    )
-                    fig_monthly.update_traces(
-                        line_color="#0284c7",
-                        line_width=3,
-                        texttemplate='%{text}h',
-                        textposition='top center',
-                        marker=dict(size=9, color="#005073", line=dict(width=2, color="#ffffff"))
-                    )
-                    fig_monthly.update_layout(
-                        height=350,
-                        margin=dict(l=40, r=40, t=50, b=40),
-                        xaxis=dict(type='category', title="조회 월")
-                    )
-                    st.plotly_chart(fig_monthly, use_container_width=True)
-                
-            event_weekly = None
-            event_daily = None
-
-            with col_t3_2:
-                # 주별 추이 차트 (신규 추가!)
-                weekly_df = df.groupby("week_label")["actual_hours"].sum().reset_index()
-                if not weekly_df.empty:
-                    # 📅 주차 X축 표시 기간 산출 (예: 주차(Week / 8월 1일 ~ 8월 31일))
-                    week_axis_title = "주차(Week)"
-                    if selected_months and len(selected_months) == 1:
-                        try:
-                            s_dt = pd.to_datetime(selected_months[0] + "-01")
-                            e_dt = s_dt + pd.offsets.MonthEnd(1)
-                            week_axis_title = f"주차(Week / {s_dt.month}월 {s_dt.day}일 ~ {e_dt.month}월 {e_dt.day}일)"
-                        except Exception:
-                            week_axis_title = f"주차(Week / {month_desc})"
-                    elif selected_months:
-                        try:
-                            s_dt = pd.to_datetime(min(selected_months) + "-01")
-                            e_dt = pd.to_datetime(max(selected_months) + "-01") + pd.offsets.MonthEnd(1)
-                            week_axis_title = f"주차(Week / {s_dt.month}월 {s_dt.day}일 ~ {e_dt.month}월 {e_dt.day}일)"
-                        except Exception:
-                            week_axis_title = f"주차(Week / {month_desc})"
-
-                    fig_weekly = px.bar(
-                        weekly_df,
-                        x="week_label",
-                        y="actual_hours",
-                        text="actual_hours",
-                        labels={"week_label": week_axis_title, "actual_hours": "총 투입 시간(h)"},
-                        title="주차(Week)별 총 지원 시간 분포"
-                    )
-                    fig_weekly.update_traces(
-                        texttemplate='%{text}h',
-                        textposition='outside',
-                        marker_color='#42A5F5',
-                        customdata=[[w] for w in weekly_df['week_label']]
-                    )
-                    fig_weekly.update_layout(
-                        height=350,
-                        margin=dict(l=40, r=40, t=50, b=40),
-                        xaxis=dict(tickangle=-30, title=week_axis_title)
-                    )
-                    event_weekly = st.plotly_chart(
-                        fig_weekly,
-                        use_container_width=True,
-                        on_select="rerun",
-                        selection_mode=["points"],
-                        key="chart_trend_weekly_bar"
-                    )
-
-            st.markdown("##### 📅 일자별 작업 시간 분포")
-            daily_df = df.groupby("date_str")["actual_hours"].sum().reset_index()
-            daily_df = daily_df.sort_values(by="date_str")
-            fig_daily = px.bar(
-                daily_df,
-                x="date_str",
-                y="actual_hours",
-                text="actual_hours",
-                labels={"date_str": "일자", "actual_hours": "작업 시간(h)"},
-                title="일자별 작업 시간 분포"
-            )
-            fig_daily.update_traces(
-                texttemplate='%{text}h',
-                textposition='outside',
-                marker_color='#60A5FA',
-                customdata=[[d] for d in daily_df['date_str']]
-            )
-            fig_daily.update_layout(
-                height=320,
-                margin=dict(l=40, r=40, t=50, b=40),
-                xaxis=dict(type='category', title="작업 일자")
-            )
-            event_daily = st.plotly_chart(
-                fig_daily,
-                use_container_width=True,
-                on_select="rerun",
-                selection_mode=["points"],
-                key="chart_trend_daily_bar"
-            )
-
-            # 🖱️ 클릭 이벤트 감지 및 세부 작업 내역 모달 팝업 연동 (단일 다이얼로그 상호 배타적 실행 보장)
-            curr_wk_pt = event_weekly.selection.points[0] if (event_weekly and hasattr(event_weekly, "selection") and event_weekly.selection.points) else None
-            curr_day_pt = event_daily.selection.points[0] if (event_daily and hasattr(event_daily, "selection") and event_daily.selection.points) else None
-
-            last_wk_id = st.session_state.get("last_selected_trend_week")
-            last_day_id = st.session_state.get("last_selected_trend_day")
-
-            wk_target = None
-            if curr_wk_pt:
-                if "customdata" in curr_wk_pt and curr_wk_pt["customdata"]:
-                    cdata = curr_wk_pt["customdata"]
-                    wk_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-                elif "x" in curr_wk_pt:
-                    wk_target = curr_wk_pt["x"]
-
-            day_target = None
-            if curr_day_pt:
-                if "customdata" in curr_day_pt and curr_day_pt["customdata"]:
-                    cdata = curr_day_pt["customdata"]
-                    day_target = cdata[0] if isinstance(cdata, (list, tuple)) else cdata
-                elif "x" in curr_day_pt:
-                    day_target = curr_day_pt["x"]
-
-            # 변경 감지
-            wk_changed = (wk_target is not None) and (wk_target != last_wk_id)
-            day_changed = (day_target is not None) and (day_target != last_day_id)
-
-            dialog_to_open = None
-            if day_changed:
-                # 일자 막대가 새로 클릭됨
-                st.session_state["last_selected_trend_day"] = day_target
-                st.session_state["last_selected_trend_week"] = None
-                dialog_to_open = ("day", day_target)
-            elif wk_changed:
-                # 주차 막대가 새로 클릭됨
-                st.session_state["last_selected_trend_week"] = wk_target
-                st.session_state["last_selected_trend_day"] = None
-                dialog_to_open = ("week", wk_target)
-            elif day_target and not wk_target:
-                dialog_to_open = ("day", day_target)
-            elif wk_target and not day_target:
-                dialog_to_open = ("week", wk_target)
-
-            # 🛡️ 1회 실행 주기당 정확히 1개의 다이얼로그만 단독 호출 (다이얼로그 중복 오픈 에러 방지)
-            if dialog_to_open:
-                dtype, dval = dialog_to_open
-                if dtype == "week" and dval:
-                    target_df = df[df["week_label"] == dval]
-                    if not target_df.empty:
-                        show_week_summary_dialog(dval, target_df)
-                elif dtype == "day" and dval:
-                    target_df = df[df["date_str"] == dval]
-                    if not target_df.empty:
-                        show_calendar_day_dialog(dval, target_df)
+            render_trend_interactive_charts(df, monthly_trend, target_months, selected_months, month_desc)
 
     # ------------------------------------------
     # PAGE: 고객사별 공수 분포
