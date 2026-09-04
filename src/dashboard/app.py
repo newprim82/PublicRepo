@@ -2769,15 +2769,55 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     danger_names = []
     caution_names = []
     safe_names = []
+    danger_detail_map = {}
+    caution_detail_map = {}
+
+    def format_week_short(w_lbl: str) -> str:
+        if not w_lbl:
+            return ""
+        base = str(w_lbl).split(" (")[0].strip()
+        parts = base.split(" ")
+        if len(parts) >= 2 and "-" in parts[0]:
+            try:
+                _, month = parts[0].split("-")
+                return f"{int(month)}월 {parts[1]}"
+            except Exception:
+                return base
+        return base
+
     worker_hours = df_active.groupby("worker_name")["actual_hours"].sum().to_dict() if ("worker_name" in df_active.columns and not df_active.empty) else {}
     if "worker_name" in df_active.columns and not df_active.empty:
         all_active_workers = list(df_active["worker_name"].dropna().unique())
         if "week_label" in df_active.columns:
             wk_agg = df_active.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
-            danger_workers = wk_agg[wk_agg["actual_hours"] > 52]["worker_name"].unique()
-            caution_workers = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]["worker_name"].unique()
+            danger_rows = wk_agg[wk_agg["actual_hours"] > 52]
+            caution_rows = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]
+
+            danger_workers = danger_rows["worker_name"].unique()
+            caution_workers = caution_rows["worker_name"].unique()
+
             danger_names = sorted(list(danger_workers), key=lambda w: worker_hours.get(w, 0.0), reverse=True)
             caution_names = sorted([w for w in caution_workers if w not in danger_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
+
+            # 주차 정보 표기 여부 (월간 전체 종합이거나 대상 주차가 복수인 경우)
+            show_week_info = (not is_weekly_view) or (df_active["week_label"].nunique() > 1)
+
+            for w in danger_names:
+                sub_d = danger_rows[danger_rows["worker_name"] == w].sort_values(by="actual_hours", ascending=False)
+                if show_week_info:
+                    wk_infos = [f"{format_week_short(r['week_label'])}: {r['actual_hours']:.1f}h" for _, r in sub_d.iterrows()]
+                    danger_detail_map[w] = f"{w}({', '.join(wk_infos)})"
+                else:
+                    danger_detail_map[w] = f"{w}({worker_hours.get(w, 0.0):.1f}h)"
+
+            for w in caution_names:
+                sub_c = caution_rows[caution_rows["worker_name"] == w].sort_values(by="actual_hours", ascending=False)
+                if show_week_info:
+                    wk_infos = [f"{format_week_short(r['week_label'])}: {r['actual_hours']:.1f}h" for _, r in sub_c.iterrows()]
+                    caution_detail_map[w] = f"{w}({', '.join(wk_infos)})"
+                else:
+                    caution_detail_map[w] = f"{w}({worker_hours.get(w, 0.0):.1f}h)"
+
         safe_names = sorted([w for w in all_active_workers if w not in danger_names and w not in caution_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
 
     danger_cnt = len(danger_names)
@@ -2786,7 +2826,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
     top3_share = round((client_agg.head(3).sum() / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
 
-    danger_desc_inline = ', '.join([f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in danger_names])
+    danger_desc_inline = ', '.join([danger_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in danger_names])
     risk_status_html = "<span style='color:#16a34a; font-weight:800;'>🟢 법정 근로시간 안정 (주 52시간 초과 인원 없음)</span>" if danger_cnt == 0 else f"<span style='color:#dc2626; font-weight:800;'>🚨 주 52시간 초과 주의 ({danger_cnt}명: {danger_desc_inline})</span>"
 
     # ----------------------------------------------------
@@ -2940,8 +2980,8 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     st.caption("주 52시간 근로시간 규정 준수 현황과 야간·주말 비정규 투입 비중을 진단합니다.")
 
     gov_c1, gov_c2, gov_c3 = st.columns(3)
-    danger_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in danger_names]
-    caution_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in caution_names]
+    danger_str_list = [danger_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in danger_names]
+    caution_str_list = [caution_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in caution_names]
     safe_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in safe_names]
 
     with gov_c1:

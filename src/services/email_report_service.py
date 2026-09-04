@@ -118,15 +118,50 @@ class EmailReportService:
         delta_clients_str = calc_delta(tot_clients, prev_tot_clients)
 
         danger_names, caution_names, safe_names = [], [], []
+        danger_detail_map = {}
+        caution_detail_map = {}
+
+        def format_week_short(w_lbl: str) -> str:
+            if not w_lbl:
+                return ""
+            base = str(w_lbl).split(" (")[0].strip()
+            parts = base.split(" ")
+            if len(parts) >= 2 and "-" in parts[0]:
+                try:
+                    _, month = parts[0].split("-")
+                    return f"{int(month)}월 {parts[1]}"
+                except Exception:
+                    return base
+            return base
+
         worker_hours = df_active.groupby("worker_name")["actual_hours"].sum().to_dict() if ("worker_name" in df_active.columns and not df_active.empty) else {}
         if not df_active.empty:
             all_active = list(df_active["worker_name"].dropna().unique())
             wk_agg = df_active.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
-            danger_workers = wk_agg[wk_agg["actual_hours"] > 52]["worker_name"].unique()
-            caution_workers = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]["worker_name"].unique()
+            danger_rows = wk_agg[wk_agg["actual_hours"] > 52]
+            caution_rows = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]
+            danger_workers = danger_rows["worker_name"].unique()
+            caution_workers = caution_rows["worker_name"].unique()
             danger_names = sorted(list(danger_workers), key=lambda w: worker_hours.get(w, 0.0), reverse=True)
             caution_names = sorted([w for w in caution_workers if w not in danger_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
             safe_names = sorted([w for w in all_active if w not in danger_names and w not in caution_names], key=lambda w: worker_hours.get(w, 0.0), reverse=True)
+
+            show_week_info = df_active["week_label"].nunique() > 1 if "week_label" in df_active.columns else False
+            for w in danger_names:
+                sub_d = danger_rows[danger_rows["worker_name"] == w].sort_values(by="actual_hours", ascending=False)
+                if show_week_info:
+                    wk_infos = [f"{format_week_short(r['week_label'])}: {r['actual_hours']:.1f}h" for _, r in sub_d.iterrows()]
+                    danger_detail_map[w] = f"{w}({', '.join(wk_infos)})"
+                else:
+                    danger_detail_map[w] = f"{w}({worker_hours.get(w, 0.0):.1f}h)"
+
+            for w in caution_names:
+                sub_c = caution_rows[caution_rows["worker_name"] == w].sort_values(by="actual_hours", ascending=False)
+                if show_week_info:
+                    wk_infos = [f"{format_week_short(r['week_label'])}: {r['actual_hours']:.1f}h" for _, r in sub_c.iterrows()]
+                    caution_detail_map[w] = f"{w}({', '.join(wk_infos)})"
+                else:
+                    caution_detail_map[w] = f"{w}({worker_hours.get(w, 0.0):.1f}h)"
 
         client_agg = df_active.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(5) if not df_active.empty else pd.Series()
         top_clients_summary = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in client_agg.head(3).items()]) if not client_agg.empty else "없음"
@@ -174,8 +209,8 @@ class EmailReportService:
             </tr>
             """
 
-        danger_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in danger_names]
-        caution_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in caution_names]
+        danger_str_list = [danger_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in danger_names]
+        caution_str_list = [caution_detail_map.get(w, f"{w}({worker_hours.get(w, 0.0):.1f}h)") for w in caution_names]
         safe_str_list = [f"{w}({worker_hours.get(w, 0.0):.1f}h)" for w in safe_names]
 
         danger_badge = f"<span style='color: #dc2626; font-weight: bold;'>🚨 52h 초과({len(danger_names)}명: {', '.join(danger_str_list)})</span>" if danger_names else "<span style='color: #16a34a; font-weight: bold;'>🟢 52h 초과 없음 (안전)</span>"
