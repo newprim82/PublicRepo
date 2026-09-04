@@ -5822,7 +5822,7 @@ def main():
     # PAGE: 팀별 업무량 비교
     # ------------------------------------------
     elif curr_page == "🏢 팀별 업무량 비교":
-        st.subheader("🏢 팀별(기술 1/2/3팀 + PI팀) 총 투입 시간 및 공수 비교")
+        st.subheader("🏢 팀별 총 투입 시간 및 공수 비교")
         team_df = df_raw.copy()
         if selected_months:
             team_df = team_df[team_df["month_str"].isin(selected_months)]
