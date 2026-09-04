@@ -35,10 +35,18 @@ class EmailSender:
         sender_email: Optional[str] = None,
         sender_password: Optional[str] = None,
         target_week_label: Optional[str] = None,
-        selected_team: str = "기술 1팀"
+        selected_team: str = "기술 1팀",
+        df_active_override: Optional[Any] = None,
+        prev_df_override: Optional[Any] = None,
+        ai_briefing_override: Optional[Dict[str, Any]] = None,
+        current_period_label_override: Optional[str] = None,
+        available_weeks_override: Optional[List[str]] = None,
+        df_scope_override: Optional[Any] = None,
+        team_mappings_override: Optional[dict] = None
     ) -> Tuple[bool, str]:
         """
-        Gmail SMTP를 통해 주간 Executive Summary 보고서를 발송합니다.
+        Gmail SMTP를 통해 주간/월간 Executive Summary 보고서를 발송합니다.
+        대시보드 화면에서 보고 있는 데이터셋(df_active) 및 AI 브리핑을 온전히 전달받아 동기화 발송합니다.
         
         Returns:
             (success: bool, message: str)
@@ -65,7 +73,14 @@ class EmailSender:
             # 1. 보고서 HTML 및 엑셀 생성
             subject, html_content, excel_bytes = EmailReportService.generate_weekly_report(
                 target_week_label=target_week_label,
-                selected_team=selected_team
+                selected_team=selected_team,
+                df_active_override=df_active_override,
+                prev_df_override=prev_df_override,
+                ai_briefing_override=ai_briefing_override,
+                current_period_label_override=current_period_label_override,
+                available_weeks_override=available_weeks_override,
+                df_scope_override=df_scope_override,
+                team_mappings_override=team_mappings_override
             )
 
             # 2. 이메일 메시지 조립 (기업 스팸 필터 통과를 위한 RFC 표준 헤더 완비)

@@ -3502,13 +3502,22 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     st.dataframe(display_df, use_container_width=True, height=520)
 
 
-@st.dialog("📧 주간 Executive Summary 메일 발송", width="medium")
+@st.dialog("📧 Executive Summary 메일 발송", width="medium")
 def show_email_report_dialog(selected_team: str):
-    """주간 리포트 이메일 발송 전용 팝업 모달"""
+    """경영진 보고용 Summary 이메일 발송 전용 팝업 모달 (화면 데이터 100% 동기화)"""
+    ctx = st.session_state.get("exec_summary_context", {})
+    period_label = ctx.get("current_period_label", f"{selected_team} - 실적 Summary")
+    df_active = ctx.get("df_active", None)
+    prev_df = ctx.get("prev_df", None)
+    ai_briefing = ctx.get("ai_briefing", None)
+    available_weeks = ctx.get("available_weeks", None)
+    df_scope = ctx.get("df_scope", None)
+    team_mappings = ctx.get("team_mappings", None)
+
     st.markdown(
-        """
-        <div style="background: rgba(2, 132, 199, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); border-left: 4px solid #38bdf8; padding: 12px 16px; border-radius: 6px; font-size: 13.5px; color: #FFFFFF !important; line-height: 1.6; margin-bottom: 15px;">
-            매주 월요일 08:00에 자동 발송되는 <b style="color: #38bdf8;">Executive Summary 반응형 HTML 리포트</b> 및 <b style="color: #38bdf8;">상세 실적 엑셀 파일</b>을 지정한 메일 주소로 즉시 전송합니다.
+        f"""
+        <div style="background: rgba(2, 132, 199, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); border-left: 4px solid #38bdf8; padding: 12px 16px; border-radius: 6px; font-size: 13px; color: #FFFFFF !important; line-height: 1.6; margin-bottom: 15px;">
+            📌 현재 화면에서 조회 중인 <b style="color: #38bdf8;">[{period_label}]</b>의 서머리 페이지 모든 내용(핵심 지표, AI 브리핑, 주차별 비교표, 법정근로시간 거버넌스, 고객사 파레토 분석, 전체 팀원 현황, 부서별 집계표)과 <b style="color: #38bdf8;">상세 실적 다중 시트 엑셀 파일</b>을 지정한 메일 주소로 즉시 전송합니다.
         </div>
         """,
         unsafe_allow_html=True
@@ -3522,8 +3531,8 @@ def show_email_report_dialog(selected_team: str):
     st.markdown("<div style='font-size: 12px; color: #cbd5e1; margin-top: -6px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
     st.write("")
     
-    if st.button("🚀 주간 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
-        with st.spinner("📧 보고서 생성 및 이메일 전송 중..."):
+    if st.button("🚀 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
+        with st.spinner("📧 서머리 보고서 생성 및 이메일 전송 중..."):
             import importlib
             import src.services.email_sender as es_module
             importlib.reload(es_module)
@@ -3531,7 +3540,14 @@ def show_email_report_dialog(selected_team: str):
                 recipient_emails=mail_rcpt,
                 sender_email="newprim82@gmail.com",
                 sender_password="dlugbvfuhgdozkgr",
-                selected_team=selected_team
+                selected_team=selected_team,
+                df_active_override=df_active,
+                prev_df_override=prev_df,
+                ai_briefing_override=ai_briefing,
+                current_period_label_override=period_label,
+                available_weeks_override=available_weeks,
+                df_scope_override=df_scope,
+                team_mappings_override=team_mappings
             )
             if success:
                 st.success(send_msg)
@@ -4069,6 +4085,18 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 </div>
 </div>"""
     st.markdown(briefing_html, unsafe_allow_html=True)
+
+    # 🌟 화면 서머리 컨텍스트 실시간 저장 (이메일 발송 팝업 시 화면 내용 100% 일치 연동)
+    st.session_state["exec_summary_context"] = {
+        "current_period_label": current_period_label,
+        "selected_team": selected_team,
+        "df_active": df_active,
+        "prev_df": prev_df,
+        "ai_briefing": ai_briefing,
+        "available_weeks": available_weeks,
+        "df_scope": df_scope,
+        "team_mappings": team_mappings
+    }
 
     # =========================================================================
     # 3. 📅 주차별 핵심 실적 종합 비교표 (Weekly Breakdown Matrix)
