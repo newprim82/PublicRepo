@@ -89,8 +89,7 @@ CREATE TABLE IF NOT EXISTS public.worktime_email_dispatch_logs (
     period_label VARCHAR(150) DEFAULT '',               -- 대상 기간 라벨 (예: 기술 1팀 - 2026-09 월간 전체)
     subject TEXT DEFAULT '',                            -- 메일 제목
     status VARCHAR(30) NOT NULL,                        -- SUCCESS / FAILED
-    error_message TEXT DEFAULT '',                      -- 에러 사유
-    created_at TIMESTAMPTZ DEFAULT NOW()                -- 발송 시각
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'Asia/Seoul') -- 발송 시각 (초 단위 KST 한국 시간, +00 없음)
 );
 
 -- 검색 최적화 인덱스
@@ -102,4 +101,9 @@ ALTER TABLE public.worktime_email_dispatch_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all access to worktime_email_dispatch_logs" ON public.worktime_email_dispatch_logs;
 CREATE POLICY "Allow all access to worktime_email_dispatch_logs"
 ON public.worktime_email_dispatch_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+-- 💡 [이미 테이블을 생성한 경우: +00 타임존 접미사 제거 및 시/분/초 타입 변환]
+-- ALTER TABLE public.worktime_email_dispatch_logs ALTER COLUMN created_at TYPE TIMESTAMP WITHOUT TIME ZONE USING created_at::TIMESTAMP WITHOUT TIME ZONE;
+-- ALTER TABLE public.worktime_email_dispatch_logs ALTER COLUMN created_at SET DEFAULT (NOW() AT TIME ZONE 'Asia/Seoul');
+
 

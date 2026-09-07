@@ -4,6 +4,7 @@ from datetime import datetime
 
 from ..config import config
 from ..database.supabase_client import db_manager
+from ..dashboard.common.ui_helpers import get_current_kst_time
 
 
 class EmailDispatchService:
@@ -56,9 +57,11 @@ class EmailDispatchService:
     ) -> bool:
         """
         메일 발송 결과 DB 저장 (로컬 SQLite 저장 + Supabase 클라우드 동기화)
+        시간은 항상 KST 한국시간 기준 초 단위(YYYY-MM-DD HH:MM:SS)로만 저장 (+00 타임존 오프셋 없음)
         """
         cls.init_table()
-        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        now_kst = get_current_kst_time()
+        now_str = now_kst.strftime('%Y-%m-%d %H:%M:%S')
 
         # 1. 로컬 SQLite에 무조건 최우선 저장
         try:
