@@ -132,18 +132,22 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         else:
             if tot_work_h >= 52.0:
                 st.markdown(f"""
-                <div style="background-color: #fef2f2; border: 1.5px solid #fecaca; border-left: 5px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
-                    <span style="color: #7f1d1d !important; font-weight: 700; font-size: 13.5px; line-height: 1.5; display: inline-block;">
-                        🚨 주 52시간 초과 근무 <span style="color: #dc2626 !important; font-weight: 900;">{round(tot_work_h - 52.0, 1)}시간 발생</span> (교육 제외 {tot_work_h}h, 미보상 상태). 아래에서 보상 휴가를 등록하시면 표의 색상이 <b style="color: #15803d !important;">초록색</b>으로 전환됩니다.
-                    </span>
+                <div class="overwork-danger-box" style="background-color: #fecaca !important; border: 1.5px solid #ef4444 !important; border-left: 6px solid #dc2626 !important; border-radius: 8px !important; padding: 13px 18px !important; margin-bottom: 14px !important; color: #000000 !important;">
+                    <div style="color: #000000 !important; font-weight: 800 !important; font-size: 13.5px !important; line-height: 1.6 !important;">
+                        <span style="font-size: 16px !important; margin-right: 4px;">🚨</span>
+                        <span style="color: #000000 !important; font-weight: 900 !important;">주 52시간 초과 근무 <span style="color: #991b1b !important; font-weight: 900;">{round(tot_work_h - 52.0, 1)}시간 발생</span> (교육 제외 {tot_work_h}h, 미보상 상태).</span>
+                        <span style="color: #1e293b !important; font-weight: 700 !important; margin-left: 4px;">아래에서 보상 휴가를 등록하시면 표의 색상이 <b style="color: #15803d !important;">초록색</b>으로 전환됩니다.</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             elif tot_work_h >= 40.0:
                 st.markdown(f"""
-                <div style="background-color: #fefce8; border: 1.5px solid #fef08a; border-left: 5px solid #eab308; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
-                    <span style="color: #713f12 !important; font-weight: 700; font-size: 13.5px; line-height: 1.5; display: inline-block;">
-                        ⚠️ <b style="color: #713f12 !important;">주 40시간 초과(교육 제외 {tot_work_h}시간) 주차입니다.</b> <span style="color: #854d0e !important; font-weight: 700;">필요 시 보상 휴가를 등록하시면 표에 반영됩니다.</span>
-                    </span>
+                <div class="overwork-warning-box" style="background-color: #fef08a !important; border: 1.5px solid #eab308 !important; border-left: 6px solid #ca8a04 !important; border-radius: 8px !important; padding: 13px 18px !important; margin-bottom: 14px !important; color: #000000 !important;">
+                    <div style="color: #000000 !important; font-weight: 800 !important; font-size: 13.5px !important; line-height: 1.6 !important;">
+                        <span style="font-size: 16px !important; margin-right: 4px;">⚠️</span>
+                        <span style="color: #000000 !important; font-weight: 900 !important;">주 40시간 초과(교육 제외 {tot_work_h}시간) 주차입니다.</span>
+                        <span style="color: #1e293b !important; font-weight: 700 !important; margin-left: 6px;">필요 시 보상 휴가를 등록하시면 표에 반영됩니다.</span>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
             else:

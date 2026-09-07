@@ -317,6 +317,9 @@ def apply_custom_styles():
         }
 
         /* ⚠️ 노란색/연노란색/경고 배경 내 텍스트 시인성 완벽 보장 (모달 및 인라인 div 포함 흰색 글씨 원천 차단) */
+        .overwork-warning-box,
+        .overwork-warning-box *,
+        div.overwork-warning-box *,
         div[style*="fefce8"],
         div[style*="fefce8"] *,
         div[style*="fffbeb"],
@@ -329,18 +332,24 @@ def apply_custom_styles():
         div[style*="fde047"] *,
         div[style*="fff9db"],
         div[style*="fff9db"] * {
-            color: #713f12 !important;
-            font-weight: 700 !important;
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+            font-weight: 800 !important;
             text-shadow: none !important;
         }
 
         /* 🚨 연빨간색 배경 내 텍스트 고대비 보장 */
+        .overwork-danger-box,
+        .overwork-danger-box *,
+        div.overwork-danger-box *,
         div[style*="fef2f2"],
         div[style*="fef2f2"] *,
         div[style*="fecaca"],
         div[style*="fecaca"] * {
-            color: #7f1d1d !important;
-            font-weight: 700 !important;
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+            font-weight: 800 !important;
+            text-shadow: none !important;
         }
 
 

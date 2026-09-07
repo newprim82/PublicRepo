@@ -172,36 +172,41 @@ def inject_dialog_title_style():
         transform: none !important;
     }
 
-    /* ⚠️ 모달 내부 노란색/경고/알림창 글자색 고대비 보장 (흰색 글씨 원천 차단) */
+    /* ⚠️ 모달 내부 노란색/경고/알림창 글자색 완전 블랙 고대비 보장 (흰색 글씨 원천 차단) */
+    .overwork-warning-box,
+    .overwork-warning-box *,
+    div.overwork-warning-box *,
+    div[data-testid="stDialog"] .overwork-warning-box *,
+    div[role="dialog"] .overwork-warning-box *,
+    div[data-baseweb="modal"] .overwork-warning-box *,
     div[data-testid="stDialog"] div[data-testid="stAlert"] *,
     div[role="dialog"] div[data-testid="stAlert"] *,
     div[data-baseweb="modal"] div[data-testid="stAlert"] *,
-    div[data-testid="stDialog"] div[style*="fefce8"],
-    div[data-testid="stDialog"] div[style*="fefce8"] *,
-    div[data-testid="stDialog"] div[style*="fffbeb"],
-    div[data-testid="stDialog"] div[style*="fffbeb"] *,
-    div[data-testid="stDialog"] div[style*="fef08a"],
     div[data-testid="stDialog"] div[style*="fef08a"] *,
-    div[data-testid="stDialog"] div[style*="fef3c7"],
-    div[data-testid="stDialog"] div[style*="fef3c7"] *,
-    div[data-testid="stDialog"] div[style*="fde047"],
+    div[data-testid="stDialog"] div[style*="fefce8"] *,
+    div[data-testid="stDialog"] div[style*="fffbeb"] *,
     div[data-testid="stDialog"] div[style*="fde047"] *,
-    div[role="dialog"] div[style*="fefce8"] *,
-    div[role="dialog"] div[style*="fffbeb"] *,
     div[role="dialog"] div[style*="fef08a"] *,
-    div[data-baseweb="modal"] div[style*="fefce8"] *,
-    div[data-baseweb="modal"] div[style*="fffbeb"] * {
-        color: #713f12 !important;
-        font-weight: 700 !important;
+    div[role="dialog"] div[style*="fefce8"] *,
+    div[data-baseweb="modal"] div[style*="fef08a"] * {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        font-weight: 800 !important;
         text-shadow: none !important;
     }
 
     /* 🚨 모달 내부 빨간색 경고창 글자색 보장 */
-    div[data-testid="stDialog"] div[style*="fef2f2"],
-    div[data-testid="stDialog"] div[style*="fef2f2"] *,
-    div[role="dialog"] div[style*="fef2f2"] * {
-        color: #7f1d1d !important;
-        font-weight: 700 !important;
+    .overwork-danger-box,
+    .overwork-danger-box *,
+    div.overwork-danger-box *,
+    div[data-testid="stDialog"] .overwork-danger-box *,
+    div[role="dialog"] .overwork-danger-box *,
+    div[data-testid="stDialog"] div[style*="fecaca"] *,
+    div[data-testid="stDialog"] div[style*="fef2f2"] * {
+        color: #000000 !important;
+        -webkit-text-fill-color: #000000 !important;
+        font-weight: 800 !important;
+        text-shadow: none !important;
     }
     </style>
     """, unsafe_allow_html=True)
