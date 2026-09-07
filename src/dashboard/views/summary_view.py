@@ -366,8 +366,8 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     if "worker_name" in df_active.columns and not df_active.empty:
         all_active_workers = list(df_active["worker_name"].dropna().unique())
         if "week_label" in df_active.columns:
-            # 주 40h/52h 초과 산정 시 [교육] 구분은 법정 근로시간 합산에서 제외
-            df_active_work = df_active[~df_active["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in df_active.columns else df_active
+            # 주 40h/52h 초과 산정 시 [교육] 및 [휴가] 구분은 법정 근로시간 합산에서 제외
+            df_active_work = df_active[~df_active["log_type"].fillna("").astype(str).str.contains("교육|휴가")] if "log_type" in df_active.columns else df_active
             wk_agg = df_active_work.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
             danger_rows = wk_agg[wk_agg["actual_hours"] > 52]
             caution_rows = wk_agg[(wk_agg["actual_hours"] > 40) & (wk_agg["actual_hours"] <= 52)]

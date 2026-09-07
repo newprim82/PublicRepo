@@ -62,17 +62,20 @@ def render_worklog_view(df: pd.DataFrame):
         )
 
     display_cols = [
-        "start_time", "status", "log_type", "worker_name", "worker_team",
+        "start_time", "end_time", "status", "log_type", "worker_name", "worker_team",
         "client_name", "task_description", "estimated_hours", "actual_hours", "is_night_work", "is_weekend_work"
     ]
     available_display_cols = [c for c in display_cols if c in df.columns]
     disp_df_out = strip_tz(df[available_display_cols].copy())
+    if "start_time" in disp_df_out.columns:
+        disp_df_out = disp_df_out.sort_values(by="start_time", ascending=False)
     if "status" in disp_df_out.columns:
         disp_df_out["status"] = disp_df_out["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_df_out["status"])
     
     st.dataframe(
         disp_df_out.rename(columns={
             "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
             "status": "상태",
             "log_type": "구분",
             "worker_name": "담당자",

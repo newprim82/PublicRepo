@@ -169,6 +169,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         pend_df, auto_comp_df, leave_records = ScheduleSyncService.get_synced_live_tasks(pend_df, comp_df)
         if not auto_comp_df.empty:
             comp_df = pd.concat([comp_df, auto_comp_df], ignore_index=True)
+            comp_df = comp_df.drop_duplicates(subset=["worker_name", "start_time", "task_description"], keep="first")
     except Exception as e_sync:
         print(f"[라이브 일정 동기화 예외]: {e_sync}")
         leave_records = []
@@ -191,8 +192,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         tot_workers_set.update([l["worker_name"] for l in leave_records if l.get("worker_name")])
     tot_workers = len(tot_workers_set)
 
-    tot_comp_h = comp_df["total_hours"].sum() if "total_hours" in comp_df.columns else (comp_df["actual_hours"].sum() if "actual_hours" in comp_df.columns else 0.0)
-    tot_pend_h = pend_df["total_hours"].sum() if "total_hours" in pend_df.columns else (pend_df["estimated_hours"].sum() if "estimated_hours" in pend_df.columns else 0.0)
+    tot_comp_h = comp_df["actual_hours"].sum() if "actual_hours" in comp_df.columns else 0.0
+    tot_pend_h = pend_df["actual_hours"].sum() if "actual_hours" in pend_df.columns else 0.0
     tot_hours = round(tot_comp_h + tot_pend_h, 1)
 
     # 3. 상단 실시간 요약 바 (Live Status Summary - 다크모드 NOC 커맨드 센터 스타일)
@@ -263,12 +264,11 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                         t_desc = f"{prefix}{pt}"
                                 st_dt = r["start_time"]
                                 ed_dt = r["end_time"]
-                                act_h = r["actual_hours"]
-
                                 st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
                                 ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
-
                                 is_l = bool(r.get("is_leave", False) or r.get("log_type") == "휴가")
+                                disp_h = r.get("display_hours")
+                                act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
                                 comp_border = "#a855f7" if is_l else get_job_title_color(w_title)
                                 badge_bg = "#f3e8ff" if is_l else "#ede9fe"
                                 badge_c = "#7e22ce" if is_l else "#5b21b6"
@@ -308,12 +308,11 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                     t_desc = f"{prefix}{pt}"
                             st_dt = r["start_time"]
                             ed_dt = r["end_time"]
-                            act_h = r["actual_hours"]
-
+                            is_l = bool(r.get("is_leave", False) or r.get("log_type") == "휴가")
+                            disp_h = r.get("display_hours")
+                            act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
                             st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
                             ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
-
-                            is_l = bool(r.get("is_leave", False) or r.get("log_type") == "휴가")
                             comp_border = "#a855f7" if is_l else get_job_title_color(w_title)
                             badge_bg = "#f3e8ff" if is_l else "#ede9fe"
                             badge_c = "#7e22ce" if is_l else "#5b21b6"
@@ -400,8 +399,8 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
         caution_items = []
         rewarded_items = []
         
-        # 주차별/팀원별 집계 (주 40시간 / 52시간 과중 근무 감지 시 [교육] 구분은 법정 시간에서 제외)
-        df_for_overwork = ov_df[~ov_df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in ov_df.columns else ov_df
+        # 주차별/팀원별 집계 (주 40시간 / 52시간 과중 근무 감지 시 [교육] 및 [휴가] 구분은 법정 시간에서 제외)
+        df_for_overwork = ov_df[~ov_df["log_type"].fillna("").astype(str).str.contains("교육|휴가")] if "log_type" in ov_df.columns else ov_df
         wk_user_agg = df_for_overwork.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
         for _, r in wk_user_agg.iterrows():
             w_name = r["worker_name"]

@@ -42,8 +42,8 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         st.warning(f"[{target_worker}] 님의 작업 데이터가 없습니다.")
         return
 
-    # 주차 목록 (시간 많은 순 정렬 - 40h/52h 초과 판단은 교육 제외 실근로시간 기준)
-    worker_df_work = worker_df[~worker_df["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in worker_df.columns else worker_df
+    # 주차 목록 (시간 많은 순 정렬 - 40h/52h 초과 판단은 교육 및 휴가 제외 실근로시간 기준)
+    worker_df_work = worker_df[~worker_df["log_type"].fillna("").astype(str).str.contains("교육|휴가")] if "log_type" in worker_df.columns else worker_df
     wk_work_hours = worker_df_work.groupby("week_label")["actual_hours"].sum().to_dict()
 
     wk_agg = worker_df.groupby("week_label")["actual_hours"].agg(["sum", "count"]).reset_index()
@@ -87,8 +87,8 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         weekend_tasks = int(detail["is_weekend_work"].sum()) if "is_weekend_work" in detail.columns else 0
         clients = list(detail["client_name"].unique())
 
-        # 교육 제외 근로시간 산정 (주 40h / 52h 법정 기준 산정용)
-        detail_work = detail[~detail["log_type"].fillna("").astype(str).str.contains("교육")] if "log_type" in detail.columns else detail
+        # 교육 및 휴가 제외 근로시간 산정 (주 40h / 52h 법정 기준 산정용)
+        detail_work = detail[~detail["log_type"].fillna("").astype(str).str.contains("교육|휴가")] if "log_type" in detail.columns else detail
         tot_work_h = round(detail_work["actual_hours"].sum(), 1)
         edu_h = round(tot_h - tot_work_h, 1)
 

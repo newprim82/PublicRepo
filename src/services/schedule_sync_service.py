@@ -102,7 +102,7 @@ class ScheduleSyncService:
                     "color_tag": r.get("color_tag", "#ec4899")
                 })
 
-            # 1-B. 휴가는 오늘 완료된 작업 섹션에 항상 100% 완료 카드로 당당히 표출!
+            # 1-B. 휴가는 오늘 완료된 작업 섹션에 항상 100% 완료 카드로 표출 (업무량 산정은 0h 제외)
             auto_completed_rows.append({
                 "msg_hash": f"OUTLOOK_LEAVE_{r.get('entry_id', '')}",
                 "log_type": "휴가",
@@ -113,10 +113,12 @@ class ScheduleSyncService:
                 "task_description": f"[{l_type}] {r['subject']}",
                 "start_time": st_time,
                 "end_time": ed_time,
-                "estimated_minutes": int(dur_hours * 60),
-                "actual_minutes": int(dur_hours * 60),
-                "actual_hours": dur_hours,
-                "total_hours": dur_hours,
+                "estimated_minutes": 0,
+                "actual_minutes": 0,
+                "actual_hours": 0.0,
+                "estimated_hours": 0.0,
+                "total_hours": 0.0,
+                "display_hours": dur_hours,
                 "status": "COMPLETED",
                 "is_outlook": True,
                 "is_leave": True,
@@ -240,3 +242,184 @@ class ScheduleSyncService:
         auto_comp_df = pd.DataFrame(auto_completed_rows) if auto_completed_rows else pd.DataFrame()
 
         return final_pend_df, auto_comp_df, leave_records
+
+    @classmethod
+    def combine_all_work_logs(
+        cls,
+        kakao_df: pd.DataFrame,
+        outlook_df: Optional[pd.DataFrame] = None
+    ) -> pd.DataFrame:
+        """
+        📋 대시보드 전체(작업 기록 원장, 통계 분석, 주간/월간 업무량, LIVE 관제)에서
+        카카오톡 기록과 아웃룩 전체 일정(연차, 회의, 프로젝트 지원)을 완벽하게 일원화하여 병합합니다.
+        
+        - 연차/휴가/반차: 업무량 산정(actual_hours)에서 100% 완전 제외 (0.0h), 카드 표출용(display_hours) 보존
+        - 아웃룩 실제 작업/회의: 실제 공수(actual_hours)에 정상 합산
+        - 카카오톡 기보고 동일 작업: 지능형 중복 배제 (카카오톡 최우선 존중)
+        """
+        now = get_current_kst_time().replace(tzinfo=None)
+        team_info = TeamService.get_team_members_info()
+        team_mappings = TeamService.get_team_mappings()
+        title_mappings = TeamService.get_title_mappings()
+
+        if outlook_df is None or outlook_df.empty:
+            try:
+                if hasattr(db_manager, "fetch_outlook_schedules"):
+                    outlook_df = db_manager.fetch_outlook_schedules()
+                elif fetch_outlook_schedules is not None:
+                    outlook_df = fetch_outlook_schedules()
+                else:
+                    import importlib
+                    import src.database.supabase_client as sc
+                    importlib.reload(sc)
+                    outlook_df = sc.db_manager.fetch_outlook_schedules()
+            except Exception:
+                outlook_df = pd.DataFrame()
+
+        # 1. 카카오톡 작업 목록 (작업자별) 매핑
+        kakao_tasks_by_worker = {}
+        if not kakao_df.empty and "worker_name" in kakao_df.columns:
+            for _, k_r in kakao_df.iterrows():
+                wn = k_r.get("worker_name")
+                if wn:
+                    kakao_tasks_by_worker.setdefault(wn, []).append(k_r.to_dict())
+
+        outlook_converted_rows = []
+
+        if not outlook_df.empty and "start_time" in outlook_df.columns:
+            out_copy = outlook_df.copy()
+            if not pd.api.types.is_datetime64_any_dtype(out_copy["start_time"]):
+                out_copy["start_time"] = pd.to_datetime(out_copy["start_time"], errors="coerce")
+            if not pd.api.types.is_datetime64_any_dtype(out_copy["end_time"]):
+                out_copy["end_time"] = pd.to_datetime(out_copy["end_time"], errors="coerce")
+
+            for _, r in out_copy.iterrows():
+                w_name = r.get("worker_name")
+                if not w_name:
+                    continue
+
+                st_time = r["start_time"]
+                ed_time = r["end_time"]
+                if pd.isna(st_time) or pd.isna(ed_time):
+                    continue
+
+                st_dt = st_time.to_pydatetime() if hasattr(st_time, "to_pydatetime") else st_time
+                ed_dt = ed_time.to_pydatetime() if hasattr(ed_time, "to_pydatetime") else ed_time
+
+                is_leave = bool(r.get("is_leave", False))
+                l_type = r.get("leave_type") or "연차"
+
+                raw_dur = r.get("duration_hours")
+                if is_leave:
+                    dur_hours = 4.5 if ("반차" in str(l_type) or "반일" in str(l_type)) else 9.0
+                elif raw_dur is not None and float(raw_dur) > 0:
+                    dur_hours = float(raw_dur)
+                else:
+                    total_sec = max(1800, (ed_dt - st_dt).total_seconds())
+                    dur_hours = round(total_sec / 3600.0, 1)
+
+                w_title = title_mappings.get(w_name) or team_info.get(w_name, {}).get("title", "")
+                w_team = team_mappings.get(w_name) or r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
+                entry_id = str(r.get("entry_id") or "")
+                subj = str(r.get("subject") or "")
+
+                if is_leave:
+                    # 🏖️ 사용자 확정 원칙: 연차/휴가/반차는 업무량 산정에서 완전 제외(0h), 카드 표출 전용
+                    row_dict = {
+                        "msg_hash": f"OUTLOOK_LEAVE_{entry_id}",
+                        "log_type": "휴가",
+                        "worker_name": w_name,
+                        "worker_title": w_title,
+                        "worker_team": w_team,
+                        "client_name": f"🏖️ {l_type}",
+                        "task_description": f"[{l_type}] {subj}",
+                        "start_time": st_time,
+                        "end_time": ed_time,
+                        "estimated_minutes": 0,
+                        "actual_minutes": 0,
+                        "actual_hours": 0.0,       # 🌟 업무량 산정 완전 제외 (0.0h)
+                        "estimated_hours": 0.0,
+                        "total_hours": 0.0,
+                        "display_hours": dur_hours, # 🌟 카드 뱃지 표출용 (9.0h / 4.5h)
+                        "status": "COMPLETED",
+                        "is_outlook": True,
+                        "is_leave": True,
+                        "is_night_work": False,
+                        "is_weekend_work": False
+                    }
+                    outlook_converted_rows.append(row_dict)
+                else:
+                    # 🏢 비-휴가 일반 작업 일정
+                    parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(subj, r.get("location", ""))
+
+                    # 중복 검사: 카카오톡에 이미 보고된 동일 작업인지 확인
+                    worker_k_tasks = kakao_tasks_by_worker.get(w_name, [])
+                    is_dup = False
+                    for k in worker_k_tasks:
+                        k_client = str(k.get("client_name", "")).strip()
+                        k_desc = str(k.get("task_description", "")).strip()
+
+                        if k_client and k_client not in ["기타", "내부업무", "사내", "아웃룩 일정"] and (k_client == parsed_client or k_client in subj):
+                            is_dup = True
+                            break
+                        common_words = set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", subj)) & set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", f"{k_client} {k_desc}"))
+                        meaningful_common = {w for w in common_words if w not in ["작업", "회의", "미팅", "지원", "점검", "수석", "팀장", "기술본부", "기술", "고객사", "프로젝트", "업무", "일정", "완료", "진행", "1팀", "2팀", "3팀"]}
+                        if meaningful_common:
+                            is_dup = True
+                            break
+                        k_st = k.get("start_time")
+                        if pd.notna(k_st):
+                            k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
+                            if abs((st_dt - k_st_dt).total_seconds()) < 900 and (k_client == parsed_client):
+                                is_dup = True
+                                break
+                    if is_dup:
+                        continue
+
+                    sched_type = r.get("schedule_type") or "작업"
+                    log_type = "회의" if sched_type == "회의" else ("교육" if sched_type == "교육" else "작업")
+
+                    is_completed = (now >= ed_dt)
+                    is_pending = (now >= st_dt and now < ed_dt)
+                    status = "COMPLETED" if is_completed else ("PENDING" if is_pending else "SCHEDULED")
+
+                    prefix = "[📅 일정완료] " if is_completed else ("[📅 아웃룩] " if is_pending else "[📅 예정] ")
+                    task_desc = f"{prefix}{parsed_desc}"
+
+                    row_dict = {
+                        "msg_hash": f"OUTLOOK_WORK_{entry_id}",
+                        "log_type": log_type,
+                        "worker_name": w_name,
+                        "worker_title": w_title,
+                        "worker_team": w_team,
+                        "client_name": parsed_client,
+                        "task_description": task_desc,
+                        "start_time": st_time,
+                        "end_time": ed_time,
+                        "estimated_minutes": int(dur_hours * 60),
+                        "actual_minutes": int(dur_hours * 60),
+                        "actual_hours": dur_hours,   # 🌟 실제 업무량 정상 합산
+                        "estimated_hours": dur_hours,
+                        "total_hours": dur_hours,
+                        "display_hours": dur_hours,
+                        "status": status,
+                        "is_outlook": True,
+                        "is_leave": False,
+                        "is_night_work": False,
+                        "is_weekend_work": False
+                    }
+                    outlook_converted_rows.append(row_dict)
+
+        if outlook_converted_rows:
+            out_df_converted = pd.DataFrame(outlook_converted_rows)
+            combined_df = pd.concat([kakao_df, out_df_converted], ignore_index=True)
+        else:
+            combined_df = kakao_df.copy()
+
+        # 팀 및 직급 매핑 안전 보장
+        if team_mappings and "worker_name" in combined_df.columns:
+            combined_df["worker_team"] = combined_df["worker_name"].map(team_mappings).fillna(combined_df.get("worker_team", "")).fillna("미배정")
+        if title_mappings and "worker_name" in combined_df.columns:
+            combined_df["worker_title"] = combined_df["worker_name"].map(title_mappings).fillna(combined_df.get("worker_title", ""))
+
+        return combined_df

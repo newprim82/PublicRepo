@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 # WorkTime Dashboard v2.0.6 (Outlook Subject Client/Task Auto-Parsing)
-APP_VERSION = "v2.0.9"
+APP_VERSION = "v2.1.0"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -128,6 +128,14 @@ if st.session_state.get("_applied_app_version") != APP_VERSION:
 @st.cache_data(ttl=60, show_spinner=False)
 def load_data() -> pd.DataFrame:
     df = db_manager.fetch_all_work_logs()
+    
+    # 🌟 [전면 통합] 카카오톡 기록과 아웃룩 전체 일정(연차/회의/프로젝트 지원) 완벽 결합
+    try:
+        from src.services.schedule_sync_service import ScheduleSyncService
+        df = ScheduleSyncService.combine_all_work_logs(df)
+    except Exception as e_comb:
+        print(f"[아웃룩 일정 전면 통합 예외]: {e_comb}")
+
     if not df.empty:
         # 🛡️ 멀티데이 분할 레코드(1/3일차 등) 존재 시 분할 전 원본 레코드 자동 중복 배제 (사전 변환 최적화)
         if "task_description" in df.columns and "start_time" in df.columns and "end_time" in df.columns:
