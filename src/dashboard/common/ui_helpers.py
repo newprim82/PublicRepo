@@ -25,20 +25,28 @@ def get_current_kst_time() -> datetime:
     """한국 표준시(KST, UTC+9) 현재 시각 반환"""
     return datetime.now(KST_TIMEZONE)
 
+_ntp_offset: Optional[float] = None
+_ntp_last_sync: float = 0.0
+
 def get_bora_ntp_timestamp() -> float:
-    """time.bora.net (LGU+ 타임서버) NTP 기준 한국 표준시 타임스탬프(초) 반환 (네트워크 실패 시 시스템 KST fallback)"""
-    try:
-        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        client.settimeout(0.8)
-        data = b'\x1b' + 47 * b'\0'
-        client.sendto(data, ('time.bora.net', 123))
-        resp, _ = client.recvfrom(1024)
-        if resp:
-            t = struct.unpack('!12I', resp)[10] - 2208988800
-            return float(t)
-    except Exception:
-        pass
-    return datetime.now(timezone.utc).timestamp()
+    """time.bora.net (LGU+ 타임서버) NTP 기준 한국 표준시 타임스탬프(초) 반환 (1시간 캐싱 오프셋 적용으로 0ms 즉시 응답)"""
+    global _ntp_offset, _ntp_last_sync
+    now = time.time()
+    if _ntp_offset is None or (now - _ntp_last_sync > 3600):
+        try:
+            client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            client.settimeout(0.6)
+            data = b'\x1b' + 47 * b'\0'
+            client.sendto(data, ('time.bora.net', 123))
+            resp, _ = client.recvfrom(1024)
+            if resp:
+                t = struct.unpack('!12I', resp)[10] - 2208988800
+                _ntp_offset = float(t) - now
+                _ntp_last_sync = now
+        except Exception:
+            if _ntp_offset is None:
+                _ntp_offset = 0.0
+    return now + (_ntp_offset or 0.0)
 
 try:
     from streamlit_autorefresh import st_autorefresh

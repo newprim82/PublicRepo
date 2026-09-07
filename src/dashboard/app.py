@@ -595,8 +595,10 @@ def main():
     # ==========================================
     curr_page = st.session_state.get("current_page", "🏠 실시간 분석 대시보드")
     page_tag = curr_page.split(" ")[1] if " " in curr_page else curr_page
-    bora_ts = get_bora_ntp_timestamp()
-    initial_ms = int(bora_ts * 1000)
+    if "_base_bora_initial_ms" not in st.session_state:
+        bora_ts = get_bora_ntp_timestamp()
+        st.session_state["_base_bora_initial_ms"] = int(bora_ts * 1000)
+    initial_ms = st.session_state["_base_bora_initial_ms"]
 
     render_header_banner(initial_ms, page_tag)
 

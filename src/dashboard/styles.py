@@ -124,6 +124,17 @@ def apply_custom_styles():
             max-width: 100% !important;
         }
 
+        /* 🚀 상단 헤더 컴포넌트 iframe 깜빡임(화이트 플래시) 100% 원천 방지 */
+        iframe[title*="components.v1.html"],
+        div[data-testid="stCustomComponentV1"] iframe {
+            background-color: transparent !important;
+            border: none !important;
+            color-scheme: dark !important;
+        }
+        div[data-testid="stCustomComponentV1"] {
+            background: transparent !important;
+        }
+
         /* 🔘 시스템 표준 프리미엄 버튼 기본 스타일 (메일 발송 버튼 테마로 완전 일원화) */
         div[data-testid="stButton"] > button,
         .stButton > button,
@@ -943,6 +954,7 @@ def apply_custom_styles():
 
 
 
+@st.fragment
 def render_header_banner(initial_ms: int, page_tag: str):
     """LGU+ time.bora.net NTP 타임서버 실시간 동기화 헤더 배너 렌더링"""
     components.html(f"""
