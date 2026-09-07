@@ -20,8 +20,8 @@ from ..common.ui_helpers import (
 )
 
 @st.fragment
-def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
-    """[📊 경영진 보고용 Executive Summary] 주간/월간 회의 및 임원 보고용 핵심 요약 & 메일 발송 (독립 Fragment)"""
+def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
+    """[📊 업무 실적 Summary] 주간/월간 핵심 요약 & 메일 발송 (독립 Fragment)"""
     if df.empty:
         st.info("표시할 보고서 데이터가 없습니다.")
         return
@@ -292,7 +292,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
     d_avg_badge = get_delta_badge(avg_hours_per_worker, prev_avg_hours, is_positive_good=True)
 
     # =========================================================================
-    # 1. 🏛️ 경영진 5초 펄스 카드 (4대 핵심 지표 with MoM/WoW Delta)
+    # 1. 🏛️ 핵심 실적 5초 펄스 카드 (4대 핵심 지표 with MoM/WoW Delta)
     # =========================================================================
     pulse_cards_html = f"""
     <div style="display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap;">
@@ -447,7 +447,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
         st.markdown(f"""
         <div style="display: flex; align-items: center; justify-content: space-between; height: 100%; min-height: 42px; padding-top: 6px;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span style="font-size: 16.5px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">📑 경영진 핵심 요약 브리핑 & 액션 아이템</span>
+                <span style="font-size: 16.5px; font-weight: 800; color: #002d42; letter-spacing: -0.3px;">📑 업무 실적 핵심 요약 브리핑 & 액션 아이템</span>
                 <span style="font-size: 12px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 700;">조회 기준: {current_period_label}</span>
             </div>
         </div>
@@ -897,5 +897,9 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
 @st.fragment
 def render_summary_view(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
-    """📊 Summary (Executive Summary) 메인 뷰"""
-    render_executive_summary_tab(df, df_raw, selected_team, team_mappings, month_desc)
+    """📊 Summary (업무 실적 요약) 메인 뷰"""
+    render_work_summary_tab(df, df_raw, selected_team, team_mappings, month_desc)
+
+
+# 하위 호환성 별칭
+render_executive_summary_tab = render_work_summary_tab

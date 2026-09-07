@@ -9,7 +9,7 @@ from ..dashboard.common.ui_helpers import get_current_kst_time
 
 class EmailDispatchService:
     """
-    Executive Summary 메일 발송 이력 관리 서비스
+    업무 실적 Summary 메일 발송 이력 관리 서비스
     - 수동 즉시 발송(MANUAL_IMMEDIATE), 주간 자동 발송(AUTO_WEEKLY), 월간 자동 발송(AUTO_MONTHLY) 전수 DB 기록
     - 로컬 SQLite (email_dispatch_logs) + Supabase 클라우드 (worktime_email_dispatch_logs) 하이브리드 지원
     """

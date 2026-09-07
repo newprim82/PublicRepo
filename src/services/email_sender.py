@@ -47,7 +47,7 @@ class EmailSender:
         **kwargs
     ) -> Tuple[bool, str]:
         """
-        Gmail SMTP를 통해 주간/월간 Executive Summary 보고서를 발송합니다.
+        Gmail SMTP를 통해 주간/월간 업무 실적 Summary 보고서를 발송합니다.
         대시보드 화면에서 보고 있는 데이터셋(df_active) 및 AI 브리핑을 온전히 전달받아 동기화 발송합니다.
         
         Returns:
@@ -100,7 +100,7 @@ class EmailSender:
             msg["Date"] = formatdate(localtime=True)
             msg["Message-ID"] = make_msgid(domain="gmail.com")
             msg["Reply-To"] = sender
-            msg["X-Mailer"] = "WorkTime Dashboard Executive Reporter v2.0"
+            msg["X-Mailer"] = "WorkTime Dashboard Summary Reporter v2.0"
 
             # HTML 본문 추가
             msg_body = MIMEMultipart("alternative")
@@ -159,7 +159,7 @@ class EmailSender:
                     sender_email=sender,
                     selected_team=selected_team,
                     period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
-                    subject=locals().get('subject', 'Executive Summary 보고서'),
+                    subject=locals().get('subject', '업무 실적 Summary 보고서'),
                     status="FAILED",
                     error_message=err_msg
                 )
@@ -176,7 +176,7 @@ class EmailSender:
                     sender_email=sender,
                     selected_team=selected_team,
                     period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
-                    subject=locals().get('subject', 'Executive Summary 보고서'),
+                    subject=locals().get('subject', '업무 실적 Summary 보고서'),
                     status="FAILED",
                     error_message=err_msg
                 )

@@ -879,9 +879,9 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
 
 
 
-@st.dialog("📧 Executive Summary 메일 발송", width="medium")
+@st.dialog("📧 업무 실적 Summary 메일 발송", width="medium")
 def show_email_report_dialog(selected_team: str):
-    """경영진 보고용 Summary 이메일 발송 전용 팝업 모달 (화면 데이터 100% 동기화)"""
+    """업무 실적 Summary 이메일 발송 전용 팝업 모달 (화면 데이터 100% 동기화)"""
     ctx = st.session_state.get("exec_summary_context", {})
     period_label = ctx.get("current_period_label", f"{selected_team} - 실적 Summary")
     df_active = ctx.get("df_active", None)

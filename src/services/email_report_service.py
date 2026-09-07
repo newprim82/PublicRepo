@@ -27,7 +27,7 @@ class EmailReportService:
     ) -> Tuple[str, str, bytes]:
         """
         대시보드의 '📊 Summary' 페이지와 100% 동일한 내용의
-        Executive Summary 반응형 HTML 리포트 및 분석 엑셀 파일을 생성합니다.
+        업무 실적 Summary 반응형 HTML 리포트 및 분석 엑셀 파일을 생성합니다.
         """
         def is_same_team(t1, t2):
             return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
@@ -532,7 +532,7 @@ class EmailReportService:
             </table>
             """
 
-        subject = f"📊 [경영진 보고용 Summary] {current_period_label}"
+        subject = f"📊 [업무 실적 Summary] {current_period_label}"
 
         # ----------------------------------------------------
         # 9. 최종 반응형 HTML 템플릿 조립 (대시보드 Summary와 100% 일치)
@@ -553,12 +553,12 @@ class EmailReportService:
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                                 <td>
-                                    <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.5px;">📊 기술본부 작업 실적 Executive Summary</div>
+                                    <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.5px;">📊 기술본부 작업 실적 Summary</div>
                                     <div style="font-size: 13px; color: #bae6fd; margin-top: 6px;">📅 대상 기준: <b>{current_period_label}</b></div>
                                 </td>
                                 <td style="text-align: right; vertical-align: middle;">
                                     <span style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #ffffff; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
-                                        Executive Briefing
+                                        핵심 실적 브리핑
                                     </span>
                                 </td>
                             </tr>
@@ -596,9 +596,9 @@ class EmailReportService:
                             </tr>
                         </table>
 
-                        <!-- 2. AI 경영 핵심 요약 브리핑 -->
+                        <!-- 2. AI 업무 실적 핵심 요약 브리핑 -->
                         <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 10px; display: flex; justify-content: space-between;">
-                            <span>📝 경영진 핵심 요약 브리핑 & 액션 아이템</span>
+                            <span>📝 업무 실적 핵심 요약 브리핑 & 액션 아이템</span>
                             <span style="font-size: 11px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: bold;">[{ai_badge_text}]</span>
                         </div>
                         <div style="background: #ffffff; border: 1.5px solid #005f8a; border-left: 5px solid #005073; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; font-size: 13px; line-height: 1.8; color: #1e293b; box-shadow: 0 2px 8px rgba(0,45,66,0.05);">
@@ -698,8 +698,8 @@ class EmailReportService:
                 <!-- 푸터 안내 -->
                 <tr>
                     <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 30px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.6;">
-                        본 메일은 기술본부 현장 업무 관제 시스템에서 발송된 경영진 보고용 Executive Summary 리포트입니다.<br>
-                        상세 작업 내역은 첨부된 엑셀 파일(<code>Executive_Summary_{datetime.now().strftime('%Y%m%d')}.xlsx</code>) 또는 웹 대시보드에서 확인하실 수 있습니다.
+                        본 메일은 기술본부 현장 업무 관제 시스템에서 발송된 업무 실적 Summary 리포트입니다.<br>
+                        상세 작업 내역은 첨부된 엑셀 파일(<code>Work_Summary_{datetime.now().strftime('%Y%m%d')}.xlsx</code>) 또는 웹 대시보드에서 확인하실 수 있습니다.
                     </td>
                 </tr>
             </table>
