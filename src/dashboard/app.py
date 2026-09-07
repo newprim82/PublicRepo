@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.0.4 (Leave Card Sizing & Cloud Cache Sync)
-APP_VERSION = "v2.0.4"
+# WorkTime Dashboard v2.0.5 (Hide Top Leave Banner after 18:00)
+APP_VERSION = "v2.0.5"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
