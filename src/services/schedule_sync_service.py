@@ -62,20 +62,58 @@ class ScheduleSyncService:
         today_out = today_out[today_out["start_time"].dt.strftime("%Y-%m-%d") == today_str]
         today_out = today_out.drop_duplicates(subset=["worker_name", "subject", "start_time"])
 
-        # 1. 휴가/연차/반차 추출 (무조건 100% 표출용)
+        promoted_pend_rows = []
+        auto_completed_rows = []
+        team_info = TeamService.get_team_members_info()
+
+        # 1. 휴가/연차/반차 추출 (실시간 배너 및 오늘 완료된 작업에 100% 표출)
         leave_records = []
         leave_rows = today_out[today_out["is_leave"] == True]
         for _, r in leave_rows.iterrows():
-            leave_records.append({
-                "worker_name": r["worker_name"],
-                "worker_team": r.get("worker_team", "미배정"),
-                "subject": r["subject"],
-                "leave_type": r.get("leave_type") or "연차",
-                "start_time": r["start_time"],
-                "end_time": r["end_time"],
-                "duration_hours": r.get("duration_hours", 9.0),
-                "progress_pct": 100,  # 무조건 100%
-                "color_tag": r.get("color_tag", "#ec4899")
+            w_name = r["worker_name"]
+            st_time = r["start_time"]
+            ed_time = r["end_time"]
+            st_dt = st_time.to_pydatetime() if hasattr(st_time, "to_pydatetime") else st_time
+            ed_dt = ed_time.to_pydatetime() if hasattr(ed_time, "to_pydatetime") else ed_time
+            dur_hours = float(r.get("duration_hours") or 9.0)
+            w_title = team_info.get(w_name, {}).get("title", "")
+            w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
+            l_type = r.get("leave_type") or "연차"
+
+            # 1-A. 현재 시간이 아직 휴가 종료 이전(09:00~18:00 등)인 경우에만 실시간 진행 섹션 상단 부재 배너에 표출
+            if ed_dt and now < ed_dt:
+                leave_records.append({
+                    "worker_name": w_name,
+                    "worker_team": w_team,
+                    "subject": r["subject"],
+                    "leave_type": l_type,
+                    "start_time": st_time,
+                    "end_time": ed_time,
+                    "duration_hours": dur_hours,
+                    "progress_pct": 100,  # 무조건 100%
+                    "color_tag": r.get("color_tag", "#ec4899")
+                })
+
+            # 1-B. 휴가는 오늘 완료된 작업 섹션에 항상 100% 완료 카드로 당당히 표출!
+            auto_completed_rows.append({
+                "msg_hash": f"OUTLOOK_LEAVE_{r.get('entry_id', '')}",
+                "log_type": "휴가",
+                "worker_name": w_name,
+                "worker_title": w_title,
+                "worker_team": w_team,
+                "client_name": f"🏖️ {l_type}",
+                "task_description": f"[{l_type}] {r['subject']}",
+                "start_time": st_time,
+                "end_time": ed_time,
+                "estimated_minutes": int(dur_hours * 60),
+                "actual_minutes": int(dur_hours * 60),
+                "actual_hours": dur_hours,
+                "total_hours": dur_hours,
+                "status": "COMPLETED",
+                "is_outlook": True,
+                "is_leave": True,
+                "is_night_work": False,
+                "is_weekend_work": False
             })
 
         # 2. 오늘 이미 카카오톡으로 시작보고를 올렸거나 완료한 작업자 확인 (중복 방지)
@@ -87,11 +125,6 @@ class ScheduleSyncService:
 
         # 3. 비-휴가 일반 작업 일정 처리
         work_rows = today_out[today_out["is_leave"] == False]
-
-        promoted_pend_rows = []
-        auto_completed_rows = []
-
-        team_info = TeamService.get_team_members_info()
 
         for _, r in work_rows.iterrows():
             w_name = r["worker_name"]
@@ -128,6 +161,7 @@ class ScheduleSyncService:
                     "end_time": ed_time,
                     "estimated_minutes": int(dur_hours * 60),
                     "actual_minutes": int(dur_hours * 60),
+                    "actual_hours": dur_hours,
                     "total_hours": dur_hours,
                     "status": "COMPLETED",
                     "is_outlook": True,
