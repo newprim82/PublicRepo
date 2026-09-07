@@ -78,7 +78,8 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
                 st.markdown(l_html, unsafe_allow_html=True)
         st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
 
-    st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">⏳ 실시간 진행 중인 작업 <span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
+    badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 )</span>'
+    st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>⏳ 실시간 진행 중인 작업</span>{badge_legend_html}<span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
         st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
         return
