@@ -3,7 +3,6 @@ import streamlit as st
 from ...services.team_service import TeamService, DEFAULT_TEAMS, UNASSIGNED_TEAM
 from ..common.ui_helpers import get_all_teams_safe
 
-@st.fragment
 def render_team_management_page(all_workers_list, team_mappings):
     """[⚙️ 팀원 소속 및 직급 관리] 전용 관리 페이지 (신규 팀 생성 + 소속팀 + 직급 완벽 지원)"""
     # 🎨 Cisco ACI Deep Cyan-Navy 전용 프리미엄 테마 주입

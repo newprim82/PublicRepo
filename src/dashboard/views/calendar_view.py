@@ -207,8 +207,6 @@ def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, sele
     )
     st.plotly_chart(fig_peak, use_container_width=True)
 
-@st.fragment
-
 
 def render_calendar_view(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
     """📅 작업 캘린더 & 밀도 히트맵 메인 뷰"""

@@ -17,6 +17,7 @@ class TeamService:
     _all_teams_cache: Optional[List[str]] = None
     _cache_time: float = 0.0
     CACHE_TTL: float = 60.0  # 60초 유효시간 (데이터 변경 시 즉시 무효화)
+    _table_initialized: bool = False
 
     @classmethod
     def clear_cache(cls):
@@ -25,9 +26,11 @@ class TeamService:
         cls._all_teams_cache = None
         cls._cache_time = 0.0
 
-    @staticmethod
-    def init_team_table():
-        """로컬 SQLite에 team_members 및 custom_teams 테이블 생성 및 컬럼 마이그레이션"""
+    @classmethod
+    def init_team_table(cls):
+        """로컬 SQLite에 team_members 및 custom_teams 테이블 생성 및 인덱스 초기화 (1회만 실행)"""
+        if cls._table_initialized:
+            return
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("""
@@ -38,10 +41,11 @@ class TeamService:
                 updated_at TEXT DEFAULT (datetime('now', 'localtime'))
             )
         """)
-        
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_tm_team_name ON team_members(team_name)")
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS custom_teams (
-                team_name TEXT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_name TEXT UNIQUE NOT NULL,
                 created_at TEXT DEFAULT (datetime('now', 'localtime'))
             )
         """)
@@ -54,6 +58,7 @@ class TeamService:
 
         conn.commit()
         conn.close()
+        cls._table_initialized = True
 
     @classmethod
     def get_all_teams(cls) -> List[str]:
@@ -235,8 +240,51 @@ class TeamService:
         TeamService.clear_cache()
 
     @staticmethod
+    def save_team_members_batch(records: List[Dict[str, str]]):
+        """
+        다수의 팀원 정보(이름, 팀, 직급)를 단일 트랜잭션 및 1회 Supabase 일괄 Upsert로 고속 저장
+        records: [{"worker_name": "홍길동", "team_name": "기술 1팀", "job_title": "수석"}, ...]
+        """
+        TeamService.init_team_table()
+        if not records:
+            return
+
+        # 1. Supabase Cloud DB 1회 배치 Upsert
+        try:
+            db_manager.supabase.table("worktime_team_members").upsert(records, on_conflict="worker_name").execute()
+        except Exception:
+            pass
+
+        # 2. 로컬 SQLite executemany 단일 트랜잭션 처리
+        conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+        cursor = conn.cursor()
+        
+        sqlite_records = [
+            (r["worker_name"], r.get("team_name", UNASSIGNED_TEAM), r.get("job_title", ""))
+            for r in records
+        ]
+        cursor.executemany("""
+            INSERT INTO team_members (worker_name, team_name, job_title, updated_at)
+            VALUES (?, ?, ?, datetime('now', 'localtime'))
+            ON CONFLICT(worker_name) DO UPDATE SET
+                team_name=excluded.team_name,
+                job_title=excluded.job_title,
+                updated_at=excluded.updated_at
+        """, sqlite_records)
+
+        update_logs_records = [
+            (r.get("team_name", UNASSIGNED_TEAM), r.get("job_title", ""), r["worker_name"])
+            for r in records
+        ]
+        cursor.executemany("UPDATE work_logs SET worker_team=?, worker_title=? WHERE worker_name=?", update_logs_records)
+        
+        conn.commit()
+        conn.close()
+        TeamService.clear_cache()
+
+    @staticmethod
     def save_team_members(team_name: str, worker_names: List[str]):
-        """특정 팀에 소속된 팀원 목록을 일괄 업데이트 (기존 직급 유지)"""
+        """특정 팀에 소속된 팀원 목록을 일괄 업데이트 (기존 직급 유지, 1회 고속 배치 처리)"""
         TeamService.init_team_table()
         if not worker_names:
             return
@@ -244,9 +292,15 @@ class TeamService:
         target_team = UNASSIGNED_TEAM if "해제" in team_name or "미지정" in team_name else team_name
         current_info = TeamService.get_team_members_info()
 
-        for w_name in worker_names:
-            existing_title = current_info.get(w_name, {}).get("title", "")
-            TeamService.save_worker_info(w_name, target_team, existing_title)
+        records = [
+            {
+                "worker_name": w_name,
+                "team_name": target_team,
+                "job_title": current_info.get(w_name, {}).get("title", "")
+            }
+            for w_name in worker_names
+        ]
+        TeamService.save_team_members_batch(records)
 
     @staticmethod
     def update_worker_title(worker_name: str, job_title: str):
@@ -270,13 +324,14 @@ class TeamService:
 
     @staticmethod
     def auto_init_mappings_from_worklogs(all_workers: List[str], df_logs: pd.DataFrame):
-        """기존 work_logs의 팀 및 직급 정보를 기반으로 초기 매핑 구성"""
+        """기존 work_logs의 팀 및 직급 정보를 기반으로 초기 매핑 구성 (배치 최적화)"""
         current_info = TeamService.get_team_members_info()
         unmapped = [w for w in all_workers if w not in current_info or not current_info[w].get("title")]
         
         if not unmapped or df_logs.empty:
             return
 
+        batch_records = []
         for w in unmapped:
             worker_rows = df_logs[df_logs["worker_name"] == w]
             found_team = current_info.get(w, {}).get("team", "")
@@ -298,7 +353,14 @@ class TeamService:
                             break
                             
             if (found_team and found_team != UNASSIGNED_TEAM) or found_title:
-                TeamService.save_worker_info(w, found_team or UNASSIGNED_TEAM, found_title or "")
+                batch_records.append({
+                    "worker_name": w,
+                    "team_name": found_team or UNASSIGNED_TEAM,
+                    "job_title": found_title or ""
+                })
+
+        if batch_records:
+            TeamService.save_team_members_batch(batch_records)
 
 
 def get_all_teams() -> List[str]:

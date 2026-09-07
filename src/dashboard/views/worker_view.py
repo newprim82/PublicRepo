@@ -379,7 +379,6 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
 
 
 
-@st.fragment
 def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str):
     """👤 팀원별 업무량 분석 메인 뷰 (상단 차트/테이블 + 하단 주차별 매트릭스)"""
     st.subheader(f"👤 {selected_team} - 팀원별 총 작업 시간 및 업무 집중도 ({month_desc})")

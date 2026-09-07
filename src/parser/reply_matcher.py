@@ -1,8 +1,9 @@
 import re
 import hashlib
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict
+import pandas as pd
 
 from .kakao_parser import (
     KakaoMessageParser,
@@ -445,7 +446,7 @@ class WorkLogMatcher:
                         matched_records.append(record)
                         
         # 3. 잔여 미완료 시작 보고들 처리 (기본 48시간, 다일 작업은 (예정일수*24h)+48h 경과 시 COMPLETED 자동 전환)
-        latest_ref_time = max([m.timestamp for m in raw_messages]) if raw_messages else datetime.now()
+        latest_ref_time = sorted_msgs[-1].timestamp if sorted_msgs else datetime.now()
         
         for p_start in pending_starts:
             msg_hash = generate_msg_hash(

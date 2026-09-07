@@ -4,9 +4,32 @@ from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 
+import plotly.express as px
 from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, strip_tz
 from ...services.email_report_service import EmailReportService
+from ...services.email_sender import EmailSender
 from ...services.team_service import TeamService
+
+def render_chat_messages_expander(target_df: pd.DataFrame, max_display: int = 20, title_prefix: str = "전체 작업"):
+    """모달 내 카카오톡 원본 메시지를 상위 N건으로 제한 렌더링하여 DOM 폭발 및 브라우저 프리징 방지"""
+    total_cnt = len(target_df)
+    if total_cnt == 0:
+        return
+    display_cnt = min(total_cnt, max_display)
+    title = f"💬 {title_prefix} 카카오톡 원본 메시지 ({total_cnt}건 중 최근 {display_cnt}건)"
+    with st.expander(title, expanded=False):
+        for i, (_, r) in enumerate(target_df.head(max_display).iterrows()):
+            start_str = r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r.get('start_time')) else ''
+            w_name = r.get('worker_name', '')
+            c_name = r.get('client_name', '')
+            t_desc = r.get('task_description', '')
+            est_h = r.get('estimated_hours', 0)
+            act_h = r.get('actual_hours', 0)
+            st.markdown(f"**[작업 #{i+1}] {start_str} | {w_name} - {c_name} ({t_desc}) [예정:{est_h}h ➔ 소요:{act_h}h]**")
+            st.code(format_raw_chat_display(r), language="text")
+            st.divider()
+        if total_cnt > max_display:
+            st.caption(f"💡 표에서 행을 클릭하시면 개별 원본 대화를 확인하실 수 있습니다. (성능 최적화를 위해 최근 {max_display}건만 표시됩니다)")
 
 @st.dialog("🔍 세부 작업 내역 및 카카오톡 원본 분석", width="large")
 def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default_week_name: str = None):
@@ -166,12 +189,8 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
             hide_index=True
         )
 
-        # 카카오톡 원본 메시지 아코디언
-        with st.expander(f"💬 카카오톡 시작/완료 원본 메시지 전수 보기 ({tot_cnt}건)", expanded=False):
-            for i, (_, r) in enumerate(detail.iterrows()):
-                st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['client_name']} - {r['task_description']} ({r['actual_hours']}h)**")
-                st.code(format_raw_chat_display(r), language="text")
-                st.divider()
+        # 카카오톡 원본 메시지 아코디언 (상위 20건 제한 경량화)
+        render_chat_messages_expander(detail, max_display=20, title_prefix="카카오톡 시작/완료")
 
 
 
@@ -237,11 +256,7 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
         st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
         st.code(format_raw_chat_display(sel_row), language="text")
 
-    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(sorted_df)}건)", expanded=False):
-        for i, (_, r) in enumerate(sorted_df.iterrows()):
-            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정:{r.get('estimated_hours',0)}h ➔ 소요:{r.get('actual_hours',0)}h]**")
-            st.code(format_raw_chat_display(r), language="text")
-            st.divider()
+    render_chat_messages_expander(sorted_df, max_display=20, title_prefix="전체 작업")
 
 
 @st.dialog("📋 총 작업 건수 세부 내역 (완료 / 진행 중)", width="large")
@@ -491,12 +506,7 @@ def show_kpi_overdue_dialog(df_data: pd.DataFrame):
             st.markdown(f"**💬 카카오톡 완료 보고 원본 메시지{ed_label} (실제 지연/괴리 사유 확인):**")
             st.code(sel_row.get("raw_end_message", "(완료 메시지 없음 - 예정시간 초과로 인한 자동완료 처리)"), language="text")
 
-        # 전수 아코디언도 제공
-        with st.expander(f"💬 전체 초과 작업 카카오톡 원본 메시지 전수 보기 ({len(overdue_df)}건)", expanded=False):
-            for i, (_, r) in enumerate(overdue_df.iterrows()):
-                st.markdown(f"**[초과작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정: {r['estimated_hours']}h ➔ 소요: {r['actual_hours']}h (🚨 +{r['diff_hours']}h 초과)]**")
-                st.code(format_raw_chat_display(r), language="text")
-                st.divider()
+        render_chat_messages_expander(overdue_df, max_display=20, title_prefix="초과 작업")
 
 
 
@@ -550,11 +560,7 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
         st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
         st.code(format_raw_chat_display(sel_row), language="text")
 
-    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(w_df)}건)", expanded=False):
-        for i, (_, r) in enumerate(w_df.iterrows()):
-            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['client_name']} - {r['task_description']} ({r['actual_hours']}h)**")
-            st.code(format_raw_chat_display(r), language="text")
-            st.divider()
+    render_chat_messages_expander(w_df, max_display=20, title_prefix="전체 작업")
 
 
 @st.dialog("🔍 작업 구분별 세부 내역", width="large")
@@ -615,11 +621,7 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
         st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
         st.code(format_raw_chat_display(sel_row), language="text")
 
-    with st.expander(f"💬 전체 [{cat_name}] 카카오톡 원본 메시지 전수 보기 ({len(cat_df)}건)", expanded=False):
-        for i, (_, r) in enumerate(cat_df.iterrows()):
-            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['client_name']} - {r['task_description']} ({r['actual_hours']}h)**")
-            st.code(format_raw_chat_display(r), language="text")
-            st.divider()
+    render_chat_messages_expander(cat_df, max_display=20, title_prefix=f"전체 [{cat_name}]")
 
 
 
@@ -709,10 +711,7 @@ def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
         st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
         st.code(format_raw_chat_display(sel_row), language="text")
 
-    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(sorted_df)}건)", expanded=False):
-        for i, (_, r) in enumerate(sorted_df.iterrows()):
-            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정:{r.get('estimated_hours',0)}h ➔ 소요:{r.get('actual_hours',0)}h]**")
-            st.code(format_raw_chat_display(r), language="text")
+    render_chat_messages_expander(sorted_df, max_display=20, title_prefix="전체 작업")
 
 
 @st.dialog("📆 주차별 세부 지원 내역 및 카카오톡 원본", width="large")
@@ -797,10 +796,7 @@ def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
         st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
         st.code(format_raw_chat_display(sel_row), language="text")
 
-    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(sorted_df)}건)", expanded=False):
-        for i, (_, r) in enumerate(sorted_df.iterrows()):
-            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정:{r.get('estimated_hours',0)}h ➔ 소요:{r.get('actual_hours',0)}h]**")
-            st.code(format_raw_chat_display(r), language="text")
+    render_chat_messages_expander(sorted_df, max_display=20, title_prefix="전체 작업")
 
 
 @st.dialog("📅 일자별 세부 작업 내역", width="large")
@@ -871,10 +867,7 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
         st.markdown(f"##### 💬 [{sel_row['worker_name']} | {sel_row['client_name']}] 카카오톡 대화 원본")
         st.code(format_raw_chat_display(sel_row), language="text")
 
-    with st.expander(f"💬 전체 작업 카카오톡 원본 메시지 전수 보기 ({len(sorted_df)}건)", expanded=False):
-        for i, (_, r) in enumerate(sorted_df.iterrows()):
-            st.markdown(f"**[작업 #{i+1}] {r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r['start_time']) else ''} | {r['worker_name']} - {r['client_name']} ({r['task_description']}) [예정:{r.get('estimated_hours',0)}h ➔ 소요:{r.get('actual_hours',0)}h]**")
-            st.code(format_raw_chat_display(r), language="text")
+    render_chat_messages_expander(sorted_df, max_display=20, title_prefix="전체 작업")
 
 
 
@@ -910,12 +903,7 @@ def show_email_report_dialog(selected_team: str):
     
     if st.button("🚀 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
         with st.spinner("🤖 Gemini AI 심층 브리핑 생성 및 이메일 전송 중..."):
-            import importlib
-            import src.services.email_report_service as ers_module
-            importlib.reload(ers_module)
-            import src.services.email_sender as es_module
-            importlib.reload(es_module)
-            success, send_msg = es_module.EmailSender.send_weekly_report(
+            success, send_msg = EmailSender.send_weekly_report(
                 recipient_emails=mail_rcpt,
                 sender_email="newprim82@gmail.com",
                 sender_password="dlugbvfuhgdozkgr",

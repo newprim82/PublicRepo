@@ -148,7 +148,6 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             show_team_work_logs_dialog(team_to_open, team_target_df)
 
 
-@st.fragment
 
 
 def render_team_view(df_raw: pd.DataFrame, selected_months: list):

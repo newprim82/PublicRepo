@@ -101,6 +101,8 @@ COLLECTOR_STATUS = {
 # 현재 활성 스레드 ID 관리 및 동기화 락
 _ACTIVE_THREAD_TOKEN = 0
 _cycle_lock = threading.Lock()
+_collector_start_lock = threading.Lock()
+_collector_stop_event = threading.Event()
 _last_execution_timestamp = 0
 
 # 한국 표준시 (KST, UTC+9) 기준 정의
@@ -242,34 +244,14 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                 click_x = max(10, rect[2] // 2)
                 click_y = max(10, rect[3] - 40)
                 
-                # 가상 메시지 + 실제 화면 좌표 클릭 병행 (키보드 포커스 100% 획득)
+                # 가상 메시지로 포커스 부여 (물리 마우스 하이재킹 원천 차단)
                 lparam = (click_y << 16) | click_x
                 win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
                 win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, lparam)
-                
-                try:
-                    orig_cursor = win32api.GetCursorPos()
-                    screen_pt = win32gui.ClientToScreen(target_focus, (click_x, click_y))
-                    win32api.SetCursorPos(screen_pt)
-                    time.sleep(0.02)
-                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
-                    time.sleep(0.02)
-                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
-                    time.sleep(0.04)
-                except Exception:
-                    pass
-                finally:
-                    if orig_cursor:
-                        try:
-                            win32api.SetCursorPos(orig_cursor)
-                        except Exception:
-                            pass
 
-                # 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END)
-                win32api.keybd_event(win32con.VK_END, 0, 0, 0)
-                time.sleep(0.02)
-                win32api.keybd_event(win32con.VK_END, 0, win32con.KEYEVENTF_KEYUP, 0)
-                time.sleep(0.05)
+                # 대화창을 '맨 아래(최신 메시지)'로 스크롤 (VK_END)
+                win32gui.PostMessage(target_focus, win32con.WM_KEYDOWN, win32con.VK_END, 0)
+                win32gui.PostMessage(target_focus, win32con.WM_KEYUP, win32con.VK_END, 0)
             except Exception as e:
                 log_trace(f"[클릭/스크롤 알림]: {e}")
 
@@ -451,9 +433,8 @@ def background_collector_loop():
     except Exception as e:
         log_trace(f"[초기 수집 예외]: {e}")
 
-    # 2. 영구 1분 루프 반복 실행
-    while True:
-        time.sleep(interval)
+    # 2. 영구 10분 루프 반복 실행 (Event 대기로 Graceful Shutdown 지원)
+    while not _collector_stop_event.wait(timeout=interval):
         try:
             enable_windows_keep_alive()
             run_collection_cycle(is_manual=False)
@@ -464,19 +445,28 @@ def background_collector_loop():
 
 def start_background_collector():
     """
-    프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 싱글톤 보장
+    프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 싱글톤 보장 (Race Condition 방어)
     """
     global _COLLECTOR_THREAD_RUNNING
     
-    if _COLLECTOR_THREAD_RUNNING:
+    with _collector_start_lock:
+        if _COLLECTOR_THREAD_RUNNING:
+            return True
+            
+        _COLLECTOR_THREAD_RUNNING = True
+        thread = threading.Thread(
+            target=background_collector_loop,
+            daemon=True,
+            name="KakaoAutoCollectorDaemon"
+        )
+        thread.start()
+        log_trace("[✓] 카카오톡 10분 자동 수집 백그라운드 데몬이 단독 기동되었습니다.")
         return True
-        
-    _COLLECTOR_THREAD_RUNNING = True
-    thread = threading.Thread(
-        target=background_collector_loop,
-        daemon=True,
-        name="KakaoAutoCollectorDaemon"
-    )
-    thread.start()
-    log_trace("[✓] 카카오톡 1분 자동 수집 백그라운드 데몬이 단독 기동되었습니다.")
-    return True
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("🚀 [독립 백그라운드 수집기] 카카오톡 자동 수집 프로세스 가동")
+    print("=" * 60)
+    enable_windows_keep_alive()
+    background_collector_loop()

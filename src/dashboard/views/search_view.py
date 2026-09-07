@@ -6,9 +6,16 @@ import streamlit as st
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ..common.ui_helpers import strip_tz, format_raw_chat_display, is_same_team, get_all_teams_safe
 
-@st.fragment
+@st.cache_data(show_spinner=False)
+def _get_cached_search_excel(display_df: pd.DataFrame) -> bytes:
+    clean_df = strip_tz(display_df)
+    excel_buffer = io.BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
+        clean_df.to_excel(writer, index=False, sheet_name="작업검색결과")
+    return excel_buffer.getvalue()
+
 def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
-    """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기 (독립 Fragment)"""
+    """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기"""
     # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입 (모든 버전의 Streamlit expander 및 input 완벽 호환)
     st.markdown("""
     <style>
@@ -271,12 +278,8 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     if "주말" in display_df.columns:
         display_df["주말"] = display_df["주말"].apply(lambda x: "Y" if x else "")
 
-    # 📊 엑셀(.xlsx) 파일 생성 및 다운로드 버튼
-    import io
-    excel_buffer = io.BytesIO()
-    with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-        display_df.to_excel(writer, index=False, sheet_name="작업검색결과")
-    excel_data = excel_buffer.getvalue()
+    # 📊 엑셀(.xlsx) 파일 캐시 생성 및 다운로드
+    excel_data = _get_cached_search_excel(display_df)
 
     st.download_button(
         label="📥 검색 결과 엑셀(XLSX) 다운로드",
@@ -289,7 +292,6 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     st.dataframe(display_df, use_container_width=True, height=520)
 
 
-@st.fragment
 def render_search_view(df_raw: pd.DataFrame, team_mappings: dict):
     """🔍 전체 작업 스마트 검색 메인 뷰"""
     render_smart_search_tab(df_raw, team_mappings)

@@ -1,4 +1,5 @@
 import re
+import functools
 import pandas as pd
 from typing import Optional
 
@@ -169,6 +170,7 @@ PREFIX_RULES = [
     (re.compile(r"^(?i:fortinet|포티넷)", re.IGNORECASE), "Fortinet"),
 ]
 
+@functools.lru_cache(maxsize=2048)
 def normalize_client_name(name: Optional[str]) -> str:
     """
     고객사명을 한글/영문, 대소문자, 띄어쓰기 차이 없이 표준 대표 명칭으로 정규화합니다.

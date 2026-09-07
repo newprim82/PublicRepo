@@ -4,7 +4,14 @@ import pandas as pd
 import streamlit as st
 from ..common.ui_helpers import strip_tz
 
-@st.fragment
+@st.cache_data(show_spinner=False)
+def _get_cached_worklog_excel(df: pd.DataFrame) -> bytes:
+    clean_df = strip_tz(df)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        clean_df.to_excel(writer, index=False, sheet_name="지원시간통계")
+    return output.getvalue()
+
 def render_worklog_view(df: pd.DataFrame):
     """📋 작업 지원 상세 기록 원장 & 엑셀 다운로드 화면"""
     st.subheader("📋 작업 지원 상세 기록 원장 & 엑셀 다운로드")
@@ -42,12 +49,7 @@ def render_worklog_view(df: pd.DataFrame):
     """, unsafe_allow_html=True)
     
     # openpyxl은 타임존(tz-aware) datetime을 지원하지 않으므로 strip_tz 적용
-    clean_df = strip_tz(df)
-    
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        clean_df.to_excel(writer, index=False, sheet_name="지원시간통계")
-    excel_data = output.getvalue()
+    excel_data = _get_cached_worklog_excel(df)
     
     btn_col, _ = st.columns([2.0, 5.0])
     with btn_col:

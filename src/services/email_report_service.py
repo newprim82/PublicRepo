@@ -418,17 +418,21 @@ class EmailReportService:
             </div>
             """
 
-        # 고객사 테이블 행 생성 (전체 고객사 순위별)
-        client_rows_html = ""
+        # 고객사 테이블 행 생성 (단일 GroupBy 사전 집계 최적화)
+        client_grp = df_active.groupby("client_name")
+        c_w_counts = client_grp["worker_name"].nunique().to_dict()
+        c_counts = client_grp.size().to_dict()
+        c_tasks = client_grp["task_description"].agg(lambda s: ", ".join(s.dropna().unique()[:2])).to_dict()
+
+        client_rows_list = []
         cum_running = 0.0
         for rank, (c_name, c_h) in enumerate(client_agg.items(), 1):
             c_share = round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0.0
             cum_running = round(cum_running + c_share, 1)
-            sub_c = df_active[df_active["client_name"] == c_name]
-            c_w_cnt = sub_c["worker_name"].nunique()
-            c_cnt = len(sub_c)
-            tasks = ", ".join(sub_c["task_description"].dropna().unique()[:2])
-            client_rows_html += f"""
+            c_w_cnt = c_w_counts.get(c_name, 0)
+            c_cnt = c_counts.get(c_name, 0)
+            tasks = c_tasks.get(c_name, "")
+            client_rows_list.append(f"""
             <tr style="border-bottom: 1px solid #e2e8f0; font-size: 12.5px;">
                 <td style="padding: 8px 10px; font-weight: bold; color: #005073; text-align: center;">{rank}위</td>
                 <td style="padding: 8px 10px; font-weight: bold; color: #0f172a;">{c_name}</td>
@@ -439,21 +443,32 @@ class EmailReportService:
                 <td style="padding: 8px 10px; text-align: right; color: #ea580c; font-weight: bold;">{cum_running:.1f}%</td>
                 <td style="padding: 8px 10px; color: #475569; font-size: 12px;">{tasks}</td>
             </tr>
-            """
+            """)
+        client_rows_html = "".join(client_rows_list)
 
         # ----------------------------------------------------
-        # 7. 👥 전체 팀원별 공수 투입 현황
+        # 7. 👥 전체 팀원별 공수 투입 현황 (단일 GroupBy 사전 집계 최적화)
         # ----------------------------------------------------
         worker_agg = df_active.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False) if not df_active.empty else pd.Series()
-        worker_rows_html = ""
+        worker_grp = df_active.groupby("worker_name")
+        w_counts = worker_grp.size().to_dict()
+        w_first_teams = worker_grp["worker_team"].first().to_dict() if "worker_team" in df_active.columns else {}
+        w_first_titles = worker_grp["worker_title"].first().to_dict() if "worker_title" in df_active.columns else {}
+        
+        wc_agg = df_active.groupby(["worker_name", "client_name"])["actual_hours"].sum().reset_index()
+        wc_agg = wc_agg.sort_values(by=["worker_name", "actual_hours"], ascending=[True, False])
+        top_c_by_worker = {}
+        for w_name, grp in wc_agg.groupby("worker_name"):
+            top2 = grp.head(2)
+            top_c_by_worker[w_name] = ", ".join([f"{r['client_name']}({round(r['actual_hours'],1)}h)" for _, r in top2.iterrows()])
+
+        worker_rows_list = []
         for rank, (w_name, w_h) in enumerate(worker_agg.items(), 1):
-            sub_w = df_active[df_active["worker_name"] == w_name]
-            w_team = sub_w["worker_team"].iloc[0] if "worker_team" in sub_w.columns and pd.notna(sub_w["worker_team"].iloc[0]) else team_mappings.get(w_name, UNASSIGNED_TEAM)
-            w_title = sub_w["worker_title"].iloc[0] if "worker_title" in sub_w.columns and pd.notna(sub_w["worker_title"].iloc[0]) else ""
-            w_cnt = len(sub_w)
-            top_c = sub_w.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(2)
-            top_c_str = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in top_c.items()]) if not top_c.empty else "-"
-            worker_rows_html += f"""
+            w_team = w_first_teams.get(w_name) or team_mappings.get(w_name, UNASSIGNED_TEAM)
+            w_title = w_first_titles.get(w_name, "")
+            w_cnt = w_counts.get(w_name, 0)
+            top_c_str = top_c_by_worker.get(w_name, "-")
+            worker_rows_list.append(f"""
             <tr style="border-bottom: 1px solid #e2e8f0; font-size: 12.5px;">
                 <td style="padding: 8px 10px; font-weight: bold; color: #005073; text-align: center;">{rank}위</td>
                 <td style="padding: 8px 10px; font-weight: bold; color: #0f172a;">{w_name}</td>
@@ -463,7 +478,8 @@ class EmailReportService:
                 <td style="padding: 8px 10px; text-align: right; color: #005073; font-weight: bold;">{w_h:.1f}h</td>
                 <td style="padding: 8px 10px; color: #475569; font-size: 12px;">{top_c_str}</td>
             </tr>
-            """
+            """)
+        worker_rows_html = "".join(worker_rows_list)
 
         # ----------------------------------------------------
         # 8. 📈 부서별 종합 집계표

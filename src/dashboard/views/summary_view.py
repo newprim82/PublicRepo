@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...services.email_report_service import EmailReportService
+from ...services.ai_briefing_service import FactExtractor, AIBriefingService
 from ..common.dialogs import show_email_report_dialog
 from ..common.ui_helpers import (
     strip_tz,
@@ -19,9 +20,8 @@ from ..common.ui_helpers import (
     get_all_teams_safe
 )
 
-@st.fragment
 def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
-    """[📊 업무 실적 Summary] 주간/월간 핵심 요약 & 메일 발송 (독립 Fragment)"""
+    """[📊 업무 실적 Summary] 주간/월간 핵심 요약 & 메일 발송"""
     if df.empty:
         st.info("표시할 보고서 데이터가 없습니다.")
         return
@@ -434,12 +434,6 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     # ----------------------------------------------------
     # 🌟 다차원 팩트 추출(2번) + AI 심층 분석(1번) 결합 브리핑 생성
     # ----------------------------------------------------
-    import importlib
-    import src.services.ai_briefing_service as ai_module
-    importlib.reload(ai_module)
-    FactExtractor = ai_module.FactExtractor
-    AIBriefingService = ai_module.AIBriefingService
-
     facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_period_label)
 
     b_col1, b_col2 = st.columns([4.2, 0.8])
@@ -759,23 +753,24 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         """
         st.markdown(warning_html, unsafe_allow_html=True)
 
-    client_table_rows = []
-    for c_rank, (c_name, c_h) in enumerate(client_agg.items(), 1):
-        sub_c_df = df_active[df_active["client_name"] == c_name]
-        c_w_cnt = sub_c_df["worker_name"].nunique()
-        c_cnt = len(sub_c_df)
-        c_share = round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0
-        main_tasks = ", ".join(sub_c_df["task_description"].dropna().unique()[:2])
+    # 🏢 고객사별 단일 GroupBy 사전 집계 (O(N) 1회 처리)
+    client_grp = df_active.groupby("client_name")
+    c_w_counts = client_grp["worker_name"].nunique().to_dict()
+    c_counts = client_grp.size().to_dict()
+    c_tasks = client_grp["task_description"].agg(lambda s: ", ".join(s.dropna().unique()[:2])).to_dict()
 
-        client_table_rows.append({
+    client_table_rows = [
+        {
             "순위": f"{c_rank}위",
             "고객사명": c_name,
-            "투입 인원": f"{c_w_cnt}명",
-            "작업 건수": f"{c_cnt}건",
+            "투입 인원": f"{c_w_counts.get(c_name, 0)}명",
+            "작업 건수": f"{c_counts.get(c_name, 0)}건",
             "총 투입공수": f"{round(c_h, 1)}h",
-            "공수 비중": f"{c_share}%",
-            "주요 지원 작업": main_tasks
-        })
+            "공수 비중": f"{round((c_h / tot_hours) * 100, 1) if tot_hours > 0 else 0}%",
+            "주요 지원 작업": c_tasks.get(c_name, "")
+        }
+        for c_rank, (c_name, c_h) in enumerate(client_agg.items(), 1)
+    ]
 
     if client_table_rows:
         st.dataframe(pd.DataFrame(client_table_rows), use_container_width=True, hide_index=True)
@@ -784,31 +779,36 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     st.divider()
 
     # =========================================================================
-    # 4. 👥 전체 팀원별 공수 투입 현황 (구 5번에서 위치 이동 & 전체 팀원 표출)
+    # 4. 👥 전체 팀원별 공수 투입 현황 (단일 GroupBy 사전 집계 최적화)
     # =========================================================================
     st.markdown("#### 👥 4. 전체 팀원별 공수 투입 현황")
     if not df_active.empty:
         worker_agg = df_active.groupby("worker_name")["actual_hours"].sum().sort_values(ascending=False)
-        all_worker_rows = []
-        for rank, (w_name, w_hours) in enumerate(worker_agg.items(), 1):
-            w_sub = df_active[df_active["worker_name"] == w_name]
-            w_team = w_sub["worker_team"].iloc[0] if "worker_team" in w_sub.columns and pd.notna(w_sub["worker_team"].iloc[0]) else team_mappings.get(w_name, UNASSIGNED_TEAM)
-            w_title = w_sub["worker_title"].iloc[0] if "worker_title" in w_sub.columns and pd.notna(w_sub["worker_title"].iloc[0]) else ""
-            w_cnt = len(w_sub)
-            
-            # 주요 고객사 Top 2
-            top_c = w_sub.groupby("client_name")["actual_hours"].sum().sort_values(ascending=False).head(2)
-            top_c_str = ", ".join([f"{cn}({round(ch,1)}h)" for cn, ch in top_c.items()]) if not top_c.empty else "-"
-            
-            all_worker_rows.append({
+        worker_grp = df_active.groupby("worker_name")
+        w_counts = worker_grp.size().to_dict()
+        w_first_teams = worker_grp["worker_team"].first().to_dict() if "worker_team" in df_active.columns else {}
+        w_first_titles = worker_grp["worker_title"].first().to_dict() if "worker_title" in df_active.columns else {}
+        
+        # 작업자별 고객사 Top2 단일 집계
+        wc_agg = df_active.groupby(["worker_name", "client_name"])["actual_hours"].sum().reset_index()
+        wc_agg = wc_agg.sort_values(by=["worker_name", "actual_hours"], ascending=[True, False])
+        top_c_by_worker = {}
+        for w_name, grp in wc_agg.groupby("worker_name"):
+            top2 = grp.head(2)
+            top_c_by_worker[w_name] = ", ".join([f"{r['client_name']}({round(r['actual_hours'],1)}h)" for _, r in top2.iterrows()])
+
+        all_worker_rows = [
+            {
                 "순위": f"{rank}위",
                 "팀원명": w_name,
-                "소속팀": w_team,
-                "직급": w_title,
-                "작업 건수": f"{w_cnt:,}건",
+                "소속팀": w_first_teams.get(w_name) or team_mappings.get(w_name, UNASSIGNED_TEAM),
+                "직급": w_first_titles.get(w_name, ""),
+                "작업 건수": f"{w_counts.get(w_name, 0):,}건",
                 "총 투입공수": f"{round(w_hours, 1)}h",
-                "주요 지원 고객사": top_c_str
-            })
+                "주요 지원 고객사": top_c_by_worker.get(w_name, "-")
+            }
+            for rank, (w_name, w_hours) in enumerate(worker_agg.items(), 1)
+        ]
         if all_worker_rows:
             st.dataframe(pd.DataFrame(all_worker_rows), use_container_width=True, hide_index=True)
 

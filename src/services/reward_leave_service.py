@@ -13,15 +13,19 @@ class RewardLeaveService:
     _cache_time: float = 0.0
     CACHE_TTL: float = 60.0  # 60초 유효시간 (데이터 변경 시 즉시 무효화)
 
+    _table_initialized: bool = False
+
     @classmethod
     def clear_cache(cls):
         """인메모리 캐시 초기화 (보상 휴가 등록/수정/삭제 시 즉시 호출)"""
         cls._reward_leaves_cache = None
         cls._cache_time = 0.0
 
-    @staticmethod
-    def init_table():
-        """로컬 SQLite에 reward_leave_logs 테이블 생성"""
+    @classmethod
+    def init_table(cls):
+        """로컬 SQLite에 reward_leave_logs 테이블 생성 (1회만 실행 가드)"""
+        if cls._table_initialized:
+            return
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("""
@@ -36,6 +40,7 @@ class RewardLeaveService:
         """)
         conn.commit()
         conn.close()
+        cls._table_initialized = True
 
     @classmethod
     def get_all_reward_leaves(cls) -> Dict[tuple, dict]:

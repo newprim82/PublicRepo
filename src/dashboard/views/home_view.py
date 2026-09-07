@@ -28,9 +28,8 @@ from ..common.ui_helpers import (
     LIVE_PROGRESS_ANIMATION_AND_TIMER
 )
 
-@st.fragment(run_every="60s")
-def render_single_team_pending_cards_fragment(pend_df: pd.DataFrame, title_mappings: dict):
-    """🏢 단일 팀 진행 중인 작업 카드 전용 1분 무깜빡임 자동 갱신 프래그먼트"""
+def _render_single_team_pending_cards(pend_df: pd.DataFrame, title_mappings: dict):
+    """🏢 단일 팀 진행 중인 작업 카드 렌더링"""
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_pend = pend_df.copy()
     t_pend["_rank_score"] = t_pend.apply(
@@ -46,9 +45,8 @@ def render_single_team_pending_cards_fragment(pend_df: pd.DataFrame, title_mappi
             st.markdown(card_html, unsafe_allow_html=True)
 
 
-@st.fragment(run_every="60s")
-def render_kanban_pending_cards_fragment(t_pend: pd.DataFrame, title_mappings: dict):
-    """🏛️ 전체 팀 칸반 열 진행 중인 작업 카드 전용 1분 무깜빡임 자동 갱신 프래그먼트"""
+def _render_kanban_pending_cards(t_pend: pd.DataFrame, title_mappings: dict):
+    """🏛️ 전체 팀 칸반 열 진행 중인 작업 카드 렌더링"""
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_pend_sorted = t_pend.copy()
     t_pend_sorted["_rank_score"] = t_pend_sorted.apply(
@@ -62,32 +60,56 @@ def render_kanban_pending_cards_fragment(t_pend: pd.DataFrame, title_mappings: d
         st.markdown(card_html, unsafe_allow_html=True)
 
 
+@st.fragment(run_every="60s")
+def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str):
+    """⏳ 진행 중인 작업 섹션 전용 단일 1분 자동 갱신 프래그먼트 (다중 타이머 통합)"""
+    st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">⏳ 실시간 진행 중인 작업 <span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
+    if pend_df.empty:
+        st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
+        return
+
+    st.markdown(LIVE_PROGRESS_ANIMATION_AND_TIMER, unsafe_allow_html=True)
+
+    if selected_team == "전체 팀":
+        base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
+        teams_to_render = list(base_teams)
+        for extra_t in pend_df["worker_team"].unique():
+            if extra_t and not any(is_same_team(extra_t, bt) for bt in teams_to_render):
+                teams_to_render.append(extra_t)
+
+        title_mappings = TeamService.get_title_mappings()
+        team_cols = st.columns(len(teams_to_render))
+
+        for c_idx, t_name in enumerate(teams_to_render):
+            with team_cols[c_idx]:
+                theme = get_team_theme(t_name)
+                t_pend = pend_df[pend_df["worker_team"].apply(lambda t: is_same_team(t, t_name))]
+                cnt_str = f"🟢 {len(t_pend)}건 진행" if len(t_pend) > 0 else "0건"
+                cnt_bg = "#d1e7dd" if len(t_pend) > 0 else "#f1f5f9"
+                cnt_color = "#0f5132" if len(t_pend) > 0 else "#64748b"
+                cnt_border = "#a3cfbb" if len(t_pend) > 0 else "#cbd5e1"
+
+                st.markdown(f"""<div style="background: {theme['bg_gradient']}; border: 1.5px solid {theme['border']}; border-top: 4px solid {theme['primary']}; border-radius: 8px; padding: 10px 8px; margin-bottom: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 5px;"><span style="font-size: 17px;">{theme['icon']}</span><span style="font-size: 15px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{t_name}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 800;">{theme['tag']}</span></div><div><span style="background-color: {cnt_bg}; color: {cnt_color}; border: 1px solid {cnt_border}; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">{cnt_str}</span></div></div>""", unsafe_allow_html=True)
+
+                if t_pend.empty:
+                    st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 26px 8px; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 10px;'>진행 작업 없음</div>", unsafe_allow_html=True)
+                else:
+                    _render_kanban_pending_cards(t_pend, title_mappings)
+    else:
+        title_mappings = TeamService.get_title_mappings()
+        theme = get_team_theme(selected_team)
+        with st.container(border=True):
+            st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(pend_df)}건 진행 중</span></div>""", unsafe_allow_html=True)
+            _render_single_team_pending_cards(pend_df, title_mappings)
+
+
 @st.fragment
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     # 팀명 공백 무관 안전 비교 헬퍼 (예: "기술1팀" == "기술 1팀")
     def is_same_team(t1, t2):
         return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
 
-    # 1분 주기 자동 실행 시 최신 DB(카카오톡 수집 데이터) 동기화 시도 및 팀 매핑 보장
-    try:
-        latest_df = db_manager.fetch_all_work_logs()
-        if latest_df is not None and not latest_df.empty:
-            if "start_time" in latest_df.columns:
-                latest_df["start_time"] = pd.to_datetime(latest_df["start_time"], errors="coerce")
-            if "end_time" in latest_df.columns:
-                latest_df["end_time"] = pd.to_datetime(latest_df["end_time"], errors="coerce")
-            if "estimated_minutes" in latest_df.columns and "estimated_hours" not in latest_df.columns:
-                latest_df["estimated_hours"] = (latest_df["estimated_minutes"] / 60.0).round(1)
-            if "actual_minutes" in latest_df.columns and "actual_hours" not in latest_df.columns:
-                latest_df["actual_hours"] = (latest_df["actual_minutes"] / 60.0).round(1)
-            if team_mappings:
-                latest_df["worker_team"] = latest_df["worker_name"].map(team_mappings).fillna(latest_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
-            title_mappings = TeamService.get_title_mappings()
-            if title_mappings:
-                latest_df["worker_title"] = latest_df["worker_name"].map(title_mappings).fillna(latest_df.get("worker_title", ""))
-            df_raw = latest_df
-    except Exception:
-        pass
+    # 상위 app.py에서 캐시 전처리된 df_raw 활용 (렌더 경로 블로킹 DB 직접 쿼리 제거)
 
     # 전달된 df_raw의 worker_team 매핑 안전 보장
     if team_mappings and "worker_name" in df_raw.columns:
@@ -177,48 +199,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     with st.container(border=True):
         st.markdown('<span class="live-board-main-container" style="display:none;"></span>', unsafe_allow_html=True)
 
-        # 4. 실시간 진행 중(PENDING) 작업 섹션 (팀 단위 그룹 렌더링)
-        st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">⏳ 실시간 진행 중인 작업 <span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
-        if pend_df.empty:
-            st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
-        else:
-            # 💡 1분 주기 무깜빡임 타이머 스크립트 및 프로그레스 바 스트라이프 애니메이션 주입
-            st.markdown(LIVE_PROGRESS_ANIMATION_AND_TIMER, unsafe_allow_html=True)
-
-            if selected_team == "전체 팀":
-                # 🏛️ 전체 팀 기준: 5개 팀 세로 열 (칸반 보드) 레이아웃
-                base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
-                teams_to_render = list(base_teams)
-                for extra_t in pend_df["worker_team"].unique():
-                    if extra_t and not any(is_same_team(extra_t, bt) for bt in teams_to_render):
-                        teams_to_render.append(extra_t)
-
-                title_mappings = TeamService.get_title_mappings()
-                team_cols = st.columns(len(teams_to_render))
-
-                for c_idx, t_name in enumerate(teams_to_render):
-                    with team_cols[c_idx]:
-                        theme = get_team_theme(t_name)
-                        t_pend = pend_df[pend_df["worker_team"].apply(lambda t: is_same_team(t, t_name))]
-                        cnt_str = f"🟢 {len(t_pend)}건 진행" if len(t_pend) > 0 else "0건"
-                        cnt_bg = "#d1e7dd" if len(t_pend) > 0 else "#f1f5f9"
-                        cnt_color = "#0f5132" if len(t_pend) > 0 else "#64748b"
-                        cnt_border = "#a3cfbb" if len(t_pend) > 0 else "#cbd5e1"
-
-                        st.markdown(f"""<div style="background: {theme['bg_gradient']}; border: 1.5px solid {theme['border']}; border-top: 4px solid {theme['primary']}; border-radius: 8px; padding: 10px 8px; margin-bottom: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 5px;"><span style="font-size: 17px;">{theme['icon']}</span><span style="font-size: 15px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{t_name}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 800;">{theme['tag']}</span></div><div><span style="background-color: {cnt_bg}; color: {cnt_color}; border: 1px solid {cnt_border}; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">{cnt_str}</span></div></div>""", unsafe_allow_html=True)
-
-                        if t_pend.empty:
-                            st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 26px 8px; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 10px;'>진행 작업 없음</div>", unsafe_allow_html=True)
-                        else:
-                            render_kanban_pending_cards_fragment(t_pend, title_mappings)
-            else:
-                # 🏢 단일 팀 선택 시: 기존 4열 그리드 레이아웃
-                title_mappings = TeamService.get_title_mappings()
-                theme = get_team_theme(selected_team)
-                with st.container(border=True):
-                    st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(pend_df)}건 진행 중</span></div>""", unsafe_allow_html=True)
-
-                    render_single_team_pending_cards_fragment(pend_df, title_mappings)
+        # 4. 실시간 진행 중(PENDING) 작업 섹션 (단일 통합 1분 자동 갱신)
+        render_live_pending_section(pend_df, selected_team)
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 5. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)

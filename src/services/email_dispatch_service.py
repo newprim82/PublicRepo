@@ -14,9 +14,13 @@ class EmailDispatchService:
     - 로컬 SQLite (email_dispatch_logs) + Supabase 클라우드 (worktime_email_dispatch_logs) 하이브리드 지원
     """
 
-    @staticmethod
-    def init_table():
-        """로컬 SQLite에 email_dispatch_logs 테이블 생성 및 인덱스 초기화"""
+    _table_initialized: bool = False
+
+    @classmethod
+    def init_table(cls):
+        """로컬 SQLite 발송 로그 테이블 생성 및 인덱스 초기화 (1회만 실행 가드)"""
+        if cls._table_initialized:
+            return
         db_path = config.LOCAL_DB_PATH
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -37,11 +41,12 @@ class EmailDispatchService:
             )
         """)
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_email_dispatch_created_at
-            ON email_dispatch_logs(created_at DESC)
+            CREATE INDEX IF NOT EXISTS idx_email_dispatch_created_id
+            ON email_dispatch_logs(created_at DESC, id DESC)
         """)
         conn.commit()
         conn.close()
+        cls._table_initialized = True
 
     @classmethod
     def record_dispatch(

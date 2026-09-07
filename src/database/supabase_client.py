@@ -75,6 +75,16 @@ class DatabaseManager:
                 created_at TEXT DEFAULT (datetime('now', 'localtime'))
             )
         """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_start_time ON work_logs(start_time DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_status ON work_logs(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_worker ON work_logs(worker_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_client ON work_logs(client_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_worker_time ON work_logs(worker_name, start_time DESC)")
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+        except Exception:
+            pass
         conn.commit()
         conn.close()
 
@@ -360,10 +370,14 @@ class DatabaseManager:
         return self._process_dataframe(df)
 
     def _sync_to_local_sqlite(self, df: pd.DataFrame):
-        """Supabase에서 조회한 최신 데이터를 로컬 SQLite에 안전하게 동기화"""
+        """Supabase에서 조회한 최신 데이터를 로컬 SQLite에 고속 일괄 동기화 (executemany 최적화)"""
+        if df.empty:
+            return
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cursor = conn.cursor()
+            
+            batch_data = []
             for _, r in df.iterrows():
                 msg_hash = r.get("msg_hash", "")
                 if not msg_hash:
@@ -371,7 +385,21 @@ class DatabaseManager:
                 st_val = str(r.get("start_time", ""))[:16]
                 ed_raw = r.get("end_time")
                 ed_val = str(ed_raw)[:16] if pd.notna(ed_raw) and ed_raw else ""
-                cursor.execute("""
+                batch_data.append((
+                    str(msg_hash), str(r.get("log_type", "작업")), str(r.get("worker_name", "")),
+                    str(r.get("worker_title", "")), str(r.get("worker_team", "")),
+                    str(r.get("client_name", "")), str(r.get("task_description", "")),
+                    int(r.get("estimated_minutes", 0) or 0), int(r.get("actual_minutes", 0) or 0),
+                    st_val, ed_val,
+                    str(r.get("status", "COMPLETED")),
+                    1 if r.get("is_night_work") else 0,
+                    1 if r.get("is_weekend_work") else 0,
+                    str(r.get("raw_start_message", "") or ""),
+                    str(r.get("raw_end_message", "") or "")
+                ))
+                
+            if batch_data:
+                cursor.executemany("""
                     INSERT INTO work_logs (
                         msg_hash, log_type, worker_name, worker_title, worker_team,
                         client_name, task_description, estimated_minutes, actual_minutes,
@@ -384,19 +412,8 @@ class DatabaseManager:
                         status=excluded.status,
                         is_night_work=excluded.is_night_work,
                         raw_end_message=excluded.raw_end_message
-                """, (
-                    str(msg_hash), str(r.get("log_type", "작업")), str(r.get("worker_name", "")),
-                    str(r.get("worker_title", "")), str(r.get("worker_team", "")),
-                    str(r.get("client_name", "")), str(r.get("task_description", "")),
-                    int(r.get("estimated_minutes", 0) or 0), int(r.get("actual_minutes", 0) or 0),
-                    st_val, ed_val,
-                    str(r.get("status", "COMPLETED")),
-                    1 if r.get("is_night_work") else 0,
-                    1 if r.get("is_weekend_work") else 0,
-                    str(r.get("raw_start_message", "") or ""),
-                    str(r.get("raw_end_message", "") or "")
-                ))
-            conn.commit()
+                """, batch_data)
+                conn.commit()
             conn.close()
         except Exception:
             pass

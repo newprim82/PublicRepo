@@ -3,7 +3,6 @@ import streamlit as st
 import plotly.express as px
 from ...analytics.stats_service import StatsService
 
-@st.fragment
 def render_client_view(df: pd.DataFrame):
     """🏢 고객사별 지원 시간 및 공수 비중 화면"""
     st.subheader("🏢 고객사별 지원 시간 및 공수 비중")

@@ -72,13 +72,7 @@ class EmailSender:
             return False, "수신자 이메일 주소가 지정되지 않았습니다."
 
         try:
-            # 1. 최신 리포트 모듈 동적 리로드 (Streamlit 캐시 방어)
-            import importlib
-            import src.services.email_report_service as ers_mod
-            importlib.reload(ers_mod)
-            ActiveReportService = ers_mod.EmailReportService
-
-            subject, html_content, excel_bytes = ActiveReportService.generate_weekly_report(
+            subject, html_content, excel_bytes = EmailReportService.generate_weekly_report(
                 target_week_label=target_week_label,
                 selected_team=selected_team,
                 df_active_override=df_active_override,

@@ -24,9 +24,7 @@ git pull origin main
 pip install -r requirements.txt
 
 echo.
-echo [3/4] 파이썬 및 Streamlit 로컬 임시 캐시를 정리합니다...
-for /d /r . %%d in (__pycache__) do @if exist "%%d" rd /s /q "%%d" >nul 2>&1
-del /s /q *.pyc >nul 2>&1
+echo [3/4] 파이썬 네이티브 캐시 가속을 적용하여 대시보드를 구동합니다...
 
 echo.
 echo -------------------------------------------------------------------

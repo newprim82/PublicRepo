@@ -166,9 +166,6 @@ def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFram
                 show_calendar_day_dialog(dval, target_df)
 
 
-@st.fragment
-
-
 def render_trend_view(df: pd.DataFrame, df_filtered_base: pd.DataFrame, selected_months: list, available_months: list, month_desc: str):
     """📈 월별 / 주별 / 일별 지원 시간 추이 및 시계열 분석 메인 뷰"""
     st.subheader("📈 월별 / 주별 / 일별 지원 시간 추이 및 시계열 분석")
