@@ -6,6 +6,7 @@ import streamlit as st
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ..common.ui_helpers import strip_tz, format_raw_chat_display, is_same_team, get_all_teams_safe
 
+@st.fragment
 def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     """[🔍 전체 작업 스마트 검색] 다중 조건 실시간 통합 검색 탐색기 (독립 Fragment)"""
     # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입 (모든 버전의 Streamlit expander 및 input 완벽 호환)
@@ -286,9 +287,6 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     )
 
     st.dataframe(display_df, use_container_width=True, height=520)
-
-
-@st.dialog("📧 Executive Summary 메일 발송", width="medium")
 
 
 def render_search_view(df_raw: pd.DataFrame, team_mappings: dict):
