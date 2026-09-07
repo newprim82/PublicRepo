@@ -909,7 +909,7 @@ def show_email_report_dialog(selected_team: str):
     st.write("")
     
     if st.button("🚀 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
-        with st.spinner("📧 서머리 보고서 생성 및 이메일 전송 중..."):
+        with st.spinner("🤖 Gemini AI 심층 브리핑 생성 및 이메일 전송 중..."):
             import importlib
             import src.services.email_report_service as ers_module
             importlib.reload(ers_module)

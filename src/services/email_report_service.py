@@ -204,15 +204,25 @@ class EmailReportService:
         d_clients_badge = get_delta_badge(tot_clients, prev_tot_clients, is_positive_good=True)
 
         # ----------------------------------------------------
-        # 3. 📝 AI 경영 브리핑
+        # 3. 📝 AI 경영 브리핑 (어떤 메일이건간에 자동/수동 반드시 Gemini AI 심층 분석 적용)
         # ----------------------------------------------------
-        if ai_briefing_override:
-            ai_briefing = ai_briefing_override
-        else:
-            facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_period_label)
-            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=True)
+        facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_period_label)
 
-        briefing_source = ai_briefing.get("source", "📊 다차원 팩트 분석")
+        ai_briefing = None
+        # 화면에서 이미 Gemini AI로 분석 완료된 브리핑이 전달된 경우 그대로 활용
+        if ai_briefing_override and isinstance(ai_briefing_override, dict):
+            if "Gemini" in ai_briefing_override.get("source", ""):
+                ai_briefing = ai_briefing_override
+
+        # 미분석(팩트 기반 규칙 브리핑) 상태이거나 자동 배치 발송인 경우: 반드시 Gemini AI 호출 강제 실행
+        if not ai_briefing:
+            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=True, allow_ai_call=True)
+
+        # Gemini 호출 실패(API 장애) 시 팩트 기반 규칙 브리핑으로 안전 Fallback
+        if not ai_briefing:
+            ai_briefing = AIBriefingService._generate_fact_based_rule_briefing(facts)
+
+        briefing_source = ai_briefing.get("source", "✨ Gemini AI 심층 분석")
         is_gemini = "Gemini" in briefing_source
         ai_badge_text = "✨ Gemini AI 심층 컨설팅" if is_gemini else "📊 팩트 기반 규칙 브리핑"
 
