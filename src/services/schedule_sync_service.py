@@ -75,10 +75,15 @@ class ScheduleSyncService:
             ed_time = r["end_time"]
             st_dt = st_time.to_pydatetime() if hasattr(st_time, "to_pydatetime") else st_time
             ed_dt = ed_time.to_pydatetime() if hasattr(ed_time, "to_pydatetime") else ed_time
-            dur_hours = float(r.get("duration_hours") or 9.0)
+            l_type = r.get("leave_type") or "연차"
+            if "반차" in str(l_type) or "반일" in str(l_type):
+                dur_hours = 4.5
+            elif "연차" in str(l_type) or "휴가" in str(l_type):
+                dur_hours = 9.0
+            else:
+                dur_hours = float(r.get("duration_hours") or 9.0)
             w_title = team_info.get(w_name, {}).get("title", "")
             w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
-            l_type = r.get("leave_type") or "연차"
 
             # 1-A. 오늘 휴가는 상시 실시간 진행 섹션 상단 부재 현황에 100% 카드로 표출
             leave_records.append({

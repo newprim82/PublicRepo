@@ -85,14 +85,40 @@ st.set_page_config(
 
 apply_custom_styles()
 
+def clear_all_web_caches():
+    """웹 메모리 캐시, RAM 인메모리 캐시 및 서브 모듈 핫리로드(Hot-Reload) 강제 실행"""
+    # 1. Streamlit 전역 캐시 초기화
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    
+    # 2. TeamService RAM 캐시 초기화
+    try:
+        from src.services.team_service import TeamService
+        TeamService.clear_cache()
+    except Exception:
+        pass
+        
+    # 3. 파이썬 서브 모듈 강제 핫리로드 (Streamlit Cloud 메모리 캐시 파괴)
+    import importlib
+    modules_to_reload = [
+        "src.dashboard.common.ui_helpers",
+        "src.services.schedule_sync_service",
+        "src.dashboard.views.home_view",
+        "src.dashboard.views.outlook_calendar_widget",
+        "src.database.supabase_client",
+        "src.services.team_service"
+    ]
+    for mod_name in modules_to_reload:
+        if mod_name in sys.modules:
+            try:
+                importlib.reload(sys.modules[mod_name])
+            except Exception:
+                pass
+
 # 버전 변경 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
 if st.session_state.get("_applied_app_version") != APP_VERSION:
     st.session_state["_applied_app_version"] = APP_VERSION
-    st.cache_data.clear()
-
-def clear_all_web_caches():
-    """웹 메모리 캐시 및 인메모리 RAM 캐시 초기화"""
-    st.cache_data.clear()
+    clear_all_web_caches()
 
 # -------------------------------------------------------------
 # 3. 데이터 로딩 (멀티데이 분할 원본 중복제거, 정규화, 야간/주말 보장)
@@ -365,10 +391,13 @@ def main():
     # ==========================================
     with st.sidebar:
         # 🏛️ APIC 스타일 사이드바 헤더
-        st.markdown("""
-        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px; ">
-            <div style="font-size: 15px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">기술본부 관제센터</div>
-            <div style="font-size: 10px; color: #5a8a9e; margin-top: 2px; letter-spacing: 0.5px;">FIELD SUPPORT PORTAL</div>
+        st.markdown(f"""
+        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <div style="font-size: 15px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">기술본부 관제센터</div>
+                <div style="font-size: 10px; color: #5a8a9e; margin-top: 2px; letter-spacing: 0.5px;">FIELD SUPPORT PORTAL</div>
+            </div>
+            <span style="background: rgba(0, 180, 216, 0.2); color: #00b4d8; border: 1px solid rgba(0, 180, 216, 0.4); border-radius: 6px; padding: 2px 6px; font-size: 10px; font-weight: 800;">{APP_VERSION}</span>
         </div>
         """, unsafe_allow_html=True)
 

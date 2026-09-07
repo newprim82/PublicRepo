@@ -170,6 +170,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         if not auto_comp_df.empty:
             comp_df = pd.concat([comp_df, auto_comp_df], ignore_index=True)
     except Exception as e_sync:
+        print(f"[라이브 일정 동기화 예외]: {e_sync}")
         leave_records = []
 
     # 팀 필터링 재적용 (아웃룩 승격 작업 포함)
