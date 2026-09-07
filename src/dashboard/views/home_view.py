@@ -438,6 +438,7 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
         for _, r in wk_user_agg.iterrows():
             w_name = r["worker_name"]
             w_lbl = r["week_label"]
+            val = round(r["actual_hours"], 1)
             short_w = w_lbl.split(" ")[-2] if " " in w_lbl else w_lbl
             if val >= 40.0:
                 item = {
