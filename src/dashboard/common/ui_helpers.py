@@ -406,6 +406,7 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     time_badge_padding = "2px 8px" if is_single_view else "1.5px 6px"
 
     elapsed_html = f"⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}" if is_single_view else f"⏱️ 경과 {elapsed_hours}h ({elapsed_mins}분) {'⚠️' if is_overtime else ''}"
+    elapsed_color = "#dc2626; font-weight:700;" if is_overtime else "#0f5132;"
     is_leave = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
     clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
 
