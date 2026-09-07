@@ -273,12 +273,12 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
 
                                 if is_l:
-                                    source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">🏖️ 휴가</span>'
+                                    source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">🏖️ 휴가</span>'
                                     clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
                                 elif is_out:
-                                    source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">📅 아웃룩</span>'
+                                    source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">📅 아웃룩</span>'
                                 else:
-                                    source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">💬 카톡</span>'
+                                    source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">K</span>'
 
                                 disp_h = r.get("display_hours")
                                 act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
@@ -327,12 +327,12 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
 
                             if is_l:
-                                source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">🏖️ 휴가</span>'
+                                source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">🏖️ 휴가</span>'
                                 clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
                             elif is_out:
-                                source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">📅 아웃룩</span>'
+                                source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">📅 아웃룩</span>'
                             else:
-                                source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">💬 카톡</span>'
+                                source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">K</span>'
 
                             disp_h = r.get("display_hours")
                             act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
