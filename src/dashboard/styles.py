@@ -178,6 +178,98 @@ def apply_custom_styles():
             color: #FFFFFF !important;
         }
 
+        /* 📊 [과중근무 배너 전용] 프로그레스 바 타입 버튼 스타일링 */
+        /* 1) 🚨 [52h 초과] 레드 프로그레스 바 */
+        div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.danger-chip-zone) button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"] {
+            background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%) !important;
+            background-color: #dc2626 !important;
+            border: 1px solid #b91c1c !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 8px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(220, 38, 38, 0.25) !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"]:hover {
+            background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%) !important;
+            border-color: #991b1b !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(220, 38, 38, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 2) ⚠️ [40h 초과] 주황색 프로그레스 바 */
+        div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="secondary"],
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div.stButton > button:not([kind="primary"]) {
+            background: linear-gradient(90deg, #ea580c 0%, #f97316 100%) !important;
+            background-color: #ea580c !important;
+            border: 1px solid #c2410c !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 8px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(234, 88, 12, 0.25) !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button:hover {
+            background: linear-gradient(90deg, #c2410c 0%, #ea580c 100%) !important;
+            border-color: #9a3412 !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(234, 88, 12, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 3) ✅ [보상 완료] 초록색 프로그레스 바 */
+        div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button {
+            background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%) !important;
+            background-color: #16a34a !important;
+            border: 1px solid #15803d !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 8px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(22, 163, 74, 0.25) !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover {
+            background: linear-gradient(90deg, #15803d 0%, #16a34a 100%) !important;
+            border-color: #166534 !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(22, 163, 74, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 4) 📝 프로그레스 바 내부 볼드 화이트 텍스트 + 입체 텍스트 그림자 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button *,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button p,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button span,
+        div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button *,
+        div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button *,
+        div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button * {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 11.5px !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+            letter-spacing: -0.3px !important;
+            white-space: nowrap !important;
+        }
+
+
         /* ⚠️ Streamlit 알림창 (st.warning, st.info, st.success, st.error) 고대비 가독성 보장 (흰색 글씨 원천 방지) */
         div[data-testid="stAlert"] {
             border-radius: 8px !important;

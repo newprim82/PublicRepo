@@ -383,88 +383,107 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
 
         if danger_items or caution_items or rewarded_items:
             with st.container(border=True):
-                # 배너 내부 버튼/칩 글자 가독성 (52h: 빨간색, 40h: 주황색, 보상완료: 초록색 배경)
+                # 🏷️ 과중근무 배너 전용 마커
+                st.markdown('<span class="overwork-banner-zone" style="display:none;"></span>', unsafe_allow_html=True)
+
+                # 📊 과중근무 알림 버튼: 실시간 카드 프로그레스 바 타입 스타일링
                 st.markdown("""
                 <style>
-                    /* 🚨 주 52시간 초과 버튼 (빨간색 배경) */
-                    div.stButton > button[kind="primary"] {
-                        background-color: #dc2626 !important;
-                        border: 1.5px solid #b91c1c !important;
-                        border-radius: 6px !important;
-                        color: #ffffff !important;
-                        font-weight: 700 !important;
-                        font-size: 12px !important;
-                        padding: 4px 6px !important;
-                        box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3) !important;
-                    }
-                    div.stButton > button[kind="primary"] * {
-                        color: #ffffff !important;
-                        font-weight: 700 !important;
-                    }
-                    div.stButton > button[kind="primary"]:hover {
-                        background-color: #b91c1c !important;
-                        border-color: #991b1b !important;
-                    }
-
-                    /* ⚠️ 주 40시간 초과 버튼 (주황색 배경) */
-                    div.stButton > button[kind="secondary"],
-                    div.stButton > button {
-                        background-color: #ea580c !important;
-                        border: 1.5px solid #c2410c !important;
-                        border-radius: 6px !important;
-                        color: #ffffff !important;
-                        font-weight: 700 !important;
-                        font-size: 12px !important;
-                        padding: 4px 6px !important;
-                        box-shadow: 0 2px 5px rgba(234, 88, 12, 0.3) !important;
-                    }
-                    div.stButton > button[kind="secondary"] *,
-                    div.stButton > button * {
-                        color: #ffffff !important;
-                        font-weight: 700 !important;
-                    }
-                    div.stButton > button[kind="secondary"]:hover,
-                    div.stButton > button:hover {
-                        background-color: #c2410c !important;
-                        border-color: #9a3412 !important;
-                    }
-
-                    /* ✅ 과중근무 보상완료 버튼 (초록색 배경) */
+                    /* 불필요한 마커 컨테이너 숨김 */
+                    div.element-container:has(.overwork-banner-zone),
+                    div.element-container:has(.danger-chip-zone),
+                    div.element-container:has(.caution-chip-zone),
                     div.element-container:has(.reward-chip-zone) {
                         display: none !important;
                         height: 0px !important;
                         margin: 0px !important;
                         padding: 0px !important;
                     }
-                    div[data-testid="stColumn"]:has(.reward-chip-zone) button,
-                    div[data-testid="column"]:has(.reward-chip-zone) button {
-                        background-color: #16a34a !important;
-                        border: 1.5px solid #15803d !important;
+
+                    /* 🚨 [52h 초과] 레드 프로그레스 바 버튼 타입 */
+                    div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
+                    div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.danger-chip-zone) button,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"] {
+                        background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%) !important;
+                        background-color: #dc2626 !important;
+                        border: 1px solid #b91c1c !important;
                         border-radius: 6px !important;
-                        color: #ffffff !important;
-                        font-weight: 700 !important;
-                        font-size: 12px !important;
-                        padding: 4px 6px !important;
-                        box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3) !important;
+                        height: 30px !important;
+                        min-height: 30px !important;
+                        padding: 0 8px !important;
+                        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(220, 38, 38, 0.25) !important;
+                        cursor: pointer !important;
+                        transition: all 0.15s ease-in-out !important;
                     }
-                    div[data-testid="stColumn"]:has(.reward-chip-zone) button *,
-                    div[data-testid="column"]:has(.reward-chip-zone) button * {
-                        color: #ffffff !important;
-                        font-weight: 700 !important;
-                    }
-                    div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover,
-                    div[data-testid="column"]:has(.reward-chip-zone) button:hover {
-                        background-color: #15803d !important;
-                        border-color: #166534 !important;
+                    div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
+                    div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"]:hover {
+                        background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%) !important;
+                        border-color: #991b1b !important;
+                        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(220, 38, 38, 0.45) !important;
+                        transform: translateY(-1px) !important;
                     }
 
-                    /* 텍스트 줄바꿈 방지 및 가독성 최적화 */
-                    div.stButton > button {
-                        white-space: nowrap !important;
+                    /* ⚠️ [40h 초과] 주황색 프로그레스 바 버튼 타입 */
+                    div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
+                    div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="secondary"],
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div.stButton > button:not([kind="primary"]) {
+                        background: linear-gradient(90deg, #ea580c 0%, #f97316 100%) !important;
+                        background-color: #ea580c !important;
+                        border: 1px solid #c2410c !important;
+                        border-radius: 6px !important;
+                        height: 30px !important;
+                        min-height: 30px !important;
+                        padding: 0 8px !important;
+                        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(234, 88, 12, 0.25) !important;
+                        cursor: pointer !important;
+                        transition: all 0.15s ease-in-out !important;
                     }
-                    div.stButton > button *,
-                    div.stButton > button p,
-                    div.stButton > button span {
+                    div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
+                    div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button:hover {
+                        background: linear-gradient(90deg, #c2410c 0%, #ea580c 100%) !important;
+                        border-color: #9a3412 !important;
+                        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(234, 88, 12, 0.45) !important;
+                        transform: translateY(-1px) !important;
+                    }
+
+                    /* ✅ [보상 완료] 초록색 프로그레스 바 버튼 타입 */
+                    div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
+                    div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button {
+                        background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%) !important;
+                        background-color: #16a34a !important;
+                        border: 1px solid #15803d !important;
+                        border-radius: 6px !important;
+                        height: 30px !important;
+                        min-height: 30px !important;
+                        padding: 0 8px !important;
+                        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(22, 163, 74, 0.25) !important;
+                        cursor: pointer !important;
+                        transition: all 0.15s ease-in-out !important;
+                    }
+                    div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
+                    div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover {
+                        background: linear-gradient(90deg, #15803d 0%, #16a34a 100%) !important;
+                        border-color: #166534 !important;
+                        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(22, 163, 74, 0.45) !important;
+                        transform: translateY(-1px) !important;
+                    }
+
+                    /* 📝 프로그레스 바 내부 볼드 화이트 텍스트 + 입체 텍스트 그림자 */
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button *,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button p,
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button span {
+                        color: #ffffff !important;
+                        font-weight: 700 !important;
+                        font-size: 11.5px !important;
+                        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+                        letter-spacing: -0.3px !important;
                         white-space: nowrap !important;
                     }
                 </style>
@@ -477,18 +496,20 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
 
                 st.markdown("<div style='margin-top: 6px; margin-bottom: 10px; border-top: 1px solid #fecaca;'></div>", unsafe_allow_html=True)
                 
-                # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 빨간색 배경, 5개씩 넉넉하게 줄바꿈)
+                # 2행: 🚨 주 52h 초과 위험 팀원들 (있을 경우 - 레드 프로그레스 바)
                 if danger_items:
                     col_d_lbl, col_d_chips = st.columns([1.4, 8.6])
                     with col_d_lbl:
                         st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#dc2626;'>🚨 주 52h 초과 ({len(danger_items)}건):</div>", unsafe_allow_html=True)
                     with col_d_chips:
+                        st.markdown('<span class="danger-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
                         chunk_size = 5
                         for i in range(0, len(danger_items), chunk_size):
                             chunk = danger_items[i:i + chunk_size]
                             d_cols = st.columns(chunk_size)
                             for c_idx, d_item in enumerate(chunk):
                                 with d_cols[c_idx]:
+                                    st.markdown('<span class="danger-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
                                     if st.button(
                                         f"🚨 {d_item['worker_name']}({d_item['short_w']}:{d_item['val']}h)",
                                         key=f"btn_chip_danger_{d_item['worker_name']}_{d_item['week_label']}",
@@ -497,18 +518,20 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                                     ):
                                         show_weekly_detail_dialog(d_item["worker_name"], ov_df, default_week_name=d_item["week_label"])
 
-                # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 주황색 배경, 5개씩 넉넉하게 줄바꿈)
+                # 3행: ⚠️ 주 40h 초과 주의 팀원들 (있을 경우 - 오렌지 프로그레스 바)
                 if caution_items:
                     col_c_lbl, col_c_chips = st.columns([1.4, 8.6])
                     with col_c_lbl:
                         st.markdown(f"<div style='padding-top:6px; font-size:13px; font-weight:800; color:#d97706;'>⚠️ 주 40h 초과 ({len(caution_items)}건):</div>", unsafe_allow_html=True)
                     with col_c_chips:
+                        st.markdown('<span class="caution-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
                         chunk_size = 5
                         for i in range(0, len(caution_items), chunk_size):
                             chunk = caution_items[i:i + chunk_size]
                             c_cols = st.columns(chunk_size)
                             for c_idx, c_item in enumerate(chunk):
                                 with c_cols[c_idx]:
+                                    st.markdown('<span class="caution-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
                                     if st.button(
                                         f"⚠️ {c_item['worker_name']}({c_item['short_w']}:{c_item['val']}h)",
                                         key=f"btn_chip_caution_{c_item['worker_name']}_{c_item['week_label']}",
@@ -517,7 +540,7 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                                     ):
                                         show_weekly_detail_dialog(c_item["worker_name"], ov_df, default_week_name=c_item["week_label"])
 
-                # 4행: ✅ 과중근무 보상완료 팀원들 (있을 경우 - 초록색 배경, 5개씩 넉넉하게 줄바꿈)
+                # 4행: ✅ 과중근무 보상완료 팀원들 (있을 경우 - 그린 프로그레스 바)
                 if rewarded_items:
                     col_r_lbl, col_r_chips = st.columns([1.4, 8.6])
                     with col_r_lbl:
@@ -530,6 +553,7 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                             r_cols = st.columns(chunk_size)
                             for c_idx, r_item in enumerate(chunk):
                                 with r_cols[c_idx]:
+                                    st.markdown('<span class="reward-chip-zone" style="display:none;"></span>', unsafe_allow_html=True)
                                     if st.button(
                                         f"✅ {r_item['worker_name']}({r_item['short_w']}:{r_item['val']}h)",
                                         key=f"btn_chip_reward_{r_item['worker_name']}_{r_item['week_label']}",
