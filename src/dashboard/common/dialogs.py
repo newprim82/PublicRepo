@@ -9,6 +9,9 @@ from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, stri
 from ...services.email_report_service import EmailReportService
 from ...services.email_sender import EmailSender
 from ...services.team_service import TeamService
+from ...services.reward_leave_service import RewardLeaveService
+from ...analytics.stats_service import StatsService
+
 
 def render_chat_messages_expander(target_df: pd.DataFrame, max_display: int = 20, title_prefix: str = "전체 작업"):
     """모달 내 카카오톡 원본 메시지를 상위 N건으로 제한 렌더링하여 DOM 폭발 및 브라우저 프리징 방지"""
