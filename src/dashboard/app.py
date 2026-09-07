@@ -403,19 +403,16 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        # 🏛️ APIC 스타일 사이드바 헤더
-        st.markdown(f"""
-        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <div style="font-size: 15px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">기술본부 관제센터</div>
-                <div style="font-size: 10px; color: #5a8a9e; margin-top: 2px; letter-spacing: 0.5px;">FIELD SUPPORT PORTAL</div>
-            </div>
-            <span style="background: rgba(0, 180, 216, 0.2); color: #00b4d8; border: 1px solid rgba(0, 180, 216, 0.4); border-radius: 6px; padding: 2px 6px; font-size: 10px; font-weight: 800;">{APP_VERSION}</span>
+        # 🏛️ APIC 스타일 사이드바 헤더 (버전 표기 제거)
+        st.markdown("""
+        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px;">
+            <div style="font-size: 15px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">기술본부 관제센터</div>
+            <div style="font-size: 10px; color: #5a8a9e; margin-top: 2px; letter-spacing: 0.5px;">FIELD SUPPORT PORTAL</div>
         </div>
         """, unsafe_allow_html=True)
 
-        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (위아래 30px 간격, on_click 콜백으로 0.1초 즉시 전환)
-        st.markdown('<div style="height: 30px;"></div><span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
+        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (위아래 간격, on_click 콜백으로 0.1초 즉시 전환)
+        st.markdown('<div style="height: 25px;"></div><span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
         is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
         st.button(
             "🏠 실시간 분석 대시보드",
@@ -425,10 +422,6 @@ def main():
             on_click=set_nav_page,
             args=("🏠 실시간 분석 대시보드",)
         )
-        if st.button("🔄 최신 데이터 즉시 동기화", key="btn_quick_cache_sync", use_container_width=True, help="클릭 시 웹 캐시를 즉시 초기화하고 최신 DB 데이터를 다시 불러옵니다."):
-            clear_all_web_caches()
-            st.toast("🧹 최신 DB 데이터 및 일정을 즉시 동기화했습니다!", icon="✅")
-            st.rerun()
         st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True)
 
         is_auth = AuthManager.is_authenticated()
