@@ -10,6 +10,8 @@ try:
 except ImportError:
     fetch_outlook_schedules = None
 from src.services.team_service import TeamService
+from src.dashboard.common.ui_helpers import get_current_kst_time
+
 
 # 팀원별 아웃룩 고유 색상 매핑 (한눈에 구별되는 고대비 7색 스펙트럼)
 OUTLOOK_MEMBER_COLORS = {
@@ -161,11 +163,14 @@ def render_outlook_calendar_widget():
     </style>
     """, unsafe_allow_html=True)
 
-    # 2. 날짜 상태 관리 (세션 스테이트)
+    # 2. 날짜 상태 관리 (한국 표준시 KST 기준 동적 감지)
+    kst_now = get_current_kst_time()
+    today_dt = kst_now.date()
+
     if "outlook_cal_year" not in st.session_state:
-        st.session_state["outlook_cal_year"] = 2026
+        st.session_state["outlook_cal_year"] = today_dt.year
     if "outlook_cal_month" not in st.session_state:
-        st.session_state["outlook_cal_month"] = 9
+        st.session_state["outlook_cal_month"] = today_dt.month
     if "outlook_cal_filter_worker" not in st.session_state:
         st.session_state["outlook_cal_filter_worker"] = "전체 팀원"
 
@@ -209,8 +214,8 @@ def render_outlook_calendar_widget():
         c1, c2, c3, c4 = st.columns([1, 0.6, 0.6, 2])
         with c1:
             if st.button("오늘", key="btn_out_today", use_container_width=True):
-                st.session_state["outlook_cal_year"] = 2026
-                st.session_state["outlook_cal_month"] = 9
+                st.session_state["outlook_cal_year"] = today_dt.year
+                st.session_state["outlook_cal_month"] = today_dt.month
                 st.rerun()
         with c2:
             if st.button("◀", key="btn_out_prev", use_container_width=True):
@@ -240,7 +245,6 @@ def render_outlook_calendar_widget():
             st.rerun()
 
     # 5. 달력 그리드 계산
-    today_dt = date(2026, 9, 7) # 대시보드 기준일
     first_day_of_month = date(y, m, 1)
     # 일요일 시작 (weekday: 월=0 -> 일=6 이므로, (weekday + 1) % 7)
     start_offset = (first_day_of_month.weekday() + 1) % 7
