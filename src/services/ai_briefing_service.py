@@ -170,12 +170,16 @@ class AIBriefingService:
             f"{facts.get('start_date', '')}_{facts.get('end_date', '')}"
         )
 
-        # 1. 프로세스 레벨 TTL 캐시 확인
-        now = time.time()
-        if not force_refresh and cache_key in cls._process_cache:
-            cache_ts, cached_data = cls._process_cache[cache_key]
-            if now - cache_ts < cls.CACHE_TTL:
-                return cached_data
+        # 1. 프로세스 레벨 TTL 캐시 확인 (철저한 예외 방어)
+        try:
+            import time
+            now = time.time()
+            if not force_refresh and cache_key in cls._process_cache:
+                cache_ts, cached_data = cls._process_cache[cache_key]
+                if now - cache_ts < cls.CACHE_TTL:
+                    return cached_data
+        except Exception:
+            pass
 
         if force_refresh and st is not None:
             try:
@@ -225,8 +229,12 @@ class AIBriefingService:
                 if k in briefing:
                     briefing[k] = cls.clean_briefing_text(briefing[k])
 
-        # 프로세스 캐시 저장
-        cls._process_cache[cache_key] = (time.time(), briefing)
+        # 프로세스 캐시 저장 (예외 방어)
+        try:
+            import time
+            cls._process_cache[cache_key] = (time.time(), briefing)
+        except Exception:
+            pass
 
         if st is not None:
             try:

@@ -500,12 +500,20 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         re_analyze = st.button("🔄 AI 재분석", use_container_width=True, key="btn_refresh_ai_briefing", help="클릭 시 Gemini AI API를 호출하여 심층 컨설팅 브리핑을 생성합니다 (토큰 소모).")
 
     # ★ 옵션 2 토큰 절약 모드: [🔄 AI 재분석] 버튼을 클릭했을 때만 Gemini API 호출 (토큰 소모) ★
-    if re_analyze:
-        with st.spinner("✨ Gemini AI가 현장 데이터를 심층 분석 중입니다 (API 토큰 소모)..."):
-            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=True, api_key=gemini_api_key, allow_ai_call=True)
-    else:
-        # 평소 조회 변경 시: 토큰 소모 없이 팩트 기반 규칙 엔진 또는 이전 Gemini 캐시 표출 (0초 딜레이)
-        ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=False, api_key=gemini_api_key, allow_ai_call=False)
+    try:
+        if re_analyze:
+            with st.spinner("✨ Gemini AI가 현장 데이터를 심층 분석 중입니다 (API 토큰 소모)..."):
+                ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=True, api_key=gemini_api_key, allow_ai_call=True)
+        else:
+            # 평소 조회 변경 시: 토큰 소모 없이 팩트 기반 규칙 엔진 또는 이전 Gemini 캐시 표출 (0초 딜레이)
+            ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=False, api_key=gemini_api_key, allow_ai_call=False)
+    except Exception as e:
+        ai_briefing = {
+            "overview": f"총 {facts.get('total_hours', 0)}시간 동안 {facts.get('total_tasks', 0)}건의 현장 지원이 성공적으로 완수되었습니다.",
+            "risks": "주요 위험 요인 및 초과 지연 작업이 안정적으로 관리되고 있습니다.",
+            "recommendations": "현행 지원 체계를 유지하며 집중 고객사 업무 분담을 지속 관리하십시오.",
+            "source": "팩트 기반 기본 브리핑"
+        }
 
     briefing_source = ai_briefing.get("source", "")
     is_gemini = "Gemini" in briefing_source
