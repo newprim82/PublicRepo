@@ -19,39 +19,13 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     # 🎨 스마트 검색 탭 전용 선명한 UI 스타일링 주입 (모든 버전의 Streamlit expander 및 input 완벽 호환)
     st.markdown("""
     <style>
-        /* 1. 상세 검색 필터 expander 헤더 (본문 stMain 영역에만 한정 격리하여 사이드바 오염 방지) */
-        div[data-testid="stMain"] [data-testid="stExpander"] details summary,
-        div[data-testid="stMain"] [data-testid="stExpander"] summary,
-        div[data-testid="stMain"] [data-testid="stExpanderSummary"],
-        div[data-testid="stMain"] .streamlit-expanderHeader,
-        div[data-testid="stMain"] div.streamlit-expanderHeader,
-        div[data-testid="stMain"] details[data-testid="stExpander"] summary {
-            background: linear-gradient(135deg, #002233 0%, #004d71 100%) !important;
-            background-color: #002d42 !important;
-            border: 1px solid #005f8a !important;
-            border-radius: 8px !important;
-            color: #ffffff !important;
-            font-weight: 800 !important;
-            padding: 10px 16px !important;
-            box-shadow: 0 2px 6px rgba(0, 34, 51, 0.15) !important;
-        }
-        div[data-testid="stMain"] [data-testid="stExpander"] details summary *,
-        div[data-testid="stMain"] [data-testid="stExpander"] summary *,
-        div[data-testid="stMain"] [data-testid="stExpanderSummary"] *,
-        div[data-testid="stMain"] .streamlit-expanderHeader *,
-        div[data-testid="stMain"] details[data-testid="stExpander"] summary * {
-            color: #ffffff !important;
-            font-weight: 800 !important;
-            font-size: 13.5px !important;
-        }
-
-        /* 2. 검색 입력 폼 (화이트 배경, 짙은 텍스트, 선명한 테두리) */
-        div[data-testid="stMain"] div[data-testid="stExpander"] input,
-        div[data-testid="stMain"] div[data-testid="stExpander"] select,
-        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="input"],
-        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="select"] > div,
-        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="base-input"],
-        div[data-testid="stMain"] div[data-testid="stExpander"] div[data-testid="stDateInput"] input {
+        /* 1. 검색 입력 폼 (화이트 배경, 짙은 텍스트, 선명한 테두리) */
+        div[data-testid="stMain"] input,
+        div[data-testid="stMain"] select,
+        div[data-testid="stMain"] [data-baseweb="input"],
+        div[data-testid="stMain"] [data-baseweb="select"] > div,
+        div[data-testid="stMain"] [data-baseweb="base-input"],
+        div[data-testid="stMain"] div[data-testid="stDateInput"] input {
             background-color: #ffffff !important;
             color: #0f172a !important;
             border: 1.5px solid #cbd5e1 !important;
@@ -59,27 +33,27 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             font-weight: 600 !important;
             font-size: 13px !important;
         }
-        div[data-testid="stMain"] div[data-testid="stExpander"] input::placeholder {
+        div[data-testid="stMain"] input::placeholder {
             color: #94a3b8 !important;
             font-weight: 500 !important;
         }
-        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="select"] span,
-        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="select"] div {
+        div[data-testid="stMain"] [data-baseweb="select"] span,
+        div[data-testid="stMain"] [data-baseweb="select"] div {
             color: #0f172a !important;
             font-weight: 600 !important;
         }
-        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="tag"] {
+        div[data-testid="stMain"] [data-baseweb="tag"] {
             background-color: #e0f2fe !important;
             color: #0369a1 !important;
             border: 1px solid #bae6fd !important;
             border-radius: 4px !important;
             font-weight: 700 !important;
         }
-        div[data-testid="stMain"] div[data-testid="stExpander"] [data-baseweb="tag"] * {
+        div[data-testid="stMain"] [data-baseweb="tag"] * {
             color: #0369a1 !important;
         }
 
-        /* 3. 다운로드 버튼 (Cisco ACI Deep Blue + 볼드 화이트 글자 상시 노출) */
+        /* 2. 다운로드 버튼 (Cisco ACI Deep Blue + 볼드 화이트 글자 상시 노출) */
         div[data-testid="stMain"] .stDownloadButton button,
         div[data-testid="stMain"] [data-testid="stDownloadButton"] button,
         div[data-testid="stMain"] button[kind="primary"],
@@ -148,34 +122,33 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     search_df["worker_team"] = search_df["worker_team"].fillna(search_df["worker_name"].map(team_mappings)).fillna(UNASSIGNED_TEAM)
 
     # 1. 다중 스마트 필터 컨트롤 패널 (라벨을 선명한 딥 네이비로 표출)
-    with st.expander("🛠️ 상세 검색 필터 설정 (여기를 클릭하여 조건 접기/펼치기)", expanded=True):
-        f_col1, f_col2, f_col3 = st.columns([2, 1.5, 1.5])
-        with f_col1:
-            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📝 통합 키워드 검색:</div>', unsafe_allow_html=True)
-            keyword = st.text_input("통합 키워드 검색", placeholder="예: 정기점검, 장애처리, DR, 하나은행, BGF...", key="smart_kw", label_visibility="collapsed")
-        with f_col2:
-            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏢 소속팀 필터:</div>', unsafe_allow_html=True)
-            team_options = ["전체 팀"] + get_all_teams_safe() + [UNASSIGNED_TEAM]
-            sel_team = st.selectbox("소속팀 필터:", options=team_options, index=0, key="smart_team", label_visibility="collapsed")
-        with f_col3:
-            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏷️ 근무/상태 유형:</div>', unsafe_allow_html=True)
-            type_options = ["전체", "⏳ 실시간 진행중", "✅ 작업 완료", "🌙 야간 근무", "🏖️ 주말 근무", "🚨 예정시간 초과"]
-            sel_type = st.selectbox("근무/상태 유형:", options=type_options, index=0, key="smart_type", label_visibility="collapsed")
+    f_col1, f_col2, f_col3 = st.columns([2, 1.5, 1.5])
+    with f_col1:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📝 통합 키워드 검색:</div>', unsafe_allow_html=True)
+        keyword = st.text_input("통합 키워드 검색", placeholder="예: 정기점검, 장애처리, DR, 하나은행, BGF...", key="smart_kw", label_visibility="collapsed")
+    with f_col2:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏢 소속팀 필터:</div>', unsafe_allow_html=True)
+        team_options = ["전체 팀"] + get_all_teams_safe() + [UNASSIGNED_TEAM]
+        sel_team = st.selectbox("소속팀 필터:", options=team_options, index=0, key="smart_team", label_visibility="collapsed")
+    with f_col3:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏷️ 근무/상태 유형:</div>', unsafe_allow_html=True)
+        type_options = ["전체", "⏳ 실시간 진행중", "✅ 작업 완료", "🌙 야간 근무", "🏖️ 주말 근무", "🚨 예정시간 초과"]
+        sel_type = st.selectbox("근무/상태 유형:", options=type_options, index=0, key="smart_type", label_visibility="collapsed")
 
-        f_col4, f_col5, f_col6 = st.columns([1.5, 1.5, 2])
-        with f_col4:
-            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏢 고객사 다중 선택:</div>', unsafe_allow_html=True)
-            all_clients = sorted([c for c in search_df["client_name"].dropna().unique() if str(c).strip()])
-            sel_clients = st.multiselect("고객사 다중 선택:", options=all_clients, placeholder="고객사 선택 (전체)", key="smart_clients", label_visibility="collapsed")
-        with f_col5:
-            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">👤 작업자 다중 선택:</div>', unsafe_allow_html=True)
-            all_workers = sorted([w for w in search_df["worker_name"].dropna().unique() if str(w).strip()])
-            sel_workers = st.multiselect("작업자 다중 선택:", options=all_workers, placeholder="작업자 선택 (전체)", key="smart_workers", label_visibility="collapsed")
-        with f_col6:
-            st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📅 작업 기간 범위:</div>', unsafe_allow_html=True)
-            min_date = search_df["start_time"].dt.date.min() if pd.notna(search_df["start_time"].min()) else datetime.now().date()
-            max_date = search_df["start_time"].dt.date.max() if pd.notna(search_df["start_time"].max()) else datetime.now().date()
-            date_range = st.date_input("작업 기간 범위:", value=(min_date, max_date), key="smart_date_range", label_visibility="collapsed")
+    f_col4, f_col5, f_col6 = st.columns([1.5, 1.5, 2])
+    with f_col4:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🏢 고객사 다중 선택:</div>', unsafe_allow_html=True)
+        all_clients = sorted([c for c in search_df["client_name"].dropna().unique() if str(c).strip()])
+        sel_clients = st.multiselect("고객사 다중 선택:", options=all_clients, placeholder="고객사 선택 (전체)", key="smart_clients", label_visibility="collapsed")
+    with f_col5:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">👤 작업자 다중 선택:</div>', unsafe_allow_html=True)
+        all_workers = sorted([w for w in search_df["worker_name"].dropna().unique() if str(w).strip()])
+        sel_workers = st.multiselect("작업자 다중 선택:", options=all_workers, placeholder="작업자 선택 (전체)", key="smart_workers", label_visibility="collapsed")
+    with f_col6:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📅 작업 기간 범위:</div>', unsafe_allow_html=True)
+        min_date = search_df["start_time"].dt.date.min() if pd.notna(search_df["start_time"].min()) else datetime.now().date()
+        max_date = search_df["start_time"].dt.date.max() if pd.notna(search_df["start_time"].max()) else datetime.now().date()
+        date_range = st.date_input("작업 기간 범위:", value=(min_date, max_date), key="smart_date_range", label_visibility="collapsed")
 
     # 2. 필터링 로직 적용
     filtered_df = search_df.copy()
