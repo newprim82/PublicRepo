@@ -31,7 +31,8 @@ from src.parser.reply_matcher import check_is_night_work, check_is_weekend_work,
 from src.collector.kakao_auto_collector import (
     start_background_collector,
     get_collector_countdown_info,
-    run_collection_cycle
+    run_collection_cycle,
+    WIN32_AVAILABLE
 )
 
 from src.dashboard.styles import apply_custom_styles, render_header_banner
@@ -633,8 +634,18 @@ def main():
                             time.sleep(1)
                             st.rerun()
                         elif res.get("status") == "window_not_found":
-                            st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
-                            st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
+                            if sys.platform != "win32" or not WIN32_AVAILABLE:
+                                st.toast("☁️ 클라우드 웹에서는 로컬 PC 카톡 창을 직접 긁어올 수 없습니다.", icon="ℹ️")
+                                st.info(
+                                    "ℹ️ **현재 접속하신 곳은 인터넷 클라우드 서버(worktimes.streamlit.app)입니다.**\n\n"
+                                    "클라우드 웹 서버는 보안 및 환경상 사용자 PC 화면의 카카오톡 창에 직접 접근할 수 없습니다.\n\n"
+                                    "💡 **데이터 동기화 방법**:\n"
+                                    "1. 카카오톡이 켜져 있는 로컬 PC에서 **`update_and_run.bat`** (또는 `setup_and_run.bat`)을 실행해두시면 10분마다 자동으로 최신 대화가 클라우드 DB로 전송됩니다.\n"
+                                    "2. 전송된 데이터는 아래 **`🔄 실시간 Cloud DB 새로고침`** 버튼을 누르시면 즉시 반영됩니다!"
+                                )
+                            else:
+                                st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
+                                st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
                         elif res.get("status") == "no_text":
                             st.warning("⚠️ 대화창에서 텍스트를 읽지 못했습니다. 카톡 대화방을 마우스로 한 번 클릭한 뒤 다시 눌러주세요.")
                         else:
