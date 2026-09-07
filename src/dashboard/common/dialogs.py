@@ -1,4 +1,5 @@
 import re
+import time
 from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
@@ -930,8 +931,6 @@ def show_email_report_dialog(selected_team: str):
             )
             if success:
                 st.success(send_msg)
-                time.sleep(1)
-                st.rerun()
             else:
                 st.error(send_msg)
 
