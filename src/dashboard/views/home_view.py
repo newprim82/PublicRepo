@@ -60,7 +60,6 @@ def _render_kanban_pending_cards(t_pend: pd.DataFrame, title_mappings: dict):
         st.markdown(card_html, unsafe_allow_html=True)
 
 
-@st.fragment(run_every="60s")
 def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str):
     """⏳ 진행 중인 작업 섹션 전용 단일 1분 자동 갱신 프래그먼트 (다중 타이머 통합)"""
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">⏳ 실시간 진행 중인 작업 <span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
@@ -103,7 +102,6 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str):
             _render_single_team_pending_cards(pend_df, title_mappings)
 
 
-@st.fragment
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     # 팀명 공백 무관 안전 비교 헬퍼 (예: "기술1팀" == "기술 1팀")
     def is_same_team(t1, t2):
@@ -284,7 +282,6 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             st.markdown(comp_html, unsafe_allow_html=True)
 
 
-@st.fragment
 def render_kpi_cards_fragment(kpi_df: pd.DataFrame):
     kpi = StatsService.compute_kpis(kpi_df)
     kpi_col1, kpi_col2, kpi_col3, kpi_col4, kpi_col5 = st.columns(5)
@@ -354,7 +351,6 @@ def render_kpi_cards_fragment(kpi_df: pd.DataFrame):
 
 
 
-@st.fragment
 def render_overwork_banner_fragment(ov_df: pd.DataFrame):
     if not ov_df.empty and "week_label" in ov_df.columns:
         all_rewards = RewardLeaveService.get_all_reward_leaves()
@@ -554,7 +550,6 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
 
 
 
-@st.fragment
 def render_home_view(
     df: pd.DataFrame,
     df_raw: pd.DataFrame,

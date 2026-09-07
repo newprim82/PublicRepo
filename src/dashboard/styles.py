@@ -954,7 +954,6 @@ def apply_custom_styles():
 
 
 
-@st.fragment
 def render_header_banner(initial_ms: int, page_tag: str):
     """LGU+ time.bora.net NTP 타임서버 실시간 동기화 헤더 배너 렌더링"""
     components.html(f"""

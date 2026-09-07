@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 from ...analytics.stats_service import StatsService
 from ..common.dialogs import show_week_summary_dialog, show_calendar_day_dialog
 
-@st.fragment
 def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFrame, target_months: list, selected_months: list, month_desc: str):
     """월별/주별/일별 추이 인터랙티브 차트 및 클릭 시 팝업 렌더링 (화면 전체 새로고침 없이 독립 Fragment 동작)"""
     col_t3_1, col_t3_2 = st.columns(2)

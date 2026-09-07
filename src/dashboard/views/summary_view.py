@@ -72,7 +72,6 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             """,
             unsafe_allow_html=True
         )
-        @st.fragment
         def render_email_report_button(team: str):
             if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
                 show_email_report_dialog(team)
@@ -895,7 +894,6 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
 
 
 
-@st.fragment
 def render_summary_view(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
     """📊 Summary (업무 실적 요약) 메인 뷰"""
     render_work_summary_tab(df, df_raw, selected_team, team_mappings, month_desc)

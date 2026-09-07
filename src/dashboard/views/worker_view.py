@@ -11,7 +11,6 @@ from ..common.dialogs import (
     show_weekly_detail_dialog
 )
 
-@st.fragment
 def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataFrame, chart_orientation: str, selected_view: str):
     """팀원별 업무량 랭킹 & 작업 유형 차트 (화면 전체 새로고침 없는 독립 Fragment)"""
     chart_height = max(450, len(display_summary) * 28)
@@ -182,7 +181,6 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
 
 
 
-@st.fragment
 def render_weekly_matrix_section(mat_df: pd.DataFrame):
     """주차별 팀원 투입 시간 매트릭스 표 및 클릭 시 세부 팝업 (화면 전체 새로고침 없는 독립 Fragment)"""
     if not mat_df.empty and "week_label" in mat_df.columns:

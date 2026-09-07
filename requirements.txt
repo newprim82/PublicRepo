@@ -1,5 +1,5 @@
 # Dashboard & Visualization
-streamlit>=1.32.0
+streamlit>=1.37.0
 streamlit-autorefresh>=1.0.1
 plotly>=5.19.0
 pandas>=2.2.0
@@ -8,6 +8,7 @@ openpyxl>=3.1.2
 # Configuration & Utilities
 python-dotenv>=1.0.1
 requests>=2.31.0
+pydantic>=2.6.0
 
 # Windows PC KakaoTalk Automation (Local Windows only)
 pywin32>=306; sys_platform == 'win32'

@@ -167,8 +167,8 @@ def load_data() -> pd.DataFrame:
         # 🌙 야간 및 🏖️ 주말 작업 필터링 벡터화 최적화 (후보군 대상에 대해서만 선별 계산)
         df["is_night_work"] = False
         df["is_weekend_work"] = False
-        if "start_time" in df.columns:
-            st_dt = df["start_time"]
+        if "start_time" in df.columns and not df.empty:
+            st_dt = pd.to_datetime(df["start_time"], errors="coerce")
             night_candidate_mask = (st_dt.dt.hour >= 18) | (st_dt.dt.hour < 6)
             weekend_candidate_mask = st_dt.dt.dayofweek >= 5
 
