@@ -102,8 +102,36 @@ DROP POLICY IF EXISTS "Allow all access to worktime_email_dispatch_logs" ON publ
 CREATE POLICY "Allow all access to worktime_email_dispatch_logs"
 ON public.worktime_email_dispatch_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
--- 💡 [이미 테이블을 생성한 경우: +00 타임존 접미사 제거 및 시/분/초 타입 변환]
--- ALTER TABLE public.worktime_email_dispatch_logs ALTER COLUMN created_at TYPE TIMESTAMP WITHOUT TIME ZONE USING created_at::TIMESTAMP WITHOUT TIME ZONE;
--- ALTER TABLE public.worktime_email_dispatch_logs ALTER COLUMN created_at SET DEFAULT (NOW() AT TIME ZONE 'Asia/Seoul');
+-- 5. 아웃룩 스케줄 관리 테이블 (worktime_outlook_schedules)
+CREATE TABLE IF NOT EXISTS public.worktime_outlook_schedules (
+    id BIGSERIAL PRIMARY KEY,
+    entry_id TEXT UNIQUE NOT NULL,                       -- 아웃룩 고유 항목 ID
+    worker_name VARCHAR(100) NOT NULL,                   -- 담당자 이름 (예: 김시우)
+    worker_team VARCHAR(100) DEFAULT '미배정',            -- 팀명 (예: 기술 1팀)
+    subject TEXT NOT NULL,                               -- 일정/약속 제목
+    schedule_type VARCHAR(50) DEFAULT '작업',             -- 작업 / 회의 / 지원 / 기타
+    start_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,     -- 시작 일시 (KST)
+    end_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,       -- 종료 일시 (KST)
+    duration_hours NUMERIC DEFAULT 0.0,                  -- 소요 시간(시간)
+    is_all_day BOOLEAN DEFAULT FALSE,                    -- 종일 일정 여부
+    is_leave BOOLEAN DEFAULT FALSE,                      -- 휴가/연차/반차 여부
+    leave_type VARCHAR(50) DEFAULT '',                   -- 연차 / 오전반차 / 오후반차 / 공가 등
+    location TEXT DEFAULT '',                            -- 장소
+    body TEXT DEFAULT '',                                -- 상세 본문
+    color_tag VARCHAR(30) DEFAULT '#0284c7',             -- 표시 배지 색상
+    created_by VARCHAR(100) DEFAULT '',                  -- 등록자/캘린더 소유자
+    synced_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (NOW() AT TIME ZONE 'Asia/Seoul') -- 동기화 일시
+);
+
+-- 검색 최적화 인덱스
+CREATE INDEX IF NOT EXISTS idx_worktime_outlook_start_time ON public.worktime_outlook_schedules (start_time);
+CREATE INDEX IF NOT EXISTS idx_worktime_outlook_worker_name ON public.worktime_outlook_schedules (worker_name);
+CREATE INDEX IF NOT EXISTS idx_worktime_outlook_is_leave ON public.worktime_outlook_schedules (is_leave);
+
+-- RLS 활성화 및 권한 정책 (익명/로그인 모두 읽기/쓰기 허용)
+ALTER TABLE public.worktime_outlook_schedules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to worktime_outlook_schedules" ON public.worktime_outlook_schedules;
+CREATE POLICY "Allow all access to worktime_outlook_schedules"
+ON public.worktime_outlook_schedules FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
 
