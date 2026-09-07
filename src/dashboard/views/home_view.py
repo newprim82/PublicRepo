@@ -684,59 +684,17 @@ def render_home_view(
     # 5. 🟢 오늘 실시간 작업 현황 라이브 보드 (현재시: LIVE 관제)
     render_today_live_board(df_raw, team_mappings, selected_team)
 
-    # 6. 📏 LIVE 관제 카드 아래와 미래시 일정표 사이 정확한 20px 대칭 구분선 (카드 아래 20px / 일정표 위 20px)
+    # 6. 📏 LIVE 관제 카드 아래와 미래시 일정표 사이 20px 대칭 구분선
     st.markdown("""
-    <style>
-    /* 중간 구분선 컨테이너: 상하 불필요한 추가 패딩/마진 0 리셋 */
-    div:has(> .live-to-calendar-divider),
-    div[data-testid="stElementContainer"]:has(> .live-to-calendar-divider) {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    .live-to-calendar-divider {
-        margin-top: 12px !important; /* 카드 자체의 margin-bottom 8px + 12px = 정확히 20px */
-        margin-bottom: 20px !important; /* 중간선에서 일정표 아코디언 상단까지 정확히 20px */
-        border-top: 1.5px solid #cbd5e1 !important;
-        width: 100% !important;
-    }
-    /* 📅 기술본부 통합 일정표 expander 전용 프리미엄 고시인성 스타일 (좌측 파란선 완전 제거 & 상단 마진 0 리셋) */
-    div[data-testid="stExpander"]:has(.outlook-grid),
-    div[data-testid="stExpander"]:has(.outlook-day-header) {
-        margin-top: 0px !important;
-        background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
-        border-left: 1px solid #cbd5e1 !important;
-        border-radius: 9px !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
-    }
-    div[data-testid="stExpander"]:has(.outlook-grid) summary,
-    div[data-testid="stExpander"]:has(.outlook-day-header) summary {
-        background: linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%) !important;
-        background-color: #f0f9ff !important;
-        border-bottom: 1px solid #e2e8f0 !important;
-        padding: 10px 16px !important;
-    }
-    div[data-testid="stExpander"]:has(.outlook-grid) summary span,
-    div[data-testid="stExpander"]:has(.outlook-grid) summary p,
-    div[data-testid="stExpander"]:has(.outlook-grid) summary *,
-    div[data-testid="stExpander"]:has(.outlook-day-header) summary * {
-        color: #0c4a6e !important;
-        font-weight: 800 !important;
-        font-size: 15px !important;
-        letter-spacing: -0.3px !important;
-    }
-    div[data-testid="stExpander"]:has(.outlook-grid) summary svg,
-    div[data-testid="stExpander"]:has(.outlook-day-header) summary svg {
-        fill: #0284c7 !important;
-        color: #0284c7 !important;
-    }
-    </style>
-    <div class="live-to-calendar-divider"></div>
+    <div class="live-to-calendar-divider" style="margin-top: 20px; margin-bottom: 20px; border-top: 1.5px solid #cbd5e1; width: 100%;"></div>
     """, unsafe_allow_html=True)
 
-    # 7. 🌟 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시: 미래 스케줄 캘린더 위젯)
-    try:
-        with st.expander("📅 기술본부 통합 일정표 (아웃룩 연동 & 미래시 스케줄)", expanded=True):
+    # 7. 🌟 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시: 미래 스케줄 캘린더 위젯 - 프리미엄 NOC 헤더 바)
+    cal_header_html = f"""<div style="background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%); border: 1px solid #005f8a; border-radius: 9px; padding: 13px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 14px rgba(0, 34, 51, 0.25);"><div style="display: flex; align-items: center; gap: 11px;"><span style="background-color: #0284c7; color: #ffffff; border: 1px solid #38bdf8; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);">● 미래시 스케줄</span><span style="font-size: 16.5px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">기술본부 통합 일정표 (아웃룩 연동 & 미래시 스케줄)</span><span style="font-size: 12px; color: #38bdf8; background-color: rgba(0, 180, 216, 0.22); border: 1px solid rgba(56, 189, 248, 0.5); padding: 3px 9px; border-radius: 6px; font-weight: 700;">동기화: 아웃룩 캘린더</span></div><div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; font-weight: 600;"><span style="color: #cbd5e1;">👥 등록 인원: <b style="color: #38bdf8; font-size: 14.5px; font-weight: 800;">7명</b></span><span style="color: #cbd5e1;">🔄 연동 주기: <b style="color: #4ade80; font-size: 14.5px; font-weight: 800;">10분 자동</b></span><span style="color: #cbd5e1;">📅 일정 뷰: <b style="color: #fbbf24; font-size: 14.5px; font-weight: 800;">월간 캘린더</b></span></div></div>"""
+    st.markdown(cal_header_html, unsafe_allow_html=True)
+
+    with st.container(border=True):
+        try:
             render_outlook_calendar_widget()
-    except Exception as e_cal:
-        st.info("📅 기술본부 아웃룩 일정을 동기화하는 중입니다. (잠시 후 새로고침 시 정상 반영됩니다)")
+        except Exception as e_cal:
+            st.info("📅 기술본부 아웃룩 일정을 동기화하는 중입니다. (잠시 후 새로고침 시 정상 반영됩니다)")
