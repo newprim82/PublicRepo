@@ -981,7 +981,7 @@ def show_email_report_dialog(selected_team: str):
             )
             status = item.get("status", "SUCCESS")
             status_html = '<span style="color:#4ade80; font-weight:800; font-size:11.5px;">✅ 성공</span>' if status == "SUCCESS" else '<span style="color:#f87171; font-weight:800; font-size:11.5px;" title="' + str(item.get("error_message", "")) + '">❌ 실패</span>'
-            dt_str = str(item.get("created_at", ""))
+            dt_str = str(item.get("created_at", "")).replace("T", " ")
             short_dt = dt_str[5:16] if len(dt_str) >= 16 else dt_str
 
             p_label = item.get("period_label", "")
