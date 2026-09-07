@@ -407,7 +407,7 @@ def get_leave_card_html(r: dict, is_single_view: bool = False) -> str:
     w_name = r["worker_name"]
     leave_type = r.get("leave_type") or "연차"
     subj = r.get("subject") or f"{w_name} {leave_type}"
-    dur_h = r.get("duration_hours", 8.0)
+    dur_h = r.get("duration_hours", 9.0)
     st_t = r["start_time"].strftime("%H:%M") if hasattr(r["start_time"], "strftime") else "09:00"
     ed_t = r["end_time"].strftime("%H:%M") if hasattr(r["end_time"], "strftime") else "18:00"
 
