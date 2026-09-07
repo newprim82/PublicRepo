@@ -316,6 +316,32 @@ def apply_custom_styles():
             font-weight: 700 !important;
         }
 
+        /* ⚠️ 노란색 경고창 배경 및 테두리 강제 적용 */
+        .overwork-warning-box,
+        div.overwork-warning-box {
+            background: #fef08a !important;
+            background-color: #fef08a !important;
+            border: 1.5px solid #facc15 !important;
+            border-left: 6px solid #ca8a04 !important;
+            border-radius: 8px !important;
+            padding: 13px 18px !important;
+            margin-bottom: 14px !important;
+            display: block !important;
+        }
+
+        /* 🚨 빨간색 경고창 배경 및 테두리 강제 적용 */
+        .overwork-danger-box,
+        div.overwork-danger-box {
+            background: #fee2e2 !important;
+            background-color: #fee2e2 !important;
+            border: 1.5px solid #f87171 !important;
+            border-left: 6px solid #ef4444 !important;
+            border-radius: 8px !important;
+            padding: 13px 18px !important;
+            margin-bottom: 14px !important;
+            display: block !important;
+        }
+
         /* ⚠️ 노란색/연노란색/경고 배경 내 텍스트 시인성 완벽 보장 (모달 및 인라인 div 포함 흰색 글씨 원천 차단) */
         .overwork-warning-box,
         .overwork-warning-box *,

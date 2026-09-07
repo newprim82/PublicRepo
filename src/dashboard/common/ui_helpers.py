@@ -172,6 +172,32 @@ def inject_dialog_title_style():
         transform: none !important;
     }
 
+    /* ⚠️ 모달 내부 노란색 경고창 배경 및 테두리 강제 적용 */
+    .overwork-warning-box,
+    div.overwork-warning-box {
+        background: #fef08a !important;
+        background-color: #fef08a !important;
+        border: 1.5px solid #facc15 !important;
+        border-left: 6px solid #ca8a04 !important;
+        border-radius: 8px !important;
+        padding: 13px 18px !important;
+        margin-bottom: 14px !important;
+        display: block !important;
+    }
+
+    /* 🚨 모달 내부 빨간색 경고창 배경 및 테두리 강제 적용 */
+    .overwork-danger-box,
+    div.overwork-danger-box {
+        background: #fee2e2 !important;
+        background-color: #fee2e2 !important;
+        border: 1.5px solid #f87171 !important;
+        border-left: 6px solid #ef4444 !important;
+        border-radius: 8px !important;
+        padding: 13px 18px !important;
+        margin-bottom: 14px !important;
+        display: block !important;
+    }
+
     /* ⚠️ 모달 내부 노란색/경고/알림창 글자색 완전 블랙 고대비 보장 (흰색 글씨 원천 차단) */
     .overwork-warning-box,
     .overwork-warning-box *,
