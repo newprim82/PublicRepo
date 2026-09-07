@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 # WorkTime Dashboard v2.0.6 (Outlook Subject Client/Task Auto-Parsing)
-APP_VERSION = "v2.0.7"
+APP_VERSION = "v2.0.8"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -101,6 +101,7 @@ def clear_all_web_caches():
     # 3. 파이썬 서브 모듈 강제 핫리로드 (Streamlit Cloud 메모리 캐시 파괴)
     import importlib
     modules_to_reload = [
+        "src.services.client_normalizer",
         "src.dashboard.common.ui_helpers",
         "src.services.schedule_sync_service",
         "src.dashboard.views.home_view",

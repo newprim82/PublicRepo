@@ -251,6 +251,16 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 title_str = get_job_title_badge(w_title)
                                 c_name = r["client_name"]
                                 t_desc = r["task_description"]
+
+                                # 🛡️ 아웃룩 일정 고객사명/작업내용 최종 정규화 안전망 (캐시 지연 대비)
+                                if c_name in ["아웃룩 일정", "기타"] or "아웃룩" in str(c_name):
+                                    from ...services.client_normalizer import parse_outlook_subject_to_client_and_task
+                                    clean_raw = re.sub(r"^\[.*?\]\s*", "", str(t_desc))
+                                    pc, pt = parse_outlook_subject_to_client_and_task(clean_raw)
+                                    if pc and pc not in ["아웃룩 일정", "기타"]:
+                                        c_name = pc
+                                        prefix = "[📅 일정완료] " if "[일정완료]" in str(t_desc) else ("[📅 아웃룩] " if "[아웃룩]" in str(t_desc) else "")
+                                        t_desc = f"{prefix}{pt}"
                                 st_dt = r["start_time"]
                                 ed_dt = r["end_time"]
                                 act_h = r["actual_hours"]
@@ -286,6 +296,16 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             title_str = get_job_title_badge(w_title)
                             c_name = r["client_name"]
                             t_desc = r["task_description"]
+
+                            # 🛡️ 아웃룩 일정 고객사명/작업내용 최종 정규화 안전망 (캐시 지연 대비)
+                            if c_name in ["아웃룩 일정", "기타"] or "아웃룩" in str(c_name):
+                                from ...services.client_normalizer import parse_outlook_subject_to_client_and_task
+                                clean_raw = re.sub(r"^\[.*?\]\s*", "", str(t_desc))
+                                pc, pt = parse_outlook_subject_to_client_and_task(clean_raw)
+                                if pc and pc not in ["아웃룩 일정", "기타"]:
+                                    c_name = pc
+                                    prefix = "[📅 일정완료] " if "[일정완료]" in str(t_desc) else ("[📅 아웃룩] " if "[아웃룩]" in str(t_desc) else "")
+                                    t_desc = f"{prefix}{pt}"
                             st_dt = r["start_time"]
                             ed_dt = r["end_time"]
                             act_h = r["actual_hours"]
