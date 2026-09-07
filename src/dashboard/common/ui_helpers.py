@@ -21,10 +21,6 @@ def is_same_team(t1: str, t2: str) -> bool:
     clean2 = str(t2).replace(" ", "").lower().strip()
     return clean1 == clean2
 
-def get_current_kst_time() -> datetime:
-    """한국 표준시(KST, UTC+9) 현재 시각 반환"""
-    return datetime.now(KST_TIMEZONE)
-
 _ntp_offset: Optional[float] = None
 _ntp_last_sync: float = 0.0
 
@@ -47,6 +43,11 @@ def get_bora_ntp_timestamp() -> float:
             if _ntp_offset is None:
                 _ntp_offset = 0.0
     return now + (_ntp_offset or 0.0)
+
+def get_current_kst_time() -> datetime:
+    """time.bora.net (LGU+ 타임서버) NTP 기준 한국 표준시(KST, UTC+9) 현재 시각 반환 (상단 헤더 프레임 시계와 100% 일치)"""
+    ts = get_bora_ntp_timestamp()
+    return datetime.fromtimestamp(ts, tz=KST_TIMEZONE)
 
 try:
     from streamlit_autorefresh import st_autorefresh

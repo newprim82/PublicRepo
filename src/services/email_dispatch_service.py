@@ -65,7 +65,25 @@ class EmailDispatchService:
         시간은 항상 KST 한국시간 기준 초 단위(YYYY-MM-DD HH:MM:SS)로만 저장 (+00 타임존 오프셋 없음)
         """
         cls.init_table()
-        now_kst = get_current_kst_time()
+        # 🌐 무조건 time.bora.net (LGU+ 타임서버) NTP 기준 한국 표준시(KST, UTC+9) 적용
+        try:
+            from ..dashboard.common.ui_helpers import get_current_kst_time
+            now_kst = get_current_kst_time()
+        except Exception:
+            import socket, struct, time as _time
+            from datetime import timezone, timedelta
+            now_ts = _time.time()
+            try:
+                client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                client.settimeout(0.6)
+                client.sendto(b'\x1b' + 47 * b'\0', ('time.bora.net', 123))
+                resp, _ = client.recvfrom(1024)
+                if resp:
+                    now_ts = float(struct.unpack('!12I', resp)[10] - 2208988800)
+            except Exception:
+                pass
+            now_kst = datetime.fromtimestamp(now_ts, tz=timezone(timedelta(hours=9)))
+
         now_str = now_kst.strftime('%Y-%m-%d %H:%M:%S')
 
         # 1. 로컬 SQLite에 무조건 최우선 저장
