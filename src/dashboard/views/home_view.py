@@ -684,15 +684,25 @@ def render_home_view(
     # 5. 🟢 오늘 실시간 작업 현황 라이브 보드 (현재시: LIVE 관제)
     render_today_live_board(df_raw, team_mappings, selected_team)
 
-    # 6. LIVE 관제와 미래시 캘린더 사이 구분선 (28px 균일)
-    st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
-
-    # 7. 🌟 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시: 미래 스케줄 캘린더 위젯)
+    # 6. 📏 LIVE 관제 카드 아래와 미래시 일정표 사이 정확한 30px 대칭 구분선 (카드 아래 30px / 일정표 위 30px)
     st.markdown("""
     <style>
-    /* 📅 기술본부 통합 일정표 expander 전용 프리미엄 고시인성 스타일 (좌측 파란선 완전 제거) */
+    /* 중간 구분선 컨테이너: 상하 불필요한 추가 패딩/마진 0 리셋 */
+    div:has(> .live-to-calendar-divider),
+    div[data-testid="stElementContainer"]:has(> .live-to-calendar-divider) {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .live-to-calendar-divider {
+        margin-top: 22px !important; /* 카드 자체의 margin-bottom 8px + 22px = 정확히 30px */
+        margin-bottom: 30px !important; /* 중간선에서 일정표 아코디언 상단까지 정확히 30px */
+        border-top: 1.5px solid #cbd5e1 !important;
+        width: 100% !important;
+    }
+    /* 📅 기술본부 통합 일정표 expander 전용 프리미엄 고시인성 스타일 (좌측 파란선 완전 제거 & 상단 마진 0 리셋) */
     div[data-testid="stExpander"]:has(.outlook-grid),
     div[data-testid="stExpander"]:has(.outlook-day-header) {
+        margin-top: 0px !important;
         background-color: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
         border-left: 1px solid #cbd5e1 !important;
@@ -721,7 +731,10 @@ def render_home_view(
         color: #0284c7 !important;
     }
     </style>
+    <div class="live-to-calendar-divider"></div>
     """, unsafe_allow_html=True)
+
+    # 7. 🌟 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시: 미래 스케줄 캘린더 위젯)
     try:
         with st.expander("📅 기술본부 통합 일정표 (아웃룩 연동 & 미래시 스케줄)", expanded=True):
             render_outlook_calendar_widget()
