@@ -8,6 +8,7 @@ try:
 except ImportError:
     fetch_outlook_schedules = None
 from src.services.team_service import TeamService
+from src.services.client_normalizer import parse_outlook_subject_to_client_and_task
 from src.dashboard.common.ui_helpers import get_current_kst_time
 
 class ScheduleSyncService:
@@ -153,6 +154,9 @@ class ScheduleSyncService:
             w_title = team_info.get(w_name, {}).get("title", "")
             w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
 
+            # 🏢 아웃룩 제목에서 [작업자] 제거 후 고객사명과 작업 내용을 스마트 분리 파싱
+            parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(r["subject"], r.get("location", ""))
+
             # A. 현재 시간이 종료 시각 이후 -> 100% 도달 -> 자동 완료 전환
             if now >= ed_dt:
                 auto_completed_rows.append({
@@ -161,8 +165,8 @@ class ScheduleSyncService:
                     "worker_name": w_name,
                     "worker_title": w_title,
                     "worker_team": w_team,
-                    "client_name": r.get("location") or "아웃룩 일정",
-                    "task_description": f"[📅 일정완료] {r['subject']}",
+                    "client_name": parsed_client,
+                    "task_description": f"[📅 일정완료] {parsed_desc}",
                     "start_time": st_time,
                     "end_time": ed_time,
                     "estimated_minutes": int(dur_hours * 60),
@@ -183,8 +187,8 @@ class ScheduleSyncService:
                     "worker_name": w_name,
                     "worker_title": w_title,
                     "worker_team": w_team,
-                    "client_name": r.get("location") or "아웃룩 일정",
-                    "task_description": f"[📅 아웃룩] {r['subject']}",
+                    "client_name": parsed_client,
+                    "task_description": f"[📅 아웃룩] {parsed_desc}",
                     "start_time": st_time,
                     "end_time": ed_time,
                     "estimated_minutes": int(dur_hours * 60),
