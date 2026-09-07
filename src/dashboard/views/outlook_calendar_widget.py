@@ -10,15 +10,15 @@ except ImportError:
     fetch_outlook_schedules = None
 from src.services.team_service import TeamService
 
-# 팀원별 아웃룩 고유 색상 매핑 (캡처 사진과 100% 동일)
+# 팀원별 아웃룩 고유 색상 매핑 (한눈에 구별되는 고대비 7색 스펙트럼)
 OUTLOOK_MEMBER_COLORS = {
-    "문영민": {"bg": "#d9f99d", "border": "#84cc16", "text": "#365314", "name": "문영민 수석"},
-    "이동우": {"bg": "#ffedd5", "border": "#f97316", "text": "#7c2d12", "name": "이동우 수석"},
-    "홍정표": {"bg": "#ccfbf1", "border": "#14b8a6", "text": "#134e4a", "name": "홍정표 과장"},
-    "전종필": {"bg": "#fef9c3", "border": "#eab308", "text": "#713f12", "name": "전종필 대리"},
-    "김시우": {"bg": "#fce7f3", "border": "#ec4899", "text": "#831843", "name": "김시우 사원"},
-    "김형일": {"bg": "#cffafe", "border": "#06b6d4", "text": "#164e63", "name": "김형일 수석"},
-    "김경현": {"bg": "#ffe4e6", "border": "#f43f5e", "text": "#881337", "name": "김경현 (내 일정)"},
+    "문영민": {"bg": "#dcfce7", "border": "#16a34a", "text": "#14532d", "name": "문영민 수석"},  # 🟢 싱그러운 에메랄드 그린
+    "이동우": {"bg": "#dbeafe", "border": "#2563eb", "text": "#1e40af", "name": "이동우 수석"},  # 🔵 선명한 코발트 블루
+    "전종필": {"bg": "#ffedd5", "border": "#ea580c", "text": "#9a3412", "name": "전종필 대리"},  # 🟠 활기찬 브라이트 오렌지
+    "김시우": {"bg": "#f3e8ff", "border": "#9333ea", "text": "#581c87", "name": "김시우 사원"},  # 🟣 세련된 바이올렛 보라
+    "김경현": {"bg": "#ffe4e6", "border": "#e11d48", "text": "#881337", "name": "김경현 (내 일정)"},  # 🔴 강렬한 크림슨 레드
+    "홍정표": {"bg": "#ccfbf1", "border": "#0d9488", "text": "#115e59", "name": "홍정표 과장"},  # 🌊 청량한 민트 틸
+    "김형일": {"bg": "#fef9c3", "border": "#ca8a04", "text": "#713f12", "name": "김형일 수석"},  # 🟡 따뜻한 골드 옐로우
 }
 
 DEFAULT_COLOR = {"bg": "#f1f5f9", "border": "#94a3b8", "text": "#0f172a", "name": "기타"}
@@ -94,14 +94,16 @@ def render_outlook_calendar_widget():
     .outlook-chip {
         display: block;
         border-radius: 4px;
-        padding: 2px 5px;
-        margin-bottom: 3px;
-        font-size: 10.5px;
+        padding: 2.5px 6px;
+        margin-bottom: 3.5px;
+        font-size: 11px;
+        font-weight: 700;
         line-height: 1.35;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        border-left: 3px solid;
+        border-left: 3.5px solid;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
     }
     .outlook-tab-bar {
         display: flex;
