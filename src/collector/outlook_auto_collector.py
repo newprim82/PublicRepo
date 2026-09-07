@@ -134,7 +134,12 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
 
     for owner_name, folder in cal_folders:
         try:
-            items = folder.Items
+            try:
+                items = folder.Items
+            except Exception as e_items:
+                safe_print(f"[i] 공유 캘린더 '{owner_name}': 사서함 세부 일정 접근 권한이 없어 건너뜁니다.")
+                continue
+
             try:
                 items.IncludeRecurrences = True
                 items.Sort("[Start]")
@@ -172,7 +177,7 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                             w_name = cand
                     if not w_name or any(t in w_name for t in ["팀", "본부"]):
                         w_name = clean_worker_name(owner_name)
-                    if not w_name or w_name == "내 캘린더":
+                    if not w_name or w_name in ["내 캘린더", "내 일정", "Calendar", "내"]:
                         w_name = "김경현"
 
                     # 휴가 / 연차 / 반차 식별
@@ -192,20 +197,58 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                         elif any(k in subject for k in ["회의", "미팅", "1on1", "주간"]):
                             sched_type = "회의"
 
-                    # 시간 처리: 사용자의 명시적 요청 - '종일' 체크 시 09:00~18:00
+                    # 시간 처리: 종일 또는 다일(Multi-day) 일정 분할 처리
                     allday = bool(getattr(item, "AllDayEvent", False))
                     raw_st = getattr(item, "Start", None)
                     raw_ed = getattr(item, "End", None)
 
+                    team_info = team_members_info.get(w_name, {})
+                    w_team = team_info.get("team", "기술 1팀" if w_name in ["문영민", "이동우", "홍정표", "전종필", "김시우", "김형일", "김경현", "양금희"] else "미배정")
+                    color = MEMBER_COLOR_MAP.get(w_name, "#0284c7")
+                    loc = str(getattr(item, "Location", "") or "").strip()
+
                     if allday:
-                        # 종일 일정 -> 09:00 ~ 18:00 (8.0시간 산정)
-                        if hasattr(raw_st, "strftime"):
-                            d_val = raw_st.strftime("%Y-%m-%d")
+                        # 종일 일정: 날짜 범위 계산 (예: 9/8~9/10 지원 -> Start: 9/8 00:00, End: 9/11 00:00)
+                        if hasattr(raw_st, "date"):
+                            st_date = raw_st.date()
                         else:
-                            d_val = str(raw_st)[:10]
-                        st_str = f"{d_val} 09:00:00"
-                        ed_str = f"{d_val} 18:00:00"
-                        dur_h = 8.0
+                            st_date = datetime.strptime(str(raw_st)[:10], "%Y-%m-%d").date()
+
+                        if hasattr(raw_ed, "date"):
+                            ed_date_raw = raw_ed.date()
+                        else:
+                            ed_date_raw = datetime.strptime(str(raw_ed)[:10], "%Y-%m-%d").date()
+
+                        # 아웃룩 종일 일정의 End가 다음날 자정(00:00)이면 마지막 날짜는 하루 전날
+                        if hasattr(raw_ed, "hour") and raw_ed.hour == 0 and raw_ed.minute == 0 and ed_date_raw > st_date:
+                            real_end_date = ed_date_raw - timedelta(days=1)
+                        else:
+                            real_end_date = ed_date_raw
+
+                        # 시작일부터 종료일까지 매일매일 09:00~18:00 (8.0h) 분할 레코드 생성!
+                        curr_d = st_date
+                        while curr_d <= real_end_date:
+                            d_val = curr_d.strftime("%Y-%m-%d")
+                            sub_id = f"{entry_id}_{d_val}" if curr_d != st_date else entry_id
+                            rec = OutlookScheduleRecord(
+                                entry_id=sub_id,
+                                worker_name=w_name,
+                                worker_team=w_team,
+                                subject=subject,
+                                schedule_type=sched_type,
+                                start_time=f"{d_val} 09:00:00",
+                                end_time=f"{d_val} 18:00:00",
+                                duration_hours=8.0,
+                                is_all_day=True,
+                                is_leave=is_leave,
+                                leave_type=leave_type,
+                                location=loc,
+                                body="",
+                                color_tag=color,
+                                created_by=owner_name
+                            )
+                            records.append(rec)
+                            curr_d += timedelta(days=1)
                     else:
                         st_str = raw_st.strftime("%Y-%m-%d %H:%M:%S") if hasattr(raw_st, "strftime") else str(raw_st)[:19]
                         ed_str = raw_ed.strftime("%Y-%m-%d %H:%M:%S") if hasattr(raw_ed, "strftime") else str(raw_ed)[:19]
@@ -216,28 +259,24 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                         except Exception:
                             dur_h = 1.0
 
-                    team_info = team_members_info.get(w_name, {})
-                    w_team = team_info.get("team", "미배정")
-                    color = MEMBER_COLOR_MAP.get(w_name, "#0284c7")
-
-                    rec = OutlookScheduleRecord(
-                        entry_id=entry_id,
-                        worker_name=w_name,
-                        worker_team=w_team,
-                        subject=subject,
-                        schedule_type=sched_type,
-                        start_time=st_str,
-                        end_time=ed_str,
-                        duration_hours=dur_h,
-                        is_all_day=allday,
-                        is_leave=is_leave,
-                        leave_type=leave_type,
-                        location=str(getattr(item, "Location", "") or "").strip(),
-                        body="",
-                        color_tag=color,
-                        created_by=owner_name
-                    )
-                    records.append(rec)
+                        rec = OutlookScheduleRecord(
+                            entry_id=entry_id,
+                            worker_name=w_name,
+                            worker_team=w_team,
+                            subject=subject,
+                            schedule_type=sched_type,
+                            start_time=st_str,
+                            end_time=ed_str,
+                            duration_hours=dur_h,
+                            is_all_day=False,
+                            is_leave=is_leave,
+                            leave_type=leave_type,
+                            location=loc,
+                            body="",
+                            color_tag=color,
+                            created_by=owner_name
+                        )
+                        records.append(rec)
                 except Exception:
                     pass
                 item = flt.GetNext()

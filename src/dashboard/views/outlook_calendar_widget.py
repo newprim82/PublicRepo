@@ -232,8 +232,11 @@ def render_outlook_calendar_widget():
         if is_today:
             cell_class += " outlook-cell-today"
 
-        # 해당 일자 일정 필터링
-        day_events = df_view[df_view["start_time"].dt.strftime("%Y-%m-%d") == date_str]
+        # 해당 일자 일정 필터링 (start_time <= cur_date <= end_time 범위 매칭)
+        day_events = df_view[
+            (df_view["start_time"].dt.date <= cur_date) &
+            (df_view["end_time"].dt.date >= cur_date)
+        ]
 
         # 날짜 숫자 색상 (일: 빨강, 토: 파랑)
         day_color = "#dc2626" if cur_date.weekday() == 6 else ("#2563eb" if cur_date.weekday() == 5 else "#334155")
