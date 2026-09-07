@@ -18,7 +18,8 @@ from ..common.ui_helpers import (
     get_team_theme,
     is_same_team,
     get_all_teams_safe,
-    extract_week_sort_key
+    extract_week_sort_key,
+    get_available_weeks_for_df
 )
 
 def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
@@ -84,13 +85,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     # 0. 📅 보고서 조회 주기 선택 (월간 전체 종합 vs 각 주차별 상세 드릴다운)
     # =========================================================================
     df_scope = df.copy()
-    available_weeks = []
-    if "week_label" in df_scope.columns:
-        raw_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
-        try:
-            available_weeks = sorted(raw_weeks, key=extract_week_sort_key)
-        except Exception:
-            available_weeks = sorted(raw_weeks)
+    available_weeks = get_available_weeks_for_df(df_scope, month_desc=month_desc)
 
     period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks]
     

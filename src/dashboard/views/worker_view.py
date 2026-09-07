@@ -10,7 +10,7 @@ from ..common.dialogs import (
     show_kpi_urgent_dialog,
     show_weekly_detail_dialog
 )
-from ..common.ui_helpers import extract_week_sort_key
+from ..common.ui_helpers import extract_week_sort_key, get_available_weeks_for_df
 
 def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataFrame, chart_orientation: str, selected_view: str):
     """팀원별 업무량 랭킹 & 작업 유형 차트 (화면 전체 새로고침 없는 독립 Fragment)"""
@@ -385,13 +385,7 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
     # 0. 📅 보고서 조회 주기 선택 (월간 전체 종합 vs 각 주차별 상세 드릴다운)
     # =========================================================================
     df_scope = df.copy()
-    available_weeks = []
-    if "week_label" in df_scope.columns:
-        raw_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
-        try:
-            available_weeks = sorted(raw_weeks, key=extract_week_sort_key)
-        except Exception:
-            available_weeks = sorted(raw_weeks)
+    available_weeks = get_available_weeks_for_df(df_scope, month_desc=month_desc)
 
     period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks]
 

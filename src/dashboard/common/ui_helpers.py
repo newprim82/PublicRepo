@@ -438,3 +438,67 @@ def extract_week_sort_key(w_lbl: str) -> list:
     return nums if nums else [9999]
 
 
+def get_all_weeks_for_month(year: int, month: int) -> list:
+    """해당 월의 1일부터 말일까지의 모든 주차 라벨을 누락 없이 순서대로 반환"""
+    import calendar
+    from datetime import date, timedelta
+    last_day_num = calendar.monthrange(year, month)[1]
+    cur_start = date(year, month, 1)
+    week_num = 1
+    weeks = []
+    while cur_start.day <= last_day_num:
+        days_to_sun = 6 - cur_start.weekday()
+        cur_sun = cur_start + timedelta(days=days_to_sun)
+        cur_end = min(cur_sun, date(year, month, last_day_num))
+        lbl = f"{year:04d}-{month:02d} {week_num}주차 ({cur_start.strftime('%m/%d')}~{cur_end.strftime('%m/%d')})"
+        weeks.append(lbl)
+        cur_start = cur_end + timedelta(days=1)
+        week_num += 1
+        if cur_start.month != month:
+            break
+    return weeks
+
+
+def get_available_weeks_for_df(df_scope: pd.DataFrame, month_desc: str = "") -> list:
+    """선택된 월(들)에 대해 1주차부터 마지막 주차까지 캘린더 기준 모든 주차 목록을 누락 없이 반환"""
+    import re
+    months = []
+    # 1. month_desc에서 YYYY-MM 패턴 추출
+    if month_desc:
+        found = re.findall(r'\b(20\d\d[-/]\d{1,2})\b', str(month_desc))
+        for m in found:
+            clean_m = m.replace('/', '-')
+            parts = clean_m.split('-')
+            clean_m = f"{parts[0]}-{int(parts[1]):02d}"
+            if clean_m not in months:
+                months.append(clean_m)
+    
+    # 2. df_scope에서 월 추출
+    if not months and df_scope is not None and not df_scope.empty:
+        if "month_str" in df_scope.columns:
+            months = [m for m in df_scope["month_str"].dropna().unique() if str(m).strip()]
+        elif "start_time" in df_scope.columns:
+            st_col = pd.to_datetime(df_scope["start_time"], errors="coerce").dropna()
+            if not st_col.empty:
+                months = list(st_col.dt.strftime("%Y-%m").unique())
+
+    all_weeks = []
+    for m_str in sorted(months):
+        try:
+            parts = m_str.split('-')
+            y, m = int(parts[0]), int(parts[1])
+            w_list = get_all_weeks_for_month(y, m)
+            for w in w_list:
+                if w not in all_weeks:
+                    all_weeks.append(w)
+        except Exception:
+            pass
+
+    # 만약 위에서 못 구했으면 df_scope에 존재하는 주차들 사용
+    if not all_weeks and df_scope is not None and not df_scope.empty and "week_label" in df_scope.columns:
+        all_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
+
+    return sorted(all_weeks, key=extract_week_sort_key)
+
+
+
