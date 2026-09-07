@@ -652,7 +652,7 @@ def render_home_view(
     extra_chips_str: str
 ):
     """🏠 실시간 분석 대시보드 메인 뷰 (기준패널 + KPI 카드 + 과중업무 배너 + LIVE 관제보드)"""
-    # 1. 🏛️ 메인 상단 고시인성 실시간 집계 기준 정보 패널
+    # 1. 🏛️ 메인 상단 고시인성 실시간 집계 기준 정보 패널 (과거시 실적 기준)
     criteria_panel_html = (
         f'<div class="active-criteria-container">'
         f'<div class="criteria-left">'
@@ -672,15 +672,30 @@ def render_home_view(
     )
     st.markdown(criteria_panel_html, unsafe_allow_html=True)
 
-    # 🌟 [신규] 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시 캘린더 위젯)
+    # 2. 핵심 KPI 5대 카드 (과거시 누적 통계 - 프리미엄 네온 글래스모피즘 - 독립 Fragment)
+    render_kpi_cards_fragment(df)
+
+    # 3. 주 40/52시간 초과 과중 업무 배너 (과거시~현재 기준 누적 근무 경고 - 독립 Fragment)
+    render_overwork_banner_fragment(df)
+
+    # 4. 과중 근무 배너와 회색선, 회색선과 LIVE 관제 사이 간격 (28px 균일)
+    st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
+
+    # 5. 🟢 오늘 실시간 작업 현황 라이브 보드 (현재시: LIVE 관제)
+    render_today_live_board(df_raw, team_mappings, selected_team)
+
+    # 6. LIVE 관제와 미래시 캘린더 사이 구분선 (28px 균일)
+    st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
+
+    # 7. 🌟 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시: 미래 스케줄 캘린더 위젯)
     st.markdown("""
     <style>
-    /* 📅 기술본부 통합 일정표 expander 전용 프리미엄 고시인성 스타일 */
+    /* 📅 기술본부 통합 일정표 expander 전용 프리미엄 고시인성 스타일 (좌측 파란선 완전 제거) */
     div[data-testid="stExpander"]:has(.outlook-grid),
     div[data-testid="stExpander"]:has(.outlook-day-header) {
         background-color: #ffffff !important;
-        border: 1.5px solid #cbd5e1 !important;
-        border-left: 5px solid #0284c7 !important;
+        border: 1px solid #cbd5e1 !important;
+        border-left: 1px solid #cbd5e1 !important;
         border-radius: 9px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
     }
@@ -712,15 +727,3 @@ def render_home_view(
             render_outlook_calendar_widget()
     except Exception as e_cal:
         st.info("📅 기술본부 아웃룩 일정을 동기화하는 중입니다. (잠시 후 새로고침 시 정상 반영됩니다)")
-
-    # 2. 핵심 KPI 5대 카드 (프리미엄 네온 글래스모피즘 - 독립 Fragment)
-    render_kpi_cards_fragment(df)
-
-    # 3. 주 40/52시간 초과 과중 업무 배너 (독립 Fragment)
-    render_overwork_banner_fragment(df)
-
-    # 4. 과중 근무 배너와 회색선, 회색선과 LIVE 관제 사이 간격 (28px 균일)
-    st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
-
-    # 5. 🟢 오늘 실시간 작업 현황 라이브 보드 (첫 화면에 단독 풀사이즈 표출)
-    render_today_live_board(df_raw, team_mappings, selected_team)

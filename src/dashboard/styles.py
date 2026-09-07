@@ -1158,7 +1158,7 @@ def apply_custom_styles():
         div[data-testid="stExpander"]:not([data-testid="stSidebar"] div[data-testid="stExpander"]) {
             background-color: #ffffff !important;
             border: 1px solid #cbd5e1 !important;
-            border-left: 5px solid #0284c7 !important;
+            border-left: 1px solid #cbd5e1 !important;
             border-radius: 9px !important;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
             margin-bottom: 14px !important;
