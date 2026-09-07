@@ -391,21 +391,18 @@ class ScheduleSyncService:
                         status = "COMPLETED"
                         act_h = dur_hours
                         act_m = int(dur_hours * 60)
-                        prefix = "[📅 일정완료] "
                     elif is_pending:
                         status = "PENDING"
                         elapsed_sec = max(0, (now - st_dt).total_seconds())
                         act_h = round(elapsed_sec / 3600.0, 1)
                         act_m = int(elapsed_sec / 60)
-                        prefix = "[📅 아웃룩] "
                     else:
                         # 🔮 미래 예정 일정: 미래시는 아직 근무하지 않았으므로 0.0h 부여
                         status = "SCHEDULED"
                         act_h = 0.0
                         act_m = 0
-                        prefix = "[📅 예정] "
 
-                    task_desc = f"{prefix}{parsed_desc}"
+                    task_desc = parsed_desc
 
                     row_dict = {
                         "msg_hash": f"OUTLOOK_WORK_{entry_id}",

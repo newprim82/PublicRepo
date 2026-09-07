@@ -254,21 +254,32 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 t_desc = r["task_description"]
 
                                 # 🛡️ 아웃룩 일정 고객사명/작업내용 최종 정규화 안전망 (캐시 지연 대비)
+                                # 🛡️ 아웃룩 일정 고객사명/작업내용 최종 정규화 안전망 (캐시 지연 대비)
                                 if c_name in ["아웃룩 일정", "기타"] or "아웃룩" in str(c_name):
                                     from ...services.client_normalizer import parse_outlook_subject_to_client_and_task
                                     clean_raw = re.sub(r"^\[.*?\]\s*", "", str(t_desc))
                                     pc, pt = parse_outlook_subject_to_client_and_task(clean_raw)
                                     if pc and pc not in ["아웃룩 일정", "기타"]:
                                         c_name = pc
-                                        prefix = "[📅 일정완료] " if "[일정완료]" in str(t_desc) else ("[📅 아웃룩] " if "[아웃룩]" in str(t_desc) else "")
-                                        t_desc = f"{prefix}{pt}"
+                                        t_desc = pt
                                 st_dt = r["start_time"]
                                 ed_dt = r["end_time"]
                                 st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
                                 ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
                                 is_out = (r.get("is_outlook") == True)
                                 is_l = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
-                                kakao_icon = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">💬 카톡</span>' if (not is_out and not is_l) else ""
+                                
+                                # 기존 [📅 일정완료], [📅 아웃룩], [일정완료] 등 텍스트 접두사 제거
+                                clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
+
+                                if is_l:
+                                    source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">🏖️ 휴가</span>'
+                                    clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
+                                elif is_out:
+                                    source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">📅 아웃룩</span>'
+                                else:
+                                    source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">💬 카톡</span>'
+
                                 disp_h = r.get("display_hours")
                                 act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
                                 comp_border = "#a855f7" if is_l else get_job_title_color(w_title)
@@ -277,7 +288,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 badge_border = "#d8b4fe" if is_l else "#c4b5fd"
                                 badge_icon = "🏖️" if is_l else "✅"
 
-                                comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 8px; padding: 1px 5px; font-size: 10px; font-weight: 700; white-space: nowrap;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 12px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="font-size: 11.5px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{kakao_icon}{t_desc}</div></div>"""
+                                comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 8px; padding: 1px 5px; font-size: 10px; font-weight: 700; white-space: nowrap;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 12px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="font-size: 11.5px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{source_badge}{clean_desc}</div></div>"""
                                 st.markdown(comp_html, unsafe_allow_html=True)
             else:
                 # 🏢 단일 팀 선택 시: 기존 4열 그리드 레이아웃
@@ -306,13 +317,23 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 pc, pt = parse_outlook_subject_to_client_and_task(clean_raw)
                                 if pc and pc not in ["아웃룩 일정", "기타"]:
                                     c_name = pc
-                                    prefix = "[📅 일정완료] " if "[일정완료]" in str(t_desc) else ("[📅 아웃룩] " if "[아웃룩]" in str(t_desc) else "")
-                                    t_desc = f"{prefix}{pt}"
+                                    t_desc = pt
                             st_dt = r["start_time"]
                             ed_dt = r["end_time"]
                             is_out = (r.get("is_outlook") == True)
                             is_l = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
-                            kakao_icon = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">💬 카톡</span>' if (not is_out and not is_l) else ""
+                            
+                            # 기존 [📅 일정완료], [📅 아웃룩], [일정완료] 등 텍스트 접두사 제거
+                            clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
+
+                            if is_l:
+                                source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">🏖️ 휴가</span>'
+                                clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
+                            elif is_out:
+                                source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">📅 아웃룩</span>'
+                            else:
+                                source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle;">💬 카톡</span>'
+
                             disp_h = r.get("display_hours")
                             act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
                             st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
@@ -323,7 +344,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             badge_border = "#d8b4fe" if is_l else "#c4b5fd"
                             badge_icon = "🏖️" if is_l else "✅"
 
-                            comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{kakao_icon}{t_desc}</div></div>"""
+                            comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{source_badge}{clean_desc}</div></div>"""
                             st.markdown(comp_html, unsafe_allow_html=True)
 
 

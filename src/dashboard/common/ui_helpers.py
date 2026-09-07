@@ -363,8 +363,7 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
         pc, pt = parse_outlook_subject_to_client_and_task(clean_raw)
         if pc and pc not in ["아웃룩 일정", "기타"]:
             c_name = pc
-            prefix = "[📅 아웃룩] " if "[아웃룩]" in str(t_desc) else ""
-            t_desc = f"{prefix}{pt}"
+            t_desc = pt
     st_dt = r["start_time"]
 
     st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
@@ -375,7 +374,7 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     is_overtime = elapsed_hours > est_hours and est_hours > 0
 
     is_outlook = (r.get("is_outlook") == True)
-    outlook_badge = "<span style='background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>📅 일정표</span>" if is_outlook else ""
+    outlook_badge = ""
 
     if is_outlook and "outlook_progress_pct" in r:
         raw_pct = int(r["outlook_progress_pct"])
@@ -408,9 +407,17 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
 
     elapsed_html = f"⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}" if is_single_view else f"⏱️ 경과 {elapsed_hours}h ({elapsed_mins}분) {'⚠️' if is_overtime else ''}"
     is_leave = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
-    kakao_icon = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9px; font-weight: 800; padding: 1px 3px; border-radius: 3px; margin-right: 3px; display: inline-block; vertical-align: middle;">💬 카톡</span>' if (not is_outlook and not is_leave) else ''
+    clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
 
-    return f"""<div class="live-task-card" data-start="{st_dt_iso}" data-est="{est_hours}" data-single-view="{'true' if is_single_view else 'false'}" style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: {card_padding}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}{outlook_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: {time_badge_padding}; font-size: 10.5px; font-weight: 700; white-space: nowrap;">{time_badge_label}</span></div><div style="font-size: {client_font_size}; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div class="live-progress-bar live-progress-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.8s ease-in-out;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 11px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">{kakao_icon}{t_desc}</span><span class="live-pct-badge" style="font-weight: 700; color: #ffffff; font-size: 10px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정 {est_hours}h</span><span class="live-elapsed-time" style="color: {elapsed_color}">{elapsed_html}</span></div></div>"""
+    if is_leave:
+        source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9px; font-weight: 800; padding: 1px 3px; border-radius: 3px; margin-right: 3px; display: inline-block; vertical-align: middle;">🏖️ 휴가</span>'
+        clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
+    elif is_outlook:
+        source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9px; font-weight: 800; padding: 1px 3px; border-radius: 3px; margin-right: 3px; display: inline-block; vertical-align: middle;">📅 아웃룩</span>'
+    else:
+        source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9px; font-weight: 800; padding: 1px 3px; border-radius: 3px; margin-right: 3px; display: inline-block; vertical-align: middle;">💬 카톡</span>'
+
+    return f"""<div class="live-task-card" data-start="{st_dt_iso}" data-est="{est_hours}" data-single-view="{'true' if is_single_view else 'false'}" style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: {card_padding}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}{outlook_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: {time_badge_padding}; font-size: 10.5px; font-weight: 700; white-space: nowrap;">{time_badge_label}</span></div><div style="font-size: {client_font_size}; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div class="live-progress-bar live-progress-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.8s ease-in-out;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 11px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">{source_badge}{clean_desc}</span><span class="live-pct-badge" style="font-weight: 700; color: #ffffff; font-size: 10px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정 {est_hours}h</span><span class="live-elapsed-time" style="color: {elapsed_color}">{elapsed_html}</span></div></div>"""
 
 
 def get_leave_card_html(r: dict, is_single_view: bool = False) -> str:
