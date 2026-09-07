@@ -2,10 +2,15 @@ import sqlite3
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ..config import config
-from ..parser.reply_matcher import WorkLogRecord
+from ..parser.reply_matcher import (
+    WorkLogRecord,
+    get_pending_timeout_hours,
+    check_is_night_work,
+    check_is_weekend_work
+)
 from ..parser.multiday_splitter import split_multiday_record, is_multiday_record
 
 try:
@@ -208,10 +213,96 @@ class DatabaseManager:
 
         return saved_count
 
+    def resolve_expired_pending_tasks(self, df_source: Optional[pd.DataFrame] = None) -> int:
+        """
+        DB에 존재하는 PENDING(진행 중) 레코드 중 시작 시각으로부터
+        48시간(다일 작업은 예정일수*24h + 48h)이 경과한 작업을
+        시작 보고 기준 COMPLETED(완료)로 자동 승격하여 Supabase 및 로컬 DB에 영구 반영
+        """
+        try:
+            if df_source is not None and not df_source.empty:
+                if "status" in df_source.columns:
+                    pend_rows = df_source[df_source["status"] == "PENDING"]
+                else:
+                    return 0
+            else:
+                # DB 직접 조회 (Supabase 우선, 없으면 SQLite)
+                if self.use_supabase and self.supabase:
+                    res = self.supabase.table("worktime_work_logs").select("*").eq("status", "PENDING").execute()
+                    pend_rows = pd.DataFrame(res.data or [])
+                else:
+                    conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+                    pend_rows = pd.read_sql_query("SELECT * FROM work_logs WHERE status='PENDING'", conn)
+                    conn.close()
+
+            if pend_rows.empty:
+                return 0
+
+            now = datetime.now()
+            resolved_records: List[WorkLogRecord] = []
+
+            for _, r in pend_rows.iterrows():
+                st = r.get("start_time")
+                if pd.isna(st) or not st:
+                    continue
+                if isinstance(st, str):
+                    try:
+                        st = datetime.fromisoformat(st.replace("Z", ""))
+                    except Exception:
+                        continue
+                elif hasattr(st, "to_pydatetime"):
+                    st = st.to_pydatetime()
+                if hasattr(st, "tzinfo") and st.tzinfo:
+                    st = st.replace(tzinfo=None)
+
+                raw_msg = str(r.get("raw_start_message", "") or "")
+                est_mins = int(r.get("estimated_minutes", 0) or 0)
+
+                threshold_hours = get_pending_timeout_hours(raw_msg, est_mins)
+                elapsed_hours = (now - st).total_seconds() / 3600.0
+
+                if elapsed_hours >= threshold_hours:
+                    auto_actual = est_mins if est_mins > 0 else 60
+                    auto_end_time = st + timedelta(minutes=auto_actual)
+                    is_night = check_is_night_work(st, auto_end_time, raw_msg, est_mins, auto_actual)
+                    is_weekend = check_is_weekend_work(st, auto_end_time, raw_msg, est_mins, auto_actual)
+
+                    resolved_record = WorkLogRecord(
+                        msg_hash=str(r.get("msg_hash", "")),
+                        log_type=str(r.get("log_type", "작업")),
+                        worker_name=str(r.get("worker_name", "")),
+                        worker_title=str(r.get("worker_title", "")),
+                        worker_team=str(r.get("worker_team", "")),
+                        client_name=str(r.get("client_name", "")),
+                        task_description=str(r.get("task_description", "")),
+                        estimated_minutes=est_mins,
+                        actual_minutes=auto_actual,
+                        start_time=st,
+                        end_time=auto_end_time,
+                        status="COMPLETED",
+                        is_night_work=is_night,
+                        is_weekend_work=is_weekend,
+                        raw_start_message=raw_msg,
+                        raw_end_message=f"[자동완료] {int(threshold_hours)}시간 경과로 시작보고 기준 완료 처리"
+                    )
+                    resolved_records.append(resolved_record)
+
+            if resolved_records:
+                print(f"[DB] [자동완료 배치] {len(resolved_records)}건의 48시간 만료 미완료 작업을 COMPLETED로 승격 저장합니다.")
+                self.save_work_logs(resolved_records)
+                return resolved_records
+
+            return []
+        except Exception as e:
+            print(f"[DB 오류] 자동완료 배치 예외: {e}")
+            return []
+
     def fetch_all_work_logs(self) -> pd.DataFrame:
         """
         Supabase 클라우드 DB에서 전체 데이터를 최우선 조회 (오프라인 시 로컬 SQLite 조회)
+        48시간 경과한 PENDING 작업은 자동으로 COMPLETED 승격 처리
         """
+        df = None
         if self.use_supabase and self.supabase:
             try:
                 # Supabase 페이지네이션을 통해 10,000건 이상도 전수 조회
@@ -235,20 +326,38 @@ class DatabaseManager:
                 # 💾 로컬 SQLite 오프라인 백업 DB에도 최신 데이터 자동 동기화
                 if not df.empty:
                     self._sync_to_local_sqlite(df)
-
-                return self._process_dataframe(df)
             except Exception as e:
                 print(f"[DB 오류] Supabase 조회 실패, 로컬 SQLite로 대체: {e}")
 
         # 로컬 SQLite Fallback
-        try:
-            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
-            df = pd.read_sql_query("SELECT * FROM work_logs ORDER BY start_time DESC", conn)
-            conn.close()
-            return self._process_dataframe(df)
-        except Exception as e:
-            print(f"[DB 오류] SQLite 데이터 조회 실패: {e}")
-            return self._process_dataframe(pd.DataFrame())
+        if df is None:
+            try:
+                conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+                df = pd.read_sql_query("SELECT * FROM work_logs ORDER BY start_time DESC", conn)
+                conn.close()
+            except Exception as e:
+                print(f"[DB 오류] SQLite 데이터 조회 실패: {e}")
+                return self._process_dataframe(pd.DataFrame())
+
+        # 48시간 이상 경과한 잔여 PENDING 작업 검사 및 자동 완료 승격
+        if not df.empty and "status" in df.columns and (df["status"] == "PENDING").any():
+            try:
+                resolved_records = self.resolve_expired_pending_tasks(df)
+                if resolved_records:
+                    for rec in resolved_records:
+                        mask = df["msg_hash"] == rec.msg_hash
+                        if mask.any():
+                            df.loc[mask, "status"] = "COMPLETED"
+                            df.loc[mask, "actual_minutes"] = rec.actual_minutes
+                            ed_str = rec.end_time.strftime("%Y-%m-%d %H:%M") if rec.end_time else None
+                            df.loc[mask, "end_time"] = ed_str
+                            df.loc[mask, "raw_end_message"] = rec.raw_end_message
+                            df.loc[mask, "is_night_work"] = rec.is_night_work
+                            df.loc[mask, "is_weekend_work"] = rec.is_weekend_work
+            except Exception as e:
+                print(f"[DB 오류] PENDING 자동승격 반영 오류: {e}")
+
+        return self._process_dataframe(df)
 
     def _sync_to_local_sqlite(self, df: pd.DataFrame):
         """Supabase에서 조회한 최신 데이터를 로컬 SQLite에 안전하게 동기화"""

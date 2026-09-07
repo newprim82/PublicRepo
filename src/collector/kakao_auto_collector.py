@@ -385,6 +385,12 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
                 
             log_trace(f"[파싱 시작] 텍스트 크기: {len(raw_text)}자")
             records = WorkLogMatcher.parse_and_match_text(raw_text)
+            # DB에 남아있는 48시간 이상 경과 미완료(PENDING) 작업 자동 완료 승격
+            try:
+                db_manager.resolve_expired_pending_tasks()
+            except Exception as e_exp:
+                log_trace(f"[PENDING 만료 처리 알림]: {e_exp}")
+
             if not records:
                 msg = "새로 등록/완료할 작업 보고 메시지가 없습니다."
                 log_trace(f"[✓] [{now_str}] {msg}")

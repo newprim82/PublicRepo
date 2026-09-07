@@ -185,7 +185,7 @@ def generate_msg_hash(worker_name: str, client_name: str, start_dt: datetime, ta
     return hashlib.sha256(unique_str.encode('utf-8')).hexdigest()[:16]
 
 
-def get_pending_timeout_hours(p_start) -> float:
+def get_pending_timeout_hours(p_start_or_raw: Any, est_mins: int = 0) -> float:
     """
     미완료 시작 보고의 자동 완료 대기 제한 시간(hours) 산출:
     - 기본 일반 당일 작업 (1일 이하, <= 9h): 48.0시간 (2일)
@@ -193,11 +193,19 @@ def get_pending_timeout_hours(p_start) -> float:
       공식: max(48.0, (예정일수 * 24.0) + 48.0)  (여유 +48시간 보장)
       예: 3days (27h) -> (3.0 * 24.0) + 48.0 = 120.0시간 (5일 동안 PENDING 대기 유지)
     """
-    raw_msg = getattr(p_start, "raw_message", "") or ""
-    est_mins = getattr(p_start, "estimated_minutes", 0) or 0
+    if hasattr(p_start_or_raw, "raw_message"):
+        raw_msg = getattr(p_start_or_raw, "raw_message", "") or ""
+        est_mins = getattr(p_start_or_raw, "estimated_minutes", 0) or 0
+    elif isinstance(p_start_or_raw, str):
+        raw_msg = p_start_or_raw
+    else:
+        raw_msg = ""
 
-    # 1. 메시지 본문에서 'N days / N일' 패턴 직접 탐색
-    m_day = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_msg, re.IGNORECASE)
+    # 1. 날짜(예: 9월 4일, 9/4)의 '일' 오인식 방지
+    clean_msg = re.sub(r'\d+\s*월\s*\d+\s*일', '', raw_msg)
+
+    # 2. 메시지 본문에서 'N days / N일' 패턴 직접 탐색
+    m_day = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일간|일동안|일)', clean_msg, re.IGNORECASE)
     if m_day:
         try:
             est_days = float(m_day.group(1))
