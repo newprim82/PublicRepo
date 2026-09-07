@@ -10,27 +10,59 @@ def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFram
     col_t3_1, col_t3_2 = st.columns(2)
     with col_t3_1:
         if not monthly_trend.empty:
-            range_label = f"{target_months[0]} ~ {target_months[-1]}" if len(target_months) >= 3 else ""
-            fig_monthly = px.line(
-                monthly_trend,
-                x="month_str",
-                y="total_hours",
-                markers=True,
-                text="total_hours",
-                labels={"month_str": "월", "total_hours": "총 지원 시간(h)"},
-                title=f"월별 총 지원 시간(h) 변동 추이 (지난 2달 포함 3개월 비교: {range_label})"
-            )
-            fig_monthly.update_traces(
-                line_color="#0284c7",
-                line_width=3,
-                texttemplate='%{text}h',
-                textposition='top center',
-                marker=dict(size=9, color="#005073", line=dict(width=2, color="#ffffff"))
-            )
+            range_label = f"{target_months[0]} ~ {target_months[-1]}" if target_months else ""
+
+            # 선택된 월 강조 마커 & 텍스트 세팅
+            is_selected = monthly_trend["month_str"].isin(selected_months)
+            marker_sizes = [15 if sel else 8 for sel in is_selected]
+            marker_colors = ["#f59e0b" if sel else "#0284c7" for sel in is_selected]
+            marker_symbols = ["diamond" if sel else "circle" for sel in is_selected]
+            marker_line_widths = [3 if sel else 1.5 for sel in is_selected]
+
+            text_labels = []
+            for m, h in zip(monthly_trend["month_str"], monthly_trend["total_hours"]):
+                if m in selected_months:
+                    text_labels.append(f"<b>★ {h}h<br>(선택)</b>")
+                else:
+                    text_labels.append(f"{h}h")
+
+            fig_monthly = go.Figure()
+            fig_monthly.add_trace(go.Scatter(
+                x=monthly_trend["month_str"],
+                y=monthly_trend["total_hours"],
+                mode="lines+markers+text",
+                text=text_labels,
+                textposition="top center",
+                line=dict(color="#0284c7", width=3.5),
+                marker=dict(
+                    size=marker_sizes,
+                    color=marker_colors,
+                    symbol=marker_symbols,
+                    line=dict(width=marker_line_widths, color="#ffffff")
+                ),
+                name="총 지원 시간",
+                hovertemplate="<b>%{x}</b><br>총 지원 시간: %{y}h<extra></extra>"
+            ))
+
+            # 선택된 월에 대해 세로 하이라이트 배경 밴드 추가
+            for sm in selected_months:
+                if sm in monthly_trend["month_str"].values:
+                    fig_monthly.add_vrect(
+                        x0=sm, x1=sm,
+                        fillcolor="#fef08a",
+                        opacity=0.35,
+                        layer="below",
+                        line_width=1.5,
+                        line_color="#f59e0b",
+                        line_dash="dot"
+                    )
+
             fig_monthly.update_layout(
+                title=f"월별 총 지원 시간(h) 변동 추이 (올해 {range_label})",
                 height=350,
                 margin=dict(l=40, r=40, t=50, b=40),
-                xaxis=dict(type='category', title="조회 월")
+                xaxis=dict(type='category', title="조회 월"),
+                yaxis=dict(title="총 지원 시간(h)")
             )
             st.plotly_chart(fig_monthly, use_container_width=True)
         
@@ -169,31 +201,42 @@ def render_trend_view(df: pd.DataFrame, df_filtered_base: pd.DataFrame, selected
     """📈 월별 / 주별 / 일별 지원 시간 추이 및 시계열 분석 메인 뷰"""
     st.subheader("📈 월별 / 주별 / 일별 지원 시간 추이 및 시계열 분석")
 
-    # 🌟 월별 총 지원 시간 변동 추이: 선택된 조회 월 기준 지난 2달 포함 (총 최근 3개월 비교)
+    # 🌟 월별 총 지원 시간 변동 추이: 올해 기준 1월부터 모든 월 표시 (선택된 달 강조)
     ref_month = selected_months[0] if selected_months else (available_months[0] if available_months else "")
-    target_months = []
+    year_target = "2026"
     if ref_month:
         try:
-            ref_dt = pd.to_datetime(ref_month + "-01")
-            m0 = ref_dt.strftime("%Y-%m")
-            m1 = (ref_dt - pd.DateOffset(months=1)).strftime("%Y-%m")
-            m2 = (ref_dt - pd.DateOffset(months=2)).strftime("%Y-%m")
-            target_months = [m2, m1, m0]
+            year_target = str(pd.to_datetime(ref_month + "-01").year)
         except Exception:
-            target_months = [ref_month]
+            year_target = ref_month.split("-")[0] if "-" in ref_month else "2026"
 
-    if target_months and "df_filtered_base" in locals():
-        df_trend_3m = df_filtered_base[df_filtered_base["month_str"].isin(target_months)]
+    # 올해(year_target)에 속하는 DB 내 월 목록 확인하여 1월부터 최신월까지 전수 생성
+    year_db_months = [m for m in available_months if str(m).startswith(year_target)]
+    if year_db_months:
+        max_m_num = max([int(m.split("-")[1]) for m in year_db_months])
+        target_months = [f"{year_target}-{m:02d}" for m in range(1, max_m_num + 1)]
     else:
-        df_trend_3m = df.copy()
+        target_months = [f"{year_target}-{m:02d}" for m in range(1, 13)]
 
-    monthly_trend = StatsService.get_monthly_trend(df_trend_3m)
-    if target_months and not monthly_trend.empty:
+    if df_filtered_base is not None and not df_filtered_base.empty:
+        df_trend_year = df_filtered_base[df_filtered_base["month_str"].isin(target_months)]
+    else:
+        df_trend_year = df.copy()
+
+    monthly_trend = StatsService.get_monthly_trend(df_trend_year)
+    if target_months:
         base_months_df = pd.DataFrame({"month_str": target_months})
-        monthly_trend = pd.merge(base_months_df, monthly_trend, on="month_str", how="left").fillna({
-            "total_hours": 0.0, "total_tasks": 0, "night_tasks": 0, "worker_count": 0
-        })
-        monthly_trend = monthly_trend.sort_values(by="month_str")
+        if not monthly_trend.empty:
+            monthly_trend = pd.merge(base_months_df, monthly_trend, on="month_str", how="left").fillna({
+                "total_hours": 0.0, "total_tasks": 0, "night_tasks": 0, "worker_count": 0
+            })
+        else:
+            monthly_trend = base_months_df.copy()
+            monthly_trend["total_hours"] = 0.0
+            monthly_trend["total_tasks"] = 0
+            monthly_trend["night_tasks"] = 0
+            monthly_trend["worker_count"] = 0
+        monthly_trend = monthly_trend.sort_values(by="month_str").reset_index(drop=True)
 
     if not df.empty:
         st.markdown("""<div style="background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-left: 4.5px solid #0284c7; border-radius: 6px; padding: 9px 15px; margin: 4px 0 14px 0; font-size: 13px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 8px;">
