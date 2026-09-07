@@ -119,6 +119,42 @@ def render_outlook_calendar_widget():
         cursor: pointer;
         white-space: nowrap;
     }
+    /* 📅 아웃룩 위젯 부모 Expander 고시인성 보장 */
+    div[data-testid="stExpander"] summary,
+    .streamlit-expanderHeader {
+        background: linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%) !important;
+        background-color: #f0f9ff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    div[data-testid="stExpander"] summary span,
+    div[data-testid="stExpander"] summary p,
+    div[data-testid="stExpander"] summary * {
+        color: #0c4a6e !important;
+        font-weight: 800 !important;
+        font-size: 14.5px !important;
+    }
+    div[data-testid="stExpander"] summary svg {
+        fill: #0284c7 !important;
+        color: #0284c7 !important;
+    }
+    /* 🔘 팀원 필터 pills 스타일링 */
+    [data-testid="stPills"] label,
+    [data-testid="stPills"] p {
+        color: #1e293b !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+    }
+    [data-testid="stPills"] button {
+        background-color: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #334155 !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stPills"] button[aria-selected="true"] {
+        background-color: #0284c7 !important;
+        color: #ffffff !important;
+        border-color: #0284c7 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 

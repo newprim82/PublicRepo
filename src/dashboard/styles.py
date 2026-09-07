@@ -1150,6 +1150,116 @@ def apply_custom_styles():
             color: #0f172a !important;
         }
 
+        /* ========================================================= */
+        /* 🏛️ [고시인성] 메인 영역 Expander (아코디언) 프리미엄 화이트 카드 테마 */
+        /* ========================================================= */
+        [data-testid="stMain"] [data-testid="stExpander"],
+        .stMain [data-testid="stExpander"],
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] div[data-testid="stExpander"]) {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-left: 5px solid #0284c7 !important;
+            border-radius: 9px !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 14px !important;
+            overflow: hidden !important;
+        }
+
+        [data-testid="stMain"] [data-testid="stExpander"] details,
+        .stMain [data-testid="stExpander"] details,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) details {
+            background-color: #ffffff !important;
+            border-radius: 9px !important;
+        }
+
+        /* Expander 헤더 (Summary) - 화사하고 밝은 아이스 소프트 그레이-블루 배경 */
+        [data-testid="stMain"] [data-testid="stExpander"] summary,
+        [data-testid="stMain"] details[data-testid="stExpander"] summary,
+        .stMain [data-testid="stExpander"] summary,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary {
+            background: linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%) !important;
+            background-color: #f0f9ff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 10px 16px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+
+        [data-testid="stMain"] [data-testid="stExpander"] summary:hover,
+        .stMain [data-testid="stExpander"] summary:hover,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary:hover {
+            background: linear-gradient(90deg, #e0f2fe 0%, #f1f5f9 100%) !important;
+            background-color: #e0f2fe !important;
+        }
+
+        /* 헤더 텍스트: 선명한 딥 네이비 볼드 (다크모드 간섭 100% 방지) */
+        [data-testid="stMain"] [data-testid="stExpander"] summary span,
+        [data-testid="stMain"] [data-testid="stExpander"] summary p,
+        [data-testid="stMain"] [data-testid="stExpander"] summary div,
+        .stMain [data-testid="stExpander"] summary *,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary * {
+            color: #0c4a6e !important;
+            font-size: 14.5px !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.3px !important;
+        }
+
+        /* Expander 토글 화살표 (SVG) */
+        [data-testid="stMain"] [data-testid="stExpander"] summary svg,
+        .stMain [data-testid="stExpander"] summary svg,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary svg {
+            fill: #0284c7 !important;
+            color: #0284c7 !important;
+            width: 18px !important;
+            height: 18px !important;
+        }
+
+        /* 본문 컨테이너 */
+        [data-testid="stMain"] [data-testid="stExpander"] [data-testid="stExpanderDetails"],
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) [data-testid="stExpanderDetails"] {
+            background-color: #ffffff !important;
+            padding: 14px 16px !important;
+        }
+
+        /* 🔘 [고시인성] st.pills (팀원 필터 알약 버튼) 스타일링 - 검은 덩어리 방지 */
+        [data-testid="stPills"] {
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }
+        [data-testid="stPills"] label,
+        [data-testid="stPills"] p {
+            color: #334155 !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            margin-right: 6px !important;
+        }
+        [data-testid="stPills"] button {
+            background-color: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+            padding: 3px 10px !important;
+            border-radius: 20px !important;
+            transition: all 0.15s ease !important;
+        }
+        [data-testid="stPills"] button:hover {
+            background-color: #e2e8f0 !important;
+            border-color: #94a3b8 !important;
+            color: #0f172a !important;
+        }
+        [data-testid="stPills"] button[aria-selected="true"] {
+            background-color: #0284c7 !important;
+            border-color: #0369a1 !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3) !important;
+        }
+        [data-testid="stPills"] button[aria-selected="true"] * {
+            color: #ffffff !important;
+        }
+
     </style>
     """, unsafe_allow_html=True)
 

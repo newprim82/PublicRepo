@@ -673,6 +673,40 @@ def render_home_view(
     st.markdown(criteria_panel_html, unsafe_allow_html=True)
 
     # 🌟 [신규] 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시 캘린더 위젯)
+    st.markdown("""
+    <style>
+    /* 📅 기술본부 통합 일정표 expander 전용 프리미엄 고시인성 스타일 */
+    div[data-testid="stExpander"]:has(.outlook-grid),
+    div[data-testid="stExpander"]:has(.outlook-day-header) {
+        background-color: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-left: 5px solid #0284c7 !important;
+        border-radius: 9px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+    }
+    div[data-testid="stExpander"]:has(.outlook-grid) summary,
+    div[data-testid="stExpander"]:has(.outlook-day-header) summary {
+        background: linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%) !important;
+        background-color: #f0f9ff !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 10px 16px !important;
+    }
+    div[data-testid="stExpander"]:has(.outlook-grid) summary span,
+    div[data-testid="stExpander"]:has(.outlook-grid) summary p,
+    div[data-testid="stExpander"]:has(.outlook-grid) summary *,
+    div[data-testid="stExpander"]:has(.outlook-day-header) summary * {
+        color: #0c4a6e !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        letter-spacing: -0.3px !important;
+    }
+    div[data-testid="stExpander"]:has(.outlook-grid) summary svg,
+    div[data-testid="stExpander"]:has(.outlook-day-header) summary svg {
+        fill: #0284c7 !important;
+        color: #0284c7 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     try:
         with st.expander("📅 기술본부 통합 일정표 (아웃룩 연동 & 미래시 스케줄)", expanded=True):
             render_outlook_calendar_widget()
