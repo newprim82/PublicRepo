@@ -212,7 +212,133 @@ def load_data() -> pd.DataFrame:
 
 
 # -------------------------------------------------------------
-# 4. 메인 오케스트레이터 & 사이드바 & 페이지 라우터
+# 4. 상단 대제목 헤더 & 하단 메인 본문 독립 프레임 (3분할 아키텍처)
+# -------------------------------------------------------------
+@st.fragment
+def render_top_header_frame():
+    """🏛️ Frame 2: 상단 대제목 헤더 독립 프레임 (NTP 시계 & 플랫폼 타이틀 고정)"""
+    curr_page = st.session_state.get("current_page", "🏠 실시간 분석 대시보드")
+    page_tag = curr_page.split(" ")[1] if " " in curr_page else curr_page
+    if "_base_bora_initial_ms" not in st.session_state:
+        bora_ts = get_bora_ntp_timestamp()
+        st.session_state["_base_bora_initial_ms"] = int(bora_ts * 1000)
+    initial_ms = st.session_state["_base_bora_initial_ms"]
+
+    render_header_banner(initial_ms, page_tag)
+
+
+@st.fragment
+def render_main_content_frame(
+    curr_page: str,
+    df: pd.DataFrame,
+    df_raw: pd.DataFrame,
+    df_filtered_base: pd.DataFrame,
+    selected_team: str,
+    team_mappings: dict,
+    all_workers_list: list,
+    team_available_workers: list,
+    selected_months: list,
+    available_months: list,
+    worker_mode: str,
+    selected_workers: list,
+    title_mode: str,
+    selected_titles: list,
+    client_mode: str,
+    selected_clients: list,
+    type_mode: str,
+    selected_types: list,
+    night_only: bool,
+    weekend_only: bool
+):
+    """🏛️ Frame 3: 하단 메인 본문 콘텐츠 독립 프레임 (12대 메뉴 뷰 라우팅 & 관제 캔버스)"""
+    # 0) 🔐 로그인 페이지
+    if curr_page == "🔐 시스템 로그인":
+        render_login_page()
+        return
+
+    # 🔒 관리자 전용 페이지 가드
+    admin_only_pages = [
+        "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
+        "📋 작업 기록 원장 & 엑셀"
+    ]
+    if curr_page in admin_only_pages and not AuthManager.is_authenticated():
+        st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
+        render_login_page()
+        return
+
+    # 1) ⚙️ 팀원 소속 및 직급 관리 (관리자)
+    if curr_page == "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)":
+        render_team_management_page(all_workers_list, team_mappings)
+        return
+
+    # 2) 📋 작업 기록 원장 & 엑셀 (관리자)
+    if curr_page == "📋 작업 기록 원장 & 엑셀":
+        render_worklog_view(df)
+        return
+
+    # 3) 🏠 실시간 분석 대시보드 (메인)
+    month_desc = ", ".join(selected_months) if len(selected_months) <= 2 else f"{selected_months[0]} 외 {len(selected_months)-1}개 월"
+    if len(selected_months) == len(available_months):
+        month_desc = "전체 기간"
+
+    if worker_mode == "팀 전체 인원":
+        if selected_team != "전체 팀":
+            worker_desc = f"{selected_team} 전체 ({len(team_available_workers)}명)"
+        else:
+            worker_desc = f"전체 인원 ({len(all_workers_list)}명)"
+    else:
+        worker_desc = ", ".join(selected_workers) if len(selected_workers) <= 3 else f"{selected_workers[0]} 외 {len(selected_workers)-1}명"
+
+    # 🎯 추가 상세 필터 활성 칩 구성
+    extra_chips = []
+    if title_mode != "전체 직급" and selected_titles:
+        extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">👔 직급:</span><span class="chip-value">{", ".join(selected_titles)}</span></div>')
+    if client_mode != "전체 고객사" and selected_clients:
+        c_txt = selected_clients[0] if len(selected_clients) == 1 else f"{selected_clients[0]} 외 {len(selected_clients)-1}사"
+        extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">🏢 고객사:</span><span class="chip-value">{c_txt}</span></div>')
+    if type_mode != "전체 구분" and selected_types:
+        t_txt = selected_types[0] if len(selected_types) == 1 else f"{selected_types[0]} 외 {len(selected_types)-1}개"
+        extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">🏷️ 구분:</span><span class="chip-value">{t_txt}</span></div>')
+    if night_only:
+        extra_chips.append('<div class="criteria-chip chip-extra"><span class="chip-label">🌙</span><span class="chip-value">야간 전용</span></div>')
+    if weekend_only:
+        extra_chips.append('<div class="criteria-chip chip-extra"><span class="chip-label">🏖️</span><span class="chip-value">주말 전용</span></div>')
+
+    extra_chips_str = "".join(extra_chips)
+
+    # ==========================================
+    # 메인 캔버스 뷰 전환 라우터 (선택된 메뉴 화면 호출)
+    # ==========================================
+    if curr_page == "🏠 실시간 분석 대시보드":
+        render_home_view(
+            df=df,
+            df_raw=df_raw,
+            selected_team=selected_team,
+            team_mappings=team_mappings,
+            month_desc=month_desc,
+            worker_desc=worker_desc,
+            extra_chips_str=extra_chips_str
+        )
+    elif curr_page == "📅 작업 캘린더 & 밀도 히트맵":
+        render_calendar_view(df, df_raw, selected_team)
+    elif curr_page == "🔍 전체 작업 스마트 검색":
+        render_search_view(df_raw, team_mappings)
+    elif curr_page == "📊 Summary":
+        render_summary_view(df, df_raw, selected_team, team_mappings, month_desc=month_desc)
+    elif curr_page == "👤 팀원별 업무량 분석":
+        render_worker_view(df, selected_team, month_desc)
+    elif curr_page == "🏢 팀별 업무량 비교":
+        render_team_view(df_raw, selected_months)
+    elif curr_page == "📈 월별/일별 추이":
+        render_trend_view(df, df_filtered_base, selected_months, available_months, month_desc)
+    elif curr_page == "🏢 고객사별 공수 분포":
+        render_client_view(df)
+    elif curr_page == "⏱️ 예정 vs 실제 소요시간":
+        render_duration_view(df)
+
+
+# -------------------------------------------------------------
+# 5. 메인 오케스트레이터 (사이드바 & 프레임 통합 조율)
 # -------------------------------------------------------------
 def main():
     from src.parser.reply_matcher import WorkLogMatcher
@@ -591,101 +717,36 @@ def main():
 
 
     # ==========================================
-    # 상단 Cisco Catalyst Center 글로벌 네이비 플랫폼 헤더
+    # 🏛️ Frame 2: 상단 대제목 헤더 독립 프레임 (NTP 시계 & 관제센터 타이틀 고정)
+    # ==========================================
+    render_top_header_frame()
+
+    # ==========================================
+    # 🏛️ Frame 3: 하단 메인 본문 콘텐츠 독립 프레임 (12대 메뉴 뷰 라우팅 & 관제 캔버스)
     # ==========================================
     curr_page = st.session_state.get("current_page", "🏠 실시간 분석 대시보드")
-    page_tag = curr_page.split(" ")[1] if " " in curr_page else curr_page
-    if "_base_bora_initial_ms" not in st.session_state:
-        bora_ts = get_bora_ntp_timestamp()
-        st.session_state["_base_bora_initial_ms"] = int(bora_ts * 1000)
-    initial_ms = st.session_state["_base_bora_initial_ms"]
-
-    render_header_banner(initial_ms, page_tag)
-
-    # 0) 🔐 로그인 페이지
-    if curr_page == "🔐 시스템 로그인":
-        render_login_page()
-        return
-
-    # 🔒 관리자 전용 페이지 가드
-    admin_only_pages = [
-        "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
-        "📋 작업 기록 원장 & 엑셀"
-    ]
-    if curr_page in admin_only_pages and not AuthManager.is_authenticated():
-        st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
-        render_login_page()
-        return
-
-    # 1) ⚙️ 팀원 소속 및 직급 관리 (관리자)
-    if curr_page == "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)":
-        render_team_management_page(all_workers_list, team_mappings)
-        return
-
-    # 2) 📋 작업 기록 원장 & 엑셀 (관리자)
-    if curr_page == "📋 작업 기록 원장 & 엑셀":
-        render_worklog_view(df)
-        return
-
-    # 3) 🏠 실시간 분석 대시보드 (메인)
-    month_desc = ", ".join(selected_months) if len(selected_months) <= 2 else f"{selected_months[0]} 외 {len(selected_months)-1}개 월"
-    if len(selected_months) == len(available_months):
-        month_desc = "전체 기간"
-
-    if worker_mode == "팀 전체 인원":
-        if selected_team != "전체 팀":
-            worker_desc = f"{selected_team} 전체 ({len(team_available_workers)}명)"
-        else:
-            worker_desc = f"전체 인원 ({len(all_workers_list)}명)"
-    else:
-        worker_desc = ", ".join(selected_workers) if len(selected_workers) <= 3 else f"{selected_workers[0]} 외 {len(selected_workers)-1}명"
-
-    # 🎯 추가 상세 필터 활성 칩 구성
-    extra_chips = []
-    if title_mode != "전체 직급" and selected_titles:
-        extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">👔 직급:</span><span class="chip-value">{", ".join(selected_titles)}</span></div>')
-    if client_mode != "전체 고객사" and selected_clients:
-        c_txt = selected_clients[0] if len(selected_clients) == 1 else f"{selected_clients[0]} 외 {len(selected_clients)-1}사"
-        extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">🏢 고객사:</span><span class="chip-value">{c_txt}</span></div>')
-    if type_mode != "전체 구분" and selected_types:
-        t_txt = selected_types[0] if len(selected_types) == 1 else f"{selected_types[0]} 외 {len(selected_types)-1}개"
-        extra_chips.append(f'<div class="criteria-chip chip-extra"><span class="chip-label">🏷️ 구분:</span><span class="chip-value">{t_txt}</span></div>')
-    if night_only:
-        extra_chips.append('<div class="criteria-chip chip-extra"><span class="chip-label">🌙</span><span class="chip-value">야간 전용</span></div>')
-    if weekend_only:
-        extra_chips.append('<div class="criteria-chip chip-extra"><span class="chip-label">🏖️</span><span class="chip-value">주말 전용</span></div>')
-
-    extra_chips_str = "".join(extra_chips)
-
-    # ==========================================
-    # 메인 캔버스 뷰 전환 라우터 (선택된 메뉴 화면 호출)
-    # ==========================================
-    if curr_page == "🏠 실시간 분석 대시보드":
-        render_home_view(
-            df=df,
-            df_raw=df_raw,
-            selected_team=selected_team,
-            team_mappings=team_mappings,
-            month_desc=month_desc,
-            worker_desc=worker_desc,
-            extra_chips_str=extra_chips_str
-        )
-    elif curr_page == "📅 작업 캘린더 & 밀도 히트맵":
-        render_calendar_view(df, df_raw, selected_team)
-    elif curr_page == "🔍 전체 작업 스마트 검색":
-        render_search_view(df_raw, team_mappings)
-    elif curr_page == "📊 Summary":
-        render_summary_view(df, df_raw, selected_team, team_mappings, month_desc=month_desc)
-    elif curr_page == "👤 팀원별 업무량 분석":
-        render_worker_view(df, selected_team, month_desc)
-    elif curr_page == "🏢 팀별 업무량 비교":
-        render_team_view(df_raw, selected_months)
-    elif curr_page == "📈 월별/일별 추이":
-        render_trend_view(df, df_filtered_base, selected_months, available_months, month_desc)
-    elif curr_page == "🏢 고객사별 공수 분포":
-        render_client_view(df)
-    elif curr_page == "⏱️ 예정 vs 실제 소요시간":
-        render_duration_view(df)
+    render_main_content_frame(
+        curr_page=curr_page,
+        df=df,
+        df_raw=df_raw,
+        df_filtered_base=df_filtered_base,
+        selected_team=selected_team,
+        team_mappings=team_mappings,
+        all_workers_list=all_workers_list,
+        team_available_workers=team_available_workers,
+        selected_months=selected_months,
+        available_months=available_months,
+        worker_mode=worker_mode,
+        selected_workers=selected_workers,
+        title_mode=title_mode,
+        selected_titles=selected_titles,
+        client_mode=client_mode,
+        selected_clients=selected_clients,
+        type_mode=type_mode,
+        selected_types=selected_types,
+        night_only=night_only,
+        weekend_only=weekend_only
+    )
 
 
 if __name__ == "__main__":
