@@ -80,19 +80,19 @@ class ScheduleSyncService:
             w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
             l_type = r.get("leave_type") or "연차"
 
-            # 1-A. 현재 시간이 아직 휴가 종료 이전(09:00~18:00 등)인 경우에만 실시간 진행 섹션 상단 부재 배너에 표출
-            if ed_dt and now < ed_dt:
-                leave_records.append({
-                    "worker_name": w_name,
-                    "worker_team": w_team,
-                    "subject": r["subject"],
-                    "leave_type": l_type,
-                    "start_time": st_time,
-                    "end_time": ed_time,
-                    "duration_hours": dur_hours,
-                    "progress_pct": 100,  # 무조건 100%
-                    "color_tag": r.get("color_tag", "#ec4899")
-                })
+            # 1-A. 오늘 휴가는 상시 실시간 진행 섹션 상단 부재 현황에 100% 카드로 표출
+            leave_records.append({
+                "worker_name": w_name,
+                "worker_title": w_title,
+                "worker_team": w_team,
+                "subject": r["subject"],
+                "leave_type": l_type,
+                "start_time": st_time,
+                "end_time": ed_time,
+                "duration_hours": dur_hours,
+                "progress_pct": 100,  # 무조건 100%
+                "color_tag": r.get("color_tag", "#ec4899")
+            })
 
             # 1-B. 휴가는 오늘 완료된 작업 섹션에 항상 100% 완료 카드로 당당히 표출!
             auto_completed_rows.append({

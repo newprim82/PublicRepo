@@ -68,9 +68,11 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
     # 🏖️ 오늘 휴가 / 연차 / 반차 현황 카드 섹션 (무조건 100%)
     if leave_records:
         st.markdown(f"""<div style="font-size: 15px; font-weight: 800; color: #581c87; border-left: 4px solid #a855f7; padding-left: 9px; margin-bottom: 10px; margin-top: 4px; display: flex; align-items: center; gap: 8px;">🏖️ 오늘 휴가 / 연차 / 반차 현황 <span style="background: #f3e8ff; color: #7e22ce; border-radius: 12px; padding: 2px 8px; font-size: 11.5px; font-weight: 800;">{len(leave_records)}명 부재</span></div>""", unsafe_allow_html=True)
-        l_cols = st.columns(min(4, max(1, len(leave_records))))
+        # 🏛️ 일반 진행/완료 카드와 가로폭(width) 및 크기를 100% 동일하게 맞추기 위해 전체 팀(5열) / 단일 팀(4열) 고정 그리드 사용
+        target_cols_count = 5 if selected_team == "전체 팀" else 4
+        l_cols = st.columns(target_cols_count)
         for l_idx, l_rec in enumerate(leave_records):
-            with l_cols[l_idx % len(l_cols)]:
+            with l_cols[l_idx % target_cols_count]:
                 l_html = get_leave_card_html(l_rec, is_single_view=(selected_team != "전체 팀"))
                 st.markdown(l_html, unsafe_allow_html=True)
         st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)

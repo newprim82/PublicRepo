@@ -2,7 +2,9 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.0.3 (Outlook Integration & Future Schedule Hotfix)
+# WorkTime Dashboard v2.0.4 (Leave Card Sizing & Cloud Cache Sync)
+APP_VERSION = "v2.0.4"
+
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
 _project_root = _current_file.parent.parent.parent  # src/dashboard/app.py -> root
@@ -83,6 +85,11 @@ st.set_page_config(
 
 apply_custom_styles()
 
+# 버전 변경 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
+if st.session_state.get("_applied_app_version") != APP_VERSION:
+    st.session_state["_applied_app_version"] = APP_VERSION
+    st.cache_data.clear()
+
 def clear_all_web_caches():
     """웹 메모리 캐시 및 인메모리 RAM 캐시 초기화"""
     st.cache_data.clear()
@@ -91,7 +98,7 @@ def clear_all_web_caches():
 # 3. 데이터 로딩 (멀티데이 분할 원본 중복제거, 정규화, 야간/주말 보장)
 # -------------------------------------------------------------
 # -------------------------------------------------------------
-@st.cache_data(ttl=180, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
 def load_data() -> pd.DataFrame:
     df = db_manager.fetch_all_work_logs()
     if not df.empty:
@@ -376,7 +383,11 @@ def main():
             on_click=set_nav_page,
             args=("🏠 실시간 분석 대시보드",)
         )
-        st.markdown('<div style="height: 30px;"></div>', unsafe_allow_html=True)
+        if st.button("🔄 최신 데이터 즉시 동기화", key="btn_quick_cache_sync", use_container_width=True, help="클릭 시 웹 캐시를 즉시 초기화하고 최신 DB 데이터를 다시 불러옵니다."):
+            clear_all_web_caches()
+            st.toast("🧹 최신 DB 데이터 및 일정을 즉시 동기화했습니다!", icon="✅")
+            st.rerun()
+        st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True)
 
         is_auth = AuthManager.is_authenticated()
 
