@@ -684,7 +684,7 @@ def render_home_view(
     # 5. 🟢 오늘 실시간 작업 현황 라이브 보드 (현재시: LIVE 관제)
     render_today_live_board(df_raw, team_mappings, selected_team)
 
-    # 6. 📏 LIVE 관제 카드 아래와 미래시 일정표 사이 정확한 30px 대칭 구분선 (카드 아래 30px / 일정표 위 30px)
+    # 6. 📏 LIVE 관제 카드 아래와 미래시 일정표 사이 정확한 20px 대칭 구분선 (카드 아래 20px / 일정표 위 20px)
     st.markdown("""
     <style>
     /* 중간 구분선 컨테이너: 상하 불필요한 추가 패딩/마진 0 리셋 */
@@ -694,8 +694,8 @@ def render_home_view(
         padding: 0 !important;
     }
     .live-to-calendar-divider {
-        margin-top: 22px !important; /* 카드 자체의 margin-bottom 8px + 22px = 정확히 30px */
-        margin-bottom: 30px !important; /* 중간선에서 일정표 아코디언 상단까지 정확히 30px */
+        margin-top: 12px !important; /* 카드 자체의 margin-bottom 8px + 12px = 정확히 20px */
+        margin-bottom: 20px !important; /* 중간선에서 일정표 아코디언 상단까지 정확히 20px */
         border-top: 1.5px solid #cbd5e1 !important;
         width: 100% !important;
     }
