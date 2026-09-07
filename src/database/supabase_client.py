@@ -308,6 +308,11 @@ class DatabaseManager:
         df["actual_minutes"] = pd.to_numeric(df.get("actual_minutes", 0), errors="coerce").fillna(0).astype(int)
         df["estimated_minutes"] = pd.to_numeric(df.get("estimated_minutes", 0), errors="coerce").fillna(0).astype(int)
         
+        if "status" not in df.columns:
+            df["status"] = "COMPLETED"
+        else:
+            df["status"] = df["status"].fillna("COMPLETED").astype(str)
+        
         df["actual_hours"] = (df["actual_minutes"] / 60.0).round(1)
         df["estimated_hours"] = (df["estimated_minutes"] / 60.0).round(1)
         

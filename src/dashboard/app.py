@@ -1094,7 +1094,13 @@ def load_data() -> pd.DataFrame:
             if sort_cols:
                 df = df.sort_values(by=sort_cols, ascending=[False] * len(sort_cols))
             df = df.drop_duplicates(subset=dup_subset, keep="first").reset_index(drop=True)
-            
+
+        # status 컬럼 안전 보장
+        if "status" not in df.columns:
+            df["status"] = "COMPLETED"
+        else:
+            df["status"] = df["status"].fillna("COMPLETED").astype(str)
+
         # week_str, week_label 안전 보장
         if "start_time" in df.columns:
             df["start_time"] = pd.to_datetime(df["start_time"], errors="coerce")
@@ -2131,15 +2137,30 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         st.info("현재 등록된 작업 로그 데이터가 없습니다.")
         return
 
-    today_df = df_raw[df_raw["start_time"].dt.date == today_date].copy()
+    today_df = df_raw[df_raw["start_time"].dt.date == today_date].copy() if not df_raw.empty else pd.DataFrame()
+
+    # 필수 컬럼 안전 보장 (오늘 작업이 0건이거나 컬럼 누락 시 KeyError 원천 방지)
+    for col, default_val in [
+        ("status", "COMPLETED"),
+        ("worker_team", UNASSIGNED_TEAM),
+        ("worker_name", ""),
+        ("actual_hours", 0.0),
+        ("estimated_hours", 0.0)
+    ]:
+        if col not in today_df.columns:
+            today_df[col] = default_val
 
     # 팀 필터링 적용
-    if selected_team != "전체 팀":
+    if selected_team != "전체 팀" and not today_df.empty:
         today_df = today_df[today_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
     # 2. 진행 중(PENDING) vs 오늘 완료(COMPLETED) 분리
-    pend_df = today_df[today_df["status"] == "PENDING"].sort_values("start_time", ascending=False)
-    comp_df = today_df[today_df["status"] == "COMPLETED"].sort_values("start_time", ascending=False)
+    if not today_df.empty:
+        pend_df = today_df[today_df["status"] == "PENDING"].sort_values("start_time", ascending=False)
+        comp_df = today_df[today_df["status"] == "COMPLETED"].sort_values("start_time", ascending=False)
+    else:
+        pend_df = today_df.iloc[0:0]
+        comp_df = today_df.iloc[0:0]
 
     tot_workers = today_df["worker_name"].nunique() if not today_df.empty else 0
     tot_hours = round(comp_df["actual_hours"].sum() + pend_df["estimated_hours"].sum(), 1) if not today_df.empty else 0.0
