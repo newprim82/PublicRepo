@@ -367,14 +367,25 @@ class WorkLogMatcher:
                                 worker_end_mins = task_end.worker_specific_minutes[p_start.worker_name]
 
                             # ★ 사용자 지정 규칙: 단순 완료 보고 시 완료시간과 예정시간의 괴리가 과도하면 오매칭 방지를 위해 건너뜀 ★
-                            # 1) 상한 가드: 완료시간이 (예정시간 + 2시간/120분)을 초과하는 경우 (예: 4시간 예정에 18시간/2day 완료)
-                            # 2) 하한 가드: 3days(27h) 등 다일(Day) 대형 작업에 단발성 5.5시간 등 현격히 작은 완료 보고가 묶이는 것 방지
+                            # 1) 동일 작업자에게 대기 중인 시작 보고가 여러 건일 때만 엄격한 오매칭 가드 적용
+                            # 2) 대기 중인 작업이 1건뿐이면 예정시간보다 초과되거나 조기 완료된 정상 보고(예: 6h예정 ➔ 8.5h완료, 9h예정 ➔ 5h완료)는 정상 매칭
                             if p_start.estimated_minutes > 0 and worker_end_mins > 0:
-                                is_too_large = worker_end_mins > (p_start.estimated_minutes + 120)
-                                is_too_small = (p_start.estimated_minutes >= 8 * 60) and (worker_end_mins < p_start.estimated_minutes * 0.6)
-                                if is_too_large or is_too_small:
-                                    if not p_start.client_name or p_start.client_name not in task_end.raw_message:
-                                        continue
+                                same_worker_count = sum(1 for p in pending_starts if (
+                                    p.worker_name in possible_names or 
+                                    p.worker_info.name in possible_names or 
+                                    any(pn in p.worker_info.full_profile for pn in possible_names)
+                                ))
+                                if same_worker_count > 1:
+                                    is_too_large = worker_end_mins > (p_start.estimated_minutes + 180)
+                                    is_too_small = (p_start.estimated_minutes >= 8 * 60) and (worker_end_mins < p_start.estimated_minutes * 0.5)
+                                    if is_too_large or is_too_small:
+                                        if not p_start.client_name or p_start.client_name not in task_end.raw_message:
+                                            continue
+                                else:
+                                    is_extreme_mismatch = (p_start.estimated_minutes >= 18 * 60) and (worker_end_mins <= 180)
+                                    if is_extreme_mismatch:
+                                        if not p_start.client_name or p_start.client_name not in task_end.raw_message:
+                                            continue
 
                             adj_end_time = task_end.timestamp
                             if adj_end_time < p_start.timestamp and (p_start.timestamp - adj_end_time).total_seconds() < 24 * 3600:
