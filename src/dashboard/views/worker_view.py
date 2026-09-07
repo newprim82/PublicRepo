@@ -10,6 +10,7 @@ from ..common.dialogs import (
     show_kpi_urgent_dialog,
     show_weekly_detail_dialog
 )
+from ..common.ui_helpers import extract_week_sort_key
 
 def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataFrame, chart_orientation: str, selected_view: str):
     """팀원별 업무량 랭킹 & 작업 유형 차트 (화면 전체 새로고침 없는 독립 Fragment)"""
@@ -388,7 +389,7 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
     if "week_label" in df_scope.columns:
         raw_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
         try:
-            available_weeks = sorted(raw_weeks, key=lambda x: int(''.join(filter(str.isdigit, str(x)))) if any(c.isdigit() for c in str(x)) else str(x))
+            available_weeks = sorted(raw_weeks, key=extract_week_sort_key)
         except Exception:
             available_weeks = sorted(raw_weeks)
 

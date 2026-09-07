@@ -40,7 +40,8 @@ from src.dashboard.styles import apply_custom_styles, render_header_banner
 from src.dashboard.common.ui_helpers import (
     get_bora_ntp_timestamp,
     get_all_teams_safe,
-    is_same_team
+    is_same_team,
+    get_month_clamped_week_label
 )
 
 from src.dashboard.views.auth_view import render_login_page
@@ -150,17 +151,8 @@ def load_data() -> pd.DataFrame:
             df["month_str"] = df["start_time"].dt.strftime("%Y-%m")
             df["date_str"] = df["start_time"].dt.strftime("%Y-%m-%d")
             
-            def get_week_label(dt):
-                if pd.isna(dt):
-                    return ""
-                from datetime import timedelta
-                mon = dt - timedelta(days=dt.weekday())
-                sun = mon + timedelta(days=6)
-                week_of_month = (mon.day - 1) // 7 + 1
-                return f"{mon.strftime('%Y-%m')} {week_of_month}주차 ({mon.strftime('%m/%d')}~{sun.strftime('%m/%d')})"
-
             df["week_str"] = df["start_time"].dt.strftime("%G-W%V")
-            df["week_label"] = df["start_time"].apply(get_week_label)
+            df["week_label"] = df["start_time"].apply(get_month_clamped_week_label)
         else:
             df["week_str"] = ""
             df["week_label"] = ""

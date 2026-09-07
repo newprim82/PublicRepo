@@ -388,3 +388,53 @@ def get_team_theme(team_name: str) -> dict:
             "tag": "기타",
         }
 
+
+def get_month_clamped_week_label(dt) -> str:
+    """월 경계를 넘지 않고 해당 월(1일~말일) 안에서만 월요일~일요일 단위로 주차를 분할하는 라벨 생성 함수.
+    
+    규칙:
+    - 1주차: 1일부터 1일이 속한 주의 일요일까지 (예: 2026-08-01 토 ~ 2026-08-02 일 -> 2026-08 1주차 (08/01~08/02))
+    - 2주차 이후: 매주 월요일부터 일요일까지 (예: 2026-08 2주차 (08/03~08/09), 3주차 (08/10~08/16)...)
+    - 마지막 주차: 마지막 주 월요일부터 해당 월의 말일까지 (예: 2026-08 6주차 (08/31~08/31))
+    - 인접 월(전달, 다음달) 날짜가 절대 섞이지 않음.
+    """
+    if pd.isna(dt):
+        return ""
+    if hasattr(dt, "to_pydatetime"):
+        dt = dt.to_pydatetime()
+    
+    import calendar
+    from datetime import date, timedelta
+
+    y = dt.year
+    m = dt.month
+    d = dt.day
+    target_date = date(y, m, d)
+    
+    last_day_num = calendar.monthrange(y, m)[1]
+    cur_start = date(y, m, 1)
+    week_num = 1
+    
+    while cur_start.day <= last_day_num:
+        days_to_sun = 6 - cur_start.weekday()
+        cur_sun = cur_start + timedelta(days=days_to_sun)
+        cur_end = min(cur_sun, date(y, m, last_day_num))
+        
+        if cur_start <= target_date <= cur_end:
+            return f"{y:04d}-{m:02d} {week_num}주차 ({cur_start.strftime('%m/%d')}~{cur_end.strftime('%m/%d')})"
+        
+        cur_start = cur_end + timedelta(days=1)
+        week_num += 1
+        if cur_start.month != m:
+            break
+            
+    return ""
+
+
+def extract_week_sort_key(w_lbl: str) -> list:
+    """주차 라벨에서 정렬을 위한 숫자 리스트 추출 (예: '2026-08 1주차 (08/01~08/02)' -> [2026, 8, 1, 8, 1, 8, 2])"""
+    import re
+    nums = [int(n) for n in re.findall(r'\d+', str(w_lbl))]
+    return nums if nums else [9999]
+
+

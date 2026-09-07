@@ -17,7 +17,8 @@ from ..common.ui_helpers import (
     get_job_title_rank,
     get_team_theme,
     is_same_team,
-    get_all_teams_safe
+    get_all_teams_safe,
+    extract_week_sort_key
 )
 
 def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
@@ -87,7 +88,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     if "week_label" in df_scope.columns:
         raw_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
         try:
-            available_weeks = sorted(raw_weeks, key=lambda x: int(''.join(filter(str.isdigit, str(x)))) if any(c.isdigit() for c in str(x)) else str(x))
+            available_weeks = sorted(raw_weeks, key=extract_week_sort_key)
         except Exception:
             available_weeks = sorted(raw_weeks)
 

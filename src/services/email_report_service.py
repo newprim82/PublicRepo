@@ -82,13 +82,29 @@ class EmailReportService:
                     if dup_origin_indices:
                         df = df.drop(index=dup_origin_indices).reset_index(drop=True)
 
+            import calendar
+            from datetime import date as d_date, timedelta as d_timedelta
             def get_week_label(dt):
                 if pd.isna(dt):
                     return ""
-                mon = dt - timedelta(days=dt.weekday())
-                sun = mon + timedelta(days=6)
-                week_of_month = (mon.day - 1) // 7 + 1
-                return f"{mon.strftime('%Y-%m')} {week_of_month}주차 ({mon.strftime('%m/%d')}~{sun.strftime('%m/%d')})"
+                if hasattr(dt, "to_pydatetime"):
+                    dt = dt.to_pydatetime()
+                y, m, d = dt.year, dt.month, dt.day
+                target_date = d_date(y, m, d)
+                last_day_num = calendar.monthrange(y, m)[1]
+                cur_start = d_date(y, m, 1)
+                week_num = 1
+                while cur_start.day <= last_day_num:
+                    days_to_sun = 6 - cur_start.weekday()
+                    cur_sun = cur_start + d_timedelta(days=days_to_sun)
+                    cur_end = min(cur_sun, d_date(y, m, last_day_num))
+                    if cur_start <= target_date <= cur_end:
+                        return f"{y:04d}-{m:02d} {week_num}주차 ({cur_start.strftime('%m/%d')}~{cur_end.strftime('%m/%d')})"
+                    cur_start = cur_end + d_timedelta(days=1)
+                    week_num += 1
+                    if cur_start.month != m:
+                        break
+                return f"{y:04d}-{m:02d} 1주차"
 
             df["week_label"] = df["start_time"].apply(get_week_label)
             raw_weeks = [w for w in df["week_label"].dropna().unique() if str(w).strip()]
