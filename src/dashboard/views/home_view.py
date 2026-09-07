@@ -29,6 +29,40 @@ from ..common.ui_helpers import (
 )
 
 @st.fragment(run_every="60s")
+def render_single_team_pending_cards_fragment(pend_df: pd.DataFrame, title_mappings: dict):
+    """🏢 단일 팀 진행 중인 작업 카드 전용 1분 무깜빡임 자동 갱신 프래그먼트"""
+    kst_now_naive = get_current_kst_time().replace(tzinfo=None)
+    t_pend = pend_df.copy()
+    t_pend["_rank_score"] = t_pend.apply(
+        lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""),
+        axis=1
+    )
+    t_pend = t_pend.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
+
+    p_cols = st.columns(4)
+    for idx, (_, r) in enumerate(t_pend.iterrows()):
+        with p_cols[idx % 4]:
+            card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=True)
+            st.markdown(card_html, unsafe_allow_html=True)
+
+
+@st.fragment(run_every="60s")
+def render_kanban_pending_cards_fragment(t_pend: pd.DataFrame, title_mappings: dict):
+    """🏛️ 전체 팀 칸반 열 진행 중인 작업 카드 전용 1분 무깜빡임 자동 갱신 프래그먼트"""
+    kst_now_naive = get_current_kst_time().replace(tzinfo=None)
+    t_pend_sorted = t_pend.copy()
+    t_pend_sorted["_rank_score"] = t_pend_sorted.apply(
+        lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""),
+        axis=1
+    )
+    t_pend_sorted = t_pend_sorted.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
+
+    for idx, (_, r) in enumerate(t_pend_sorted.iterrows()):
+        card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=False)
+        st.markdown(card_html, unsafe_allow_html=True)
+
+
+@st.fragment
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
     # 팀명 공백 무관 안전 비교 헬퍼 (예: "기술1팀" == "기술 1팀")
     def is_same_team(t1, t2):
@@ -176,13 +210,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                         if t_pend.empty:
                             st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 26px 8px; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 10px;'>진행 작업 없음</div>", unsafe_allow_html=True)
                         else:
-                            t_pend = t_pend.copy()
-                            t_pend["_rank_score"] = t_pend.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
-                            t_pend = t_pend.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
-
-                            for idx, (_, r) in enumerate(t_pend.iterrows()):
-                                card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=False)
-                                st.markdown(card_html, unsafe_allow_html=True)
+                            render_kanban_pending_cards_fragment(t_pend, title_mappings)
             else:
                 # 🏢 단일 팀 선택 시: 기존 4열 그리드 레이아웃
                 title_mappings = TeamService.get_title_mappings()
@@ -190,15 +218,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 with st.container(border=True):
                     st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(pend_df)}건 진행 중</span></div>""", unsafe_allow_html=True)
 
-                    t_pend = pend_df.copy()
-                    t_pend["_rank_score"] = t_pend.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
-                    t_pend = t_pend.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
-
-                    p_cols = st.columns(4)
-                    for idx, (_, r) in enumerate(t_pend.iterrows()):
-                        with p_cols[idx % 4]:
-                            card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=True)
-                            st.markdown(card_html, unsafe_allow_html=True)
+                    render_single_team_pending_cards_fragment(pend_df, title_mappings)
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 5. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)
