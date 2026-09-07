@@ -150,6 +150,10 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                     if not w_name or w_name in ["내 캘린더", "내 일정", "Calendar", "내"]:
                         w_name = "김경현"
 
+                    # 🌟 사용자 요청: 맨 앞에 대괄호하고 이름이 없다면 '[이름]' 자동 부착
+                    if not subject.startswith(f"[{w_name}]"):
+                        subject = f"[{w_name}] {subject}"
+
                     # 휴가 / 연차 / 반차 식별
                     is_leave = False
                     leave_type = ""

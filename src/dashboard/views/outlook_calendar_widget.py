@@ -252,7 +252,11 @@ def render_outlook_calendar_widget():
         for _, ev in day_events.iterrows():
             w_name = ev["worker_name"]
             c_info = OUTLOOK_MEMBER_COLORS.get(w_name, DEFAULT_COLOR)
-            subj = ev["subject"]
+            subj = str(ev["subject"]).strip()
+            # 🌟 [신규] 맨 앞에 대괄호하고 작업자 이름이 없다면 '[이름]' 자동 부착
+            if not subj.startswith(f"[{w_name}]"):
+                subj = f"[{w_name}] {subj}"
+
             allday = ev.get("is_all_day", False)
             is_leave = ev.get("is_leave", False)
 
