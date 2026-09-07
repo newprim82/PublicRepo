@@ -22,3 +22,4 @@ data/*.db
 backup/
 data/.session_cache.json
 *.cache
+collector_status.json

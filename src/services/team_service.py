@@ -75,7 +75,7 @@ class TeamService:
                 if t and t not in teams and t != UNASSIGNED_TEAM:
                     teams.append(t)
                     
-            cursor.execute("SELECT DISTINCT team_name FROM team_members")
+            cursor.execute("SELECT DISTINCT team_name FROM team_members WHERE worker_name NOT LIKE 'SYSTEM_%' AND worker_name NOT LIKE 'SYS_%'")
             for row in cursor.fetchall():
                 t = row[0].strip()
                 if t and t not in teams and t != UNASSIGNED_TEAM:
@@ -87,8 +87,11 @@ class TeamService:
         # 2. Supabase team_members에서 등록된 팀도 병합
         if db_manager.use_supabase and db_manager.supabase:
             try:
-                res = db_manager.supabase.table("worktime_team_members").select("team_name").execute()
+                res = db_manager.supabase.table("worktime_team_members").select("worker_name, team_name").execute()
                 for row in (res.data or []):
+                    w = str(row.get("worker_name", ""))
+                    if w.startswith("SYSTEM_") or w.startswith("SYS_"):
+                        continue
                     t = (row.get("team_name") or "").strip()
                     if t and t not in teams and t != UNASSIGNED_TEAM:
                         teams.append(t)
@@ -151,7 +154,10 @@ class TeamService:
             try:
                 res = db_manager.supabase.table("worktime_team_members").select("*").execute()
                 for row in (res.data or []):
-                    info_map[row["worker_name"]] = {
+                    w_name = str(row.get("worker_name", "")).strip()
+                    if not w_name or w_name.startswith("SYSTEM_") or w_name.startswith("SYS_"):
+                        continue
+                    info_map[w_name] = {
                         "team": row.get("team_name") or UNASSIGNED_TEAM,
                         "title": row.get("job_title") or ""
                     }
@@ -165,7 +171,7 @@ class TeamService:
         # 2. 로컬 SQLite 조회
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
-        cursor.execute("SELECT worker_name, team_name, job_title FROM team_members")
+        cursor.execute("SELECT worker_name, team_name, job_title FROM team_members WHERE worker_name NOT LIKE 'SYSTEM_%' AND worker_name NOT LIKE 'SYS_%'")
         for w_name, t_name, j_title in cursor.fetchall():
             info_map[w_name] = {
                 "team": t_name or UNASSIGNED_TEAM,

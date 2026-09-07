@@ -11,6 +11,7 @@ from ..config import config
 from ..parser.kakao_parser import RawKakaoMessage, KakaoMessageParser
 from ..parser.reply_matcher import WorkLogMatcher, WorkLogRecord
 from ..database.supabase_client import db_manager
+from ..services.collector_status_service import CollectorStatusService
 
 # Windows 전용 모듈 안전 임포트
 import ctypes
@@ -366,10 +367,11 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             
             hwnd = find_kakao_chat_window(target_chat)
             if not hwnd:
-                msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않습니다."
+                msg = f"'{target_chat}' 대화방 창이 PC 화면에 열려있지 않거나 카카오톡 로그인이 풀려있습니다."
                 log_trace(f"[-] [{now_str}] {msg}")
-                COLLECTOR_STATUS["last_status"] = "대화방 창 미열림"
+                COLLECTOR_STATUS["last_status"] = "대화방 창 미열림 / 로그인 필요"
                 COLLECTOR_STATUS["last_log_message"] = msg
+                CollectorStatusService.report_status("LOGIN_REQUIRED_OR_WINDOW_CLOSED", msg)
                 return {"status": "window_not_found", "message": msg, "time": now_str}
                 
             raw_text = extract_text_from_kakao_window(hwnd, is_manual=is_manual)
@@ -378,6 +380,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
                 log_trace(f"[-] [{now_str}] {msg}")
                 COLLECTOR_STATUS["last_status"] = "텍스트 추출 실패"
                 COLLECTOR_STATUS["last_log_message"] = msg
+                CollectorStatusService.report_status("TEXT_EXTRACT_FAILED", msg)
                 return {"status": "no_text", "message": msg, "time": now_str}
                 
             log_trace(f"[파싱 시작] 텍스트 크기: {len(raw_text)}자")
@@ -387,6 +390,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
                 log_trace(f"[✓] [{now_str}] {msg}")
                 COLLECTOR_STATUS["last_status"] = "새 작업 없음"
                 COLLECTOR_STATUS["last_log_message"] = msg
+                CollectorStatusService.report_status("ONLINE", msg, 0, 0)
                 return {"status": "no_records", "message": msg, "time": now_str}
                 
             saved = db_manager.save_work_logs(records)
@@ -396,6 +400,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
                 "saved_records": saved
             }
             COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
+            CollectorStatusService.report_status("ONLINE", f"{len(records)}건 분석 완료 (DB 저장: {saved}건)", len(records), saved)
             
             log_trace(f"[✓] [{now_str}] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
             return {
@@ -408,6 +413,7 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             log_trace(f"[수집 사이클 예외 발생]: {e}")
             COLLECTOR_STATUS["last_status"] = f"예외 발생: {e}"
             COLLECTOR_STATUS["last_log_message"] = str(e)
+            CollectorStatusService.report_status("ERROR", f"수집 사이클 예외: {e}")
             return {"status": "error", "message": str(e), "time": now_str}
 
 

@@ -2170,7 +2170,41 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     st.markdown(summary_html, unsafe_allow_html=True)
 
     if today_df.empty:
-        st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 실시간 작업 보고가 아직 없습니다. 카카오톡에 시작 보고가 올라오면 10분 내로 여기에 실시간으로 표시됩니다!")
+        # 🚨 카카오톡 수집기 장애 상태 실시간 감지
+        try:
+            from src.services.collector_status_service import CollectorStatusService
+            collector_stat = CollectorStatusService.get_status()
+        except Exception:
+            collector_stat = {"is_healthy": False, "status_code": "UNKNOWN"}
+
+        is_healthy = collector_stat.get("is_healthy", True)
+        stat_code = collector_stat.get("status_code", "")
+        stat_msg = collector_stat.get("message", "카카오톡 PC 로그인이 풀려있거나 대화방 창이 닫혀 있습니다.")
+        last_up = collector_stat.get("updated_at", "")
+
+        # 비정상 상태(로그인 풀림, 창 닫힘, 추출 실패 등)
+        if not is_healthy or stat_code in ["LOGIN_REQUIRED_OR_WINDOW_CLOSED", "TEXT_EXTRACT_FAILED", "ERROR"]:
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border: 1.5px solid #ef4444; border-radius: 9px; padding: 16px 20px; color: #ffffff; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">🚨</span>
+                        <span style="font-size: 15.5px; font-weight: 800; color: #fecaca; letter-spacing: -0.3px;">카카오톡 실시간 연동 장애 감지</span>
+                    </div>
+                    <span style="font-size: 11.5px; background: #dc2626; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-weight: 800; border: 1px solid #f87171;">수집 중단</span>
+                </div>
+                <div style="font-size: 13.5px; color: #fee2e2; margin-top: 8px; line-height: 1.65; font-weight: 600;">
+                    현재 <b>수집 전용 PC의 카카오톡 로그인이 풀려있거나, 대화방 창이 닫혀 있어</b> 실시간 대화 내용을 수집하지 못하고 있습니다.<br>
+                    수집 PC에서 카카오톡에 로그인하고 <b>[기술본부] 업무공유방</b> 창을 열어주시면 10분 내로 실시간 데이터가 자동 복구됩니다!
+                </div>
+                <div style="font-size: 12px; color: #fca5a5; margin-top: 9px; border-top: 1px solid rgba(248, 113, 113, 0.3); padding-top: 6px;">
+                    • 장애 상세: <b>{stat_msg}</b><br>
+                    • 최근 감지 시각: {last_up if last_up else '확인 중'}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 실시간 작업 보고가 아직 없습니다. 카카오톡에 시작 보고가 올라오면 10분 내로 여기에 실시간으로 표시됩니다!")
         return
 
     # 4 & 5. 🏛️ LIVE 관제 중 하위 전체 내용을 하나로 묶는 대형 통합 네모 컨테이너
