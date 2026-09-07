@@ -1,5 +1,6 @@
 import calendar
 from datetime import datetime, date, timedelta
+import re
 import pandas as pd
 import streamlit as st
 
@@ -97,7 +98,7 @@ def render_outlook_calendar_widget():
         padding: 2.5px 6px;
         margin-bottom: 3.5px;
         font-size: 11px;
-        font-weight: 700;
+        font-weight: 400;
         line-height: 1.35;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -291,9 +292,8 @@ def render_outlook_calendar_widget():
             w_name = ev["worker_name"]
             c_info = OUTLOOK_MEMBER_COLORS.get(w_name, DEFAULT_COLOR)
             subj = str(ev["subject"]).strip()
-            # 🌟 [신규] 맨 앞에 대괄호하고 작업자 이름이 없다면 '[이름]' 자동 부착
-            if not subj.startswith(f"[{w_name}]"):
-                subj = f"[{w_name}] {subj}"
+            # 🌟 작업 내역에서 앞의 [이름]을 분리하여 [이름]만 bold 처리
+            clean_task = re.sub(rf"^\[\s*{re.escape(w_name)}\s*\]\s*", "", subj).strip()
 
             allday = ev.get("is_all_day", False)
             is_leave = ev.get("is_leave", False)
@@ -306,9 +306,12 @@ def render_outlook_calendar_widget():
 
             leave_icon = "🏖️ " if is_leave else ""
             chip_style = f"background: {c_info['bg']}; border-color: {c_info['border']}; color: {c_info['text']};"
-            chip_text = f"{leave_icon}{time_tag} {subj}"
+            time_part = f"{leave_icon}{time_tag} " if time_tag else f"{leave_icon}"
+            bold_name = f"<b style='font-weight: 800;'>[{w_name}]</b>"
+            chip_text = f"{time_part}{bold_name} <span style='font-weight: 400;'>{clean_task}</span>"
+            full_title = f"[{w_name}] {clean_task}"
 
-            grid_html += f'<div class="outlook-chip" style="{chip_style}" title="{subj} ({ev.get('duration_hours', 1)}h)">{chip_text}</div>'
+            grid_html += f'<div class="outlook-chip" style="{chip_style}" title="{full_title} ({ev.get("duration_hours", 1)}h)">{chip_text}</div>'
 
         grid_html += '</div>'
         cur_date += timedelta(days=1)
