@@ -306,6 +306,12 @@ class ScheduleSyncService:
                 st_dt = st_time.to_pydatetime() if hasattr(st_time, "to_pydatetime") else st_time
                 ed_dt = ed_time.to_pydatetime() if hasattr(ed_time, "to_pydatetime") else ed_time
 
+                # 🔮 미래 일정 수집 제외: 오늘 이후(st_dt.date() > now.date())의 미래 일정은
+                # 아직 근무하지 않은 미래시이므로 작업 원장 및 대시보드 통계(work_logs)에 수집·산정하지 않습니다.
+                # (※ 미래 캘린더 전체 일정표는 outlook_calendar_widget에서 자체적으로 언제든 확인 가능)
+                if st_dt.date() > now.date():
+                    continue
+
                 is_leave = bool(r.get("is_leave", False))
                 l_type = r.get("leave_type") or "연차"
 

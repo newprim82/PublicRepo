@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.1.1 (Exclude Future Outlook Schedules from Active Stats & Overwork)
-APP_VERSION = "v2.1.1"
+# WorkTime Dashboard v2.1.2 (Fix Future Month Auto-Selection & Exclude Beyond Today)
+APP_VERSION = "v2.1.2"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -43,6 +43,8 @@ from src.dashboard.common.ui_helpers import (
     get_bora_ntp_timestamp,
     get_all_teams_safe,
     is_same_team,
+    get_current_kst_time,
+    get_job_title_rank,
     get_month_clamped_week_label
 )
 
@@ -104,6 +106,8 @@ def clear_all_web_caches():
         "src.services.client_normalizer",
         "src.dashboard.common.ui_helpers",
         "src.services.schedule_sync_service",
+        "src.analytics.stats_service",
+        "src.dashboard.common.dialogs",
         "src.dashboard.views.home_view",
         "src.dashboard.views.outlook_calendar_widget",
         "src.database.supabase_client",
@@ -471,10 +475,13 @@ def main():
                 year_all_options = [f"{y}년 전체" for y in years_in_data]
                 single_month_options = available_months + year_all_options
 
+                cur_month_str = get_current_kst_time().strftime("%Y-%m")
+                def_month_idx = single_month_options.index(cur_month_str) if cur_month_str in single_month_options else 0
+
                 single_month = st.selectbox(
                     "조회할 월:",
                     options=single_month_options,
-                    index=0,
+                    index=def_month_idx,
                     label_visibility="collapsed",
                     key="sb_filter_single_month"
                 )
