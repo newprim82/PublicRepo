@@ -22,22 +22,29 @@ class StatsService:
                 "overdue_rate": 0.0,
             }
 
-        total_hours = df["actual_hours"].sum()
-        total_tasks = len(df)
-        completed_df = df[df["status"] == "COMPLETED"]
+        # 🌟 미래 예정(SCHEDULED)은 현재 시점 KPI 집계에서 제외하고, 실적(COMPLETED) 및 진행(PENDING)만 집계
+        active_df = df[df["status"].isin(["COMPLETED", "PENDING"])] if "status" in df.columns else df
+
+        total_hours = active_df["actual_hours"].sum() if not active_df.empty else 0.0
+        total_tasks = len(active_df)
+        completed_df = active_df[active_df["status"] == "COMPLETED"] if not active_df.empty else pd.DataFrame()
         completed_tasks = len(completed_df)
-        pending_tasks = total_tasks - completed_tasks
+        pending_df = active_df[active_df["status"] == "PENDING"] if not active_df.empty else pd.DataFrame()
+        pending_tasks = len(pending_df)
         
-        workers = df["worker_name"].dropna().unique()
+        workers = active_df["worker_name"].dropna().unique() if not active_df.empty else []
         active_workers = len(workers)
         avg_hours_per_worker = (total_hours / active_workers) if active_workers > 0 else 0.0
         
-        night_tasks_count = int(df["is_night_work"].sum())
-        weekend_tasks_count = int(df["is_weekend_work"].sum())
+        night_tasks_count = int(active_df["is_night_work"].sum()) if not active_df.empty else 0
+        weekend_tasks_count = int(active_df["is_weekend_work"].sum()) if not active_df.empty else 0
         
         # 예정 시간 초과 건수
-        overdue_mask = (df["status"] == "COMPLETED") & (df["actual_minutes"] > df["estimated_minutes"]) & (df["estimated_minutes"] > 0)
-        overdue_tasks_count = int(overdue_mask.sum())
+        if not active_df.empty:
+            overdue_mask = (active_df["status"] == "COMPLETED") & (active_df["actual_minutes"] > active_df["estimated_minutes"]) & (active_df["estimated_minutes"] > 0)
+            overdue_tasks_count = int(overdue_mask.sum())
+        else:
+            overdue_tasks_count = 0
         overdue_rate = (overdue_tasks_count / completed_tasks * 100.0) if completed_tasks > 0 else 0.0
 
         return {
@@ -62,7 +69,10 @@ class StatsService:
         if df.empty:
             return pd.DataFrame()
 
-        df_calc = df.copy()
+        df_calc = df[df["status"].isin(["COMPLETED", "PENDING"])].copy() if "status" in df.columns else df.copy()
+        if df_calc.empty:
+            return pd.DataFrame()
+
         df_calc["is_weekend_flag"] = df_calc["is_weekend_work"] == True
         df_calc["is_weekday_night_flag"] = (df_calc["is_weekend_work"] == False) & (df_calc["is_night_work"] == True)
         df_calc["is_weekday_day_flag"] = (df_calc["is_weekend_work"] == False) & (df_calc["is_night_work"] == False)
@@ -92,9 +102,13 @@ class StatsService:
         if df.empty:
             return pd.DataFrame()
 
-        trend = df.groupby("month_str").agg(
+        target_df = df[df["status"].isin(["COMPLETED", "PENDING"])] if "status" in df.columns else df
+        if target_df.empty:
+            return pd.DataFrame()
+
+        trend = target_df.groupby("month_str").agg(
             total_hours=("actual_hours", "sum"),
-            total_tasks=("id", "count"),
+            total_tasks=("id", "count") if "id" in target_df.columns else ("month_str", "count"),
             night_tasks=("is_night_work", "sum"),
             worker_count=("worker_name", "nunique")
         ).reset_index()
@@ -111,9 +125,13 @@ class StatsService:
         if df.empty:
             return pd.DataFrame()
 
-        client_df = df.groupby("client_name").agg(
+        target_df = df[df["status"].isin(["COMPLETED", "PENDING"])] if "status" in df.columns else df
+        if target_df.empty:
+            return pd.DataFrame()
+
+        client_df = target_df.groupby("client_name").agg(
             total_hours=("actual_hours", "sum"),
-            total_tasks=("id", "count"),
+            total_tasks=("id", "count") if "id" in target_df.columns else ("client_name", "count"),
             worker_count=("worker_name", "nunique")
         ).reset_index()
 
@@ -135,9 +153,13 @@ class StatsService:
         if df.empty:
             return pd.DataFrame()
 
-        type_df = df.groupby("log_type").agg(
+        target_df = df[df["status"].isin(["COMPLETED", "PENDING"])] if "status" in df.columns else df
+        if target_df.empty:
+            return pd.DataFrame()
+
+        type_df = target_df.groupby("log_type").agg(
             total_hours=("actual_hours", "sum"),
-            total_tasks=("id", "count")
+            total_tasks=("id", "count") if "id" in target_df.columns else ("log_type", "count")
         ).reset_index()
 
         type_df["total_hours"] = type_df["total_hours"].round(1)

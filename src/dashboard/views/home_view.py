@@ -399,8 +399,10 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
         caution_items = []
         rewarded_items = []
         
-        # 주차별/팀원별 집계 (주 40시간 / 52시간 과중 근무 감지 시 [교육] 및 [휴가] 구분은 법정 시간에서 제외)
-        df_for_overwork = ov_df[~ov_df["log_type"].fillna("").astype(str).str.contains("교육|휴가")] if "log_type" in ov_df.columns else ov_df
+        # 주차별/팀원별 집계 (주 40시간 / 52시간 과중 근무 감지 시 미래시(SCHEDULED), [교육] 및 [휴가] 구분은 법정 시간에서 제외)
+        status_filter = ov_df["status"].isin(["COMPLETED", "PENDING"]) if "status" in ov_df.columns else pd.Series(True, index=ov_df.index)
+        log_type_filter = ~ov_df["log_type"].fillna("").astype(str).str.contains("교육|휴가") if "log_type" in ov_df.columns else pd.Series(True, index=ov_df.index)
+        df_for_overwork = ov_df[status_filter & log_type_filter]
         wk_user_agg = df_for_overwork.groupby(["worker_name", "week_label"])["actual_hours"].sum().reset_index()
         for _, r in wk_user_agg.iterrows():
             w_name = r["worker_name"]

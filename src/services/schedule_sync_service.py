@@ -341,7 +341,7 @@ class ScheduleSyncService:
                         "estimated_hours": 0.0,
                         "total_hours": 0.0,
                         "display_hours": dur_hours, # 🌟 카드 뱃지 표출용 (9.0h / 4.5h)
-                        "status": "COMPLETED",
+                        "status": "SCHEDULED" if st_dt > now else "COMPLETED",
                         "is_outlook": True,
                         "is_leave": True,
                         "is_night_work": False,
@@ -381,9 +381,24 @@ class ScheduleSyncService:
 
                     is_completed = (now >= ed_dt)
                     is_pending = (now >= st_dt and now < ed_dt)
-                    status = "COMPLETED" if is_completed else ("PENDING" if is_pending else "SCHEDULED")
+                    if is_completed:
+                        status = "COMPLETED"
+                        act_h = dur_hours
+                        act_m = int(dur_hours * 60)
+                        prefix = "[📅 일정완료] "
+                    elif is_pending:
+                        status = "PENDING"
+                        elapsed_sec = max(0, (now - st_dt).total_seconds())
+                        act_h = round(elapsed_sec / 3600.0, 1)
+                        act_m = int(elapsed_sec / 60)
+                        prefix = "[📅 아웃룩] "
+                    else:
+                        # 🔮 미래 예정 일정: 미래시는 아직 근무하지 않았으므로 0.0h 부여
+                        status = "SCHEDULED"
+                        act_h = 0.0
+                        act_m = 0
+                        prefix = "[📅 예정] "
 
-                    prefix = "[📅 일정완료] " if is_completed else ("[📅 아웃룩] " if is_pending else "[📅 예정] ")
                     task_desc = f"{prefix}{parsed_desc}"
 
                     row_dict = {
@@ -397,11 +412,11 @@ class ScheduleSyncService:
                         "start_time": st_time,
                         "end_time": ed_time,
                         "estimated_minutes": int(dur_hours * 60),
-                        "actual_minutes": int(dur_hours * 60),
-                        "actual_hours": dur_hours,   # 🌟 실제 업무량 정상 합산
+                        "actual_minutes": act_m,
+                        "actual_hours": act_h,       # 🌟 미래시는 0.0h, 완료는 dur_hours, 진행은 경과시간
                         "estimated_hours": dur_hours,
-                        "total_hours": dur_hours,
-                        "display_hours": dur_hours,
+                        "total_hours": act_h,
+                        "display_hours": dur_hours,  # 🌟 캘린더/카드 표시용
                         "status": status,
                         "is_outlook": True,
                         "is_leave": False,

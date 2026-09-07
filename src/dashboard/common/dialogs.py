@@ -38,6 +38,8 @@ def render_chat_messages_expander(target_df: pd.DataFrame, max_display: int = 20
 def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default_week_name: str = None):
     inject_dialog_title_style()
     worker_df = df_data[df_data["worker_name"] == target_worker]
+    if "status" in worker_df.columns:
+        worker_df = worker_df[worker_df["status"].isin(["COMPLETED", "PENDING"])]
     if worker_df.empty:
         st.warning(f"[{target_worker}] 님의 작업 데이터가 없습니다.")
         return
@@ -222,6 +224,11 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
+    if "status" in df_data.columns:
+        df_data = df_data[df_data["status"].isin(["COMPLETED", "PENDING"])]
+    if df_data.empty:
+        st.info("실제 완료 및 진행 중인 작업 데이터가 없습니다.")
+        return
     tot_h = round(df_data["actual_hours"].sum(), 1)
     avg_h = round(df_data["actual_hours"].mean(), 1) if len(df_data) > 0 else 0.0
     st.markdown(f"### ⏱️ 총 지원 시간: **{tot_h:,}시간**  \n*(총 {len(df_data):,}건 / 건당 평균 소요시간: {avg_h}h)*")
@@ -284,8 +291,13 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
+    if "status" in df_data.columns:
+        df_data = df_data[df_data["status"].isin(["COMPLETED", "PENDING"])]
+    if df_data.empty:
+        st.info("실제 완료 및 진행 중인 작업 데이터가 없습니다.")
+        return
     comp_df = df_data[df_data["status"] == "COMPLETED"].sort_values(by="start_time", ascending=False).reset_index(drop=True)
-    pend_df = df_data[df_data["status"] != "COMPLETED"].sort_values(by="start_time", ascending=False).reset_index(drop=True)
+    pend_df = df_data[df_data["status"] == "PENDING"].sort_values(by="start_time", ascending=False).reset_index(drop=True)
     
     st.markdown(f"### 📋 총 작업 건수: **{len(df_data):,}건** (🟢 완료 {len(comp_df)}건 | 🟡 진행 중 {len(pend_df)}건)")
     
@@ -360,6 +372,11 @@ def show_kpi_workers_dialog(df_data: pd.DataFrame):
     if df_data.empty:
         st.info("데이터가 없습니다.")
         return
+    if "status" in df_data.columns:
+        df_data = df_data[df_data["status"].isin(["COMPLETED", "PENDING"])]
+    if df_data.empty:
+        st.info("실제 완료 및 진행 중인 작업 데이터가 없습니다.")
+        return
     w_summary = StatsService.get_worker_summary(df_data)
     st.markdown(f"### 👥 총 투입 인원: **{len(w_summary)}명** (1인당 평균 {round(df_data['actual_hours'].sum() / max(len(w_summary), 1), 1)}h)")
     
@@ -383,6 +400,11 @@ def show_kpi_urgent_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     if df_data.empty:
         st.info("데이터가 없습니다.")
+        return
+    if "status" in df_data.columns:
+        df_data = df_data[df_data["status"].isin(["COMPLETED", "PENDING"])]
+    if df_data.empty:
+        st.info("실제 완료 및 진행 중인 작업 데이터가 없습니다.")
         return
     night_df = df_data[df_data["is_night_work"] == True].sort_values(by="start_time", ascending=False).reset_index(drop=True) if "is_night_work" in df_data.columns else pd.DataFrame()
     weekend_df = df_data[df_data["is_weekend_work"] == True].sort_values(by="start_time", ascending=False).reset_index(drop=True) if "is_weekend_work" in df_data.columns else pd.DataFrame()
@@ -460,6 +482,11 @@ def show_kpi_overdue_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     if df_data.empty:
         st.info("데이터가 없습니다.")
+        return
+    if "status" in df_data.columns:
+        df_data = df_data[df_data["status"].isin(["COMPLETED", "PENDING"])]
+    if df_data.empty:
+        st.info("실제 완료 및 진행 중인 작업 데이터가 없습니다.")
         return
     overdue_df = df_data[df_data["actual_hours"] > df_data["estimated_hours"]].copy()
     if not overdue_df.empty:
