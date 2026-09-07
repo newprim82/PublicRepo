@@ -1,3 +1,4 @@
+import html
 import io
 import re
 from datetime import datetime, timezone, timedelta
@@ -287,8 +288,9 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 badge_c = "#7e22ce" if is_l else "#5b21b6"
                                 badge_border = "#d8b4fe" if is_l else "#c4b5fd"
                                 badge_icon = "🏖️" if is_l else "✅"
-
-                                comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 8px; padding: 1px 5px; font-size: 10px; font-weight: 700; white-space: nowrap;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 12px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="font-size: 11.5px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{source_badge}{clean_desc}</div></div>"""
+                                clean_desc_tooltip = html.escape(str(clean_desc), quote=True)
+                                c_name_tooltip = html.escape(str(c_name), quote=True)
+                                comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 9px 10px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 8px; padding: 1px 5px; font-size: 10px; font-weight: 700; white-space: nowrap;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 12px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{c_name_tooltip}">🏢 {c_name}</div><div style="font-size: 11.5px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{clean_desc_tooltip}">{source_badge}{clean_desc}</div></div>"""
                                 st.markdown(comp_html, unsafe_allow_html=True)
             else:
                 # 🏢 단일 팀 선택 시: 기존 4열 그리드 레이아웃
@@ -344,7 +346,10 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             badge_border = "#d8b4fe" if is_l else "#c4b5fd"
                             badge_icon = "🏖️" if is_l else "✅"
 
-                            comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px;">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{source_badge}{clean_desc}</div></div>"""
+                            clean_desc_tooltip = html.escape(str(clean_desc), quote=True)
+                            c_name_tooltip = html.escape(str(c_name), quote=True)
+
+                            comp_html = f"""<div style="background: {'#faf5ff' if is_l else '#ffffff'}; border: 1px solid {'#e9d5ff' if is_l else '#e1e4e8'}; border-left: 4px solid {comp_border}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span></div><span style="background-color: {badge_bg}; color: {badge_c}; border: 1px solid {badge_border}; border-radius: 10px; padding: 1px 6px; font-size: 10px; font-weight: 700;">{badge_icon} {st_str}~{ed_str} ({act_h}h)</span></div><div style="font-size: 13px; color: {'#6b21a8' if is_l else '#005073'}; font-weight: 700; margin-bottom: 3px;" title="{c_name_tooltip}">🏢 {c_name}</div><div style="font-size: 12px; color: #475569; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{clean_desc_tooltip}">{source_badge}{clean_desc}</div></div>"""
                             st.markdown(comp_html, unsafe_allow_html=True)
 
 
