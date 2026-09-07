@@ -396,15 +396,12 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
 
     st.markdown("""
     <style>
-        div.st-key-worker_view_period_selector > label {
+        div.st-key-worker_view_period_selector [data-testid="stWidgetLabel"],
+        div.st-key-worker_view_period_selector [data-testid="stWidgetLabel"] *,
+        div.st-key-worker_view_period_selector label,
+        div.st-key-worker_view_period_selector label * {
             color: #002d42 !important;
-            font-size: 14px !important;
-            font-weight: 800 !important;
-            margin-bottom: 6px !important;
-        }
-        div.st-key-worker_view_period_selector > label p {
-            color: #002d42 !important;
-            font-size: 14px !important;
+            font-size: 14.5px !important;
             font-weight: 800 !important;
         }
         div.st-key-worker_view_period_selector div[role="radiogroup"] {
@@ -450,14 +447,19 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
             font-weight: 900 !important;
         }
     </style>
+    <div style="font-size: 14.5px; font-weight: 800; color: #002d42 !important; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <span>📅</span>
+        <span style="color: #002d42 !important; font-weight: 800 !important;">보고서 조회 주기 선택 (월간 / 주간 드릴다운)</span>
+    </div>
     """, unsafe_allow_html=True)
 
     if available_weeks:
         sel_period = st.radio(
-            "📅 **보고서 조회 주기 선택 (월간 / 주간 드릴다운)**",
+            "보고서 조회 주기 선택 (월간 / 주간 드릴다운)",
             options=period_options,
             horizontal=True,
-            key="worker_view_period_selector"
+            key="worker_view_period_selector",
+            label_visibility="collapsed"
         )
     else:
         sel_period = "📅 월간 전체 종합"

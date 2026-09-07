@@ -95,18 +95,15 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     
     st.markdown("""
     <style>
-        div[data-testid="stRadio"] > label {
+        div.st-key-exec_summary_period_selector [data-testid="stWidgetLabel"],
+        div.st-key-exec_summary_period_selector [data-testid="stWidgetLabel"] *,
+        div.st-key-exec_summary_period_selector label,
+        div.st-key-exec_summary_period_selector label * {
             color: #002d42 !important;
-            font-size: 14px !important;
-            font-weight: 800 !important;
-            margin-bottom: 6px !important;
-        }
-        div[data-testid="stRadio"] > label p {
-            color: #002d42 !important;
-            font-size: 14px !important;
+            font-size: 14.5px !important;
             font-weight: 800 !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] {
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] {
             background: #ffffff !important;
             border: 1.5px solid #005f8a !important;
             border-radius: 8px !important;
@@ -117,7 +114,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             box-shadow: 0 2px 6px rgba(0,45,66,0.06) !important;
             margin-bottom: 12px !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label {
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label {
             background: #f1f5f9 !important;
             border: 1.2px solid #cbd5e1 !important;
             border-radius: 6px !important;
@@ -126,37 +123,42 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             cursor: pointer !important;
             transition: all 0.15s ease-in-out !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label:hover {
             background: #e2e8f0 !important;
             border-color: #0284c7 !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label p,
-        div[data-testid="stRadio"] div[role="radiogroup"] label span {
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label p,
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label span {
             color: #002d42 !important;
             font-size: 13px !important;
             font-weight: 800 !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"],
-        div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) {
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label[data-checked="true"],
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label:has(input:checked) {
             background: #005073 !important;
             border-color: #002d42 !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] p,
-        div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) p,
-        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] span,
-        div[data-testid="stRadio"] div[role="radiogroup"] label:has(input:checked) span {
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label[data-checked="true"] p,
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label:has(input:checked) p,
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label[data-checked="true"] span,
+        div.st-key-exec_summary_period_selector div[role="radiogroup"] label:has(input:checked) span {
             color: #ffffff !important;
             font-weight: 900 !important;
         }
     </style>
+    <div style="font-size: 14.5px; font-weight: 800; color: #002d42 !important; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <span>📅</span>
+        <span style="color: #002d42 !important; font-weight: 800 !important;">보고서 조회 주기 선택 (월간 / 주간 드릴다운)</span>
+    </div>
     """, unsafe_allow_html=True)
 
     if available_weeks:
         sel_period = st.radio(
-            "📅 **보고서 조회 주기 선택 (월간 / 주간 드릴다운)**",
+            "보고서 조회 주기 선택 (월간 / 주간 드릴다운)",
             options=period_options,
             horizontal=True,
-            key="exec_summary_period_selector"
+            key="exec_summary_period_selector",
+            label_visibility="collapsed"
         )
     else:
         sel_period = "📅 월간 전체 종합"
