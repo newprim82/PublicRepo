@@ -439,23 +439,21 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
             w_name = r["worker_name"]
             w_lbl = r["week_label"]
             val = round(r["actual_hours"], 1)
-            short_w = w_lbl.split(" ")[-2] if " " in w_lbl else w_lbl
-            if val >= 40.0:
+            # ⚖️ 과중 근무 감지: 주 52시간 초과(>= 52.0h)인 경우만 알림 (40h~51h 구간은 정상 근무 상태로 세이프)
+            if val >= 52.0:
                 item = {
                     "worker_name": w_name,
                     "week_label": w_lbl,
                     "short_w": short_w,
                     "val": val,
-                    "is_52": (val >= 52.0)
+                    "is_52": True
                 }
                 if (w_name, w_lbl) in all_rewards:
                     rewarded_items.append(item)
-                elif val >= 52.0:
-                    danger_items.append(item)
                 else:
-                    caution_items.append(item)
+                    danger_items.append(item)
 
-        if danger_items or caution_items or rewarded_items:
+        if danger_items or rewarded_items:
             with st.container(border=True):
                 # 🏷️ 과중근무 배너 전용 마커
                 st.markdown('<span class="overwork-banner-zone" style="display:none;"></span>', unsafe_allow_html=True)
@@ -563,8 +561,8 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                 </style>
                 """, unsafe_allow_html=True)
                 # 1행: 상단 알림 제목
-                if danger_items or caution_items:
-                    st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 40시간 / 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
+                if danger_items:
+                    st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span class="siren-icon">🚨</span> <span class="alert-blink-badge">[과중 근무 발생 알림]</span> <span style="font-weight: 800; color: #dc2626;">선택 기간 내 주 52시간 초과 팀원이 감지되었습니다!</span></div>', unsafe_allow_html=True)
                 else:
                     st.markdown('<div style="font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px;"><span>🎉</span> <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px;">[과중 근무 보상 완료]</span> <span style="font-weight: 800; color: #16a34a;">초과 근무 팀원에 대한 보상 휴가 처리가 모두 완료되었습니다!</span></div>', unsafe_allow_html=True)
 
@@ -641,7 +639,7 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                 <div style="font-size: 14px; font-weight: 700; color: #0f5132; display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; line-height: 1;">
                     <span style="font-size: 15px; line-height: 1;">🟢</span>
                     <span style="background: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2px 8px; border-radius: 4px; font-weight: 800; font-size: 12px; line-height: 1.2; display: inline-flex; align-items: center;">[과중 근무 없음]</span>
-                    <span style="color: #334155; font-size: 13px; line-height: 1; font-weight: 500;">현재 선택된 기간 내에 주 40시간 / 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
+                    <span style="color: #334155; font-size: 13px; line-height: 1; font-weight: 500;">현재 선택된 기간 내에 주 52시간을 초과한 과중 근무 팀원이 없습니다. (안정적인 근무 상태)</span>
                 </div>
             </div>
             """, unsafe_allow_html=True)
