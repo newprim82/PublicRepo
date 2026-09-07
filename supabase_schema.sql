@@ -77,3 +77,29 @@ ALTER TABLE public.worktime_reward_leave_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all access to worktime_reward_leave_logs" ON public.worktime_reward_leave_logs;
 CREATE POLICY "Allow all access to worktime_reward_leave_logs"
 ON public.worktime_reward_leave_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
+
+-- 4. 메일 발송 이력 관리 테이블 (worktime_email_dispatch_logs)
+CREATE TABLE IF NOT EXISTS public.worktime_email_dispatch_logs (
+    id BIGSERIAL PRIMARY KEY,
+    dispatch_type VARCHAR(50) NOT NULL,                 -- MANUAL_IMMEDIATE / AUTO_WEEKLY / AUTO_MONTHLY
+    recipient_emails TEXT NOT NULL,                     -- 수신자 이메일 목록
+    sender_email VARCHAR(150) NOT NULL,                 -- 발신 계정
+    selected_team VARCHAR(100) DEFAULT '',              -- 대상 팀명 (예: 기술 1팀)
+    period_label VARCHAR(150) DEFAULT '',               -- 대상 기간 라벨 (예: 기술 1팀 - 2026-09 월간 전체)
+    subject TEXT DEFAULT '',                            -- 메일 제목
+    status VARCHAR(30) NOT NULL,                        -- SUCCESS / FAILED
+    error_message TEXT DEFAULT '',                      -- 에러 사유
+    created_at TIMESTAMPTZ DEFAULT NOW()                -- 발송 시각
+);
+
+-- 검색 최적화 인덱스
+CREATE INDEX IF NOT EXISTS idx_worktime_email_logs_created_at ON public.worktime_email_dispatch_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_worktime_email_logs_dispatch_type ON public.worktime_email_dispatch_logs (dispatch_type);
+
+-- RLS 활성화 및 권한 정책
+ALTER TABLE public.worktime_email_dispatch_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all access to worktime_email_dispatch_logs" ON public.worktime_email_dispatch_logs;
+CREATE POLICY "Allow all access to worktime_email_dispatch_logs"
+ON public.worktime_email_dispatch_logs FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+
