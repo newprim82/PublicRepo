@@ -18,7 +18,7 @@ OUTLOOK_MEMBER_COLORS = {
     "전종필": {"bg": "#fef9c3", "border": "#eab308", "text": "#713f12", "name": "전종필 대리"},
     "김시우": {"bg": "#fce7f3", "border": "#ec4899", "text": "#831843", "name": "김시우 사원"},
     "김형일": {"bg": "#cffafe", "border": "#06b6d4", "text": "#164e63", "name": "김형일 수석"},
-    "김경현": {"bg": "#dbeafe", "border": "#3b82f6", "text": "#1e3a8a", "name": "김경현"},
+    "김경현": {"bg": "#ffe4e6", "border": "#f43f5e", "text": "#881337", "name": "김경현 (내 일정)"},
 }
 
 DEFAULT_COLOR = {"bg": "#f1f5f9", "border": "#94a3b8", "text": "#0f172a", "name": "기타"}

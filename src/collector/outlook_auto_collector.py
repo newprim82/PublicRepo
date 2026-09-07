@@ -36,7 +36,7 @@ MEMBER_COLOR_MAP = {
     "전종필": "#eab308",   # 노랑 (전종필 대리)
     "김시우": "#ec4899",   # 핑크 (김시우 사원)
     "김형일": "#06b6d4",   # 하늘 (김형일 수석)
-    "김경현": "#3b82f6",   # 파랑 (기본 캘린더)
+    "김경현": "#f43f5e",   # 코랄핑크 (내 기본 캘린더)
 }
 
 # 기본 탐색 대상 팀원 후보 목록 (직급 포함 표시이름)
@@ -49,6 +49,8 @@ def clean_worker_name(raw: str) -> str:
     """문자열에서 순수 작업자 이름만 정제 (예: '문영민 수석' -> '문영민', '[김시우]' -> '김시우')"""
     if not raw:
         return ""
+    if raw in ["내 캘린더", "내 일정", "Calendar", "내"]:
+        return "김경현"
     m = re.search(r"\[([가-힣a-zA-Z0-9]+)\]", raw)
     if m:
         return m.group(1).strip()
@@ -78,27 +80,36 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
 
     cal_folders = []
 
-    # 1. 내 기본 캘린더 연동
+    # 1. 내 기본 캘린더 연동 (Calendar)
     try:
         def_cal = namespace.GetDefaultFolder(9)
-        cal_folders.append(("내 캘린더", def_cal))
+        my_name = "김경현 수석"
+        cal_folders.append((my_name, def_cal))
+        safe_print(f"[✓] Outlook 내 기본 캘린더 연결 성공: '{my_name}' (항목: {def_cal.Items.Count})")
     except Exception as e:
         safe_print(f"[-] 기본 캘린더 접근 실패: {e}")
 
     # 2. 공유 캘린더 직접 연동 (STA 메인 스레드 안전 호출)
     team_members_info = TeamService.get_team_members_info()
     target_names = [
-        "김시우 사원", "문영민 수석", "전종필 대리", "이동우 수석"
+        "문영민 수석", "이동우 수석", "홍정표 과장", "전종필 대리", "김형일 수석", "김시우 사원",
+        "문영민", "이동우", "홍정표", "전종필", "김형일", "김시우"
     ]
 
     for name in target_names:
+        clean_target = clean_worker_name(name)
+        if clean_target == "김경현":
+            continue
+        # 이미 연동된 멤버면 중복 건너뛰기
+        if any(clean_worker_name(f[0]) == clean_target for f in cal_folders):
+            continue
+
         try:
             recip = namespace.CreateRecipient(name)
             folder = namespace.GetSharedDefaultFolder(recip, 9)
-            if folder and folder.Items.Count > 0:
-                if not any(f[0] == name for f in cal_folders):
-                    cal_folders.append((name, folder))
-                    safe_print(f"[✓] Outlook 공유 캘린더 연결 성공: '{name}' (항목: {folder.Items.Count})")
+            if folder:
+                cal_folders.append((name, folder))
+                safe_print(f"[✓] Outlook 공유 캘린더 연결 성공: '{name}' (항목: {folder.Items.Count})")
         except Exception as e_sh:
             pass
 
@@ -124,9 +135,16 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
     for owner_name, folder in cal_folders:
         try:
             items = folder.Items
-            items.IncludeRecurrences = True
-            items.Sort("[Start]")
-            flt = items.Restrict(restriction)
+            try:
+                items.IncludeRecurrences = True
+                items.Sort("[Start]")
+            except Exception:
+                pass
+
+            try:
+                flt = items.Restrict(restriction)
+            except Exception:
+                flt = items
 
             item = flt.GetFirst()
             while item:
@@ -240,6 +258,11 @@ def run_outlook_collection_cycle() -> Dict[str, Any]:
     # DB 저장 (로컬 SQLite 및 Supabase)
     saved = db_manager.save_outlook_schedules(records)
     safe_print(f"[✓] 아웃룩 스케줄 총 {len(records)}건 추출 완료 (DB 저장: {saved}건)")
+    from collections import Counter
+    counts = Counter([r.worker_name for r in records])
+    for w, c in counts.items():
+        is_me = " (내 일정)" if w == "김경현" else ""
+        safe_print(f"    • {w}{is_me}: {c}건")
     return {"success": True, "count": len(records), "saved": saved}
 
 
