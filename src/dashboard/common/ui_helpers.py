@@ -473,15 +473,24 @@ def get_available_weeks_for_df(df_scope: pd.DataFrame, month_desc: str = "") -> 
     """선택된 월(들)에 대해 오늘 기준 이미 시작된 주차 목록을 누락 없이 반환 (아직 시작되지 않은 미래 주차 제외)"""
     import re
     months = []
-    # 1. month_desc에서 YYYY-MM 패턴 추출
+    # 1. month_desc에서 YYYY-MM 패턴 추출 또는 YYYY년 전체 지원
     if month_desc:
-        found = re.findall(r'\b(20\d\d[-/]\d{1,2})\b', str(month_desc))
-        for m in found:
-            clean_m = m.replace('/', '-')
-            parts = clean_m.split('-')
-            clean_m = f"{parts[0]}-{int(parts[1]):02d}"
-            if clean_m not in months:
-                months.append(clean_m)
+        if "년 전체" in str(month_desc):
+            y_match = re.search(r'\b(20\d\d)년', str(month_desc))
+            if y_match:
+                y_val = int(y_match.group(1))
+                for m_num in range(1, 13):
+                    m_str = f"{y_val}-{m_num:02d}"
+                    if m_str not in months:
+                        months.append(m_str)
+        else:
+            found = re.findall(r'\b(20\d\d[-/]\d{1,2})\b', str(month_desc))
+            for m in found:
+                clean_m = m.replace('/', '-')
+                parts = clean_m.split('-')
+                clean_m = f"{parts[0]}-{int(parts[1]):02d}"
+                if clean_m not in months:
+                    months.append(clean_m)
     
     # 2. df_scope에서 월 추출
     if not months and df_scope is not None and not df_scope.empty:

@@ -239,7 +239,8 @@ def render_main_content_frame(
     type_mode: str,
     selected_types: list,
     night_only: bool,
-    weekend_only: bool
+    weekend_only: bool,
+    custom_period_desc: str = ""
 ):
     """🏛️ Frame 3: 하단 메인 본문 콘텐츠 독립 프레임 (12대 메뉴 뷰 라우팅 & 관제 캔버스)"""
     # 0) 🔐 로그인 페이지
@@ -268,9 +269,12 @@ def render_main_content_frame(
         return
 
     # 3) 🏠 실시간 분석 대시보드 (메인)
-    month_desc = ", ".join(selected_months) if len(selected_months) <= 2 else f"{selected_months[0]} 외 {len(selected_months)-1}개 월"
-    if len(selected_months) == len(available_months):
+    if custom_period_desc:
+        month_desc = custom_period_desc
+    elif len(selected_months) == len(available_months):
         month_desc = "전체 기간"
+    else:
+        month_desc = ", ".join(selected_months) if len(selected_months) <= 2 else f"{selected_months[0]} 외 {len(selected_months)-1}개 월"
 
     if worker_mode == "팀 전체 인원":
         if selected_team != "전체 팀":
@@ -408,13 +412,39 @@ def main():
             )
             
             selected_months = []
+            custom_period_desc = ""
             if month_mode == "전체 기간":
                 selected_months = available_months
+                custom_period_desc = "전체 기간"
             elif month_mode == "특정 월 선택 (기본)":
-                single_month = st.selectbox("조회할 월:", options=available_months, index=0, label_visibility="collapsed", key="sb_filter_single_month")
-                selected_months = [single_month] if single_month else available_months
+                # 💡 DB에 존재하는 연도별 'YYYY년 전체' 옵션을 드롭다운 맨 아래에 배치 (예: '2026년 전체')
+                years_in_data = sorted(list(set(str(m).split('-')[0] for m in available_months if '-' in str(m))), reverse=True)
+                year_all_options = [f"{y}년 전체" for y in years_in_data]
+                single_month_options = available_months + year_all_options
+
+                single_month = st.selectbox(
+                    "조회할 월:",
+                    options=single_month_options,
+                    index=0,
+                    label_visibility="collapsed",
+                    key="sb_filter_single_month"
+                )
+                if single_month and "년 전체" in single_month:
+                    target_year = single_month.replace("년 전체", "").strip()
+                    selected_months = [m for m in available_months if str(m).startswith(target_year)]
+                    custom_period_desc = single_month
+                else:
+                    selected_months = [single_month] if single_month else available_months
+                    custom_period_desc = ""
             else:
-                selected_months = st.multiselect("조회할 월(다중):", options=available_months, default=available_months, label_visibility="collapsed", key="sb_filter_multi_months")
+                selected_months = st.multiselect(
+                    "조회할 월(다중):",
+                    options=available_months,
+                    default=available_months,
+                    label_visibility="collapsed",
+                    key="sb_filter_multi_months"
+                )
+                custom_period_desc = ""
 
             # (2) 소속 팀 선택 (기본값: 기술 1팀)
             all_teams_filter = get_all_teams_safe()
@@ -743,7 +773,8 @@ def main():
         type_mode=type_mode,
         selected_types=selected_types,
         night_only=night_only,
-        weekend_only=weekend_only
+        weekend_only=weekend_only,
+        custom_period_desc=custom_period_desc
     )
 
 
