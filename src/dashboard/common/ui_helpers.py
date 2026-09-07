@@ -439,14 +439,24 @@ def extract_week_sort_key(w_lbl: str) -> list:
 
 
 def get_all_weeks_for_month(year: int, month: int) -> list:
-    """해당 월의 1일부터 말일까지의 모든 주차 라벨을 누락 없이 순서대로 반환"""
+    """해당 월의 1일부터 말일까지의 주차 중 오늘 기준 이미 시작된 주차 라벨만 순서대로 반환 (아직 시작되지 않은 미래 주차 제외)"""
     import calendar
     from datetime import date, timedelta
+    
+    try:
+        today = get_current_kst_time().date()
+    except Exception:
+        today = date.today()
+        
     last_day_num = calendar.monthrange(year, month)[1]
     cur_start = date(year, month, 1)
     week_num = 1
     weeks = []
     while cur_start.day <= last_day_num:
+        # 💡 아직 시작되지 않은 주차(시작일이 오늘보다 미래)는 생성하지 않음
+        if cur_start > today:
+            break
+            
         days_to_sun = 6 - cur_start.weekday()
         cur_sun = cur_start + timedelta(days=days_to_sun)
         cur_end = min(cur_sun, date(year, month, last_day_num))
@@ -460,7 +470,7 @@ def get_all_weeks_for_month(year: int, month: int) -> list:
 
 
 def get_available_weeks_for_df(df_scope: pd.DataFrame, month_desc: str = "") -> list:
-    """선택된 월(들)에 대해 1주차부터 마지막 주차까지 캘린더 기준 모든 주차 목록을 누락 없이 반환"""
+    """선택된 월(들)에 대해 오늘 기준 이미 시작된 주차 목록을 누락 없이 반환 (아직 시작되지 않은 미래 주차 제외)"""
     import re
     months = []
     # 1. month_desc에서 YYYY-MM 패턴 추출
@@ -498,7 +508,23 @@ def get_available_weeks_for_df(df_scope: pd.DataFrame, month_desc: str = "") -> 
     if not all_weeks and df_scope is not None and not df_scope.empty and "week_label" in df_scope.columns:
         all_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
 
-    return sorted(all_weeks, key=extract_week_sort_key)
+    # 💡 오늘 기준 아직 시작되지 않은 미래 주차(시작일 > 오늘)는 안전하게 2차 필터링
+    try:
+        today = get_current_kst_time().date()
+    except Exception:
+        from datetime import date
+        today = date.today()
+
+    filtered_weeks = []
+    for w in all_weeks:
+        w_info = get_week_label_info(w)
+        if w_info.get("start_date"):
+            if w_info["start_date"] <= today:
+                filtered_weeks.append(w)
+        else:
+            filtered_weeks.append(w)
+
+    return sorted(filtered_weeks, key=extract_week_sort_key)
 
 
 def get_week_label_info(week_label: str) -> dict:

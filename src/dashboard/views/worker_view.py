@@ -196,7 +196,7 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
         ).round(1)
 
         if not pivot_df.empty:
-            week_cols = sorted(list(pivot_df.columns))
+            week_cols = sorted(list(pivot_df.columns), key=extract_week_sort_key)
 
             # 주간 최고(h) 및 기간 총시간(h) 계산
             pivot_df["주간 최고(h)"] = pivot_df[week_cols].max(axis=1).round(1)
