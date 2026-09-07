@@ -178,6 +178,43 @@ def apply_custom_styles():
             color: #FFFFFF !important;
         }
 
+        /* ⚠️ Streamlit 알림창 (st.warning, st.info, st.success, st.error) 고대비 가독성 보장 (흰색 글씨 원천 방지) */
+        div[data-testid="stAlert"] {
+            border-radius: 8px !important;
+        }
+        div[data-testid="stAlert"] * {
+            color: #1e293b !important;
+            font-weight: 600 !important;
+        }
+        /* warning (노란색 배경) -> 짙은 다크 브라운 텍스트 */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] * {
+            color: #713f12 !important;
+            font-weight: 700 !important;
+        }
+        /* info (하늘색 배경) -> 짙은 네이비 텍스트 */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentInfo"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentInfo"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentInfo"] * {
+            color: #075985 !important;
+            font-weight: 700 !important;
+        }
+        /* success (초록색 배경) -> 짙은 그린 텍스트 */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"] * {
+            color: #14532d !important;
+            font-weight: 700 !important;
+        }
+        /* error (빨간색 배경) -> 짙은 레드 텍스트 */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentError"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentError"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentError"] * {
+            color: #7f1d1d !important;
+            font-weight: 700 !important;
+        }
+
         /* 🏛️ Cisco ACI 스타일 필터 배지 및 고시인성 실시간 집계 기준 정보 패널 */
         .filter-badge {
             background-color: #e0f2fe !important;

@@ -128,9 +128,17 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
                     st.rerun()
         else:
             if tot_work_h >= 52.0:
-                st.warning(f"🚨 **주 52시간 초과 근무 {round(tot_work_h - 52.0, 1)}시간 발생** (교육 제외 {tot_work_h}h, 미보상 상태). 아래에서 보상 휴가를 등록하시면 표의 색상이 **초록색**으로 전환됩니다.")
+                st.markdown(f"""
+                <div style="background-color: #fef2f2; border: 1.5px solid #fecaca; border-left: 5px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; color: #7f1d1d !important; font-weight: 700; font-size: 13.5px;">
+                    🚨 주 52시간 초과 근무 <span style="color: #dc2626; font-weight: 900;">{round(tot_work_h - 52.0, 1)}시간 발생</span> (교육 제외 {tot_work_h}h, 미보상 상태). 아래에서 보상 휴가를 등록하시면 표의 색상이 <b>초록색</b>으로 전환됩니다.
+                </div>
+                """, unsafe_allow_html=True)
             elif tot_work_h >= 40.0:
-                st.info(f"⚠️ 주 40시간 초과(교육 제외 {tot_work_h}시간) 주차입니다. 필요 시 보상 휴가를 등록하시면 표에 반영됩니다.")
+                st.markdown(f"""
+                <div style="background-color: #fefce8; border: 1.5px solid #fef08a; border-left: 5px solid #eab308; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; color: #713f12 !important; font-weight: 700; font-size: 13.5px;">
+                    ⚠️ 주 40시간 초과(교육 제외 {tot_work_h}시간) 주차입니다. 필요 시 보상 휴가를 등록하시면 표에 반영됩니다.
+                </div>
+                """, unsafe_allow_html=True)
             else:
                 st.info("💡 해당 주차는 주 52시간 이내 정상이지만, 필요 시 특별 보상 휴가를 등록할 수 있습니다.")
 

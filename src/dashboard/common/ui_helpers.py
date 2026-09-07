@@ -501,4 +501,84 @@ def get_available_weeks_for_df(df_scope: pd.DataFrame, month_desc: str = "") -> 
     return sorted(all_weeks, key=extract_week_sort_key)
 
 
+def get_week_label_info(week_label: str) -> dict:
+    """주차 라벨(예: '2026-08 1주차 (08/01~08/02)')에서 기간 정보를 파싱하고 주말(토/일)만으로 이루어진 주차인지 판별"""
+    import re
+    from datetime import date, timedelta
+    
+    res = {
+        "year": None,
+        "month": None,
+        "week_num": None,
+        "is_weekend_only": False,
+        "start_date": None,
+        "end_date": None
+    }
+    
+    if not week_label:
+        return res
+        
+    m = re.search(r'(\d{4})-(\d{2})\s+(\d+)주차\s+\((\d{2})/(\d{2})~(\d{2})/(\d{2})\)', str(week_label))
+    if m:
+        y, mo, w_num, sm, sd, em, ed = m.groups()
+        try:
+            s_date = date(int(y), int(sm), int(sd))
+            e_date = date(int(y), int(em), int(ed))
+            res["year"] = int(y)
+            res["month"] = int(mo)
+            res["week_num"] = int(w_num)
+            res["start_date"] = s_date
+            res["end_date"] = e_date
+            
+            # 기간 내 모든 날짜가 토(5) 또는 일(6)인지 검사
+            cur = s_date
+            all_weekend = True
+            while cur <= e_date:
+                if cur.weekday() < 5:  # 0~4는 평일(월~금)
+                    all_weekend = False
+                    break
+                cur += timedelta(days=1)
+            res["is_weekend_only"] = all_weekend
+        except Exception:
+            pass
+    return res
+
+
+def render_empty_week_notice(week_label: str, team_name: str = "전체"):
+    """작업 데이터가 없는 주차 선택 시, 주말만 있는 기간 여부 및 카카오톡 원장 기록 없음 안내 배너 렌더링"""
+    info = get_week_label_info(week_label)
+    is_weekend = info.get("is_weekend_only", False)
+    
+    team_clean = str(team_name).strip()
+    team_str = f"선택하신 <b>[{team_clean}]</b>의 " if team_clean and team_clean not in ["전체", "전체 팀", "전체팀"] else ""
+    
+    if is_weekend:
+        html = f"""
+        <div style="background: #fffbeb; border: 1.5px solid #fef3c7; border-left: 5.5px solid #f59e0b; border-radius: 8px; padding: 16px 20px; margin: 12px 0 20px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <div style="font-size: 15px; font-weight: 800; color: #92400e; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">ℹ️</span>
+                <span style="color: #92400e !important; font-weight: 800 !important;">해당 주차({week_label})는 <strong>주말(토·일)만 포함된 기간</strong>입니다.</span>
+            </div>
+            <div style="font-size: 13.5px; color: #78350f !important; line-height: 1.6;">
+                {team_str}해당 기간 동안 <strong>카카오톡 원장 기록이 없습니다.</strong><br>
+                <span style="color: #b45309; font-size: 12.5px;">※ 주말에 공식 작업 내역이 없거나 카카오톡 대화방에 시작/완료 보고가 등록되지 않은 경우 정상적으로 데이터가 집계되지 않습니다.</span>
+            </div>
+        </div>
+        """
+    else:
+        html = f"""
+        <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5.5px solid #64748b; border-radius: 8px; padding: 16px 20px; margin: 12px 0 20px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <div style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">📋</span>
+                <span style="color: #1e293b !important; font-weight: 800 !important;">해당 주차({week_label})는 <strong>카카오톡 원장 기록이 없습니다.</strong></span>
+            </div>
+            <div style="font-size: 13.5px; color: #334155 !important; line-height: 1.6;">
+                {team_str}해당 기간 동안 카카오톡 대화방에 등록된 시작/완료 작업 내역이 존재하지 않습니다.
+            </div>
+        </div>
+        """
+    st.markdown(html, unsafe_allow_html=True)
+
+
+
 

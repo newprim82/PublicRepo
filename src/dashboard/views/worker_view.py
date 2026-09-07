@@ -10,7 +10,7 @@ from ..common.dialogs import (
     show_kpi_urgent_dialog,
     show_weekly_detail_dialog
 )
-from ..common.ui_helpers import extract_week_sort_key, get_available_weeks_for_df
+from ..common.ui_helpers import extract_week_sort_key, get_available_weeks_for_df, render_empty_week_notice
 
 def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataFrame, chart_orientation: str, selected_view: str):
     """팀원별 업무량 랭킹 & 작업 유형 차트 (화면 전체 새로고침 없는 독립 Fragment)"""
@@ -256,14 +256,36 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
             if danger_52_cnt > 0 or caution_40_cnt > 0:
                 msg_parts = []
                 if danger_52_cnt > 0:
-                    msg_parts.append(f"🚨 **주 52시간 초과 위험 {danger_52_cnt}명 (빨간색)**")
+                    msg_parts.append(f"🚨 <span style='color: #b91c1c; font-weight: 900;'>주 52시간 초과 위험 {danger_52_cnt}명 (빨간색)</span>")
                 if caution_40_cnt > 0:
-                    msg_parts.append(f"⚠️ **주 40시간 초과 주의 {caution_40_cnt}명 (주황색)**")
-                st.warning(f"{' / '.join(msg_parts)}이 감지되었습니다. (보상 완료: {rewarded_cnt}명) 숫자를 클릭하여 보상 휴가를 등록하시면 **녹색**으로 바뀝니다.")
+                    msg_parts.append(f"⚠️ <span style='color: #c2410c; font-weight: 900;'>주 40시간 초과 주의 {caution_40_cnt}명 (주황색)</span>")
+                alert_text = f"{' / '.join(msg_parts)}이 감지되었습니다. (보상 완료: <b style='color:#15803d;'>{rewarded_cnt}명</b>) 숫자를 클릭하여 보상 휴가를 등록하시면 <b style='color:#15803d;'>녹색</b>으로 바뀝니다."
+                st.markdown(f"""
+                <div style="background-color: #fefce8; border: 1.5px solid #fef08a; border-left: 5.5px solid #eab308; border-radius: 8px; padding: 13px 18px; margin: 10px 0 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="font-size: 13.5px; color: #713f12 !important; font-weight: 700; line-height: 1.6; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 16px;">⚠️</span>
+                        <span style="color: #713f12 !important;">{alert_text}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             elif rewarded_cnt > 0:
-                st.success(f"🎉 모든 초과 근무자({rewarded_cnt}명)에게 **보상 휴가가 100% 정상 부여 완료**되었습니다! (녹색 전환)")
+                st.markdown(f"""
+                <div style="background-color: #f0fdf4; border: 1.5px solid #bbf7d0; border-left: 5.5px solid #22c55e; border-radius: 8px; padding: 13px 18px; margin: 10px 0 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="font-size: 13.5px; color: #14532d !important; font-weight: 700; line-height: 1.6; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">🎉</span>
+                        <span style="color: #14532d !important;">모든 초과 근무자(<b>{rewarded_cnt}명</b>)에게 <b>보상 휴가가 100% 정상 부여 완료</b>되었습니다! (녹색 전환)</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
             else:
-                st.info("💡 선택된 기간 동안 주 40시간을 초과한 과중 근무자가 없습니다.")
+                st.markdown("""
+                <div style="background-color: #f0f9ff; border: 1.5px solid #bae6fd; border-left: 5.5px solid #0284c7; border-radius: 8px; padding: 13px 18px; margin: 10px 0 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                    <div style="font-size: 13.5px; color: #075985 !important; font-weight: 700; line-height: 1.6; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">💡</span>
+                        <span style="color: #075985 !important;">선택된 기간 동안 주 40시간을 초과한 과중 근무자가 없습니다.</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
             # 스타일링: 52h 초과=빨간색(#D32F2F), 40h~52h=주황색(#EF6C00), 보상완료=녹색(#2E7D32)
             def style_overwork_badge(val):
@@ -524,6 +546,21 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
             use_container_width=True,
             hide_index=True
         )
+    else:
+        if sel_period != "📅 월간 전체 종합":
+            render_empty_week_notice(target_week, selected_team)
+        else:
+            st.markdown(f"""
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 5.5px solid #64748b; border-radius: 8px; padding: 16px 20px; margin: 12px 0 20px 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+                <div style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">📋</span>
+                    <span style="color: #1e293b !important; font-weight: 800 !important;">선택하신 기간({current_period_label})은 <strong>카카오톡 원장 기록이 없습니다.</strong></span>
+                </div>
+                <div style="font-size: 13.5px; color: #334155 !important; line-height: 1.6;">
+                    선택하신 <b>[{selected_team}]</b>의 해당 기간 동안 카카오톡 대화방에 등록된 시작/완료 작업 내역이 존재하지 않습니다.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 
     # ----------------------------------------------------

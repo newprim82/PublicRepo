@@ -19,7 +19,8 @@ from ..common.ui_helpers import (
     is_same_team,
     get_all_teams_safe,
     extract_week_sort_key,
-    get_available_weeks_for_df
+    get_available_weeks_for_df,
+    render_empty_week_notice
 )
 
 def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
@@ -235,6 +236,12 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             if selected_team not in ["전체", "전체 팀"] and not prev_df.empty:
                 prev_df["worker_team"] = prev_df["worker_name"].map(team_mappings).fillna(prev_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
                 prev_df = prev_df[prev_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
+
+    # ----------------------------------------------------
+    # 데이터 유무 체크 및 빈 주차 안내
+    # ----------------------------------------------------
+    if is_weekly_view and df_active.empty:
+        render_empty_week_notice(target_week, selected_team)
 
     # ----------------------------------------------------
     # 핵심 지표 산출
