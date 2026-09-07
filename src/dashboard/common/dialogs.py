@@ -132,14 +132,18 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         else:
             if tot_work_h >= 52.0:
                 st.markdown(f"""
-                <div style="background-color: #fef2f2; border: 1.5px solid #fecaca; border-left: 5px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; color: #7f1d1d !important; font-weight: 700; font-size: 13.5px;">
-                    🚨 주 52시간 초과 근무 <span style="color: #dc2626; font-weight: 900;">{round(tot_work_h - 52.0, 1)}시간 발생</span> (교육 제외 {tot_work_h}h, 미보상 상태). 아래에서 보상 휴가를 등록하시면 표의 색상이 <b>초록색</b>으로 전환됩니다.
+                <div style="background-color: #fef2f2; border: 1.5px solid #fecaca; border-left: 5px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
+                    <span style="color: #7f1d1d !important; font-weight: 700; font-size: 13.5px; line-height: 1.5; display: inline-block;">
+                        🚨 주 52시간 초과 근무 <span style="color: #dc2626 !important; font-weight: 900;">{round(tot_work_h - 52.0, 1)}시간 발생</span> (교육 제외 {tot_work_h}h, 미보상 상태). 아래에서 보상 휴가를 등록하시면 표의 색상이 <b style="color: #15803d !important;">초록색</b>으로 전환됩니다.
+                    </span>
                 </div>
                 """, unsafe_allow_html=True)
             elif tot_work_h >= 40.0:
                 st.markdown(f"""
-                <div style="background-color: #fefce8; border: 1.5px solid #fef08a; border-left: 5px solid #eab308; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; color: #713f12 !important; font-weight: 700; font-size: 13.5px;">
-                    ⚠️ 주 40시간 초과(교육 제외 {tot_work_h}시간) 주차입니다. 필요 시 보상 휴가를 등록하시면 표에 반영됩니다.
+                <div style="background-color: #fefce8; border: 1.5px solid #fef08a; border-left: 5px solid #eab308; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px;">
+                    <span style="color: #713f12 !important; font-weight: 700; font-size: 13.5px; line-height: 1.5; display: inline-block;">
+                        ⚠️ <b style="color: #713f12 !important;">주 40시간 초과(교육 제외 {tot_work_h}시간) 주차입니다.</b> <span style="color: #854d0e !important; font-weight: 700;">필요 시 보상 휴가를 등록하시면 표에 반영됩니다.</span>
+                    </span>
                 </div>
                 """, unsafe_allow_html=True)
             else:

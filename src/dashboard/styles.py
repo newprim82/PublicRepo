@@ -189,7 +189,16 @@ def apply_custom_styles():
         /* warning (노란색 배경) -> 짙은 다크 브라운 텍스트 */
         div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]),
         div[data-testid="stAlert"] [data-testid="stAlertContentWarning"],
-        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] * {
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] *,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] p,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] span,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] div,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] strong,
+        div[data-testid="stNotificationContentWarning"],
+        div[data-testid="stNotificationContentWarning"] *,
+        div[data-testid="stDialog"] div[data-testid="stAlert"] *,
+        div[role="dialog"] div[data-testid="stAlert"] *,
+        div[data-baseweb="modal"] div[data-testid="stAlert"] * {
             color: #713f12 !important;
             font-weight: 700 !important;
         }
@@ -214,6 +223,34 @@ def apply_custom_styles():
             color: #7f1d1d !important;
             font-weight: 700 !important;
         }
+
+        /* ⚠️ 노란색/연노란색/경고 배경 내 텍스트 시인성 완벽 보장 (모달 및 인라인 div 포함 흰색 글씨 원천 차단) */
+        div[style*="fefce8"],
+        div[style*="fefce8"] *,
+        div[style*="fffbeb"],
+        div[style*="fffbeb"] *,
+        div[style*="fef08a"],
+        div[style*="fef08a"] *,
+        div[style*="fef3c7"],
+        div[style*="fef3c7"] *,
+        div[style*="fde047"],
+        div[style*="fde047"] *,
+        div[style*="fff9db"],
+        div[style*="fff9db"] * {
+            color: #713f12 !important;
+            font-weight: 700 !important;
+            text-shadow: none !important;
+        }
+
+        /* 🚨 연빨간색 배경 내 텍스트 고대비 보장 */
+        div[style*="fef2f2"],
+        div[style*="fef2f2"] *,
+        div[style*="fecaca"],
+        div[style*="fecaca"] * {
+            color: #7f1d1d !important;
+            font-weight: 700 !important;
+        }
+
 
         /* 🏛️ Cisco ACI 스타일 필터 배지 및 고시인성 실시간 집계 기준 정보 패널 */
         .filter-badge {

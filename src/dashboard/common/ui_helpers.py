@@ -171,6 +171,38 @@ def inject_dialog_title_style():
         animation-delay: 0s !important;
         transform: none !important;
     }
+
+    /* ⚠️ 모달 내부 노란색/경고/알림창 글자색 고대비 보장 (흰색 글씨 원천 차단) */
+    div[data-testid="stDialog"] div[data-testid="stAlert"] *,
+    div[role="dialog"] div[data-testid="stAlert"] *,
+    div[data-baseweb="modal"] div[data-testid="stAlert"] *,
+    div[data-testid="stDialog"] div[style*="fefce8"],
+    div[data-testid="stDialog"] div[style*="fefce8"] *,
+    div[data-testid="stDialog"] div[style*="fffbeb"],
+    div[data-testid="stDialog"] div[style*="fffbeb"] *,
+    div[data-testid="stDialog"] div[style*="fef08a"],
+    div[data-testid="stDialog"] div[style*="fef08a"] *,
+    div[data-testid="stDialog"] div[style*="fef3c7"],
+    div[data-testid="stDialog"] div[style*="fef3c7"] *,
+    div[data-testid="stDialog"] div[style*="fde047"],
+    div[data-testid="stDialog"] div[style*="fde047"] *,
+    div[role="dialog"] div[style*="fefce8"] *,
+    div[role="dialog"] div[style*="fffbeb"] *,
+    div[role="dialog"] div[style*="fef08a"] *,
+    div[data-baseweb="modal"] div[style*="fefce8"] *,
+    div[data-baseweb="modal"] div[style*="fffbeb"] * {
+        color: #713f12 !important;
+        font-weight: 700 !important;
+        text-shadow: none !important;
+    }
+
+    /* 🚨 모달 내부 빨간색 경고창 글자색 보장 */
+    div[data-testid="stDialog"] div[style*="fef2f2"],
+    div[data-testid="stDialog"] div[style*="fef2f2"] *,
+    div[role="dialog"] div[style*="fef2f2"] * {
+        color: #7f1d1d !important;
+        font-weight: 700 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -595,8 +627,8 @@ def render_empty_week_notice(week_label: str, team_name: str = "전체"):
                 <span style="color: #92400e !important; font-weight: 800 !important;">해당 주차({week_label})는 <strong>주말(토·일)만 포함된 기간</strong>입니다.</span>
             </div>
             <div style="font-size: 13.5px; color: #78350f !important; line-height: 1.6;">
-                {team_str}해당 기간 동안 <strong>카카오톡 원장 기록이 없습니다.</strong><br>
-                <span style="color: #b45309; font-size: 12.5px;">※ 주말에 공식 작업 내역이 없거나 카카오톡 대화방에 시작/완료 보고가 등록되지 않은 경우 정상적으로 데이터가 집계되지 않습니다.</span>
+                <span style="color: #78350f !important; font-weight: 600;">{team_str}해당 기간 동안 <strong style="color: #451a03 !important;">카카오톡 원장 기록이 없습니다.</strong></span><br>
+                <span style="color: #b45309 !important; font-size: 12.5px; font-weight: 600;">※ 주말에 공식 작업 내역이 없거나 카카오톡 대화방에 시작/완료 보고가 등록되지 않은 경우 정상적으로 데이터가 집계되지 않습니다.</span>
             </div>
         </div>
         """

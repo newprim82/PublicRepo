@@ -314,8 +314,8 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
                                 # 52시간 이상 ➔ 빨간색
                                 styles[i] = "background-color: #FFCDD2; color: #B71C1C; font-weight: bold;"
                             else:
-                                # 40시간 이상 52시간 미만 ➔ 주황색
-                                styles[i] = "background-color: #FFE0B2; color: #E65100; font-weight: bold;"
+                                # 40시간 이상 52시간 미만 ➔ 주황/노랑 배경에 짙은 다크 브라운 텍스트
+                                styles[i] = "background-color: #FFE0B2; color: #78350f; font-weight: 800;"
                 return styles
 
             styled_pivot = pivot_df.style.format(
