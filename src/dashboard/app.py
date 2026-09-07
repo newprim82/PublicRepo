@@ -319,7 +319,7 @@ def render_main_content_frame(
     elif curr_page == "👤 팀원별 업무량 분석":
         render_worker_view(df, selected_team, month_desc, df_raw=df_raw, team_mappings=team_mappings)
     elif curr_page == "🏢 팀별 업무량 비교":
-        render_team_view(df_raw, selected_months)
+        render_team_view(df_raw, selected_months, month_desc=month_desc, team_mappings=team_mappings)
     elif curr_page == "📈 월별/일별 추이":
         render_trend_view(df, df_filtered_base, selected_months, available_months, month_desc)
     elif curr_page == "🏢 고객사별 공수 분포":

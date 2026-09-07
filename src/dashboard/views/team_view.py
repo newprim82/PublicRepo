@@ -3,10 +3,16 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from ..common.dialogs import show_team_work_logs_dialog
-from ..common.ui_helpers import is_same_team
+from ..common.ui_helpers import (
+    is_same_team,
+    get_available_weeks_for_df,
+    render_empty_week_notice
+)
 
-def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.DataFrame):
+def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.DataFrame, current_period_label: str = ""):
     """팀별 업무량 비교 차트 및 상세 표 (화면 전체 새로고침 없는 독립 Fragment)"""
+    label_suffix = f" ({current_period_label})" if current_period_label else ""
+
     col_t2_1, col_t2_2 = st.columns(2)
     with col_t2_1:
         fig_team_bar = px.bar(
@@ -17,7 +23,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             text="total_hours",
             custom_data=["worker_team"],
             labels={"worker_team": "팀", "total_hours": "총 지원 시간(h)"},
-            title="팀별 총 지원 시간(h) 비교"
+            title=f"팀별 총 지원 시간(h) 비교{label_suffix}"
         )
         fig_team_bar.update_traces(
             texttemplate='%{text}h',
@@ -41,7 +47,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             text="avg_hours_per_person",
             custom_data=["worker_team"],
             labels={"worker_team": "팀", "avg_hours_per_person": "1인당 평균 시간(h)"},
-            title="팀별 1인당 평균 지원 시간(h) 비교"
+            title=f"팀별 1인당 평균 지원 시간(h) 비교{label_suffix}"
         )
         fig_team_avg.update_traces(
             texttemplate='%{text}h',
@@ -56,7 +62,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             key="chart_team_avg_hours_bar"
         )
 
-    st.markdown("##### 📋 팀별 상세 집계 표")
+    st.markdown(f"##### 📋 팀별 상세 집계 표{label_suffix}")
     st.caption("💡 표에서 특정 팀 행을 클릭하셔도 해당 팀의 세부 작업 원장 팝업이 바로 열립니다.")
     disp_team_summary = team_summary.rename(columns={
         "worker_team": "소속팀",
@@ -150,14 +156,123 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
 
 
 
-def render_team_view(df_raw: pd.DataFrame, selected_months: list):
+def render_team_view(df_raw: pd.DataFrame, selected_months: list, month_desc: str = "", team_mappings: dict = None):
     """🏢 팀별 총 투입 시간 및 공수 비교 메인 뷰"""
-    st.subheader("🏢 팀별 총 투입 시간 및 공수 비교")
+    if df_raw.empty:
+        st.info("표시할 작업 내역 데이터가 없습니다.")
+        return
+
     team_df = df_raw.copy()
     if selected_months:
         team_df = team_df[team_df["month_str"].isin(selected_months)]
-    
-    team_summary = team_df.groupby("worker_team").agg(
+
+    if team_mappings is None:
+        try:
+            from ...services.team_service import TeamService
+            team_mappings = TeamService.get_team_mappings()
+        except Exception:
+            team_mappings = {}
+
+    if team_mappings and not team_df.empty:
+        from ...services.team_service import UNASSIGNED_TEAM
+        team_df["worker_team"] = team_df["worker_name"].map(team_mappings).fillna(team_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+
+    if not month_desc and selected_months:
+        month_desc = ", ".join(selected_months)
+
+    # 1. 캘린더 기준 이미 시작된 주차 목록 추출
+    available_weeks = get_available_weeks_for_df(team_df, month_desc)
+    period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks]
+
+    # 2. 토스/Cisco ACI 딥네이비 스타일 라디오 버튼 UI
+    st.markdown("""
+    <style>
+        div.st-key-team_view_period_selector div[role="radiogroup"] {
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+            padding: 8px 12px !important;
+            background: #f8fafc !important;
+            border: 1.5px solid #005073 !important;
+            border-radius: 8px !important;
+            margin-bottom: 16px !important;
+        }
+        div.st-key-team_view_period_selector div[role="radiogroup"] label {
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 6px 14px !important;
+            margin: 0 !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div.st-key-team_view_period_selector div[role="radiogroup"] label:hover {
+            background: #e2e8f0 !important;
+            border-color: #0284c7 !important;
+        }
+        div.st-key-team_view_period_selector div[role="radiogroup"] label p,
+        div.st-key-team_view_period_selector div[role="radiogroup"] label span {
+            color: #002d42 !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+        }
+        div.st-key-team_view_period_selector div[role="radiogroup"] label[data-checked="true"],
+        div.st-key-team_view_period_selector div[role="radiogroup"] label:has(input:checked) {
+            background: #005073 !important;
+            border-color: #002d42 !important;
+        }
+        div.st-key-team_view_period_selector div[role="radiogroup"] label[data-checked="true"] p,
+        div.st-key-team_view_period_selector div[role="radiogroup"] label:has(input:checked) p,
+        div.st-key-team_view_period_selector div[role="radiogroup"] label[data-checked="true"] span,
+        div.st-key-team_view_period_selector div[role="radiogroup"] label:has(input:checked) span {
+            color: #ffffff !important;
+            font-weight: 900 !important;
+        }
+    </style>
+    <div style="font-size: 14.5px; font-weight: 800; color: #002d42 !important; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <span>📅</span>
+        <span style="color: #002d42 !important; font-weight: 800 !important;">보고서 조회 주기 선택 (월간 / 주간 드릴다운)</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if available_weeks:
+        sel_period = st.radio(
+            "보고서 조회 주기 선택 (월간 / 주간 드릴다운)",
+            options=period_options,
+            horizontal=True,
+            key="team_view_period_selector",
+            label_visibility="collapsed"
+        )
+    else:
+        sel_period = "📅 월간 전체 종합"
+
+    # 3. 선택된 주기에 따른 active_df 필터링
+    if sel_period != "📅 월간 전체 종합":
+        target_week = sel_period.replace("📌 ", "").strip()
+        current_period_label = target_week
+        if "week_label" in df_raw.columns:
+            active_df = df_raw[df_raw["week_label"] == target_week].copy()
+        else:
+            active_df = team_df[team_df["week_label"] == target_week].copy()
+
+        if team_mappings and not active_df.empty:
+            from ...services.team_service import UNASSIGNED_TEAM
+            active_df["worker_team"] = active_df["worker_name"].map(team_mappings).fillna(active_df.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+    else:
+        current_period_label = month_desc if month_desc else "월간 전체"
+        active_df = team_df.copy()
+
+    st.subheader(f"🏢 팀별 총 투입 시간 및 공수 비교 ({current_period_label})")
+
+    if active_df.empty:
+        if sel_period != "📅 월간 전체 종합":
+            render_empty_week_notice(target_week, "전체 팀")
+        else:
+            st.info(f"💡 선택하신 기간({current_period_label})에 카카오톡 원장 기록이 없습니다.")
+        return
+
+    team_summary = active_df.groupby("worker_team").agg(
         total_hours=("actual_hours", "sum"),
         total_tasks=("id", "count"),
         night_tasks=("is_night_work", "sum"),
@@ -173,5 +288,5 @@ def render_team_view(df_raw: pd.DataFrame, selected_months: list):
     <span><b>각 팀 막대(또는 아래 집계표의 행)를 클릭</b>하시면, 해당 팀의 <b>[실제 세부 지원 내역 원장 및 카카오톡 대화 원본 팝업]</b>이 바로 열립니다.</span>
     </div>""", unsafe_allow_html=True)
 
-    render_team_comparison_interactive(team_summary, team_df)
+    render_team_comparison_interactive(team_summary, active_df, current_period_label)
 
