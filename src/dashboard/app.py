@@ -325,7 +325,7 @@ def render_main_content_frame(
     elif curr_page == "📊 Summary":
         render_summary_view(df, df_raw, selected_team, team_mappings, month_desc=month_desc)
     elif curr_page == "👤 팀원별 업무량 분석":
-        render_worker_view(df, selected_team, month_desc)
+        render_worker_view(df, selected_team, month_desc, df_raw=df_raw, team_mappings=team_mappings)
     elif curr_page == "🏢 팀별 업무량 비교":
         render_team_view(df_raw, selected_months)
     elif curr_page == "📈 월별/일별 추이":

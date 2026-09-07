@@ -377,86 +377,129 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
 
 
 
-def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str):
-    """👤 팀원별 업무량 분석 메인 뷰 (상단 차트/테이블 + 하단 주차별 매트릭스)"""
-    st.subheader(f"👤 {selected_team} - 팀원별 총 작업 시간 및 업무 집중도 ({month_desc})")
-    worker_summary = StatsService.get_worker_summary(df)
+def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df_raw: pd.DataFrame = None, team_mappings: dict = None):
+    """👤 팀원별 업무량 분석 메인 뷰 (월간/주간 드릴다운 + 상단 차트/테이블 + 하단 주차별 매트릭스)"""
+    
+    # =========================================================================
+    # 0. 📅 보고서 조회 주기 선택 (월간 전체 종합 vs 각 주차별 상세 드릴다운)
+    # =========================================================================
+    df_scope = df.copy()
+    available_weeks = []
+    if "week_label" in df_scope.columns:
+        raw_weeks = [w for w in df_scope["week_label"].dropna().unique() if str(w).strip()]
+        try:
+            available_weeks = sorted(raw_weeks, key=lambda x: int(''.join(filter(str.isdigit, str(x)))) if any(c.isdigit() for c in str(x)) else str(x))
+        except Exception:
+            available_weeks = sorted(raw_weeks)
+
+    period_options = ["📅 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks]
+
+    st.markdown("""
+    <style>
+        div.st-key-worker_view_period_selector > label {
+            color: #002d42 !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            margin-bottom: 6px !important;
+        }
+        div.st-key-worker_view_period_selector > label p {
+            color: #002d42 !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+        }
+        div.st-key-worker_view_period_selector div[role="radiogroup"] {
+            background: #ffffff !important;
+            border: 1.5px solid #005f8a !important;
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+            box-shadow: 0 2px 6px rgba(0,45,66,0.06) !important;
+            margin-bottom: 12px !important;
+        }
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label {
+            background: #f1f5f9 !important;
+            border: 1.2px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 5px 12px !important;
+            margin: 0 !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label:hover {
+            background: #e2e8f0 !important;
+            border-color: #0284c7 !important;
+        }
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label p,
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label span {
+            color: #002d42 !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+        }
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label[data-checked="true"],
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label:has(input:checked) {
+            background: #005073 !important;
+            border-color: #002d42 !important;
+        }
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label[data-checked="true"] p,
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label:has(input:checked) p,
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label[data-checked="true"] span,
+        div.st-key-worker_view_period_selector div[role="radiogroup"] label:has(input:checked) span {
+            color: #ffffff !important;
+            font-weight: 900 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    if available_weeks:
+        sel_period = st.radio(
+            "📅 **보고서 조회 주기 선택 (월간 / 주간 드릴다운)**",
+            options=period_options,
+            horizontal=True,
+            key="worker_view_period_selector"
+        )
+    else:
+        sel_period = "📅 월간 전체 종합"
+
+    # 팀명 안전 비교 헬퍼
+    def is_same_team(t1, t2):
+        return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
+
+    # 선택된 주기에 따른 데이터 필터링 (df_active)
+    if sel_period != "📅 월간 전체 종합":
+        target_week = sel_period.replace("📌 ", "").strip()
+        current_period_label = target_week
+        if df_raw is not None and not df_raw.empty and "week_label" in df_raw.columns:
+            df_active = df_raw[df_raw["week_label"] == target_week].copy()
+        else:
+            df_active = df_scope[df_scope["week_label"] == target_week].copy()
+
+        if selected_team not in ["전체", "전체 팀"] and not df_active.empty:
+            from ...services.team_service import UNASSIGNED_TEAM
+            if team_mappings:
+                df_active["worker_team"] = df_active["worker_name"].map(team_mappings).fillna(df_active.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+            df_active = df_active[df_active["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
+    else:
+        current_period_label = month_desc
+        df_active = df_scope.copy()
+
+    st.subheader(f"👤 {selected_team} - 팀원별 총 작업 시간 및 업무 집중도 ({current_period_label})")
+    worker_summary = StatsService.get_worker_summary(df_active)
     
     if not worker_summary.empty:
-        st.markdown(
-            """
-            <style>
-            div.st-key-radio_worker_view > label p,
-            div.st-key-radio_worker_orientation > label p {
-                color: #002d42 !important;
-                font-size: 13.5px !important;
-                font-weight: 800 !important;
-            }
-            div.st-key-radio_worker_view div[role="radiogroup"] label p,
-            div.st-key-radio_worker_orientation div[role="radiogroup"] label p {
-                color: #002d42 !important;
-                font-size: 13px !important;
-                font-weight: 700 !important;
-            }
-            div.st-key-radio_worker_view div[role="radiogroup"] label,
-            div.st-key-radio_worker_orientation div[role="radiogroup"] label {
-                background: #f1f5f9 !important;
-                border: 1px solid #cbd5e1 !important;
-                border-radius: 6px !important;
-                padding: 3px 10px !important;
-                cursor: pointer !important;
-            }
-            div.st-key-radio_worker_view div[role="radiogroup"] label:hover,
-            div.st-key-radio_worker_orientation div[role="radiogroup"] label:hover {
-                background: #e2e8f0 !important;
-                border-color: #0284c7 !important;
-            }
-            div.st-key-radio_worker_view div[role="radiogroup"] label[data-checked="true"],
-            div.st-key-radio_worker_view div[role="radiogroup"] label:has(input:checked),
-            div.st-key-radio_worker_orientation div[role="radiogroup"] label[data-checked="true"],
-            div.st-key-radio_worker_orientation div[role="radiogroup"] label:has(input:checked) {
-                background: #005073 !important;
-                border-color: #002d42 !important;
-            }
-            div.st-key-radio_worker_view div[role="radiogroup"] label[data-checked="true"] p,
-            div.st-key-radio_worker_view div[role="radiogroup"] label:has(input:checked) p,
-            div.st-key-radio_worker_orientation div[role="radiogroup"] label[data-checked="true"] p,
-            div.st-key-radio_worker_orientation div[role="radiogroup"] label:has(input:checked) p {
-                color: #ffffff !important;
-                font-weight: 800 !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        ctrl_col1, ctrl_col2 = st.columns([2, 1])
-        with ctrl_col1:
-            total_workers_cnt = len(worker_summary)
-            view_options = ["전체 보기"]
-            if total_workers_cnt > 15:
-                view_options.insert(0, "상위 15명")
-            if total_workers_cnt > 30:
-                view_options.insert(1, "상위 30명")
-            
-            selected_view = st.radio("📊 표시 인원 범위:", options=view_options, horizontal=True, key="radio_worker_view")
-        with ctrl_col2:
-            chart_orientation = st.radio("📐 차트 방향:", options=["가로형 (이름 안 겹침 - 권장)", "세로형 (세로 90도 회전)"], horizontal=True, key="radio_worker_orientation")
-
-        if selected_view == "상위 15명":
-            display_summary = worker_summary.head(15).copy()
-        elif selected_view == "상위 30명":
-            display_summary = worker_summary.head(30).copy()
-        else:
-            display_summary = worker_summary.copy()
+        selected_view = "전체 보기"
+        chart_orientation = "가로형 (이름 안 겹침 - 권장)"
+        display_summary = worker_summary.copy()
 
         st.markdown("""<div style="background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd; border-left: 4.5px solid #0284c7; border-radius: 6px; padding: 9px 15px; margin: 6px 0 16px 0; font-size: 13px; color: #0369a1; font-weight: 700; display: flex; align-items: center; gap: 8px;">
     <span>💡</span>
     <span><b>그래프의 막대(세그먼트)를 클릭</b>하시면, <b>[왼쪽 그래프: 개인 전체 작업 내역]</b>, <b>[오른쪽 그래프: 평일 주간/야간/주말별 상세 내역 및 카카오톡 원본]</b> 팝업이 바로 열립니다.</span>
     </div>""", unsafe_allow_html=True)
         
-        render_worker_charts_interactive(display_summary, df, chart_orientation, selected_view)
+        render_worker_charts_interactive(display_summary, df_active, chart_orientation, current_period_label)
 
-        st.markdown("##### 📊 팀원별 종합 통계 현황판")
+        st.markdown(f"##### 📊 팀원별 종합 통계 현황판 ({current_period_label})")
         disp_worker_summary = worker_summary.rename(columns={
             "worker_name": "담당자",
             "total_hours": "총 투입시간(h)",
