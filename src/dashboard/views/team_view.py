@@ -9,9 +9,41 @@ from ..common.ui_helpers import (
     render_empty_week_notice
 )
 
+def get_team_fixed_color(team_name: str) -> str:
+    """팀별 고유 고정 컬러 매핑 (순위 변동과 무관하게 항상 팀별 고유 색상 유지)"""
+    t = str(team_name).replace(" ", "").strip()
+    if "본부" in t:
+        return "#3b82f6"  # 🏛️ 기술본부: 로열 블루
+    elif "1팀" in t:
+        return "#06b6d4"  # 🌐 기술 1팀: 스카이 시안 블루
+    elif "2팀" in t:
+        return "#10b981"  # 🌿 기술 2팀: 에메랄드 그린
+    elif "3팀" in t:
+        return "#8b5cf6"  # 🍇 기술 3팀: 바이올렛 퍼플
+    elif "PI" in t.upper() or "파이" in t:
+        return "#f59e0b"  # ⚡ PI팀: 골드 앰버 (주황)
+    else:
+        return "#64748b"  # 🏢 기타/미배정: 슬레이트 그레이
+
 def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.DataFrame, current_period_label: str = ""):
     """팀별 업무량 비교 차트 및 상세 표 (화면 전체 새로고침 없는 독립 Fragment)"""
     label_suffix = f" ({current_period_label})" if current_period_label else ""
+
+    # 팀별 고유 고정 색상 딕셔너리 생성
+    team_color_map = {
+        str(t): get_team_fixed_color(t) for t in team_summary["worker_team"].dropna().unique()
+    }
+
+    # 팀별 고유 색상 식별 가이드 칩
+    st.markdown("""
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; font-size: 12px; font-weight: 800;">
+        <span style="background: rgba(59, 130, 246, 0.12); color: #2563eb; border: 1.5px solid #3b82f6; border-radius: 6px; padding: 2px 9px;">🏛️ 기술본부</span>
+        <span style="background: rgba(6, 182, 212, 0.12); color: #0891b2; border: 1.5px solid #06b6d4; border-radius: 6px; padding: 2px 9px;">🌐 기술 1팀</span>
+        <span style="background: rgba(16, 185, 129, 0.12); color: #059669; border: 1.5px solid #10b981; border-radius: 6px; padding: 2px 9px;">🌿 기술 2팀</span>
+        <span style="background: rgba(139, 92, 246, 0.12); color: #7c3aed; border: 1.5px solid #8b5cf6; border-radius: 6px; padding: 2px 9px;">🍇 기술 3팀</span>
+        <span style="background: rgba(245, 158, 11, 0.12); color: #d97706; border: 1.5px solid #f59e0b; border-radius: 6px; padding: 2px 9px;">⚡ PI팀</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     col_t2_1, col_t2_2 = st.columns(2)
     with col_t2_1:
@@ -20,6 +52,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             x="worker_team",
             y="total_hours",
             color="worker_team",
+            color_discrete_map=team_color_map,
             text="total_hours",
             custom_data=["worker_team"],
             labels={"worker_team": "팀", "total_hours": "총 지원 시간(h)"},
@@ -44,6 +77,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             x="worker_team",
             y="avg_hours_per_person",
             color="worker_team",
+            color_discrete_map=team_color_map,
             text="avg_hours_per_person",
             custom_data=["worker_team"],
             labels={"worker_team": "팀", "avg_hours_per_person": "1인당 평균 시간(h)"},
