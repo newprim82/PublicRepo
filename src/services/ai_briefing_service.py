@@ -146,10 +146,6 @@ class FactExtractor:
 class AIBriefingService:
     """1단계 추출 팩트를 바탕으로 LLM(Gemini) 또는 자체 동적 알고리즘을 통해 심층 브리핑을 완성하는 서비스"""
 
-    # ⚡ 프로세스 레벨 인메모리 TTL 캐시 (Streamlit 세션 밖에서도 0ms 즉시 응답)
-    _process_cache: Dict[str, Tuple[float, dict]] = {}
-    CACHE_TTL: float = 300.0  # 5분 유효기간
-
     @staticmethod
     def clean_briefing_text(text: str) -> str:
         """AI 브리핑 텍스트 앞머리에 붙은 중복 제목 및 이모지를 말끔히 제거하고 순수 본문만 반환"""
@@ -169,17 +165,6 @@ class AIBriefingService:
             f"{facts.get('total_hours', 0)}_{facts.get('total_workers', 0)}_{facts.get('total_clients', 0)}_"
             f"{facts.get('start_date', '')}_{facts.get('end_date', '')}"
         )
-
-        # 1. 프로세스 레벨 TTL 캐시 확인 (철저한 예외 방어)
-        try:
-            import time
-            now = time.time()
-            if not force_refresh and cache_key in cls._process_cache:
-                cache_ts, cached_data = cls._process_cache[cache_key]
-                if now - cache_ts < cls.CACHE_TTL:
-                    return cached_data
-        except Exception:
-            pass
 
         if force_refresh and st is not None:
             try:
@@ -229,13 +214,6 @@ class AIBriefingService:
                 if k in briefing:
                     briefing[k] = cls.clean_briefing_text(briefing[k])
 
-        # 프로세스 캐시 저장 (예외 방어)
-        try:
-            import time
-            cls._process_cache[cache_key] = (time.time(), briefing)
-        except Exception:
-            pass
-
         if st is not None:
             try:
                 st.session_state[cache_key] = briefing
@@ -262,7 +240,7 @@ class AIBriefingService:
 [정량 데이터 팩트 JSON]:
 {json.dumps(facts, ensure_ascii=False, indent=2)}
 """
-        model_candidates = ["gemini-2.0-flash", "gemini-1.5-flash"]
+        model_candidates = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash"]
         for model in model_candidates:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
@@ -275,7 +253,7 @@ class AIBriefingService:
                     }
                 }
                 req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-                with urllib.request.urlopen(req, timeout=15) as response:
+                with urllib.request.urlopen(req, timeout=20) as response:
                     res_data = json.loads(response.read().decode("utf-8"))
                     text_content = res_data["candidates"][0]["content"]["parts"][0]["text"]
                     parsed = json.loads(text_content)
