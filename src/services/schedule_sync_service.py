@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 
@@ -123,21 +124,20 @@ class ScheduleSyncService:
                 "is_weekend_work": False
             })
 
-        # 2. 오늘 이미 카카오톡으로 시작보고를 올렸거나 완료한 작업자 확인 (중복 방지)
-        kakao_reported_workers = set()
-        if not kakao_pend_df.empty and "worker_name" in kakao_pend_df.columns:
-            kakao_reported_workers.update(kakao_pend_df["worker_name"].dropna().unique())
-        if not today_completed_df.empty and "worker_name" in today_completed_df.columns:
-            kakao_reported_workers.update(today_completed_df["worker_name"].dropna().unique())
+        # 2. 오늘 카카오톡 작업 목록 (작업자별) 매핑하여 동일 작업 중복만 정교하게 배제 (별도 회의/일정은 카드 표출 보장)
+        kakao_tasks_by_worker = {}
+        for df_source in [kakao_pend_df, today_completed_df]:
+            if not df_source.empty and "worker_name" in df_source.columns:
+                for _, k_r in df_source.iterrows():
+                    wn = k_r.get("worker_name")
+                    if wn:
+                        kakao_tasks_by_worker.setdefault(wn, []).append(k_r.to_dict())
 
         # 3. 비-휴가 일반 작업 일정 처리
         work_rows = today_out[today_out["is_leave"] == False]
 
         for _, r in work_rows.iterrows():
             w_name = r["worker_name"]
-            # 카카오톡으로 이미 보고한 작업자는 카톡 보고를 최우선 존중
-            if w_name in kakao_reported_workers:
-                continue
 
             st_time = r["start_time"]
             ed_time = r["end_time"]
@@ -156,6 +156,36 @@ class ScheduleSyncService:
 
             # 🏢 아웃룩 제목에서 [작업자] 제거 후 고객사명과 작업 내용을 스마트 분리 파싱
             parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(r["subject"], r.get("location", ""))
+
+            # 🛡️ 동일 작업자가 카카오톡으로 이미 '동일 작업'을 보고했는지 정교하게 판정하여 중복 배제 (독립된 회의/일정은 보존)
+            worker_k_tasks = kakao_tasks_by_worker.get(w_name, [])
+            is_dup = False
+            for k in worker_k_tasks:
+                k_client = str(k.get("client_name", "")).strip()
+                k_desc = str(k.get("task_description", "")).strip()
+
+                # 1) 고객사명이 명확히 일치하는 경우 (내부업무/회의 등 제외)
+                if k_client and k_client not in ["기타", "내부업무", "사내", "아웃룩 일정"] and (k_client == parsed_client or k_client in str(r["subject"])):
+                    is_dup = True
+                    break
+
+                # 2) 주요 키워드 중복 (단, 회의/미팅/업무 등 일반 단어 제외)
+                common_words = set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", str(r["subject"]))) & set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", f"{k_client} {k_desc}"))
+                meaningful_common = {w for w in common_words if w not in ["작업", "회의", "미팅", "지원", "점검", "수석", "팀장", "기술본부", "기술", "고객사", "프로젝트", "업무", "일정", "완료", "진행", "1팀", "2팀", "3팀"]}
+                if meaningful_common:
+                    is_dup = True
+                    break
+
+                # 3) 시작 시간이 15분 이내로 거의 같고 고객사 유사
+                k_st = k.get("start_time")
+                if pd.notna(k_st):
+                    k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
+                    if abs((st_dt - k_st_dt).total_seconds()) < 900 and (k_client == parsed_client):
+                        is_dup = True
+                        break
+
+            if is_dup:
+                continue
 
             # A. 현재 시간이 종료 시각 이후 -> 100% 도달 -> 자동 완료 전환
             if now >= ed_dt:
