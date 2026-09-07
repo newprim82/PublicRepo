@@ -261,7 +261,8 @@ def main():
 
         # 1. 📂 메인 메뉴 (로그인 시에만 노출, on_click 콜백 즉시 전환)
         if is_auth:
-            with st.expander("⚙ 관리", expanded=False):
+            is_admin_active = (st.session_state.get("current_page") in ["⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)", "📋 작업 기록 원장 & 엑셀"])
+            with st.expander("⚙ 관리", expanded=is_admin_active):
                 main_menu_items = [
                     "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                     "📋 작업 기록 원장 & 엑셀"
@@ -398,17 +399,18 @@ def main():
 
 
         # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
-        with st.expander("📊 분석", expanded=False):
-            detail_menu_items = [
-                "📅 작업 캘린더 & 밀도 히트맵",
-                "🔍 전체 작업 스마트 검색",
-                "📊 Summary",
-                "👤 팀원별 업무량 분석",
-                "🏢 팀별 업무량 비교",
-                "📈 월별/일별 추이",
-                "🏢 고객사별 공수 분포",
-                "⏱️ 예정 vs 실제 소요시간"
-            ]
+        detail_menu_items = [
+            "📅 작업 캘린더 & 밀도 히트맵",
+            "🔍 전체 작업 스마트 검색",
+            "📊 Summary",
+            "👤 팀원별 업무량 분석",
+            "🏢 팀별 업무량 비교",
+            "📈 월별/일별 추이",
+            "🏢 고객사별 공수 분포",
+            "⏱️ 예정 vs 실제 소요시간"
+        ]
+        is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
+        with st.expander("📊 분석", expanded=is_detail_active):
             for d_item in detail_menu_items:
                 is_active = (st.session_state["current_page"] == d_item)
                 btn_prefix = "▸ " if is_active else "  "

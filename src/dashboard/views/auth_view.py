@@ -1,6 +1,7 @@
 import streamlit as st
 from src.auth.auth_manager import AuthManager
 
+@st.fragment
 def render_login_page():
     """🔐 기술본부 관리자 로그인 전용 페이지"""
     st.markdown("""

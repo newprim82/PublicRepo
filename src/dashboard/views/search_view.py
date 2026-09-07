@@ -289,6 +289,7 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     st.dataframe(display_df, use_container_width=True, height=520)
 
 
+@st.fragment
 def render_search_view(df_raw: pd.DataFrame, team_mappings: dict):
     """🔍 전체 작업 스마트 검색 메인 뷰"""
     render_smart_search_tab(df_raw, team_mappings)

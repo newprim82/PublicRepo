@@ -895,6 +895,7 @@ def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selecte
 
 
 
+@st.fragment
 def render_summary_view(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
     """📊 Summary (Executive Summary) 메인 뷰"""
     render_executive_summary_tab(df, df_raw, selected_team, team_mappings, month_desc)

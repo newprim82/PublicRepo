@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from ...analytics.stats_service import StatsService
 
+@st.fragment
 def render_duration_view(df: pd.DataFrame):
     """⏱️ 예정 소요시간 대비 실제 시간 편차 분석 화면"""
     st.subheader("⏱️ 예정 소요시간 대비 실제 시간 편차 분석")

@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 from ..common.ui_helpers import strip_tz
 
+@st.fragment
 def render_worklog_view(df: pd.DataFrame):
     """📋 작업 지원 상세 기록 원장 & 엑셀 다운로드 화면"""
     st.subheader("📋 작업 지원 상세 기록 원장 & 엑셀 다운로드")

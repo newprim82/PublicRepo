@@ -552,6 +552,7 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
 
 
 
+@st.fragment
 def render_home_view(
     df: pd.DataFrame,
     df_raw: pd.DataFrame,
