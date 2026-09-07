@@ -925,11 +925,83 @@ def show_email_report_dialog(selected_team: str):
                 current_period_label_override=period_label,
                 available_weeks_override=available_weeks,
                 df_scope_override=df_scope,
-                team_mappings_override=team_mappings
+                team_mappings_override=team_mappings,
+                dispatch_type="MANUAL_IMMEDIATE"
             )
             if success:
                 st.success(send_msg)
+                time.sleep(1)
+                st.rerun()
             else:
                 st.error(send_msg)
+
+    # ==========================================
+    # 📋 최근 메일 발송 이력 (최근 5회)
+    # ==========================================
+    st.markdown("<div style='margin-top: 18px; margin-bottom: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12);'></div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px;">
+            <div style="font-size: 13.5px; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                <span>📋</span><span>최근 메일 발송 이력 (최근 5회)</span>
+            </div>
+            <span style="font-size: 11px; color: #94a3b8;">DB 자동 기록 중</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    try:
+        from src.services.email_dispatch_service import EmailDispatchService
+        recent_logs = EmailDispatchService.get_recent_dispatches(limit=5)
+    except Exception as e:
+        recent_logs = []
+
+    if not recent_logs:
+        st.markdown(
+            """
+            <div style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 14px; text-align: center; color: #94a3b8; font-size: 12px;">
+                아직 발송된 메일 이력이 없습니다.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        type_badge_map = {
+            "MANUAL_IMMEDIATE": ('<span style="background:#0284c7; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">🚀 수동 즉시</span>', "수동 즉시 발송"),
+            "AUTO_WEEKLY": ('<span style="background:#16a34a; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">⏳ 주간 자동</span>', "주간 자동 발송"),
+            "AUTO_MONTHLY": ('<span style="background:#7c3aed; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">📅 월간 자동</span>', "월간 자동 발송")
+        }
+
+        for item in recent_logs:
+            d_type = item.get("dispatch_type", "MANUAL_IMMEDIATE")
+            badge_html, _ = type_badge_map.get(
+                d_type,
+                ('<span style="background:#64748b; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">메일 발송</span>', "메일 발송")
+            )
+            status = item.get("status", "SUCCESS")
+            status_html = '<span style="color:#4ade80; font-weight:800; font-size:11.5px;">✅ 성공</span>' if status == "SUCCESS" else '<span style="color:#f87171; font-weight:800; font-size:11.5px;" title="' + str(item.get("error_message", "")) + '">❌ 실패</span>'
+            dt_str = str(item.get("created_at", ""))
+            short_dt = dt_str[5:16] if len(dt_str) >= 16 else dt_str
+
+            p_label = item.get("period_label", "")
+            rcpts = item.get("recipient_emails", "")
+            rcpts_display = (rcpts[:30] + "...") if len(rcpts) > 33 else rcpts
+
+            card_html = f"""
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    {badge_html}
+                    <span style="color: #cbd5e1; font-weight: 600;">{p_label}</span>
+                    <span style="color: #64748b;">|</span>
+                    <span style="color: #94a3b8; font-size: 11px;">수신: {rcpts_display}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; white-space: nowrap;">
+                    <span style="color: #94a3b8; font-size: 11px;">{short_dt}</span>
+                    {status_html}
+                </div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
 
 

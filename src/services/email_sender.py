@@ -43,6 +43,7 @@ class EmailSender:
         available_weeks_override: Optional[List[str]] = None,
         df_scope_override: Optional[Any] = None,
         team_mappings_override: Optional[dict] = None,
+        dispatch_type: str = "MANUAL_IMMEDIATE",
         **kwargs
     ) -> Tuple[bool, str]:
         """
@@ -131,9 +132,54 @@ class EmailSender:
                 server.sendmail(sender, recipients, msg.as_string())
                 server.quit()
 
-            return True, f"✅ {', '.join(recipients)} (총 {len(recipients)}명)에게 주간 보고서가 성공적으로 발송되었습니다!"
+            success_msg = f"✅ {', '.join(recipients)} (총 {len(recipients)}명)에게 주간 보고서가 성공적으로 발송되었습니다!"
+            try:
+                from .email_dispatch_service import EmailDispatchService
+                EmailDispatchService.record_dispatch(
+                    dispatch_type=dispatch_type,
+                    recipient_emails=", ".join(recipients),
+                    sender_email=sender,
+                    selected_team=selected_team,
+                    period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
+                    subject=subject,
+                    status="SUCCESS"
+                )
+            except Exception as log_err:
+                print(f"[EmailSender] DB 로깅 알림: {log_err}")
+
+            return True, success_msg
 
         except smtplib.SMTPAuthenticationError as e:
-            return False, f"❌ Gmail 인증 실패: 구글 앱 비밀번호를 확인해주세요. ({e})"
+            err_msg = f"❌ Gmail 인증 실패: 구글 앱 비밀번호를 확인해주세요. ({e})"
+            try:
+                from .email_dispatch_service import EmailDispatchService
+                EmailDispatchService.record_dispatch(
+                    dispatch_type=dispatch_type,
+                    recipient_emails=", ".join(recipients) if 'recipients' in locals() else str(recipient_emails or ''),
+                    sender_email=sender,
+                    selected_team=selected_team,
+                    period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
+                    subject=locals().get('subject', 'Executive Summary 보고서'),
+                    status="FAILED",
+                    error_message=err_msg
+                )
+            except Exception:
+                pass
+            return False, err_msg
         except Exception as e:
-            return False, f"❌ 이메일 발송 실패: {str(e)}"
+            err_msg = f"❌ 이메일 발송 실패: {str(e)}"
+            try:
+                from .email_dispatch_service import EmailDispatchService
+                EmailDispatchService.record_dispatch(
+                    dispatch_type=dispatch_type,
+                    recipient_emails=", ".join(recipients) if 'recipients' in locals() else str(recipient_emails or ''),
+                    sender_email=sender,
+                    selected_team=selected_team,
+                    period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
+                    subject=locals().get('subject', 'Executive Summary 보고서'),
+                    status="FAILED",
+                    error_message=err_msg
+                )
+            except Exception:
+                pass
+            return False, err_msg
