@@ -402,7 +402,7 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     border_color = rank_color
 
     card_padding = "10px 12px; margin-bottom: 8px;" if is_single_view else "10px 11px; margin-bottom: 9px;"
-    time_badge_label = f"일정 시작 : {time_str}" if is_outlook else (f"시작 보고 시간 : {time_str}" if is_single_view else f"시작 {time_str}")
+    time_badge_label = f"일정시작 {time_str}" if is_outlook else f"시작보고 {time_str}"
     client_font_size = "13px" if is_single_view else "12.5px"
     time_badge_padding = "2px 8px" if is_single_view else "1.5px 6px"
 
