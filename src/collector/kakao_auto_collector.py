@@ -226,14 +226,29 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     # [1단계 메인 엔진] 포커스 획득 & End 스크롤 & 네이티브 복사 (Ctrl+A -> Ctrl+C)
     log_trace("[1단계 고신뢰 Win32 네이티브 복사 엔진 가동]")
     try:
-        # 1. 카카오톡 창 안전 활성화 (AttachThreadInput 데드락 제거)
+        # 1. 카카오톡 창 안전 활성화 (AttachThreadInput 데드락 제거 & SwitchToThisWindow 지원)
         try:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            try:
+                ctypes.windll.user32.SwitchToThisWindow(hwnd, True)
+            except Exception:
+                pass
             win32gui.SetForegroundWindow(hwnd)
             win32gui.BringWindowToTop(hwnd)
             time.sleep(0.08)
         except Exception as e:
             log_trace(f"[창 활성화 알림]: {e}")
+
+        # 클립보드 사전 초기화 (과거 클립보드 잔여 데이터 오염 원천 방지)
+        try:
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.CloseClipboard()
+        except Exception:
+            try:
+                win32clipboard.CloseClipboard()
+            except Exception:
+                pass
 
         # 2. 대화목록 영역 하단(최신 메시지 영역)에 실제 OS 마우스 클릭으로 포커스 완벽 부여
         target_focus = list_hwnd if list_hwnd else hwnd
@@ -244,14 +259,34 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                 click_x = max(10, rect[2] // 2)
                 click_y = max(10, rect[3] - 40)
                 
-                # 가상 메시지로 포커스 부여 (물리 마우스 하이재킹 원천 차단)
+                # 가상 메시지 + 실제 화면 좌표 클릭 병행 (키보드 포커스 100% 획득)
                 lparam = (click_y << 16) | click_x
                 win32gui.PostMessage(target_focus, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lparam)
                 win32gui.PostMessage(target_focus, win32con.WM_LBUTTONUP, 0, lparam)
+                
+                try:
+                    orig_cursor = win32api.GetCursorPos()
+                    screen_pt = win32gui.ClientToScreen(target_focus, (click_x, click_y))
+                    win32api.SetCursorPos(screen_pt)
+                    time.sleep(0.02)
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+                    time.sleep(0.02)
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                    time.sleep(0.04)
+                except Exception:
+                    pass
+                finally:
+                    if orig_cursor:
+                        try:
+                            win32api.SetCursorPos(orig_cursor)
+                        except Exception:
+                            pass
 
-                # 대화창을 '맨 아래(최신 메시지)'로 스크롤 (VK_END)
-                win32gui.PostMessage(target_focus, win32con.WM_KEYDOWN, win32con.VK_END, 0)
-                win32gui.PostMessage(target_focus, win32con.WM_KEYUP, win32con.VK_END, 0)
+                # 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END)
+                win32api.keybd_event(win32con.VK_END, 0, 0, 0)
+                time.sleep(0.02)
+                win32api.keybd_event(win32con.VK_END, 0, win32con.KEYEVENTF_KEYUP, 0)
+                time.sleep(0.05)
             except Exception as e:
                 log_trace(f"[클릭/스크롤 알림]: {e}")
 
