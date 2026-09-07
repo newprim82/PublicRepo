@@ -155,6 +155,9 @@ def render_outlook_calendar_widget():
         st.info("📅 아웃룩 일정을 동기화하는 중이거나 등록된 일정이 없습니다. (PC B에서 Outlook 수집기가 10분마다 자동 갱신합니다)")
         return
 
+    # 중복 표출 방지 (동일 작업자, 제목, 시작시간 기준 1건만 유지)
+    df_schedules = df_schedules.drop_duplicates(subset=["worker_name", "subject", "start_time"])
+
     # 팀원 필터링
     if selected_worker != "전체 팀원":
         df_view = df_schedules[df_schedules["worker_name"] == selected_worker]

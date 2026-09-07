@@ -60,6 +60,7 @@ class ScheduleSyncService:
             today_out["end_time"] = pd.to_datetime(today_out["end_time"], errors="coerce")
 
         today_out = today_out[today_out["start_time"].dt.strftime("%Y-%m-%d") == today_str]
+        today_out = today_out.drop_duplicates(subset=["worker_name", "subject", "start_time"])
 
         # 1. 휴가/연차/반차 추출 (무조건 100% 표출용)
         leave_records = []
