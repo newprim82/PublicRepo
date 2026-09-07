@@ -22,11 +22,14 @@ from ..common.ui_helpers import (
     get_job_title_rank,
     get_team_theme,
     get_live_task_card_html,
+    get_leave_card_html,
     is_same_team,
     format_raw_chat_display,
     get_current_kst_time,
     LIVE_PROGRESS_ANIMATION_AND_TIMER
 )
+from .outlook_calendar_widget import render_outlook_calendar_widget
+from ...services.schedule_sync_service import ScheduleSyncService
 
 def _render_single_team_pending_cards(pend_df: pd.DataFrame, title_mappings: dict):
     """🏢 단일 팀 진행 중인 작업 카드 렌더링"""
@@ -60,8 +63,18 @@ def _render_kanban_pending_cards(t_pend: pd.DataFrame, title_mappings: dict):
         st.markdown(card_html, unsafe_allow_html=True)
 
 
-def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str):
+def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave_records: list = None):
     """⏳ 진행 중인 작업 섹션 전용 단일 1분 자동 갱신 프래그먼트 (다중 타이머 통합)"""
+    # 🏖️ 오늘 휴가 / 연차 / 반차 현황 카드 섹션 (무조건 100%)
+    if leave_records:
+        st.markdown(f"""<div style="font-size: 15px; font-weight: 800; color: #581c87; border-left: 4px solid #a855f7; padding-left: 9px; margin-bottom: 10px; margin-top: 4px; display: flex; align-items: center; gap: 8px;">🏖️ 오늘 휴가 / 연차 / 반차 현황 <span style="background: #f3e8ff; color: #7e22ce; border-radius: 12px; padding: 2px 8px; font-size: 11.5px; font-weight: 800;">{len(leave_records)}명 부재</span></div>""", unsafe_allow_html=True)
+        l_cols = st.columns(min(4, max(1, len(leave_records))))
+        for l_idx, l_rec in enumerate(leave_records):
+            with l_cols[l_idx % len(l_cols)]:
+                l_html = get_leave_card_html(l_rec, is_single_view=(selected_team != "전체 팀"))
+                st.markdown(l_html, unsafe_allow_html=True)
+        st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
+
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">⏳ 실시간 진행 중인 작업 <span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
         st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
@@ -148,57 +161,51 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         pend_df = today_df.iloc[0:0]
         comp_df = today_df.iloc[0:0]
 
-    tot_workers = today_df["worker_name"].nunique() if not today_df.empty else 0
-    tot_hours = round(comp_df["actual_hours"].sum() + pend_df["estimated_hours"].sum(), 1) if not today_df.empty else 0.0
+    # 📅 [신규] 아웃룩 스케줄 동기화 및 미래시 승격 (카톡 미보고 작업 자동 진행 & 100% 자동 완료 & 휴가 100%)
+    leave_records = []
+    try:
+        pend_df, auto_comp_df, leave_records = ScheduleSyncService.get_synced_live_tasks(pend_df, comp_df)
+        if not auto_comp_df.empty:
+            comp_df = pd.concat([comp_df, auto_comp_df], ignore_index=True)
+    except Exception as e_sync:
+        leave_records = []
+
+    # 팀 필터링 재적용 (아웃룩 승격 작업 포함)
+    if selected_team != "전체 팀":
+        if not pend_df.empty:
+            pend_df = pend_df[pend_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
+        if not comp_df.empty:
+            comp_df = comp_df[comp_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
+        if leave_records:
+            leave_records = [l for l in leave_records if is_same_team(l.get("worker_team", ""), selected_team)]
+
+    tot_workers_set = set()
+    if not comp_df.empty:
+        tot_workers_set.update(comp_df["worker_name"].dropna().unique())
+    if not pend_df.empty:
+        tot_workers_set.update(pend_df["worker_name"].dropna().unique())
+    if leave_records:
+        tot_workers_set.update([l["worker_name"] for l in leave_records if l.get("worker_name")])
+    tot_workers = len(tot_workers_set)
+
+    tot_comp_h = comp_df["total_hours"].sum() if "total_hours" in comp_df.columns else (comp_df["actual_hours"].sum() if "actual_hours" in comp_df.columns else 0.0)
+    tot_pend_h = pend_df["total_hours"].sum() if "total_hours" in pend_df.columns else (pend_df["estimated_hours"].sum() if "estimated_hours" in pend_df.columns else 0.0)
+    tot_hours = round(tot_comp_h + tot_pend_h, 1)
 
     # 3. 상단 실시간 요약 바 (Live Status Summary - 다크모드 NOC 커맨드 센터 스타일)
     summary_html = f"""<div style="background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%); border: 1px solid #005f8a; border-radius: 9px; padding: 13px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 14px rgba(0, 34, 51, 0.25);"><div style="display: flex; align-items: center; gap: 11px;"><span style="background-color: #dc2626; color: #ffffff; border: 1px solid #ef4444; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);">● LIVE 관제 중</span><span style="font-size: 16.5px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #38bdf8; background-color: rgba(0, 180, 216, 0.22); border: 1px solid rgba(56, 189, 248, 0.5); padding: 3px 9px; border-radius: 6px; font-weight: 700;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; font-weight: 600;"><span style="color: #cbd5e1;">👥 오늘 투입: <b style="color: #38bdf8; font-size: 14.5px; font-weight: 800;">{tot_workers}명</b></span><span style="color: #cbd5e1;">⏳ 진행 중: <b style="color: #fbbf24; font-size: 14.5px; font-weight: 800;">{len(pend_df)}건</b></span><span style="color: #cbd5e1;">✅ 완료: <b style="color: #4ade80; font-size: 14.5px; font-weight: 800;">{len(comp_df)}건</b></span><span style="color: #cbd5e1;">⏱️ 총 지원 공수: <b style="color: #f472b6; font-size: 14.5px; font-weight: 800;">{tot_hours}시간</b></span></div></div>"""
     st.markdown(summary_html, unsafe_allow_html=True)
 
-    if today_df.empty:
-        # 🚨 카카오톡 수집기 장애 상태 실시간 감지
-        try:
-            from src.services.collector_status_service import CollectorStatusService
-            collector_stat = CollectorStatusService.get_status()
-        except Exception:
-            collector_stat = {"is_healthy": False, "status_code": "UNKNOWN"}
-
-        is_healthy = collector_stat.get("is_healthy", True)
-        stat_code = collector_stat.get("status_code", "")
-        stat_msg = collector_stat.get("message", "카카오톡 PC 로그인이 풀려있거나 대화방 창이 닫혀 있습니다.")
-        last_up = collector_stat.get("updated_at", "")
-
-        # 비정상 상태(로그인 풀림, 창 닫힘, 추출 실패 등)
-        if not is_healthy or stat_code in ["LOGIN_REQUIRED_OR_WINDOW_CLOSED", "TEXT_EXTRACT_FAILED", "ERROR"]:
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%); border: 1.5px solid #ef4444; border-radius: 9px; padding: 16px 20px; color: #ffffff; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);">
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 18px;">🚨</span>
-                        <span style="font-size: 15.5px; font-weight: 800; color: #fecaca; letter-spacing: -0.3px;">카카오톡 실시간 연동 장애 감지</span>
-                    </div>
-                    <span style="font-size: 11.5px; background: #dc2626; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-weight: 800; border: 1px solid #f87171;">수집 중단</span>
-                </div>
-                <div style="font-size: 13.5px; color: #fee2e2; margin-top: 8px; line-height: 1.65; font-weight: 600;">
-                    현재 <b>수집 전용 PC의 카카오톡 로그인이 풀려있거나, 대화방 창이 닫혀 있어</b> 실시간 대화 내용을 수집하지 못하고 있습니다.<br>
-                    수집 PC에서 카카오톡에 로그인하고 <b>[기술본부] 업무공유방</b> 창을 열어주시면 10분 내로 실시간 데이터가 자동 복구됩니다!
-                </div>
-                <div style="font-size: 12px; color: #fca5a5; margin-top: 9px; border-top: 1px solid rgba(248, 113, 113, 0.3); padding-top: 6px;">
-                    • 장애 상세: <b>{stat_msg}</b><br>
-                    • 최근 감지 시각: {last_up if last_up else '확인 중'}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 실시간 작업 보고가 아직 없습니다. 카카오톡에 시작 보고가 올라오면 10분 내로 여기에 실시간으로 표시됩니다!")
+    if today_df.empty and pend_df.empty and comp_df.empty:
+        st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 작업 보고 또는 일정이 아직 없습니다.")
         return
 
     # 4 & 5. 🏛️ LIVE 관제 중 하위 전체 내용을 하나로 묶는 대형 통합 네모 컨테이너
     with st.container(border=True):
         st.markdown('<span class="live-board-main-container" style="display:none;"></span>', unsafe_allow_html=True)
 
-        # 4. 실시간 진행 중(PENDING) 작업 섹션 (단일 통합 1분 자동 갱신)
-        render_live_pending_section(pend_df, selected_team)
+        # 4. 실시간 진행 중(PENDING) 작업 섹션 (단일 통합 1분 자동 갱신 + 휴가 100% 카드 포함)
+        render_live_pending_section(pend_df, selected_team, leave_records=leave_records)
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 5. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)
@@ -603,6 +610,10 @@ def render_home_view(
         f'</div>'
     )
     st.markdown(criteria_panel_html, unsafe_allow_html=True)
+
+    # 🌟 [신규] 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시 캘린더 위젯)
+    with st.expander("📅 기술본부 통합 일정표 (아웃룩 연동 & 미래시 스케줄)", expanded=True):
+        render_outlook_calendar_widget()
 
     # 2. 핵심 KPI 5대 카드 (프리미엄 네온 글래스모피즘 - 독립 Fragment)
     render_kpi_cards_fragment(df)

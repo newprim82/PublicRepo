@@ -12,6 +12,7 @@ from ..parser.reply_matcher import (
     check_is_weekend_work
 )
 from ..parser.multiday_splitter import split_multiday_record, is_multiday_record
+from .outlook_models import OutlookScheduleRecord
 
 try:
     from supabase import create_client, Client
@@ -80,6 +81,33 @@ class DatabaseManager:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_worker ON work_logs(worker_name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_client ON work_logs(client_name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_wl_worker_time ON work_logs(worker_name, start_time DESC)")
+
+        # 📅 아웃룩 스케줄 테이블 생성 (로컬 백업 및 캐시용)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS outlook_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entry_id TEXT UNIQUE NOT NULL,
+                worker_name TEXT NOT NULL,
+                worker_team TEXT DEFAULT '미배정',
+                subject TEXT NOT NULL,
+                schedule_type TEXT DEFAULT '작업',
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                duration_hours REAL DEFAULT 0.0,
+                is_all_day INTEGER DEFAULT 0,
+                is_leave INTEGER DEFAULT 0,
+                leave_type TEXT,
+                location TEXT,
+                body TEXT,
+                color_tag TEXT DEFAULT '#0284c7',
+                created_by TEXT,
+                synced_at TEXT DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_os_start_time ON outlook_schedules(start_time)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_os_worker ON outlook_schedules(worker_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_os_is_leave ON outlook_schedules(is_leave)")
+
         try:
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA synchronous=NORMAL")
@@ -483,6 +511,115 @@ class DatabaseManager:
         df["is_night_work"] = df.get("is_night_work", 0).astype(bool)
         df["is_weekend_work"] = df.get("is_weekend_work", 0).astype(bool)
         
+        return df
+
+    def save_outlook_schedules(self, records: List[OutlookScheduleRecord]) -> int:
+        """
+        아웃룩 일정 레코드들을 Supabase(클라우드) 및 로컬 SQLite에 Upsert 저장
+        """
+        if not records:
+            return 0
+
+        # 1. Supabase Cloud DB Upsert
+        if self.use_supabase and self.supabase:
+            try:
+                rows = [r.to_dict() for r in records]
+                self.supabase.table("worktime_outlook_schedules").upsert(rows, on_conflict="entry_id").execute()
+                print(f"[DB] [Cloud] Supabase worktime_outlook_schedules에 {len(records)}건 Upsert 완료")
+            except Exception as e:
+                print(f"[DB 오류] Supabase 아웃룩 스케줄 저장 실패: {e}")
+
+        # 2. 로컬 SQLite 백업 저장
+        saved_count = 0
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            for r in records:
+                cursor.execute("""
+                    INSERT INTO outlook_schedules (
+                        entry_id, worker_name, worker_team, subject, schedule_type,
+                        start_time, end_time, duration_hours, is_all_day, is_leave,
+                        leave_type, location, body, color_tag, created_by, synced_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(entry_id) DO UPDATE SET
+                        worker_name=excluded.worker_name,
+                        worker_team=excluded.worker_team,
+                        subject=excluded.subject,
+                        schedule_type=excluded.schedule_type,
+                        start_time=excluded.start_time,
+                        end_time=excluded.end_time,
+                        duration_hours=excluded.duration_hours,
+                        is_all_day=excluded.is_all_day,
+                        is_leave=excluded.is_leave,
+                        leave_type=excluded.leave_type,
+                        location=excluded.location,
+                        body=excluded.body,
+                        color_tag=excluded.color_tag,
+                        created_by=excluded.created_by,
+                        synced_at=excluded.synced_at
+                """, (
+                    r.entry_id, r.worker_name, r.worker_team, r.subject, r.schedule_type,
+                    r.start_time, r.end_time, r.duration_hours,
+                    1 if r.is_all_day else 0, 1 if r.is_leave else 0,
+                    r.leave_type, r.location, r.body, r.color_tag, r.created_by, r.synced_at
+                ))
+            conn.commit()
+            conn.close()
+            saved_count = len(records)
+        except Exception as e:
+            print(f"[DB 오류] 로컬 SQLite 아웃룩 스케줄 저장 실패: {e}")
+
+        return saved_count
+
+    def fetch_outlook_schedules(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
+        """
+        아웃룩 일정 데이터프레임 조회 (Supabase 우선, Fallback 로컬 SQLite)
+        """
+        df = pd.DataFrame()
+        if self.use_supabase and self.supabase:
+            try:
+                query = self.supabase.table("worktime_outlook_schedules").select("*")
+                if start_date:
+                    query = query.gte("start_time", f"{start_date} 00:00:00")
+                if end_date:
+                    query = query.lte("end_time", f"{end_date} 23:59:59")
+                res = query.order("start_time").execute()
+                if res.data:
+                    df = pd.DataFrame(res.data)
+            except Exception as e:
+                # 테이블이 아직 Supabase에 없을 경우 등 조용히 로컬 SQLite fallback
+                df = pd.DataFrame()
+
+        if df.empty:
+            try:
+                conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+                sql = "SELECT * FROM outlook_schedules WHERE 1=1"
+                params = []
+                if start_date:
+                    sql += " AND start_time >= ?"
+                    params.append(f"{start_date} 00:00:00")
+                if end_date:
+                    sql += " AND end_time <= ?"
+                    params.append(f"{end_date} 23:59:59")
+                sql += " ORDER BY start_time ASC"
+                df = pd.read_sql_query(sql, conn, params=params)
+                conn.close()
+            except Exception as e:
+                print(f"[DB 오류] 로컬 SQLite 아웃룩 스케줄 조회 실패: {e}")
+                df = pd.DataFrame()
+
+        if not df.empty:
+            if "start_time" in df.columns:
+                df["start_time"] = pd.to_datetime(df["start_time"], errors="coerce")
+            if "end_time" in df.columns:
+                df["end_time"] = pd.to_datetime(df["end_time"], errors="coerce")
+            if "is_all_day" in df.columns:
+                df["is_all_day"] = df["is_all_day"].astype(bool)
+            if "is_leave" in df.columns:
+                df["is_leave"] = df["is_leave"].astype(bool)
+            if "duration_hours" in df.columns:
+                df["duration_hours"] = pd.to_numeric(df["duration_hours"], errors="coerce").fillna(0.0)
+
         return df
 
 

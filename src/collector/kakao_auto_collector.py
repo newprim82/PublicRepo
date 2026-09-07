@@ -27,6 +27,14 @@ try:
     import pythoncom
     import uiautomation as auto
     WIN32_AVAILABLE = True
+    # DPI 가상화 오차 방지 (해상도 및 윈도우 배율 125%/150% 변경 대응)
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
 except ImportError:
     WIN32_AVAILABLE = False
 
@@ -226,9 +234,15 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     # [1단계 메인 엔진] 포커스 획득 & End 스크롤 & 네이티브 복사 (Ctrl+A -> Ctrl+C)
     log_trace("[1단계 고신뢰 Win32 네이티브 복사 엔진 가동]")
     try:
-        # 1. 카카오톡 창 안전 활성화 (AttachThreadInput 데드락 제거 & SwitchToThisWindow 지원)
+        # 1. 카카오톡 창 안전 활성화 (Alt 키 탭으로 Foreground Lock 해제 & SW_RESTORE)
         try:
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            try:
+                # Windows Foreground Lock 해제를 위한 가상 Alt 탭 (포그라운드 권한 100% 획득)
+                win32api.keybd_event(win32con.VK_MENU, 0, 0, 0)
+                win32api.keybd_event(win32con.VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
+            except Exception:
+                pass
             try:
                 ctypes.windll.user32.SwitchToThisWindow(hwnd, True)
             except Exception:
@@ -281,6 +295,12 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                             win32api.SetCursorPos(orig_cursor)
                         except Exception:
                             pass
+
+                # 윈도우 메시지로 대화창 최하단 스크롤(SB_BOTTOM) 선제 전송 (DPI/포커스 무관)
+                try:
+                    win32gui.SendMessage(target_focus, win32con.WM_VSCROLL, win32con.SB_BOTTOM, 0)
+                except Exception:
+                    pass
 
                 # 대화창을 무조건 '맨 아래(최신 메시지)'로 강제 스크롤 (VK_END)
                 win32api.keybd_event(win32con.VK_END, 0, 0, 0)
@@ -414,6 +434,16 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
                 COLLECTOR_STATUS["last_status"] = "새 작업 없음"
                 COLLECTOR_STATUS["last_log_message"] = msg
                 CollectorStatusService.report_status("ONLINE", msg, 0, 0)
+
+                # 📅 아웃룩 캘린더 동시 연동 (10분 주기)
+                try:
+                    from .outlook_auto_collector import run_outlook_collection_cycle
+                    out_res = run_outlook_collection_cycle()
+                    if out_res.get("success"):
+                        log_trace(f"[📅 아웃룩 연동] 일정 {out_res.get('count', 0)}건 동기화 완료")
+                except Exception as e_out:
+                    log_trace(f"[아웃룩 연동 알림]: {e_out}")
+
                 return {"status": "no_records", "message": msg, "time": now_str}
                 
             saved = db_manager.save_work_logs(records)
@@ -425,6 +455,15 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
             CollectorStatusService.report_status("ONLINE", f"{len(records)}건 분석 완료 (DB 저장: {saved}건)", len(records), saved)
             
+            # 📅 아웃룩 캘린더 동시 연동 (10분 주기)
+            try:
+                from .outlook_auto_collector import run_outlook_collection_cycle
+                out_res = run_outlook_collection_cycle()
+                if out_res.get("success"):
+                    log_trace(f"[📅 아웃룩 연동] 일정 {out_res.get('count', 0)}건 동기화 완료")
+            except Exception as e_out:
+                log_trace(f"[아웃룩 연동 알림]: {e_out}")
+
             log_trace(f"[✓] [{now_str}] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
             return {
                 "status": "success",

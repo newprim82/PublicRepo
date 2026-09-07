@@ -364,7 +364,14 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     est_hours = float(r.get("estimated_hours") or 0)
     is_overtime = elapsed_hours > est_hours and est_hours > 0
 
-    raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
+    is_outlook = bool(r.get("is_outlook"))
+    outlook_badge = "<span style='background:#e0f2fe; color:#0369a1; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>📅 일정표</span>" if is_outlook else ""
+
+    if is_outlook and "outlook_progress_pct" in r:
+        raw_pct = int(r["outlook_progress_pct"])
+        est_hours = float(r.get("total_hours") or r.get("estimated_hours") or 0)
+    else:
+        raw_pct = int((elapsed_hours / est_hours) * 100) if est_hours > 0 else (100 if elapsed_hours > 0 else 50)
     bar_width_pct = min(100, max(5, raw_pct))
 
     rank_bar_bg, rank_bar_border = get_job_title_bar_style(w_title)
@@ -385,14 +392,27 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     border_color = rank_color
 
     card_padding = "10px 12px; margin-bottom: 8px;" if is_single_view else "10px 11px; margin-bottom: 9px;"
-    time_badge_label = f"시작 보고 시간 : {time_str}" if is_single_view else f"시작 {time_str}"
+    time_badge_label = f"일정 시작 : {time_str}" if is_outlook else (f"시작 보고 시간 : {time_str}" if is_single_view else f"시작 {time_str}")
     client_font_size = "13px" if is_single_view else "12.5px"
     time_badge_padding = "2px 8px" if is_single_view else "1.5px 6px"
 
     elapsed_html = f"⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}" if is_single_view else f"⏱️ 경과 {elapsed_hours}h ({elapsed_mins}분) {'⚠️' if is_overtime else ''}"
     elapsed_color = "#dc2626; font-weight:700;" if is_overtime else "#0f5132;"
 
-    return f"""<div class="live-task-card" data-start="{st_dt_iso}" data-est="{est_hours}" data-single-view="{'true' if is_single_view else 'false'}" style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: {card_padding}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: {time_badge_padding}; font-size: 10.5px; font-weight: 700; white-space: nowrap;">{time_badge_label}</span></div><div style="font-size: {client_font_size}; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div class="live-progress-bar live-progress-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.8s ease-in-out;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 11px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">{t_desc}</span><span class="live-pct-badge" style="font-weight: 700; color: #ffffff; font-size: 10px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정 {est_hours}h</span><span class="live-elapsed-time" style="color: {elapsed_color}">{elapsed_html}</span></div></div>"""
+    return f"""<div class="live-task-card" data-start="{st_dt_iso}" data-est="{est_hours}" data-single-view="{'true' if is_single_view else 'false'}" style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: {card_padding}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}{weekend_badge}{outlook_badge}</div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; border-radius: 6px; padding: {time_badge_padding}; font-size: 10.5px; font-weight: 700; white-space: nowrap;">{time_badge_label}</span></div><div style="font-size: {client_font_size}; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div class="live-progress-bar live-progress-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.8s ease-in-out;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 11px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">{t_desc}</span><span class="live-pct-badge" style="font-weight: 700; color: #ffffff; font-size: 10px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748b; margin-top: 2px;"><span>⏱️ 예정 {est_hours}h</span><span class="live-elapsed-time" style="color: {elapsed_color}">{elapsed_html}</span></div></div>"""
+
+
+def get_leave_card_html(r: dict, is_single_view: bool = False) -> str:
+    """휴가/연차/반차 전용 100% 완료 상태 카드 HTML"""
+    w_name = r["worker_name"]
+    leave_type = r.get("leave_type") or "연차"
+    subj = r.get("subject") or f"{w_name} {leave_type}"
+    dur_h = r.get("duration_hours", 8.0)
+    st_t = r["start_time"].strftime("%H:%M") if hasattr(r["start_time"], "strftime") else "09:00"
+    ed_t = r["end_time"].strftime("%H:%M") if hasattr(r["end_time"], "strftime") else "18:00"
+
+    card_pad = "10px 12px; margin-bottom: 8px;" if is_single_view else "10px 11px; margin-bottom: 9px;"
+    return f"""<div style="background: #faf5ff; border: 1px solid #e9d5ff; border-left: 4px solid #a855f7; border-radius: 8px; padding: {card_pad}; box-shadow: 0 1px 3px rgba(168,85,247,0.06);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #581c87;">👤 {w_name}</span><span style="background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; font-weight: 800; margin-left: 4px;">🏖️ {leave_type}</span></div><span style="background: #f3e8ff; color: #7e22ce; border-radius: 6px; padding: 1.5px 6px; font-size: 10.5px; font-weight: 700;">{st_t}~{ed_t}</span></div><div style="position: relative; overflow: hidden; background: #e9d5ff; border-radius: 6px; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;"><div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: linear-gradient(90deg, #9333ea 0%, #a855f7 100%); border-radius: 5px;"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 8px; font-size: 11px; font-weight: 700; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.5);"><span>{subj}</span><span style="background: rgba(0,0,0,0.3); padding: 1px 5px; border-radius: 4px;">100% 완료</span></div></div><div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #7e22ce; font-weight: 600;"><span>⏱️ 휴가 인정: {dur_h}h</span><span>부여 완료 상태</span></div></div>"""
 def get_team_theme(team_name: str) -> dict:
     """팀별 고유 아이덴티티 컬러, 아이콘, 틴트 배경 그라데이션 반환 (식별성 극대화)"""
     t = str(team_name).strip()
