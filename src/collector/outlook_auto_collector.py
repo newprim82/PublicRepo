@@ -78,42 +78,7 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
         safe_print(f"[-] Outlook MAPI 연결 실패: {e}")
         return []
 
-    cal_folders = []
-
-    # 1. 내 기본 캘린더 연동 (Calendar)
-    try:
-        def_cal = namespace.GetDefaultFolder(9)
-        my_name = "김경현 수석"
-        cal_folders.append((my_name, def_cal))
-        safe_print(f"[✓] Outlook 내 기본 캘린더 연결 성공: '{my_name}' (항목: {def_cal.Items.Count})")
-    except Exception as e:
-        safe_print(f"[-] 기본 캘린더 접근 실패: {e}")
-
-    # 2. 공유 캘린더 직접 연동 (STA 메인 스레드 안전 호출)
-    team_members_info = TeamService.get_team_members_info()
-    target_names = [
-        "문영민 수석", "이동우 수석", "홍정표 과장", "전종필 대리", "김형일 수석", "김시우 사원",
-        "문영민", "이동우", "홍정표", "전종필", "김형일", "김시우"
-    ]
-
-    for name in target_names:
-        clean_target = clean_worker_name(name)
-        if clean_target == "김경현":
-            continue
-        # 이미 연동된 멤버면 중복 건너뛰기
-        if any(clean_worker_name(f[0]) == clean_target for f in cal_folders):
-            continue
-
-        try:
-            recip = namespace.CreateRecipient(name)
-            folder = namespace.GetSharedDefaultFolder(recip, 9)
-            if folder:
-                cal_folders.append((name, folder))
-                safe_print(f"[✓] Outlook 공유 캘린더 연결 성공: '{name}' (항목: {folder.Items.Count})")
-        except Exception as e_sh:
-            pass
-
-    # 3. 날짜 필터링 범위 (현재 달 1일 ~ N개월 후 말일)
+    # 1. 날짜 필터링 범위 (현재 달 1일 ~ N개월 후 말일)
     now = datetime.now()
     cur_year = now.year
     cur_month = now.month
@@ -129,16 +94,19 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
 
     restriction = f"[Start] >= '{start_date_str}' AND [End] <= '{end_date_str}'"
 
-    records = []
+    team_members_info = TeamService.get_team_members_info()
+    records: List[OutlookScheduleRecord] = []
     seen_ids = set()
 
-    for owner_name, folder in cal_folders:
+    def process_calendar_folder(folder, owner_name: str) -> int:
+        """단일 캘린더 폴더에서 즉시 일정을 추출 (COM 핸들 캐시 유실 방지)"""
+        count_before = len(records)
         try:
             try:
                 items = folder.Items
             except Exception as e_items:
                 safe_print(f"[i] 공유 캘린더 '{owner_name}': 사서함 세부 일정 접근 권한이 없어 건너뜁니다.")
-                continue
+                return 0
 
             try:
                 items.IncludeRecurrences = True
@@ -154,14 +122,16 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
             item = flt.GetFirst()
             while item:
                 try:
+                    raw_st = getattr(item, "Start", None)
+                    raw_ed = getattr(item, "End", None)
                     entry_id = getattr(item, "EntryID", "")
-                    if not entry_id:
-                        entry_id = f"{owner_name}_{getattr(item, 'Subject', '')}_{getattr(item, 'Start', '')}"
+                    st_key = str(raw_st)[:19] if raw_st else ""
+                    unique_key = f"{entry_id}_{st_key}" if entry_id else f"{owner_name}_{getattr(item, 'Subject', '')}_{st_key}"
 
-                    if entry_id in seen_ids:
+                    if unique_key in seen_ids:
                         item = flt.GetNext()
                         continue
-                    seen_ids.add(entry_id)
+                    seen_ids.add(unique_key)
 
                     subject = str(getattr(item, "Subject", "") or "").strip()
                     if not subject:
@@ -197,10 +167,8 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                         elif any(k in subject for k in ["회의", "미팅", "1on1", "주간"]):
                             sched_type = "회의"
 
-                    # 시간 처리: 종일 또는 다일(Multi-day) 일정 분할 처리
+                    # 시간 처리: 종일 또는 다일(Multi-day) 일정 분할 처리 (사용자 요청: 9.0h)
                     allday = bool(getattr(item, "AllDayEvent", False))
-                    raw_st = getattr(item, "Start", None)
-                    raw_ed = getattr(item, "End", None)
 
                     team_info = team_members_info.get(w_name, {})
                     w_team = team_info.get("team", "기술 1팀" if w_name in ["문영민", "이동우", "홍정표", "전종필", "김시우", "김형일", "김경현", "양금희"] else "미배정")
@@ -225,11 +193,11 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                         else:
                             real_end_date = ed_date_raw
 
-                        # 시작일부터 종료일까지 매일매일 09:00~18:00 (8.0h) 분할 레코드 생성!
+                        # 시작일부터 종료일까지 매일매일 09:00~18:00 (9.0h) 분할 레코드 생성!
                         curr_d = st_date
                         while curr_d <= real_end_date:
                             d_val = curr_d.strftime("%Y-%m-%d")
-                            sub_id = f"{entry_id}_{d_val}" if curr_d != st_date else entry_id
+                            sub_id = f"{entry_id}_{d_val}" if entry_id else f"{unique_key}_{d_val}"
                             rec = OutlookScheduleRecord(
                                 entry_id=sub_id,
                                 worker_name=w_name,
@@ -238,7 +206,7 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                                 schedule_type=sched_type,
                                 start_time=f"{d_val} 09:00:00",
                                 end_time=f"{d_val} 18:00:00",
-                                duration_hours=8.0,
+                                duration_hours=9.0,
                                 is_all_day=True,
                                 is_leave=is_leave,
                                 leave_type=leave_type,
@@ -259,8 +227,11 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                         except Exception:
                             dur_h = 1.0
 
+                        # 반복 일정일 경우 고유 ID 보장 (날짜 접미사)
+                        save_entry_id = f"{entry_id}_{st_str[:10]}" if entry_id else unique_key
+
                         rec = OutlookScheduleRecord(
-                            entry_id=entry_id,
+                            entry_id=save_entry_id,
                             worker_name=w_name,
                             worker_team=w_team,
                             subject=subject,
@@ -281,9 +252,44 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                     pass
                 item = flt.GetNext()
         except Exception as e:
-            print(f"[-] 캘린더 폴더 '{owner_name}' 일정 처리 오류: {e}")
+            pass
+
+        added = len(records) - count_before
+        return added
+
+    # 2. 내 기본 캘린더 연동 (Calendar)
+    try:
+        def_cal = namespace.GetDefaultFolder(9)
+        my_name = "김경현 수석"
+        added = process_calendar_folder(def_cal, my_name)
+        safe_print(f"[✓] Outlook 내 기본 캘린더 연결 성공: '{my_name}' (추출: {added}건)")
+    except Exception as e:
+        safe_print(f"[-] 기본 캘린더 접근 실패: {e}")
+
+    # 3. 공유 캘린더 직접 연동 및 즉시 추출
+    target_names = [
+        "문영민 수석", "이동우 수석", "홍정표 과장", "전종필 대리", "김형일 수석", "김시우 사원",
+        "문영민", "이동우", "홍정표", "전종필", "김형일", "김시우"
+    ]
+    processed_clean_names = {"김경현"}
+
+    for name in target_names:
+        clean_target = clean_worker_name(name)
+        if clean_target in processed_clean_names:
+            continue
+
+        try:
+            recip = namespace.CreateRecipient(name)
+            folder = namespace.GetSharedDefaultFolder(recip, 9)
+            if folder:
+                processed_clean_names.add(clean_target)
+                added = process_calendar_folder(folder, name)
+                safe_print(f"[✓] Outlook 공유 캘린더 연결 성공: '{name}' (항목: {folder.Items.Count}, 추출: {added}건)")
+        except Exception as e_sh:
+            pass
 
     return records
+
 
 
 def run_outlook_collection_cycle() -> Dict[str, Any]:

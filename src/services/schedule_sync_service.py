@@ -72,7 +72,7 @@ class ScheduleSyncService:
                 "leave_type": r.get("leave_type") or "연차",
                 "start_time": r["start_time"],
                 "end_time": r["end_time"],
-                "duration_hours": r.get("duration_hours", 8.0),
+                "duration_hours": r.get("duration_hours", 9.0),
                 "progress_pct": 100,  # 무조건 100%
                 "color_tag": r.get("color_tag", "#ec4899")
             })
