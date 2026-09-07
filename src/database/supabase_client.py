@@ -624,3 +624,11 @@ class DatabaseManager:
 
 
 db_manager = DatabaseManager()
+
+def fetch_outlook_schedules(start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
+    """모듈 레벨 안전 헬퍼"""
+    return db_manager.fetch_outlook_schedules(start_date, end_date)
+
+def save_outlook_schedules(records: List[OutlookScheduleRecord]) -> int:
+    """모듈 레벨 안전 헬퍼"""
+    return db_manager.save_outlook_schedules(records)

@@ -2,9 +2,13 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Tuple, Any, Optional
 
-from ..database.supabase_client import db_manager
-from ..services.team_service import TeamService
-from ..dashboard.common.ui_helpers import get_current_kst_time
+from src.database.supabase_client import db_manager
+try:
+    from src.database.supabase_client import fetch_outlook_schedules
+except ImportError:
+    fetch_outlook_schedules = None
+from src.services.team_service import TeamService
+from src.dashboard.common.ui_helpers import get_current_kst_time
 
 class ScheduleSyncService:
     """
@@ -32,7 +36,18 @@ class ScheduleSyncService:
         today_str = now.strftime("%Y-%m-%d")
 
         if outlook_df is None or outlook_df.empty:
-            outlook_df = db_manager.fetch_outlook_schedules(today_str, today_str)
+            try:
+                if hasattr(db_manager, "fetch_outlook_schedules"):
+                    outlook_df = db_manager.fetch_outlook_schedules(today_str, today_str)
+                elif fetch_outlook_schedules is not None:
+                    outlook_df = fetch_outlook_schedules(today_str, today_str)
+                else:
+                    import importlib
+                    import src.database.supabase_client as sc
+                    importlib.reload(sc)
+                    outlook_df = sc.db_manager.fetch_outlook_schedules(today_str, today_str)
+            except Exception:
+                outlook_df = pd.DataFrame()
 
         if outlook_df.empty or "start_time" not in outlook_df.columns:
             return kakao_pend_df, pd.DataFrame(), []

@@ -3,8 +3,12 @@ from datetime import datetime, date, timedelta
 import pandas as pd
 import streamlit as st
 
-from ...database.supabase_client import db_manager
-from ...services.team_service import TeamService
+from src.database.supabase_client import db_manager
+try:
+    from src.database.supabase_client import fetch_outlook_schedules
+except ImportError:
+    fetch_outlook_schedules = None
+from src.services.team_service import TeamService
 
 # 팀원별 아웃룩 고유 색상 매핑 (캡처 사진과 100% 동일)
 OUTLOOK_MEMBER_COLORS = {
@@ -130,8 +134,22 @@ def render_outlook_calendar_widget():
     m = st.session_state["outlook_cal_month"]
     selected_worker = st.session_state["outlook_cal_filter_worker"]
 
-    # 3. 데이터 로드
-    df_schedules = db_manager.fetch_outlook_schedules()
+    # 3. 데이터 로드 (모듈 핫리로드 및 안전 조회 대응)
+    df_schedules = pd.DataFrame()
+    try:
+        if hasattr(db_manager, "fetch_outlook_schedules"):
+            df_schedules = db_manager.fetch_outlook_schedules()
+        elif fetch_outlook_schedules is not None:
+            df_schedules = fetch_outlook_schedules()
+        else:
+            import importlib
+            import src.database.supabase_client as sc
+            importlib.reload(sc)
+            df_schedules = sc.db_manager.fetch_outlook_schedules()
+    except Exception as e_load:
+        st.info("📅 아웃룩 일정을 동기화 중입니다. 잠시 후 새로고침 해주세요.")
+        return
+
     if df_schedules.empty:
         # 아직 수집 전이면 안내
         st.info("📅 아웃룩 일정을 동기화하는 중이거나 등록된 일정이 없습니다. (PC B에서 Outlook 수집기가 10분마다 자동 갱신합니다)")

@@ -612,8 +612,11 @@ def render_home_view(
     st.markdown(criteria_panel_html, unsafe_allow_html=True)
 
     # 🌟 [신규] 📅 아웃룩 실시간 연동 기술본부 통합 일정표 (미래시 캘린더 위젯)
-    with st.expander("📅 기술본부 통합 일정표 (아웃룩 연동 & 미래시 스케줄)", expanded=True):
-        render_outlook_calendar_widget()
+    try:
+        with st.expander("📅 기술본부 통합 일정표 (아웃룩 연동 & 미래시 스케줄)", expanded=True):
+            render_outlook_calendar_widget()
+    except Exception as e_cal:
+        st.info("📅 기술본부 아웃룩 일정을 동기화하는 중입니다. (잠시 후 새로고침 시 정상 반영됩니다)")
 
     # 2. 핵심 KPI 5대 카드 (프리미엄 네온 글래스모피즘 - 독립 Fragment)
     render_kpi_cards_fragment(df)

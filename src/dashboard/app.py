@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.0.2 (AI Briefing Restored & Gemini 3.x Flash Upgrade)
+# WorkTime Dashboard v2.0.3 (Outlook Integration & Future Schedule Hotfix)
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
 _project_root = _current_file.parent.parent.parent  # src/dashboard/app.py -> root
