@@ -338,8 +338,7 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
         else:
             st.caption("💡 표에서 행을 클릭하시면 시작 보고 원본 메시지가 표시됩니다.")
             disp_pend = strip_tz(pend_df.copy())
-            if "end_time" not in disp_pend.columns:
-                disp_pend["end_time"] = None
+            disp_pend["end_time"] = None  # 🌟 진행 중인 작업은 미완료 상태이므로 완료 보고시각은 None 보장
             sel_t2 = st.dataframe(
                 disp_pend[[
                     "start_time", "end_time", "worker_name", "worker_team",

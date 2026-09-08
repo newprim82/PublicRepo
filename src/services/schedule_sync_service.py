@@ -420,10 +420,18 @@ class ScheduleSyncService:
                     # 🏢 비-휴가 일반 작업 일정
                     parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(subj, r.get("location", ""))
 
-                    # 중복 검사: 카카오톡에 이미 보고된 동일 작업인지 확인
+                    # 중복 검사: 동일 날짜의 카카오톡에 이미 보고된 동일 작업인지 확인
                     worker_k_tasks = kakao_tasks_by_worker.get(w_name, [])
                     is_dup = False
                     for k in worker_k_tasks:
+                        k_st = k.get("start_time")
+                        if pd.isna(k_st):
+                            continue
+                        k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
+                        # 🌟 필수: 같은 날짜의 카카오톡 작업만 중복 비교 대상으로 한정 (과거 이력 때문에 당일 아웃룩이 누락되는 현상 원천 방지)
+                        if st_dt.date() != k_st_dt.date():
+                            continue
+
                         k_client = str(k.get("client_name", "")).strip()
                         k_desc = str(k.get("task_description", "")).strip()
 
@@ -435,12 +443,9 @@ class ScheduleSyncService:
                         if meaningful_common:
                             is_dup = True
                             break
-                        k_st = k.get("start_time")
-                        if pd.notna(k_st):
-                            k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
-                            if abs((st_dt - k_st_dt).total_seconds()) < 900 and (k_client == parsed_client):
-                                is_dup = True
-                                break
+                        if abs((st_dt - k_st_dt).total_seconds()) < 1800 and (k_client == parsed_client or not parsed_client):
+                            is_dup = True
+                            break
                     if is_dup:
                         continue
 
@@ -479,7 +484,8 @@ class ScheduleSyncService:
                         "client_name": parsed_client,
                         "task_description": task_desc,
                         "start_time": st_time,
-                        "end_time": ed_time,
+                        "end_time": ed_time if is_completed else None,  # 🌟 18시 종료 이전(진행 중)에는 완료보고시각 None 유지
+                        "scheduled_end_time": ed_time,
                         "estimated_minutes": int(dur_hours * 60),
                         "actual_minutes": act_m,
                         "actual_hours": act_h,       # 🌟 미래시는 0.0h, 완료는 dur_hours, 진행은 경과시간
