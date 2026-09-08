@@ -270,12 +270,50 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
     except Exception as e:
         safe_print(f"[-] 기본 캘린더 접근 실패: {e}")
 
-    # 3. 공유 캘린더 직접 연동 및 즉시 추출
+    # 3. 공유 캘린더 연동 및 추출
+    processed_clean_names = {"김경현"}
+
+    # 3-1. 아웃룩 데스크톱 네비게이션 창(공유 일정 그룹)에 이미 열려 있는 폴더 우선 탐색
+    try:
+        explorer = outlook.ActiveExplorer()
+        if not explorer:
+            explorer = def_cal.GetExplorer()
+        if explorer:
+            nav_pane = explorer.NavigationPane
+            nav_mod = nav_pane.Modules.GetNavigationModule(1)  # olModuleCalendar = 1
+            for g_idx in range(1, nav_mod.NavigationGroups.Count + 1):
+                grp = nav_mod.NavigationGroups.Item(g_idx)
+                for f_idx in range(1, grp.NavigationFolders.Count + 1):
+                    nav_f = grp.NavigationFolders.Item(f_idx)
+                    d_name = nav_f.DisplayName
+                    clean_target = clean_worker_name(d_name)
+                    if clean_target in ["김경현", "일정", "한국의 공휴일", "생일", "Calendar"]:
+                        continue
+                    if clean_target in processed_clean_names:
+                        continue
+                    matched_member = None
+                    for tm in ["문영민", "이동우", "홍정표", "전종필", "김형일", "김시우"]:
+                        if tm in d_name:
+                            matched_member = tm
+                            break
+                    if not matched_member:
+                        continue
+                    try:
+                        folder = nav_f.Folder
+                        if folder:
+                            added = process_calendar_folder(folder, d_name)
+                            processed_clean_names.add(matched_member)
+                            safe_print(f"[✓] Outlook 공유 캘린더(UI) 연결 성공: '{d_name}' (항목: {folder.Items.Count}, 추출: {added}건)")
+                    except Exception as e_nav:
+                        safe_print(f"[-] Outlook 공유 캘린더(UI) '{d_name}' 접근 실패: {e_nav}")
+    except Exception:
+        pass
+
+    # 3-2. 네비게이션 창에서 아직 수집되지 않은 팀원을 대상으로 MAPI 직접 공유 폴더 연동(GetSharedDefaultFolder)
     target_names = [
         "문영민 수석", "이동우 수석", "홍정표 과장", "전종필 대리", "김형일 수석", "김시우 사원",
         "문영민", "이동우", "홍정표", "전종필", "김형일", "김시우"
     ]
-    processed_clean_names = {"김경현"}
 
     for name in target_names:
         clean_target = clean_worker_name(name)
@@ -288,9 +326,11 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
             if folder:
                 processed_clean_names.add(clean_target)
                 added = process_calendar_folder(folder, name)
-                safe_print(f"[✓] Outlook 공유 캘린더 연결 성공: '{name}' (항목: {folder.Items.Count}, 추출: {added}건)")
+                safe_print(f"[✓] Outlook 공유 캘린더(MAPI) 연결 성공: '{name}' (항목: {folder.Items.Count}, 추출: {added}건)")
+            else:
+                safe_print(f"[-] Outlook 공유 캘린더 '{name}': 폴더를 가져오지 못했습니다.")
         except Exception as e_sh:
-            pass
+            safe_print(f"[-] Outlook 공유 캘린더 '{name}' 접근 시도 실패 (권한/사서함 확인 필요): {e_sh}")
 
     return records
 

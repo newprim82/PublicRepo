@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.1.6 (Restore Data Cache TTL to 300s / 5min)
-APP_VERSION = "v2.1.6"
+# WorkTime Dashboard v2.1.7 (Add Outlook Shared Calendar NavigationPane Fallback & Failure Logging)
+APP_VERSION = "v2.1.7"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
