@@ -179,29 +179,52 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                     color = MEMBER_COLOR_MAP.get(w_name, "#0284c7")
                     loc = str(getattr(item, "Location", "") or "").strip()
 
+                    # 시작 / 종료 datetime 파싱
+                    st_str = raw_st.strftime("%Y-%m-%d %H:%M:%S") if hasattr(raw_st, "strftime") else str(raw_st)[:19]
+                    ed_str = raw_ed.strftime("%Y-%m-%d %H:%M:%S") if hasattr(raw_ed, "strftime") else str(raw_ed)[:19]
+                    try:
+                        s_dt = datetime.strptime(st_str[:19], "%Y-%m-%d %H:%M:%S")
+                        e_dt = datetime.strptime(ed_str[:19], "%Y-%m-%d %H:%M:%S")
+                        raw_dur_h = round(max(0.5, (e_dt - s_dt).total_seconds() / 3600.0), 1)
+                    except Exception:
+                        s_dt = datetime.now()
+                        e_dt = s_dt + timedelta(hours=1)
+                        raw_dur_h = 1.0
+
+                    st_date = s_dt.date()
+                    ed_date_raw = e_dt.date()
+
+                    # 다일(Multi-day) 여부 판정:
+                    # 1) allday 체크박스 ON
+                    # 2) 또는 날짜가 다르고 총 소요시간이 16시간 초과 (연속 상주, 교육, 장기 출장, 81h 버그 원천 차단)
+                    is_multi_day = False
                     if allday:
-                        # 종일 일정: 날짜 범위 계산 (예: 9/8~9/10 지원 -> Start: 9/8 00:00, End: 9/11 00:00)
-                        if hasattr(raw_st, "date"):
-                            st_date = raw_st.date()
-                        else:
-                            st_date = datetime.strptime(str(raw_st)[:10], "%Y-%m-%d").date()
+                        is_multi_day = True
+                    elif ed_date_raw > st_date:
+                        # 자정(00:00) 종료인 경우 날짜만 다음날이고 실제로는 당일인 경우 체크
+                        if e_dt.hour == 0 and e_dt.minute == 0 and ed_date_raw == st_date + timedelta(days=1):
+                            is_multi_day = False
+                        elif raw_dur_h > 16.0 or (ed_date_raw - st_date).days >= 1:
+                            is_multi_day = True
 
-                        if hasattr(raw_ed, "date"):
-                            ed_date_raw = raw_ed.date()
-                        else:
-                            ed_date_raw = datetime.strptime(str(raw_ed)[:10], "%Y-%m-%d").date()
-
-                        # 아웃룩 종일 일정의 End가 다음날 자정(00:00)이면 마지막 날짜는 하루 전날
-                        if hasattr(raw_ed, "hour") and raw_ed.hour == 0 and raw_ed.minute == 0 and ed_date_raw > st_date:
+                    if is_multi_day:
+                        # 다일 일정: 시작일부터 종료일까지 매일매일 09:00~18:00 (9.0h) 분할 레코드 생성!
+                        if e_dt.hour == 0 and e_dt.minute == 0 and ed_date_raw > st_date:
                             real_end_date = ed_date_raw - timedelta(days=1)
                         else:
                             real_end_date = ed_date_raw
 
-                        # 시작일부터 종료일까지 매일매일 09:00~18:00 (9.0h) 분할 레코드 생성!
                         curr_d = st_date
                         while curr_d <= real_end_date:
                             d_val = curr_d.strftime("%Y-%m-%d")
                             sub_id = f"{entry_id}_{d_val}" if entry_id else f"{unique_key}_{d_val}"
+                            
+                            # 휴가인 경우 연차/반차 공수 산정, 일반 작업인 경우 일일 정규 9.0h
+                            if is_leave:
+                                dur_hours = 4.5 if ("반차" in str(leave_type) or "반일" in str(leave_type)) else 9.0
+                            else:
+                                dur_hours = 9.0
+
                             rec = OutlookScheduleRecord(
                                 entry_id=sub_id,
                                 worker_name=w_name,
@@ -210,8 +233,8 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                                 schedule_type=sched_type,
                                 start_time=f"{d_val} 09:00:00",
                                 end_time=f"{d_val} 18:00:00",
-                                duration_hours=9.0,
-                                is_all_day=True,
+                                duration_hours=dur_hours,
+                                is_all_day=allday,
                                 is_leave=is_leave,
                                 leave_type=leave_type,
                                 location=loc,
@@ -222,14 +245,8 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                             records.append(rec)
                             curr_d += timedelta(days=1)
                     else:
-                        st_str = raw_st.strftime("%Y-%m-%d %H:%M:%S") if hasattr(raw_st, "strftime") else str(raw_st)[:19]
-                        ed_str = raw_ed.strftime("%Y-%m-%d %H:%M:%S") if hasattr(raw_ed, "strftime") else str(raw_ed)[:19]
-                        try:
-                            s_dt = datetime.strptime(st_str[:19], "%Y-%m-%d %H:%M:%S")
-                            e_dt = datetime.strptime(ed_str[:19], "%Y-%m-%d %H:%M:%S")
-                            dur_h = round(max(0.5, (e_dt - s_dt).total_seconds() / 3600.0), 1)
-                        except Exception:
-                            dur_h = 1.0
+                        # 단일 당일 일정 (또는 야간 교대 단일 일정)
+                        dur_h = raw_dur_h
 
                         # 반복 일정일 경우 고유 ID 보장 (날짜 접미사)
                         save_entry_id = f"{entry_id}_{st_str[:10]}" if entry_id else unique_key

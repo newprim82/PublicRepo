@@ -163,6 +163,9 @@ class ScheduleSyncService:
                 dur_hours = float(r.get("duration_hours") or 0.0)
                 if dur_hours <= 0:
                     dur_hours = round(max(1800, (ed_dt - st_dt).total_seconds()) / 3600.0, 1)
+                # 🛡️ 다일 일정 비정상 초과 시간 방어 (최대 9.0h)
+                if (ed_dt.date() > st_dt.date()) and dur_hours > 9.0:
+                    dur_hours = 9.0
 
             total_sec = max(1, (ed_dt - st_dt).total_seconds())
             elapsed_sec = (now - st_dt).total_seconds()
@@ -385,6 +388,19 @@ class ScheduleSyncService:
                     else:
                         total_sec = max(1800, (ed_dt - st_dt).total_seconds())
                         dur_hours = round(total_sec / 3600.0, 1)
+
+                    # 🛡️ [다일 일정 초과 시간 방어 및 당일 윈도우 보정]
+                    # 날짜가 다른 다일 일정이 분할되지 않고 81h 등으로 남아있는 경우,
+                    # 예정 및 실제 공수는 하루 정규 근무 시간인 9.0h로 캡 적용하고
+                    # 당일 진행 중 표출 시 경과시간이 35h 등으로 튀지 않도록 오늘 09:00~18:00으로 윈도우 보정
+                    if ed_dt.date() > st_dt.date():
+                        dur_hours = min(dur_hours, 9.0)
+                        if st_dt.date() <= now.date() <= ed_dt.date():
+                            today_d = now.date()
+                            st_dt = datetime.combine(today_d, st_dt.time() if st_dt.date() == today_d else datetime.min.time().replace(hour=9))
+                            ed_dt = datetime.combine(today_d, ed_dt.time() if ed_dt.date() == today_d else datetime.min.time().replace(hour=18))
+                            st_time = st_dt
+                            ed_time = ed_dt
 
                 w_title = title_mappings.get(w_name) or team_info.get(w_name, {}).get("title", "")
                 w_team = team_mappings.get(w_name) or r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")

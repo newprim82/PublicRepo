@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 # WorkTime Dashboard v2.1.8 (Split Pending Multi-Day Tasks into Daily 9.0h Records & Fix Live Card Display)
-APP_VERSION = "v2.1.8"
+APP_VERSION = "v2.1.9"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
