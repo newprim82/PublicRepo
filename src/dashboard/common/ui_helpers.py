@@ -411,10 +411,23 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     is_leave = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
     clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
 
+    is_both = bool(r.get("has_both") or (r.get("is_outlook") and r.get("is_kakao")))
+
     if is_leave:
         leave_text = "🏖️ 휴가" if is_single_view else "🏖️"
         source_badge = f'<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">{leave_text}</span>'
         clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
+    elif is_both:
+        if is_single_view:
+            source_badge = (
+                '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 3px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">💬 카톡</span>'
+                '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">📅 아웃룩</span>'
+            )
+        else:
+            source_badge = (
+                '<span style="background-color: #FEE500; color: #371d1e; font-size: 10px; font-weight: 900; padding: 1px 4px; border-radius: 3px; margin-right: 3px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">K</span>'
+                '<span style="background-color: #0284c7; color: #ffffff; font-size: 10px; font-weight: 900; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">O</span>'
+            )
     elif is_outlook:
         out_text = "📅 아웃룩" if is_single_view else "O"
         out_padding = "1px 4px" if is_single_view else "1px 4.5px"

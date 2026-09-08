@@ -78,7 +78,7 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
                 st.markdown(l_html, unsafe_allow_html=True)
         st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
 
-    badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 )</span>'
+    badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 &nbsp;|&nbsp; <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">O</span> 양쪽 연동 )</span>'
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>⏳ 실시간 진행 중인 작업</span>{badge_legend_html}<span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
         st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
@@ -168,7 +168,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     # 📅 [신규] 아웃룩 스케줄 동기화 및 미래시 승격 (카톡 미보고 작업 자동 진행 & 100% 자동 완료 & 휴가 100%)
     leave_records = []
     try:
-        pend_df, auto_comp_df, leave_records = ScheduleSyncService.get_synced_live_tasks(pend_df, comp_df)
+        pend_df, comp_df, auto_comp_df, leave_records = ScheduleSyncService.get_synced_live_tasks(pend_df, comp_df)
         if not auto_comp_df.empty:
             comp_df = pd.concat([comp_df, auto_comp_df], ignore_index=True)
             comp_df = comp_df.drop_duplicates(subset=["worker_name", "start_time", "task_description"], keep="first")
@@ -270,6 +270,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
                                 is_out = (r.get("is_outlook") == True)
                                 is_l = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
+                                is_both = bool(r.get("has_both") or (r.get("is_outlook") and r.get("is_kakao")))
                                 
                                 # 기존 [📅 일정완료], [📅 아웃룩], [일정완료] 등 텍스트 접두사 제거
                                 clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
@@ -277,6 +278,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 if is_l:
                                     source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">🏖️</span>'
                                     clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
+                                elif is_both:
+                                    source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 2px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">O</span>'
                                 elif is_out:
                                     source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0; line-height: 1.2;">O</span>'
                                 else:
@@ -325,6 +328,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             ed_dt = r["end_time"]
                             is_out = (r.get("is_outlook") == True)
                             is_l = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
+                            is_both = bool(r.get("has_both") or (r.get("is_outlook") and r.get("is_kakao")))
                             
                             # 기존 [📅 일정완료], [📅 아웃룩], [일정완료] 등 텍스트 접두사 제거
                             clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
@@ -332,6 +336,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             if is_l:
                                 source_badge = '<span style="background-color: #f3e8ff; color: #7e22ce; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">🏖️ 휴가</span>'
                                 clean_desc = re.sub(r"^\[(연차|휴가|반차|오전반차|오후반차)\]\s*", "", clean_desc).strip()
+                            elif is_both:
+                                source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 2px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">💬 카톡</span><span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">📅 아웃룩</span>'
                             elif is_out:
                                 source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4px; border-radius: 3px; margin-right: 4px; display: inline-block; vertical-align: middle; white-space: nowrap; flex-shrink: 0;">📅 아웃룩</span>'
                             else:
