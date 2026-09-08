@@ -618,6 +618,13 @@ class DatabaseManager:
                 df["is_all_day"] = df["is_all_day"].astype(bool)
             if "is_leave" in df.columns:
                 df["is_leave"] = df["is_leave"].astype(bool)
+
+            # 🛡️ 다일 분할 일정(일일 9.0h)과 중복되는 과거 미분할 통짜 다일 일정(81.0h 등) 원천 차단
+            if "start_time" in df.columns and "end_time" in df.columns and "duration_hours" in df.columns:
+                df["duration_hours"] = pd.to_numeric(df["duration_hours"], errors="coerce").fillna(0.0)
+                bad_mask = (df["start_time"].dt.date != df["end_time"].dt.date) & (df["duration_hours"] > 9.0)
+                if bad_mask.any():
+                    df = df[~bad_mask].reset_index(drop=True)
             if "duration_hours" in df.columns:
                 df["duration_hours"] = pd.to_numeric(df["duration_hours"], errors="coerce").fillna(0.0)
 

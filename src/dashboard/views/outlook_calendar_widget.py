@@ -199,6 +199,12 @@ def render_outlook_calendar_widget():
         st.info("📅 아웃룩 일정을 동기화하는 중이거나 등록된 일정이 없습니다. (PC B에서 Outlook 수집기가 10분마다 자동 갱신합니다)")
         return
 
+    # 🛡️ 캘린더 위젯: 다일 분할 일정(일일 9.0h)과 중복되는 미분할 통짜 다일 일정(81.0h 등) 자동 배제
+    if not df_schedules.empty and "start_time" in df_schedules.columns and "end_time" in df_schedules.columns:
+        bad_multi_mask = (df_schedules["start_time"].dt.date != df_schedules["end_time"].dt.date) & (pd.to_numeric(df_schedules.get("duration_hours", 0), errors="coerce").fillna(0) > 9.0)
+        if bad_multi_mask.any():
+            df_schedules = df_schedules[~bad_multi_mask].reset_index(drop=True)
+
     # 중복 표출 방지 (동일 작업자, 제목, 시작시간 기준 1건만 유지)
     df_schedules = df_schedules.drop_duplicates(subset=["worker_name", "subject", "start_time"])
 
