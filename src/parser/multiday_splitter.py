@@ -92,8 +92,8 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
         curr_day_minutes = min(remaining_minutes, STANDARD_DAY_MINUTES)
         curr_day_hours = round(curr_day_minutes / 60.0, 1)
         
-        # 달력 연속 기준 (단순 +1일)
-        curr_st = st_dt + timedelta(days=day_idx)
+        # ☀️ 사용자 절대 규칙: days로 들어가는 다일 작업은 시작보고 시간과 상관없이 무조건 09:00 ~ 18:00 근무 고정!
+        curr_st = (st_dt + timedelta(days=day_idx)).replace(hour=9, minute=0, second=0, microsecond=0)
         curr_ed = curr_st + timedelta(minutes=curr_day_minutes)
         
         is_weekend = (curr_st.weekday() in [5, 6])
@@ -114,34 +114,35 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
         sub_rec["is_night_work"] = False  # 주간 다일 작업
         sub_rec["is_weekend_work"] = is_weekend
 
+        st_str = curr_st.strftime("%Y-%m-%d %H:%M")
+        ed_str = curr_ed.strftime("%Y-%m-%d %H:%M")
+
         now_dt = get_current_kst_time()
         if is_pending:
             if curr_ed <= now_dt:
-                # 9시간 작업 시간이 이미 종료된 일차 -> 자동 완료(COMPLETED)
-                sub_rec["start_time"] = curr_st.isoformat()
-                sub_rec["end_time"] = curr_ed.isoformat()
+                # 18:00 근무 종료 시각이 이미 지났거나 과거 일차 -> 자동 완료(COMPLETED)
+                sub_rec["start_time"] = st_str
+                sub_rec["end_time"] = ed_str
                 sub_rec["actual_minutes"] = curr_day_minutes
                 sub_rec["actual_hours"] = curr_day_hours
                 sub_rec["status"] = "COMPLETED"
             elif curr_st <= now_dt < curr_ed:
-                # 당일 현재 근무 시간대 진행 중
-                sub_rec["start_time"] = curr_st.isoformat()
+                # 당일 09:00 ~ 18:00 근무 시간대 진행 중
+                sub_rec["start_time"] = st_str
                 sub_rec["end_time"] = None
                 sub_rec["actual_minutes"] = 0
                 sub_rec["actual_hours"] = 0.0
                 sub_rec["status"] = "PENDING"
             else:
                 # 미래 일차 (내일 이후)
-                next_st = curr_st.replace(hour=9, minute=0, second=0, microsecond=0)
-                next_ed = curr_st.replace(hour=18, minute=0, second=0, microsecond=0)
-                sub_rec["start_time"] = next_st.isoformat()
-                sub_rec["end_time"] = next_ed.isoformat()
+                sub_rec["start_time"] = st_str
+                sub_rec["end_time"] = ed_str
                 sub_rec["actual_minutes"] = 0
                 sub_rec["actual_hours"] = 0.0
                 sub_rec["status"] = "SCHEDULED"
         else:
-            sub_rec["start_time"] = curr_st.isoformat()
-            sub_rec["end_time"] = curr_ed.isoformat()
+            sub_rec["start_time"] = st_str
+            sub_rec["end_time"] = ed_str
             sub_rec["actual_minutes"] = curr_day_minutes
             sub_rec["actual_hours"] = curr_day_hours
             sub_rec["status"] = "COMPLETED"

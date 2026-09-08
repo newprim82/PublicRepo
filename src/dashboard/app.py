@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.4 (Fix KST timezone for multiday auto-complete & remove edu badge)
-APP_VERSION = "v2.2.4"
+# WorkTime Dashboard v2.2.5 (Enforce 09:00 ~ 18:00 for multiday tasks)
+APP_VERSION = "v2.2.5"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -165,34 +165,52 @@ def load_data() -> pd.DataFrame:
                 if dup_origin_indices:
                     df = df.drop(index=dup_origin_indices).reset_index(drop=True)
 
-        # 🛡️ PENDING 다일 작업의 일일 9.0h 정규화 및 (1/N일차) 보장 (모달 및 테이블 27h 표출 원천 방지 및 9시간 경과 시 자동 완료)
+        # 🛡️ 다일 작업(days 표기) 09:00~18:00 표준 근무시간 강제 및 당일 18:00 경과 시 자동 완료 보장
         if "task_description" in df.columns:
             now_dt = get_current_kst_time()
             for idx, r in df.iterrows():
-                if str(r.get("status", "")).upper() == "PENDING":
-                    raw_s = str(r.get("raw_start_message") or "")
-                    m_d = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_s, re.IGNORECASE)
-                    if m_d and float(m_d.group(1)) >= 1.5:
-                        tot_d = int(float(m_d.group(1)))
-                        # 1일차 정규 9.0h (540분) 캡 적용
+                raw_s = str(r.get("raw_start_message") or "")
+                raw_e = str(r.get("raw_end_message") or "")
+                m_d = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_s, re.IGNORECASE) or re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_e, re.IGNORECASE)
+                if m_d and float(m_d.group(1)) >= 1.0:
+                    tot_d = max(1, int(float(m_d.group(1))))
+                    raw_st_str = re.sub(r'([+-]\d{2}:?\d{2}|Z)$', '', str(r.get("start_time", "")).replace("T", " ")).strip()
+                    st_val = pd.to_datetime(raw_st_str, errors="coerce")
+                    if pd.notna(st_val):
+                        if hasattr(st_val, "to_pydatetime"):
+                            st_val = st_val.to_pydatetime()
+                        if getattr(st_val, "tzinfo", None) is not None:
+                            st_val = st_val.replace(tzinfo=None)
+
+                        # ☀️ 사용자 절대 규칙: 시작보고 시각 상관없이 무조건 09:00 ~ 18:00 고정
+                        forced_st = st_val.replace(hour=9, minute=0, second=0, microsecond=0)
+                        forced_ed = forced_st.replace(hour=18, minute=0, second=0, microsecond=0)
+                        df.at[idx, "start_time"] = forced_st
                         df.at[idx, "estimated_minutes"] = 540
                         df.at[idx, "estimated_hours"] = 9.0
                         df.at[idx, "total_hours"] = 9.0
                         if "display_hours" in df.columns:
                             df.at[idx, "display_hours"] = 9.0
+
                         cur_desc = str(r.get("task_description") or "").strip()
                         if not re.search(r'\(\d+/\d+일차\)', cur_desc):
                             df.at[idx, "task_description"] = f"{cur_desc} (1/{tot_d}일차)"
                         
-                        # 🌟 시작 시각으로부터 9시간 경과 시 자동으로 COMPLETED로 전환
-                        st_val = pd.to_datetime(str(r.get("start_time", "")).replace("T", " "), errors="coerce")
-                        if pd.notna(st_val):
-                            ed_val = st_val + timedelta(hours=9)
-                            if now_dt >= ed_val:
-                                df.at[idx, "status"] = "COMPLETED"
-                                df.at[idx, "end_time"] = ed_val
-                                df.at[idx, "actual_minutes"] = 540
-                                df.at[idx, "actual_hours"] = 9.0
+                        def _to_naive(dt_obj):
+                            t = pd.to_datetime(dt_obj)
+                            if hasattr(t, "tz") and t.tz is not None:
+                                t = t.tz_localize(None)
+                            return t.to_pydatetime() if hasattr(t, "to_pydatetime") else t
+
+                        # 당일 18:00 경과 시 또는 과거 일자이면 무조건 COMPLETED
+                        if _to_naive(now_dt) >= _to_naive(forced_ed):
+                            df.at[idx, "status"] = "COMPLETED"
+                            df.at[idx, "end_time"] = forced_ed
+                            df.at[idx, "actual_minutes"] = 540
+                            df.at[idx, "actual_hours"] = 9.0
+                        elif _to_naive(now_dt) >= _to_naive(forced_st):
+                            df.at[idx, "status"] = "PENDING"
+                            df.at[idx, "end_time"] = None
 
         mappings = TeamService.get_team_mappings()
         if mappings:
