@@ -105,14 +105,24 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
         sub_rec["is_night_work"] = False  # 주간 다일 작업
         sub_rec["is_weekend_work"] = is_weekend
 
+        now_dt = datetime.now()
         if is_pending:
-            if day_idx == 0:
+            if curr_ed <= now_dt:
+                # 9시간 작업 시간이 이미 종료된 일차 -> 자동 완료(COMPLETED)
+                sub_rec["start_time"] = curr_st.isoformat()
+                sub_rec["end_time"] = curr_ed.isoformat()
+                sub_rec["actual_minutes"] = curr_day_minutes
+                sub_rec["actual_hours"] = curr_day_hours
+                sub_rec["status"] = "COMPLETED"
+            elif curr_st <= now_dt < curr_ed:
+                # 당일 현재 근무 시간대 진행 중
                 sub_rec["start_time"] = curr_st.isoformat()
                 sub_rec["end_time"] = None
                 sub_rec["actual_minutes"] = 0
                 sub_rec["actual_hours"] = 0.0
                 sub_rec["status"] = "PENDING"
             else:
+                # 미래 일차 (내일 이후)
                 next_st = curr_st.replace(hour=9, minute=0, second=0, microsecond=0)
                 next_ed = curr_st.replace(hour=18, minute=0, second=0, microsecond=0)
                 sub_rec["start_time"] = next_st.isoformat()

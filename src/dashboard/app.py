@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.2 (Fix NameError: import re in app.py)
-APP_VERSION = "v2.2.2"
+# WorkTime Dashboard v2.2.3 (Auto-complete multiday 9h records after shift)
+APP_VERSION = "v2.2.3"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -164,8 +164,9 @@ def load_data() -> pd.DataFrame:
                 if dup_origin_indices:
                     df = df.drop(index=dup_origin_indices).reset_index(drop=True)
 
-        # 🛡️ PENDING 다일 작업의 일일 9.0h 정규화 및 (1/N일차) 보장 (모달 및 테이블 27h 표출 원천 방지)
+        # 🛡️ PENDING 다일 작업의 일일 9.0h 정규화 및 (1/N일차) 보장 (모달 및 테이블 27h 표출 원천 방지 및 9시간 경과 시 자동 완료)
         if "task_description" in df.columns:
+            now_dt = datetime.now()
             for idx, r in df.iterrows():
                 if str(r.get("status", "")).upper() == "PENDING":
                     raw_s = str(r.get("raw_start_message") or "")
@@ -181,6 +182,16 @@ def load_data() -> pd.DataFrame:
                         cur_desc = str(r.get("task_description") or "").strip()
                         if not re.search(r'\(\d+/\d+일차\)', cur_desc):
                             df.at[idx, "task_description"] = f"{cur_desc} (1/{tot_d}일차)"
+                        
+                        # 🌟 시작 시각으로부터 9시간 경과 시 자동으로 COMPLETED로 전환
+                        st_val = pd.to_datetime(str(r.get("start_time", "")).replace("T", " "), errors="coerce")
+                        if pd.notna(st_val):
+                            ed_val = st_val + timedelta(hours=9)
+                            if now_dt >= ed_val:
+                                df.at[idx, "status"] = "COMPLETED"
+                                df.at[idx, "end_time"] = ed_val
+                                df.at[idx, "actual_minutes"] = 540
+                                df.at[idx, "actual_hours"] = 9.0
 
         mappings = TeamService.get_team_mappings()
         if mappings:
