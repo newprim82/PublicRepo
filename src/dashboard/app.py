@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.1.5 (Fix Outlook Same-Day Duplicate Check & Keep Pending End Time Empty)
-APP_VERSION = "v2.1.5"
+# WorkTime Dashboard v2.1.6 (Restore Data Cache TTL to 300s / 5min)
+APP_VERSION = "v2.1.6"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -129,7 +129,7 @@ if st.session_state.get("_applied_app_version") != APP_VERSION:
 # 3. 데이터 로딩 (멀티데이 분할 원본 중복제거, 정규화, 야간/주말 보장)
 # -------------------------------------------------------------
 # -------------------------------------------------------------
-@st.cache_data(ttl=60, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_data() -> pd.DataFrame:
     df = db_manager.fetch_all_work_logs()
     
