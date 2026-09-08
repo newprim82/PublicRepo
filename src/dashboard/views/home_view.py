@@ -215,12 +215,27 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 
     # 🧹 24시간 이상 방치된 미마감(PENDING) 작업 감지 알림
     now_kst = get_current_kst_time()
+    now_naive = now_kst.replace(tzinfo=None) if hasattr(now_kst, "tzinfo") and now_kst.tzinfo else now_kst
     if not df_raw.empty and "status" in df_raw.columns:
         p_mask = df_raw["status"] == "PENDING"
         if p_mask.any():
             all_pend = df_raw[p_mask].copy()
-            all_pend["_st_dt"] = pd.to_datetime(all_pend["start_time"], errors="coerce")
-            stale_pends = all_pend[(now_kst - all_pend["_st_dt"]) >= timedelta(hours=24)]
+            def _to_naive_dt(val):
+                if pd.isna(val) or not val:
+                    return pd.NaT
+                if isinstance(val, str):
+                    clean_str = val.replace("T", " ").replace("Z", "")
+                    if "+" in clean_str:
+                        clean_str = clean_str.split("+")[0]
+                    return pd.to_datetime(clean_str.strip(), errors="coerce")
+                if hasattr(val, "tz_localize") and getattr(val, "tz", None) is not None:
+                    return val.tz_localize(None)
+                if hasattr(val, "replace") and getattr(val, "tzinfo", None) is not None:
+                    return val.replace(tzinfo=None)
+                return pd.to_datetime(val, errors="coerce")
+
+            all_pend["_st_dt"] = pd.Series([_to_naive_dt(v) for v in all_pend["start_time"]], index=all_pend.index)
+            stale_pends = all_pend[(now_naive - all_pend["_st_dt"]) >= timedelta(hours=24)]
             if not stale_pends.empty:
                 col_w1, col_w2 = st.columns([3.6, 1.2])
                 with col_w1:

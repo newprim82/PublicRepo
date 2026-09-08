@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.10 (Fix live board stale pending parameter reference)
-APP_VERSION = "v2.2.10"
+# WorkTime Dashboard v2.2.11 (Fix TypeError: timezone-safe datetime subtraction for stale pending tasks)
+APP_VERSION = "v2.2.11"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()

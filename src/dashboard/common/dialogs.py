@@ -1066,15 +1066,30 @@ def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
         st.success("🎉 현재 진행 중인 미완료 작업이 없습니다.")
         return
         
-    pend_df["_st_dt"] = pd.to_datetime(pend_df["start_time"], errors="coerce")
-    stale_mask = (now - pend_df["_st_dt"]) >= timedelta(hours=24)
+    now_naive = now.replace(tzinfo=None) if hasattr(now, "tzinfo") and now.tzinfo else now
+    def _to_naive_dt(val):
+        if pd.isna(val) or not val:
+            return pd.NaT
+        if isinstance(val, str):
+            clean_str = val.replace("T", " ").replace("Z", "")
+            if "+" in clean_str:
+                clean_str = clean_str.split("+")[0]
+            return pd.to_datetime(clean_str.strip(), errors="coerce")
+        if hasattr(val, "tz_localize") and getattr(val, "tz", None) is not None:
+            return val.tz_localize(None)
+        if hasattr(val, "replace") and getattr(val, "tzinfo", None) is not None:
+            return val.replace(tzinfo=None)
+        return pd.to_datetime(val, errors="coerce")
+
+    pend_df["_st_dt"] = pd.Series([_to_naive_dt(v) for v in pend_df["start_time"]], index=pend_df.index)
+    stale_mask = (now_naive - pend_df["_st_dt"]) >= timedelta(hours=24)
     stale_df = pend_df[stale_mask].sort_values(by="_st_dt", ascending=True).reset_index(drop=True)
     
     if stale_df.empty:
         st.success("🎉 24시간을 초과하여 방치된 미마감 작업이 없습니다. 모든 진행 작업이 정상 윈도우 내에 있습니다.")
         return
 
-    stale_df["elapsed_hours"] = ((now - stale_df["_st_dt"]).dt.total_seconds() / 3600.0).round(1)
+    stale_df["elapsed_hours"] = ((now_naive - stale_df["_st_dt"]).dt.total_seconds() / 3600.0).round(1)
     
     st.markdown(f"### ⚠️ 24시간 이상 미마감 작업: 총 **{len(stale_df)}건**")
     st.caption("카카오톡 완료 보고를 누락하여 하루 이상 '진행 중'으로 남아있는 작업입니다. 예정시간 기준으로 일괄 완료 처리하거나, 개별 완료시간을 지정하여 마감할 수 있습니다.")
