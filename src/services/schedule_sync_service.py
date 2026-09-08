@@ -126,10 +126,10 @@ class ScheduleSyncService:
                 "is_weekend_work": False
             })
 
-        # 2. 오늘 카카오톡 작업 목록 (작업자별) 매핑하여 동일 작업 중복만 정교하게 배제 (별도 회의/일정은 카드 표출 보장)
-        # 2. 오늘 카카오톡 작업 데이터프레임 복사 및 has_both 플래그 초기화
-        final_pend_df = kakao_pend_df.copy() if not kakao_pend_df.empty else pd.DataFrame()
-        final_comp_df = today_completed_df.copy() if not today_completed_df.empty else pd.DataFrame()
+        # 2. 순수 카카오톡 작업 목록 추출 (아웃룩 일정과 자기 자신 매칭 원천 방지)
+        # 전달받은 데이터프레임 중 is_outlook이 아닌 순수 카카오톡 보고 작업만 분리
+        final_pend_df = kakao_pend_df[kakao_pend_df.get("is_outlook", False) != True].copy() if not kakao_pend_df.empty else pd.DataFrame()
+        final_comp_df = today_completed_df[today_completed_df.get("is_outlook", False) != True].copy() if not today_completed_df.empty else pd.DataFrame()
 
         if not final_pend_df.empty:
             final_pend_df["has_both"] = False
@@ -179,6 +179,9 @@ class ScheduleSyncService:
                 for p_idx, p_row in final_pend_df.iterrows():
                     if p_row.get("worker_name") != w_name:
                         continue
+                    # 🛡️ 아웃룩 출처 행은 카톡 기보고 매칭 대상에서 절대 제외 (자가 중복 방지)
+                    if p_row.get("is_outlook") == True or str(p_row.get("msg_hash", "")).startswith("OUTLOOK_"):
+                        continue
                     k_client = str(p_row.get("client_name", "")).strip()
                     k_desc = str(p_row.get("task_description", "")).strip()
                     matched = False
@@ -204,6 +207,9 @@ class ScheduleSyncService:
             if not is_dup and not final_comp_df.empty:
                 for c_idx, c_row in final_comp_df.iterrows():
                     if c_row.get("worker_name") != w_name:
+                        continue
+                    # 🛡️ 아웃룩 출처 행은 카톡 기보고 매칭 대상에서 절대 제외 (자가 중복 방지)
+                    if c_row.get("is_outlook") == True or str(c_row.get("msg_hash", "")).startswith("OUTLOOK_"):
                         continue
                     k_client = str(c_row.get("client_name", "")).strip()
                     k_desc = str(c_row.get("task_description", "")).strip()
@@ -478,7 +484,7 @@ class ScheduleSyncService:
                         "actual_minutes": act_m,
                         "actual_hours": act_h,       # 🌟 미래시는 0.0h, 완료는 dur_hours, 진행은 경과시간
                         "estimated_hours": dur_hours,
-                        "total_hours": act_h,
+                        "total_hours": dur_hours,
                         "display_hours": dur_hours,  # 🌟 캘린더/카드 표시용
                         "status": status,
                         "is_outlook": True,

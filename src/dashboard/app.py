@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.1.2 (Fix Future Month Auto-Selection & Exclude Beyond Today)
-APP_VERSION = "v2.1.2"
+# WorkTime Dashboard v2.1.3 (Fix Outlook Self-Matching & Correct Schedule Estimated Hours)
+APP_VERSION = "v2.1.3"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
