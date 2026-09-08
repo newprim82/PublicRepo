@@ -12,6 +12,7 @@ from ..parser.reply_matcher import (
     check_is_weekend_work
 )
 from ..parser.multiday_splitter import split_multiday_record, is_multiday_record
+from ..common.time_utils import get_current_kst_time, to_naive_kst
 from .outlook_models import OutlookScheduleRecord
 
 try:
@@ -276,7 +277,7 @@ class DatabaseManager:
             if pend_rows.empty:
                 return 0
 
-            now = datetime.now()
+            now = get_current_kst_time()
             resolved_records: List[WorkLogRecord] = []
 
             for _, r in pend_rows.iterrows():
@@ -343,7 +344,7 @@ class DatabaseManager:
             return 0
 
         updated_count = 0
-        now = datetime.now()
+        now = get_current_kst_time()
         now_str = now.strftime("%Y-%m-%d %H:%M")
         minutes_map = custom_minutes_map or {}
 

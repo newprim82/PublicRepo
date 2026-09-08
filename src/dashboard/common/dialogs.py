@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 import plotly.express as px
-from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, strip_tz
+from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, strip_tz, get_current_kst_time, to_naive_kst
 from ...services.email_report_service import EmailReportService
 from ...services.email_sender import EmailSender
 from ...services.team_service import TeamService
@@ -1055,7 +1055,7 @@ def show_email_report_dialog(selected_team: str):
 @st.dialog("🧹 24시간 초과 미마감(진행 중) 작업 정리 도구", width="large")
 def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
-    now = datetime.now()
+    now_naive = get_current_kst_time()
     
     if df_data.empty or "status" not in df_data.columns:
         st.info("작업 데이터가 없습니다.")
@@ -1066,22 +1066,7 @@ def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
         st.success("🎉 현재 진행 중인 미완료 작업이 없습니다.")
         return
         
-    now_naive = now.replace(tzinfo=None) if hasattr(now, "tzinfo") and now.tzinfo else now
-    def _to_naive_dt(val):
-        if pd.isna(val) or not val:
-            return pd.NaT
-        if isinstance(val, str):
-            clean_str = val.replace("T", " ").replace("Z", "")
-            if "+" in clean_str:
-                clean_str = clean_str.split("+")[0]
-            return pd.to_datetime(clean_str.strip(), errors="coerce")
-        if hasattr(val, "tz_localize") and getattr(val, "tz", None) is not None:
-            return val.tz_localize(None)
-        if hasattr(val, "replace") and getattr(val, "tzinfo", None) is not None:
-            return val.replace(tzinfo=None)
-        return pd.to_datetime(val, errors="coerce")
-
-    pend_df["_st_dt"] = pd.Series([_to_naive_dt(v) for v in pend_df["start_time"]], index=pend_df.index)
+    pend_df["_st_dt"] = pd.Series([to_naive_kst(v) for v in pend_df["start_time"]], index=pend_df.index)
     stale_mask = (now_naive - pend_df["_st_dt"]) >= timedelta(hours=24)
     stale_df = pend_df[stale_mask].sort_values(by="_st_dt", ascending=True).reset_index(drop=True)
     

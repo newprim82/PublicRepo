@@ -6,8 +6,7 @@ from typing import Dict, Any, Optional
 
 from ..config import config
 from ..database.supabase_client import db_manager
-
-KST = timezone(timedelta(hours=9))
+from ..common.time_utils import get_current_kst_time
 
 class CollectorStatusService:
     """
@@ -23,7 +22,7 @@ class CollectorStatusService:
         수집기 PC에서 매 수집 시도 결과(정상/로그인필요/창미열림/에러)를 클라우드 및 로컬에 실시간 기록
         """
         try:
-            now_kst = datetime.now(timezone.utc).astimezone(KST)
+            now_kst = get_current_kst_time()
             now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
             
             is_healthy = (status_code in ["ONLINE", "SUCCESS", "NO_NEW_RECORDS"])
@@ -113,6 +112,6 @@ class CollectorStatusService:
             "is_healthy": False,
             "status_code": "LOGIN_REQUIRED_OR_WINDOW_CLOSED",
             "message": "카카오톡 PC 로그인이 풀려있거나 대화방 창이 닫혀 있습니다.",
-            "updated_at": datetime.now(timezone.utc).astimezone(KST).strftime("%Y-%m-%d %H:%M:%S")
+            "updated_at": get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
         }
 

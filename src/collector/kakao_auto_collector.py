@@ -113,16 +113,7 @@ _collector_start_lock = threading.Lock()
 _collector_stop_event = threading.Event()
 _last_execution_timestamp = 0
 
-# 한국 표준시 (KST, UTC+9) 기준 정의
-KST_TIMEZONE = timezone(timedelta(hours=9))
-
-def get_current_kst_time() -> datetime:
-    """OS 타임존(UTC 등)과 관계없이 항상 한국 표준시(KST)를 반환"""
-    try:
-        # UTC 기준 현재 시각을 KST로 변환 후 naive datetime으로 반환
-        return datetime.now(timezone.utc).astimezone(KST_TIMEZONE).replace(tzinfo=None)
-    except Exception:
-        return datetime.now()
+from ..common.time_utils import get_current_kst_time, KST_TIMEZONE
 
 
 def get_collector_countdown_info() -> Dict[str, Any]:

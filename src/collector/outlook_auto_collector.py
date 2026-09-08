@@ -18,6 +18,7 @@ from ..config import config
 from ..database.outlook_models import OutlookScheduleRecord
 from ..database.supabase_client import db_manager
 from ..services.team_service import TeamService
+from ..common.time_utils import get_current_kst_time
 
 def safe_print(msg: str):
     try:
@@ -79,7 +80,7 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
         return []
 
     # 1. 날짜 필터링 범위 (현재 달 1일 ~ N개월 후 말일)
-    now = datetime.now()
+    now = get_current_kst_time()
     cur_year = now.year
     cur_month = now.month
     start_date_str = f"{cur_year:04d}-{cur_month:02d}-01 00:00"
@@ -187,7 +188,7 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
                         e_dt = datetime.strptime(ed_str[:19], "%Y-%m-%d %H:%M:%S")
                         raw_dur_h = round(max(0.5, (e_dt - s_dt).total_seconds() / 3600.0), 1)
                     except Exception:
-                        s_dt = datetime.now()
+                        s_dt = get_current_kst_time()
                         e_dt = s_dt + timedelta(hours=1)
                         raw_dur_h = 1.0
 
@@ -355,7 +356,7 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
 
 def run_outlook_collection_cycle() -> Dict[str, Any]:
     """10분 정기 아웃룩 스케줄 동기화 사이클 실행"""
-    safe_print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 📅 아웃룩 캘린더 동기화 가동...")
+    safe_print(f"[{get_current_kst_time().strftime('%Y-%m-%d %H:%M:%S')}] 📅 아웃룩 캘린더 동기화 가동...")
     records = extract_outlook_schedules(months_ahead=2)
     if not records:
         safe_print("[-] 아웃룩에서 수집된 일정이 없습니다.")

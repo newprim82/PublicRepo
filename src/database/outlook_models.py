@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import Optional, Dict, Any
+from ..common.time_utils import get_current_kst_time
 
 
 @dataclass
@@ -21,7 +22,7 @@ class OutlookScheduleRecord:
     body: str = ""                     # 본문 메모
     color_tag: str = "#0284c7"         # 팀원별 캘린더 대표 색상 (#hex)
     created_by: str = ""               # 주최자 / 등록자
-    synced_at: str = field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    synced_at: str = field(default_factory=lambda: get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S"))
 
     def to_dict(self) -> Dict[str, Any]:
         """딕셔너리 변환 (DB Upsert 및 JSON 직렬화용)"""

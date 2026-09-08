@@ -12,6 +12,7 @@ from .kakao_parser import (
     ParsedTaskEnd,
     WorkerInfo
 )
+from ..common.time_utils import get_current_kst_time
 
 @dataclass
 class WorkLogRecord:
@@ -457,7 +458,7 @@ class WorkLogMatcher:
                         matched_records.append(record)
                         
         # 3. 잔여 미완료 시작 보고들 처리 (기본 48시간, 다일 작업은 (예정일수*24h)+48h 경과 시 COMPLETED 자동 전환)
-        latest_ref_time = sorted_msgs[-1].timestamp if sorted_msgs else datetime.now()
+        latest_ref_time = sorted_msgs[-1].timestamp if sorted_msgs else get_current_kst_time()
         
         for p_start in pending_starts:
             msg_hash = generate_msg_hash(

@@ -2,6 +2,12 @@
 
 카카오톡 `[기술본부] 업무공유방`의 **시작/완료 보고 메시지**와 Microsoft Outlook / Teams의 **캘린더 일정**을 10분마다 무간섭 자동 수집하여, **과거시(누적 실적 KPI) ➔ 현재시(LIVE 관제) ➔ 미래시(통합 월간 캘린더)**로 이어지는 완벽한 3단계 시간축 모니터링을 제공하는 **엔터프라이즈급 실시간 업무 관제 대시보드 시스템**입니다.
 
+## ⏰ 0. 단일 진실 소스 시간 표준 (Single Source of Truth: time.bora.net KST)
+
+- **타임 서버 (NTP)**: `time.bora.net` (LGU+ 한국 표준시 공식 NTP 서버) 영구 고정
+- **표준 타임존**: **한국 표준시 (KST, UTC+09:00)**
+- **동작 원칙**: 프로젝트 내 모든 실시간 관제 시계, 수집기 타임스탬프, DB 만료 판정, 업무 시간차 연산은 `src.common.time_utils`의 `get_current_kst_time()`을 통해 **KST 기준 Tz-Naive 객체**로 단일화되어 시차 왜곡 및 `TypeError`가 원천 차단됩니다. (상세: [TIME_STANDARD_GUIDE.md](TIME_STANDARD_GUIDE.md) 참조)
+
 ---
 
 ## 🌟 1. 핵심 아키텍처 & 멀티 소스 하이브리드 파이프라인

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
 from ..services.client_normalizer import normalize_client_name
+from ..common.time_utils import get_current_kst_time
 
 # ⚡ 사전 컴파일 정규식 패턴 (파싱 엔진 3~4배 가속)
 _RE_TIME_RANGE = re.compile(r'(\d{1,2}):(\d{2})\s*[~-]\s*(\d{1,2}):(\d{2})')
@@ -295,7 +296,7 @@ class KakaoMessageParser:
                 last_msg_time = current_timestamp
             current_content_lines = []
 
-        now = datetime.now()
+        now = get_current_kst_time()
         
         for line in lines:
             line_str = line.strip()

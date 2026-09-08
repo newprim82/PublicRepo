@@ -3,14 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 import pandas as pd
 
-KST_TIMEZONE = timezone(timedelta(hours=9))
-
-def get_current_kst_time() -> datetime:
-    """Streamlit Cloud(UTC) 및 로컬 환경 모두에서 한국 표준시(KST) 반환"""
-    try:
-        return datetime.now(timezone.utc).astimezone(KST_TIMEZONE).replace(tzinfo=None)
-    except Exception:
-        return datetime.now()
+from ..common.time_utils import get_current_kst_time, KST_TIMEZONE
 
 DAY_PATTERN = re.compile(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', re.IGNORECASE)
 

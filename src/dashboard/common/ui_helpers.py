@@ -11,8 +11,14 @@ import streamlit as st
 from ...config import config
 from ...services.team_service import TeamService
 
-KST = timezone(timedelta(hours=9))
-KST_TIMEZONE = KST
+from ...common.time_utils import (
+    KST,
+    KST_TIMEZONE,
+    get_bora_ntp_timestamp,
+    get_current_kst_time,
+    get_current_kst_time_aware,
+    to_naive_kst
+)
 
 def is_same_team(t1: str, t2: str) -> bool:
     """팀명 일치 여부를 유연하게 판정 (예: '기술 1팀' == '기술1팀')"""
@@ -21,34 +27,6 @@ def is_same_team(t1: str, t2: str) -> bool:
     clean1 = str(t1).replace(" ", "").lower().strip()
     clean2 = str(t2).replace(" ", "").lower().strip()
     return clean1 == clean2
-
-_ntp_offset: Optional[float] = None
-_ntp_last_sync: float = 0.0
-
-def get_bora_ntp_timestamp() -> float:
-    """time.bora.net (LGU+ 타임서버) NTP 기준 한국 표준시 타임스탬프(초) 반환 (1시간 캐싱 오프셋 적용으로 0ms 즉시 응답)"""
-    global _ntp_offset, _ntp_last_sync
-    now = time.time()
-    if _ntp_offset is None or (now - _ntp_last_sync > 3600):
-        try:
-            client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            client.settimeout(0.6)
-            data = b'\x1b' + 47 * b'\0'
-            client.sendto(data, ('time.bora.net', 123))
-            resp, _ = client.recvfrom(1024)
-            if resp:
-                t = struct.unpack('!12I', resp)[10] - 2208988800
-                _ntp_offset = float(t) - now
-                _ntp_last_sync = now
-        except Exception:
-            if _ntp_offset is None:
-                _ntp_offset = 0.0
-    return now + (_ntp_offset or 0.0)
-
-def get_current_kst_time() -> datetime:
-    """time.bora.net (LGU+ 타임서버) NTP 기준 한국 표준시(KST, UTC+9) 현재 시각 반환 (상단 헤더 프레임 시계와 100% 일치)"""
-    ts = get_bora_ntp_timestamp()
-    return datetime.fromtimestamp(ts, tz=KST_TIMEZONE)
 
 try:
     from streamlit_autorefresh import st_autorefresh
