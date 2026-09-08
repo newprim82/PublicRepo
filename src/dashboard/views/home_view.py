@@ -36,32 +36,42 @@ def _render_single_team_pending_cards(pend_df: pd.DataFrame, title_mappings: dic
     """🏢 단일 팀 진행 중인 작업 카드 렌더링"""
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_pend = pend_df.copy()
+    t_pend = t_pend.loc[:, ~t_pend.columns.duplicated()]
     t_pend["_rank_score"] = t_pend.apply(
         lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""),
         axis=1
     )
-    t_pend = t_pend.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
+    t_pend["_st_sort"] = pd.to_datetime(t_pend["start_time"], errors="coerce")
+    t_pend = t_pend.sort_values(by=["_rank_score", "_st_sort"], ascending=[True, False])
 
     p_cols = st.columns(4)
     for idx, (_, r) in enumerate(t_pend.iterrows()):
         with p_cols[idx % 4]:
-            card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=True)
-            st.markdown(card_html, unsafe_allow_html=True)
+            try:
+                card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=True)
+                st.markdown(card_html, unsafe_allow_html=True)
+            except Exception as e_card:
+                print(f"[단일팀 카드 렌더링 예외]: {e_card}")
 
 
 def _render_kanban_pending_cards(t_pend: pd.DataFrame, title_mappings: dict):
     """🏛️ 전체 팀 칸반 열 진행 중인 작업 카드 렌더링"""
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_pend_sorted = t_pend.copy()
+    t_pend_sorted = t_pend_sorted.loc[:, ~t_pend_sorted.columns.duplicated()]
     t_pend_sorted["_rank_score"] = t_pend_sorted.apply(
         lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""),
         axis=1
     )
-    t_pend_sorted = t_pend_sorted.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
+    t_pend_sorted["_st_sort"] = pd.to_datetime(t_pend_sorted["start_time"], errors="coerce")
+    t_pend_sorted = t_pend_sorted.sort_values(by=["_rank_score", "_st_sort"], ascending=[True, False])
 
     for idx, (_, r) in enumerate(t_pend_sorted.iterrows()):
-        card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=False)
-        st.markdown(card_html, unsafe_allow_html=True)
+        try:
+            card_html = get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view=False)
+            st.markdown(card_html, unsafe_allow_html=True)
+        except Exception as e_card:
+            print(f"[칸반 카드 렌더링 예외]: {e_card}")
 
 
 def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave_records: list = None):
@@ -245,8 +255,10 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 26px 8px; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 10px;'>완료 작업 없음</div>", unsafe_allow_html=True)
                         else:
                             t_comp = t_comp.copy()
+                            t_comp = t_comp.loc[:, ~t_comp.columns.duplicated()]
                             t_comp["_rank_score"] = t_comp.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
-                            t_comp = t_comp.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
+                            t_comp["_st_sort"] = pd.to_datetime(t_comp["start_time"], errors="coerce")
+                            t_comp = t_comp.sort_values(by=["_rank_score", "_st_sort"], ascending=[True, False])
 
                             for idx, (_, r) in enumerate(t_comp.iterrows()):
                                 w_name = r["worker_name"]
@@ -304,8 +316,10 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 10px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(comp_df)}건 완료</span></div>""", unsafe_allow_html=True)
 
                     t_comp = comp_df.copy()
+                    t_comp = t_comp.loc[:, ~t_comp.columns.duplicated()]
                     t_comp["_rank_score"] = t_comp.apply(lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""), axis=1)
-                    t_comp = t_comp.sort_values(by=["_rank_score", "start_time"], ascending=[True, False])
+                    t_comp["_st_sort"] = pd.to_datetime(t_comp["start_time"], errors="coerce")
+                    t_comp = t_comp.sort_values(by=["_rank_score", "_st_sort"], ascending=[True, False])
 
                     c_cols = st.columns(4)
                     for idx, (_, r) in enumerate(t_comp.iterrows()):

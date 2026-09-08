@@ -150,9 +150,22 @@ class ScheduleSyncService:
             st_dt = st_time.to_pydatetime() if hasattr(st_time, "to_pydatetime") else st_time
             ed_dt = ed_time.to_pydatetime() if hasattr(ed_time, "to_pydatetime") else ed_time
 
+            # ☀️ [종일 일정 보정] 비-휴가 일반 작업 일정이 '종일(is_all_day)'인 경우 09:00~18:00 (9.0h) 표준 업무시간 강제 적용
+            # (자정에 조기 완료되거나 00:00 표출 오류를 방지하고 09:00~18:00 동안 정상 진행 중 카드 표출 보장)
+            is_all_day = bool(r.get("is_all_day") == True)
+            if is_all_day:
+                st_dt = st_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+                ed_dt = ed_dt.replace(hour=18, minute=0, second=0, microsecond=0)
+                st_time = st_dt
+                ed_time = ed_dt
+                dur_hours = 9.0
+            else:
+                dur_hours = float(r.get("duration_hours") or 0.0)
+                if dur_hours <= 0:
+                    dur_hours = round(max(1800, (ed_dt - st_dt).total_seconds()) / 3600.0, 1)
+
             total_sec = max(1, (ed_dt - st_dt).total_seconds())
             elapsed_sec = (now - st_dt).total_seconds()
-            dur_hours = float(r.get("duration_hours") or round(total_sec / 3600.0, 1))
 
             w_title = team_info.get(w_name, {}).get("title", "")
             w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
@@ -235,6 +248,7 @@ class ScheduleSyncService:
                     "total_hours": dur_hours,
                     "status": "COMPLETED",
                     "is_outlook": True,
+                    "is_all_day": is_all_day,
                     "has_both": False,
                     "is_night_work": False,
                     "is_weekend_work": False
@@ -262,6 +276,7 @@ class ScheduleSyncService:
                     "total_hours": dur_hours,
                     "status": "PENDING",
                     "is_outlook": True,
+                    "is_all_day": is_all_day,
                     "has_both": False,
                     "outlook_progress_pct": pct,
                     "is_night_work": False,
@@ -346,16 +361,24 @@ class ScheduleSyncService:
                     continue
 
                 is_leave = bool(r.get("is_leave", False))
+                is_all_day = bool(r.get("is_all_day", False))
                 l_type = r.get("leave_type") or "연차"
 
-                raw_dur = r.get("duration_hours")
-                if is_leave:
+                if not is_leave and is_all_day:
+                    st_dt = st_dt.replace(hour=9, minute=0, second=0, microsecond=0)
+                    ed_dt = ed_dt.replace(hour=18, minute=0, second=0, microsecond=0)
+                    st_time = st_dt
+                    ed_time = ed_dt
+                    dur_hours = 9.0
+                elif is_leave:
                     dur_hours = 4.5 if ("반차" in str(l_type) or "반일" in str(l_type)) else 9.0
-                elif raw_dur is not None and float(raw_dur) > 0:
-                    dur_hours = float(raw_dur)
                 else:
-                    total_sec = max(1800, (ed_dt - st_dt).total_seconds())
-                    dur_hours = round(total_sec / 3600.0, 1)
+                    raw_dur = r.get("duration_hours")
+                    if raw_dur is not None and float(raw_dur) > 0:
+                        dur_hours = float(raw_dur)
+                    else:
+                        total_sec = max(1800, (ed_dt - st_dt).total_seconds())
+                        dur_hours = round(total_sec / 3600.0, 1)
 
                 w_title = title_mappings.get(w_name) or team_info.get(w_name, {}).get("title", "")
                 w_team = team_mappings.get(w_name) or r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
