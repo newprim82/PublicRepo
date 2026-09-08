@@ -436,20 +436,21 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
         is_night_flag = False
     night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
     weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
-    allday_badge = "<span style='background:#fef9c3; color:#a16207; border:1px solid #fef08a; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>☀️ 종일</span>" if is_all_day else ""
+    # ☀️ 종일 태그는 미사용 정책에 따라 카드 내 노출 제거 (이동우 수석 카드 형식으로 일원화)
+    allday_badge = ""
 
     rank_color = get_job_title_color(w_title)
     border_color = rank_color
 
     card_padding = "10px 12px; margin-bottom: 8px;" if is_single_view else "10px 11px; margin-bottom: 9px;"
     if is_upcoming:
-        time_badge_label = f"종일예정 09:00" if is_all_day else f"시작예정 {time_str}"
+        time_badge_label = f"시작예정 {time_str}"
         time_badge_style = "background-color: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd;"
         elapsed_html = f"⏱️ <b>{mins_left}분 후 시작</b> (대기)" if is_single_view else f"⏱️ {mins_left}분 후 시작"
         elapsed_color = "#0284c7; font-weight:700;"
     else:
-        time_badge_label = f"종일 09:00~18:00" if is_all_day else (f"일정시작 {time_str}" if is_outlook else f"시작보고 {time_str}")
-        time_badge_style = "background-color: #fef9c3; color: #854d0e; border: 1px solid #fef08a;" if is_all_day else "background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb;"
+        time_badge_label = f"일정시작 {time_str}" if is_outlook else f"시작보고 {time_str}"
+        time_badge_style = "background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb;"
         elapsed_html = f"⏱️ 경과: <b>{elapsed_hours}h</b> ({elapsed_mins}분) {'⚠️ 초과' if is_overtime else ''}" if is_single_view else f"⏱️ 경과 {elapsed_hours}h ({elapsed_mins}분) {'⚠️' if is_overtime else ''}"
         elapsed_color = "#dc2626; font-weight:700;" if is_overtime else "#0f5132;"
 
