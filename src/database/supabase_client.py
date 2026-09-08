@@ -455,9 +455,10 @@ class DatabaseManager:
                 "actual_hours", "estimated_hours", "month_str", "date_str", "week_str", "week_label"
             ])
         
-        df["start_time"] = pd.to_datetime(df["start_time"], errors="coerce")
+        # T와 공백이 혼재되어도 NaT로 증발하지 않도록 공백으로 정규화 후 안전 파싱
+        df["start_time"] = pd.to_datetime(df["start_time"].astype(str).str.replace("T", " "), errors="coerce")
         if "end_time" in df.columns:
-            df["end_time"] = pd.to_datetime(df["end_time"], errors="coerce")
+            df["end_time"] = pd.to_datetime(df["end_time"].astype(str).str.replace("T", " "), errors="coerce")
             
         df["actual_minutes"] = pd.to_numeric(df.get("actual_minutes", 0), errors="coerce").fillna(0).astype(int)
         df["estimated_minutes"] = pd.to_numeric(df.get("estimated_minutes", 0), errors="coerce").fillna(0).astype(int)

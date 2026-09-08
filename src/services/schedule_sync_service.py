@@ -57,9 +57,9 @@ class ScheduleSyncService:
         # 오늘 아웃룩 일정 필터링
         today_out = outlook_df.copy()
         if not pd.api.types.is_datetime64_any_dtype(today_out["start_time"]):
-            today_out["start_time"] = pd.to_datetime(today_out["start_time"], errors="coerce")
+            today_out["start_time"] = pd.to_datetime(today_out["start_time"].astype(str).str.replace("T", " "), errors="coerce")
         if not pd.api.types.is_datetime64_any_dtype(today_out["end_time"]):
-            today_out["end_time"] = pd.to_datetime(today_out["end_time"], errors="coerce")
+            today_out["end_time"] = pd.to_datetime(today_out["end_time"].astype(str).str.replace("T", " "), errors="coerce")
 
         today_out = today_out[today_out["start_time"].dt.strftime("%Y-%m-%d") == today_str]
         today_out = today_out.drop_duplicates(subset=["worker_name", "subject", "start_time"])
@@ -204,6 +204,8 @@ class ScheduleSyncService:
 
                     if matched:
                         final_pend_df.at[p_idx, "has_both"] = True
+                        if r.get("schedule_type") == "교육":
+                            final_pend_df.at[p_idx, "log_type"] = "교육"
                         is_dup = True
                         break
 
@@ -233,6 +235,8 @@ class ScheduleSyncService:
 
                     if matched:
                         final_comp_df.at[c_idx, "has_both"] = True
+                        if r.get("schedule_type") == "교육":
+                            final_comp_df.at[c_idx, "log_type"] = "교육"
                         is_dup = True
                         break
 
@@ -346,9 +350,9 @@ class ScheduleSyncService:
         if not outlook_df.empty and "start_time" in outlook_df.columns:
             out_copy = outlook_df.copy()
             if not pd.api.types.is_datetime64_any_dtype(out_copy["start_time"]):
-                out_copy["start_time"] = pd.to_datetime(out_copy["start_time"], errors="coerce")
+                out_copy["start_time"] = pd.to_datetime(out_copy["start_time"].astype(str).str.replace("T", " "), errors="coerce")
             if not pd.api.types.is_datetime64_any_dtype(out_copy["end_time"]):
-                out_copy["end_time"] = pd.to_datetime(out_copy["end_time"], errors="coerce")
+                out_copy["end_time"] = pd.to_datetime(out_copy["end_time"].astype(str).str.replace("T", " "), errors="coerce")
 
             for _, r in out_copy.iterrows():
                 w_name = r.get("worker_name")
@@ -521,6 +525,15 @@ class ScheduleSyncService:
             combined_df = pd.concat([kakao_df, out_df_converted], ignore_index=True)
         else:
             combined_df = kakao_df.copy()
+
+        # 🎓 교육 작업 분류 보장: task_description이나 client_name에 교육/실습/세미나가 포함되어 있으면 log_type을 '교육'으로 보정
+        # (주 40h/52h 법정 근로시간 집계 시 자동 제외, 진행/완료 카드에는 정상 표출)
+        if not combined_df.empty and "task_description" in combined_df.columns:
+            edu_mask = combined_df["task_description"].astype(str).str.contains("교육|실습|세미나|학습", regex=True) | \
+                       combined_df.get("client_name", pd.Series("", index=combined_df.index)).astype(str).str.contains("교육|협회|아카데미", regex=True)
+            if "is_leave" in combined_df.columns:
+                edu_mask = edu_mask & (~combined_df["is_leave"].fillna(False).astype(bool))
+            combined_df.loc[edu_mask, "log_type"] = "교육"
 
         # 팀 및 직급 매핑 안전 보장
         if team_mappings and "worker_name" in combined_df.columns:

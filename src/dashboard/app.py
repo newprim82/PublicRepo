@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.1.8 (Split Pending Multi-Day Tasks into Daily 9.0h Records & Fix Live Card Display)
-APP_VERSION = "v2.1.9"
+# WorkTime Dashboard v2.2.0 (Display Education Cards with Badge & Exclude from 40h/52h Work Time)
+APP_VERSION = "v2.2.0"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -193,7 +193,7 @@ def load_data() -> pd.DataFrame:
 
         # week_str, week_label 안전 보장
         if "start_time" in df.columns:
-            df["start_time"] = pd.to_datetime(df["start_time"], errors="coerce")
+            df["start_time"] = pd.to_datetime(df["start_time"].astype(str).str.replace("T", " "), errors="coerce")
             df["month_str"] = df["start_time"].dt.strftime("%Y-%m")
             df["date_str"] = df["start_time"].dt.strftime("%Y-%m-%d")
             
