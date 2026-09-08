@@ -39,13 +39,16 @@ class StatsService:
         night_tasks_count = int(active_df["is_night_work"].sum()) if not active_df.empty else 0
         weekend_tasks_count = int(active_df["is_weekend_work"].sum()) if not active_df.empty else 0
         
-        # 예정 시간 초과 건수
+        # 예정 시간 초과 건수 (예정 시간 0h 초과인 작업 기준)
         if not active_df.empty:
-            overdue_mask = (active_df["status"] == "COMPLETED") & (active_df["actual_minutes"] > active_df["estimated_minutes"]) & (active_df["estimated_minutes"] > 0)
+            est_completed_mask = (active_df["status"] == "COMPLETED") & (active_df["estimated_minutes"] > 0)
+            overdue_mask = est_completed_mask & (active_df["actual_minutes"] > active_df["estimated_minutes"])
             overdue_tasks_count = int(overdue_mask.sum())
+            est_completed_count = int(est_completed_mask.sum())
         else:
             overdue_tasks_count = 0
-        overdue_rate = (overdue_tasks_count / completed_tasks * 100.0) if completed_tasks > 0 else 0.0
+            est_completed_count = 0
+        overdue_rate = (overdue_tasks_count / est_completed_count * 100.0) if est_completed_count > 0 else 0.0
 
         return {
             "total_hours": round(total_hours, 1),

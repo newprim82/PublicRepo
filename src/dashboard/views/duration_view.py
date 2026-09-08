@@ -7,7 +7,7 @@ from ...analytics.stats_service import StatsService
 def render_duration_view(df: pd.DataFrame):
     """⏱️ 예정 소요시간 대비 실제 시간 편차 분석 화면"""
     st.subheader("⏱️ 예정 소요시간 대비 실제 시간 편차 분석")
-    completed_df = df[df["status"] == "COMPLETED"].copy()
+    completed_df = df[(df["status"] == "COMPLETED") & (df["estimated_minutes"] > 0)].copy()
     
     if not completed_df.empty:
         completed_df["diff_minutes"] = completed_df["actual_minutes"] - completed_df["estimated_minutes"]

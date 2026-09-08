@@ -498,12 +498,16 @@ def show_kpi_overdue_dialog(df_data: pd.DataFrame):
     if df_data.empty:
         st.info("실제 완료 및 진행 중인 작업 데이터가 없습니다.")
         return
-    overdue_df = df_data[df_data["actual_hours"] > df_data["estimated_hours"]].copy()
+    # 예정 시간이 0h 초과인 작업 중에서 실제 소요 시간이 예정 시간을 초과한 건만 필터링 (0h 미입력 건은 제외)
+    overdue_df = df_data[(df_data["actual_hours"] > df_data["estimated_hours"]) & (df_data["estimated_hours"] > 0)].copy()
     if not overdue_df.empty:
         overdue_df["diff_hours"] = (overdue_df["actual_hours"] - overdue_df["estimated_hours"]).round(1)
         overdue_df = overdue_df.sort_values(by="diff_hours", ascending=False).reset_index(drop=True)
         
-    st.markdown(f"### ⚠️ 예정 시간 초과 작업: 총 **{len(overdue_df)}건** (초과율 {round(len(overdue_df)/max(len(df_data), 1)*100, 1)}%)")
+    valid_est_df = df_data[df_data["estimated_hours"] > 0]
+    denom = len(valid_est_df) if not valid_est_df.empty else len(df_data)
+    overdue_rate = round(len(overdue_df) / max(denom, 1) * 100, 1)
+    st.markdown(f"### ⚠️ 예정 시간 초과 작업: 총 **{len(overdue_df)}건** (초과율 {overdue_rate}%)")
     
     if overdue_df.empty:
         st.success("🎉 예정 시간을 초과한 작업이 전혀 없습니다!")
