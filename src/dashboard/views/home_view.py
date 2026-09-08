@@ -215,10 +215,10 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 
     # 🧹 24시간 이상 방치된 미마감(PENDING) 작업 감지 알림
     now_kst = get_current_kst_time()
-    if not df.empty and "status" in df.columns:
-        p_mask = df["status"] == "PENDING"
+    if not df_raw.empty and "status" in df_raw.columns:
+        p_mask = df_raw["status"] == "PENDING"
         if p_mask.any():
-            all_pend = df[p_mask].copy()
+            all_pend = df_raw[p_mask].copy()
             all_pend["_st_dt"] = pd.to_datetime(all_pend["start_time"], errors="coerce")
             stale_pends = all_pend[(now_kst - all_pend["_st_dt"]) >= timedelta(hours=24)]
             if not stale_pends.empty:
@@ -228,7 +228,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 with col_w2:
                     st.write("")
                     if st.button(f"🧹 미마감 {len(stale_pends)}건 정리하기", key="btn_open_stale_dialog", use_container_width=True, type="primary"):
-                        show_stale_pending_tasks_dialog(df)
+                        show_stale_pending_tasks_dialog(df_raw)
 
     if today_df.empty and pend_df.empty and comp_df.empty:
         st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 작업 보고 또는 일정이 아직 없습니다.")
