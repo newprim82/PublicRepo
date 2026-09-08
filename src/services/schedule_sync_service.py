@@ -239,9 +239,14 @@ class ScheduleSyncService:
                     "is_night_work": False,
                     "is_weekend_work": False
                 })
-            # B. 현재 시간이 시작 시각 이후이고 종료 이전 -> 실시간 진행 중 작업 승격
-            elif now >= st_dt:
-                pct = min(99, max(5, int((elapsed_sec / total_sec) * 100)))
+            # B. 시작 30분 전부터 종료 이전 -> 실시간 진행 중 작업 승격 (시작 전에는 프로그레스 바 0%)
+            elif now >= (st_dt - timedelta(minutes=30)):
+                if now >= st_dt:
+                    pct = min(99, max(5, int((elapsed_sec / total_sec) * 100)))
+                    actual_mins = int((elapsed_sec / 60))
+                else:
+                    pct = 0
+                    actual_mins = 0
                 promoted_pend_rows.append({
                     "msg_hash": f"OUTLOOK_PEND_{r.get('entry_id', '')}",
                     "log_type": "작업",
@@ -253,7 +258,7 @@ class ScheduleSyncService:
                     "start_time": st_time,
                     "end_time": ed_time,
                     "estimated_minutes": int(dur_hours * 60),
-                    "actual_minutes": int((elapsed_sec / 60)),
+                    "actual_minutes": actual_mins,
                     "total_hours": dur_hours,
                     "status": "PENDING",
                     "is_outlook": True,
@@ -414,16 +419,20 @@ class ScheduleSyncService:
                     log_type = "회의" if sched_type == "회의" else ("교육" if sched_type == "교육" else "작업")
 
                     is_completed = (now >= ed_dt)
-                    is_pending = (now >= st_dt and now < ed_dt)
+                    is_pending = (now >= (st_dt - timedelta(minutes=30)) and now < ed_dt)
                     if is_completed:
                         status = "COMPLETED"
                         act_h = dur_hours
                         act_m = int(dur_hours * 60)
                     elif is_pending:
                         status = "PENDING"
-                        elapsed_sec = max(0, (now - st_dt).total_seconds())
-                        act_h = round(elapsed_sec / 3600.0, 1)
-                        act_m = int(elapsed_sec / 60)
+                        if now >= st_dt:
+                            elapsed_sec = max(0, (now - st_dt).total_seconds())
+                            act_h = round(elapsed_sec / 3600.0, 1)
+                            act_m = int(elapsed_sec / 60)
+                        else:
+                            act_h = 0.0
+                            act_m = 0
                     else:
                         # 🔮 미래 예정 일정: 미래시는 아직 근무하지 않았으므로 0.0h 부여
                         status = "SCHEDULED"
