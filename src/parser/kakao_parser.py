@@ -16,15 +16,18 @@ _RE_BRACKET = re.compile(r'\[.*?\]')
 _RE_DELIMS = re.compile(r'[,/&+\-_\\|]+')
 _RE_EXTRA_WORKERS = re.compile(r'^외\s*\d+명?$')
 
-# 🎯 완료 오타(완려, 완뇨 등) 및 다양한 완료 표현 정규식/단어셋
-_END_KEYWORD_PAT = r'(?:완[료려뇨룡]|종료|마무리|마침|끝|철수|완)'
+# 🎯 완료 오타(완려, 완뇨, 완룡, 완룟 등) 및 다양한 현장 완료 표현 정규식/단어셋
+_END_KEYWORD_PAT = r'(?:완[료려뇨룡룟]|종료|마무리|마침|마[쳤쳣]습니다|끝|철수|퇴근|완)'
 _SIMPLE_END_WORDS = frozenset([
-    "완료", "완려", "완뇨", "완룡", "완료요", "완려요", "완료했습니다", "완려했습니다", 
-    "완료함", "완려함", "완료욥", "완료용", "완",
-    "작업완료", "작업완려", "지원완료", "지원완려",
-    "종료", "작업종료", "지원종료", "종료했습니다", "종료요",
-    "마무리", "작업마무리", "지원마무리", "마무리했습니다", "마무리요",
-    "끝", "작업끝", "끝났습니다", "끝남", "철수", "철수합니다"
+    "완료", "완려", "완뇨", "완룡", "완룟", "완료요", "완려요", "완뇨요", "완료용", "완료욥", "완료오", "완",
+    "완료했습니다", "완려했습니다", "완뇨했습니다", "완료함", "완려함", "완료함당", "완료했음", "완료다",
+    "작업완료", "작업완려", "작업완뇨", "지원완료", "지원완려", "업무완료", "현장완료",
+    "종료", "작업종료", "지원종료", "종료했습니다", "종료합니다", "종료요", "종료함", "종료했음",
+    "마무리", "작업마무리", "지원마무리", "마무리했습니다", "마무리합니다", "마무리요", "마무리함", "마무리했음",
+    "마침", "마쳤습니다", "마쳣습니다", "마침요", "마침니다",
+    "끝", "작업끝", "끝났습니다", "끝났음", "끝남", "끝요", "끝이요",
+    "철수", "철수합니다", "철수함", "철수요", "퇴근", "퇴근합니다", "퇴근요",
+    "수고하셨습니다", "수고하셔요", "수고하세요", "수고많으셨습니다"
 ])
 
 @dataclass
@@ -462,7 +465,11 @@ class KakaoMessageParser:
                         is_explicit_time=True
                     )
                     
-        if cls.SIMPLE_END_PATTERN.search(target_text) or target_text in _SIMPLE_END_WORDS:
+        clean_text = re.sub(r'[\s!~.?^ㅋㅎ_]+$', '', target_text).strip()
+        if (cls.SIMPLE_END_PATTERN.search(target_text) or 
+            target_text in _SIMPLE_END_WORDS or 
+            clean_text in _SIMPLE_END_WORDS or 
+            cls.SIMPLE_END_PATTERN.search(clean_text)):
             worker_info = parse_worker_profile(msg.sender_profile)
             return ParsedTaskEnd(
                 actual_minutes=0,

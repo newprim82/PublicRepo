@@ -208,6 +208,37 @@ class DatabaseManager:
                         "raw_end_message": r.raw_end_message
                     })
                 
+                # 🛡️ 완료(COMPLETED) 작업의 진행중(PENDING) 강등/원복 원천 차단 가드:
+                # 이미 COMPLETED로 확정된 레코드가 신규 수집기의 PENDING에 의해 덮어써지지 않도록 기존 완료 상태 보존
+                pending_hashes = [p["msg_hash"] for p in payloads if p.get("status") == "PENDING"]
+                if pending_hashes:
+                    try:
+                        # 100개 단위로 기존 COMPLETED 레코드 조회
+                        completed_map = {}
+                        for i in range(0, len(pending_hashes), 100):
+                            sub_hashes = pending_hashes[i:i+100]
+                            res_c = self.supabase.table("worktime_work_logs") \
+                                .select("msg_hash, status, end_time, actual_minutes, raw_end_message") \
+                                .in_("msg_hash", sub_hashes) \
+                                .eq("status", "COMPLETED") \
+                                .execute()
+                            if res_c.data:
+                                for r_c in res_c.data:
+                                    completed_map[r_c["msg_hash"]] = r_c
+                        
+                        # 이미 COMPLETED인 레코드는 PENDING으로 다운그레이드되지 않도록 복원
+                        if completed_map:
+                            for p in payloads:
+                                h = p.get("msg_hash")
+                                if h in completed_map and p.get("status") == "PENDING":
+                                    old_c = completed_map[h]
+                                    p["status"] = "COMPLETED"
+                                    p["end_time"] = old_c.get("end_time")
+                                    p["actual_minutes"] = old_c.get("actual_minutes") or p.get("estimated_minutes") or 0
+                                    p["raw_end_message"] = old_c.get("raw_end_message") or p.get("raw_end_message") or ""
+                    except Exception as e_guard:
+                        print(f"[Supabase 완료 보호 가드 알림]: {e_guard}")
+
                 # 100개 단위 배치 Upsert
                 for i in range(0, len(payloads), 100):
                     batch = payloads[i:i+100]
@@ -232,11 +263,13 @@ class DatabaseManager:
                         raw_start_message, raw_end_message
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(msg_hash) DO UPDATE SET
-                        actual_minutes=excluded.actual_minutes,
-                        end_time=excluded.end_time,
-                        status=excluded.status,
-                        is_night_work=excluded.is_night_work,
-                        raw_end_message=excluded.raw_end_message
+                        actual_minutes = CASE WHEN work_logs.status = 'COMPLETED' AND excluded.status = 'PENDING' THEN work_logs.actual_minutes ELSE excluded.actual_minutes END,
+                        end_time = CASE WHEN work_logs.status = 'COMPLETED' AND excluded.status = 'PENDING' THEN work_logs.end_time ELSE excluded.end_time END,
+                        status = CASE WHEN work_logs.status = 'COMPLETED' AND excluded.status = 'PENDING' THEN work_logs.status ELSE excluded.status END,
+                        raw_end_message = CASE WHEN work_logs.status = 'COMPLETED' AND excluded.status = 'PENDING' THEN work_logs.raw_end_message ELSE excluded.raw_end_message END,
+                        is_night_work = excluded.is_night_work,
+                        worker_title = CASE WHEN excluded.worker_title != '' THEN excluded.worker_title ELSE work_logs.worker_title END,
+                        worker_team = CASE WHEN excluded.worker_team != '' THEN excluded.worker_team ELSE work_logs.worker_team END
                 """, (
                     r.msg_hash, r.log_type, r.worker_name, r.worker_title, r.worker_team,
                     r.client_name, r.task_description, r.estimated_minutes, r.actual_minutes,
