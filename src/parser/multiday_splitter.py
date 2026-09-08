@@ -1,7 +1,16 @@
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 import pandas as pd
+
+KST_TIMEZONE = timezone(timedelta(hours=9))
+
+def get_current_kst_time() -> datetime:
+    """Streamlit Cloud(UTC) 및 로컬 환경 모두에서 한국 표준시(KST) 반환"""
+    try:
+        return datetime.now(timezone.utc).astimezone(KST_TIMEZONE).replace(tzinfo=None)
+    except Exception:
+        return datetime.now()
 
 DAY_PATTERN = re.compile(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', re.IGNORECASE)
 
@@ -105,7 +114,7 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
         sub_rec["is_night_work"] = False  # 주간 다일 작업
         sub_rec["is_weekend_work"] = is_weekend
 
-        now_dt = datetime.now()
+        now_dt = get_current_kst_time()
         if is_pending:
             if curr_ed <= now_dt:
                 # 9시간 작업 시간이 이미 종료된 일차 -> 자동 완료(COMPLETED)

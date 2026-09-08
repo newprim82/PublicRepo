@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.3 (Auto-complete multiday 9h records after shift)
-APP_VERSION = "v2.2.3"
+# WorkTime Dashboard v2.2.4 (Fix KST timezone for multiday auto-complete & remove edu badge)
+APP_VERSION = "v2.2.4"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -36,6 +36,7 @@ from src.collector.kakao_auto_collector import (
     start_background_collector,
     get_collector_countdown_info,
     run_collection_cycle,
+    get_current_kst_time,
     WIN32_AVAILABLE
 )
 
@@ -130,7 +131,7 @@ if st.session_state.get("_applied_app_version") != APP_VERSION:
 # 3. 데이터 로딩 (멀티데이 분할 원본 중복제거, 정규화, 야간/주말 보장)
 # -------------------------------------------------------------
 # -------------------------------------------------------------
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=30, show_spinner=False)
 def load_data() -> pd.DataFrame:
     df = db_manager.fetch_all_work_logs()
     
@@ -166,7 +167,7 @@ def load_data() -> pd.DataFrame:
 
         # 🛡️ PENDING 다일 작업의 일일 9.0h 정규화 및 (1/N일차) 보장 (모달 및 테이블 27h 표출 원천 방지 및 9시간 경과 시 자동 완료)
         if "task_description" in df.columns:
-            now_dt = datetime.now()
+            now_dt = get_current_kst_time()
             for idx, r in df.iterrows():
                 if str(r.get("status", "")).upper() == "PENDING":
                     raw_s = str(r.get("raw_start_message") or "")

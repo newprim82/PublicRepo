@@ -442,7 +442,7 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
     weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if r.get("is_weekend_work") else ""
     is_edu_flag = bool("교육" in str(r.get("log_type", "")) or "실습" in str(r.get("task_description", "")) or "교육" in str(r.get("task_description", "")) or "교육" in str(r.get("client_name", "")))
-    edu_badge = "<span style='background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:800; margin-left:3px;'>🎓 교육</span>" if is_edu_flag else ""
+    edu_badge = ""  # 🎓 교육 태그는 상단 및 진행바 테두리 테마로 충분하므로 줄바꿈 방지를 위해 제거
     # ☀️ 종일 태그는 미사용 정책에 따라 카드 내 노출 제거 (이동우 수석 카드 형식으로 일원화)
     allday_badge = ""
 

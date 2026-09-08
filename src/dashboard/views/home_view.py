@@ -300,7 +300,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                 disp_h = r.get("display_hours")
                                 act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
                                 is_edu = bool("교육" in str(r.get("log_type", "")) or "실습" in str(r.get("task_description", "")) or "교육" in str(r.get("task_description", "")) or "교육" in str(r.get("client_name", "")))
-                                edu_badge = "<span style='background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:800; margin-left:3px;'>🎓 교육</span>" if is_edu else ""
+                                edu_badge = ""  # 🎓 교육 태그는 우측 시간 뱃지 및 테두리 색상으로 충분하므로 줄바꿈 방지를 위해 제거
                                 comp_border = "#f59e0b" if is_edu else ("#a855f7" if is_l else get_job_title_color(w_title))
                                 badge_bg = "#fef3c7" if is_edu else ("#f3e8ff" if is_l else "#ede9fe")
                                 badge_c = "#b45309" if is_edu else ("#7e22ce" if is_l else "#5b21b6")
@@ -362,7 +362,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                             disp_h = r.get("display_hours")
                             act_h = float(disp_h) if (is_l and pd.notna(disp_h) and float(disp_h) > 0) else r["actual_hours"]
                             is_edu = bool("교육" in str(r.get("log_type", "")) or "실습" in str(r.get("task_description", "")) or "교육" in str(r.get("task_description", "")) or "교육" in str(r.get("client_name", "")))
-                            edu_badge = "<span style='background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:800; margin-left:3px;'>🎓 교육</span>" if is_edu else ""
+                            edu_badge = ""  # 🎓 교육 태그는 우측 시간 뱃지 및 테두리 색상으로 충분하므로 줄바꿈 방지를 위해 제거
                             st_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) else "?"
                             ed_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) else "완료"
                             comp_border = "#f59e0b" if is_edu else ("#a855f7" if is_l else get_job_title_color(w_title))
