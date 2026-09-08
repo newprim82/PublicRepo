@@ -95,7 +95,8 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
         if "id" in sub_rec and day_idx > 0:
             del sub_rec["id"]
             
-        sub_rec["msg_hash"] = f"{orig_hash}_d{day_idx + 1}"
+        # 1일차는 원본 레코드의 msg_hash를 그대로 유지하여 DB의 27h 등 통짜 데이터를 일일 9.0h로 제자리 덮어쓰기 보장
+        sub_rec["msg_hash"] = orig_hash if day_idx == 0 else f"{orig_hash}_d{day_idx + 1}"
         sub_rec["estimated_minutes"] = min(curr_day_minutes, STANDARD_DAY_MINUTES)
         sub_rec["estimated_hours"] = round(sub_rec["estimated_minutes"] / 60.0, 1)
         sub_rec["total_hours"] = sub_rec["estimated_hours"]

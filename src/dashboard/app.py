@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.0 (Display Education Cards with Badge & Exclude from 40h/52h Work Time)
-APP_VERSION = "v2.2.0"
+# WorkTime Dashboard v2.2.1 (Fix Kim Kyunghyun 27h to 9.0h (1/3일차) in DB & Modals Permanently)
+APP_VERSION = "v2.2.1"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -162,6 +162,24 @@ def load_data() -> pd.DataFrame:
                             dup_origin_indices.append(idx)
                 if dup_origin_indices:
                     df = df.drop(index=dup_origin_indices).reset_index(drop=True)
+
+        # 🛡️ PENDING 다일 작업의 일일 9.0h 정규화 및 (1/N일차) 보장 (모달 및 테이블 27h 표출 원천 방지)
+        if "task_description" in df.columns:
+            for idx, r in df.iterrows():
+                if str(r.get("status", "")).upper() == "PENDING":
+                    raw_s = str(r.get("raw_start_message") or "")
+                    m_d = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_s, re.IGNORECASE)
+                    if m_d and float(m_d.group(1)) >= 1.5:
+                        tot_d = int(float(m_d.group(1)))
+                        # 1일차 정규 9.0h (540분) 캡 적용
+                        df.at[idx, "estimated_minutes"] = 540
+                        df.at[idx, "estimated_hours"] = 9.0
+                        df.at[idx, "total_hours"] = 9.0
+                        if "display_hours" in df.columns:
+                            df.at[idx, "display_hours"] = 9.0
+                        cur_desc = str(r.get("task_description") or "").strip()
+                        if not re.search(r'\(\d+/\d+일차\)', cur_desc):
+                            df.at[idx, "task_description"] = f"{cur_desc} (1/{tot_d}일차)"
 
         mappings = TeamService.get_team_mappings()
         if mappings:

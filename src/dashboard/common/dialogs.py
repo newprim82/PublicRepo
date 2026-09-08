@@ -339,6 +339,17 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
             st.caption("💡 표에서 행을 클릭하시면 시작 보고 원본 메시지가 표시됩니다.")
             disp_pend = strip_tz(pend_df.copy())
             disp_pend["end_time"] = None  # 🌟 진행 중인 작업은 미완료 상태이므로 완료 보고시각은 None 보장
+            
+            # 🛡️ PENDING 다일 작업의 일일 9.0h 예정시간 및 (1/N일차) 표기 안전 보장 (27h 표출 원천 방지)
+            for p_i, p_r in disp_pend.iterrows():
+                raw_s = str(p_r.get("raw_start_message") or "")
+                m_d = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_s, re.IGNORECASE)
+                if m_d and float(m_d.group(1)) >= 1.5:
+                    tot_d = int(float(m_d.group(1)))
+                    disp_pend.at[p_i, "estimated_hours"] = 9.0
+                    cur_desc = str(p_r.get("task_description") or "").strip()
+                    if not re.search(r'\(\d+/\d+일차\)', cur_desc):
+                        disp_pend.at[p_i, "task_description"] = f"{cur_desc} (1/{tot_d}일차)"
             sel_t2 = st.dataframe(
                 disp_pend[[
                     "start_time", "end_time", "worker_name", "worker_team",
