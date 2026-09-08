@@ -9,12 +9,22 @@ _RE_TIME_RANGE = re.compile(r'(\d{1,2}):(\d{2})\s*[~-]\s*(\d{1,2}):(\d{2})')
 _RE_DAYS = re.compile(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)')
 _RE_HOURS = re.compile(r'(\d+(?:\.\d+)?)\s*(?:시간|h|H|hours?)')
 _RE_MINUTES = re.compile(r'(\d+)\s*(?:분|m|M|mins?)')
-_RE_NUM_ONLY = re.compile(r'(\d+(?:\.\d+)?)(?:\s*예정|\s*소요|\s*완료|\Z)')
+_RE_NUM_ONLY = re.compile(r'(\d+(?:\.\d+)?)(?:\s*예정|\s*소요|\s*완[료려뇨룡]|\s*종료|\s*마무리|\s*끝|\Z)')
 _RE_PAREN = re.compile(r'\(.*?\)')
 _RE_BRACKET = re.compile(r'\[.*?\]')
 _RE_DELIMS = re.compile(r'[,/&+\-_\\|]+')
 _RE_EXTRA_WORKERS = re.compile(r'^외\s*\d+명?$')
-_SIMPLE_END_WORDS = frozenset(["완료", "작업완료", "지원완료", "완료했습니다", "완료요"])
+
+# 🎯 완료 오타(완려, 완뇨 등) 및 다양한 완료 표현 정규식/단어셋
+_END_KEYWORD_PAT = r'(?:완[료려뇨룡]|종료|마무리|마침|끝|철수|완)'
+_SIMPLE_END_WORDS = frozenset([
+    "완료", "완려", "완뇨", "완룡", "완료요", "완려요", "완료했습니다", "완려했습니다", 
+    "완료함", "완려함", "완료욥", "완료용", "완",
+    "작업완료", "작업완려", "지원완료", "지원완려",
+    "종료", "작업종료", "지원종료", "종료했습니다", "종료요",
+    "마무리", "작업마무리", "지원마무리", "마무리했습니다", "마무리요",
+    "끝", "작업끝", "끝났습니다", "끝남", "철수", "철수합니다"
+])
 
 @dataclass
 class RawKakaoMessage:
@@ -236,14 +246,14 @@ class KakaoMessageParser:
     ]
 
     END_WITH_TIME_PATTERNS = [
-        re.compile(r'(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H|hours?)\s*)?(?:\d+\s*(?:분|m|M|mins?)\s*)?)\s*(?:소요\s*)?(?:작업\s*)?(?:지원\s*)?완료', re.IGNORECASE),
-        re.compile(r'(?P<time>\d+(?:\.\d+)?)\s*(?:소요\s*)?(?:작업\s*)?(?:지원\s*)?완료', re.IGNORECASE),
-        re.compile(r'(?:작업\s*|지원\s*)?완료\s*[\/:,\(\[\s]+\s*(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H|hours?)\s*)?(?:\d+\s*(?:분|m|M|mins?)\s*)?)', re.IGNORECASE),
-        re.compile(r'(?:작업\s*|지원\s*)?완료\s*[\/:,\(\[\s]+\s*(?P<time>\d+(?:\.\d+)?)', re.IGNORECASE),
+        re.compile(rf'(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H|hours?)\s*)?(?:\d+\s*(?:분|m|M|mins?)\s*)?)\s*(?:소요\s*)?(?:작업\s*)?(?:지원\s*)?{_END_KEYWORD_PAT}', re.IGNORECASE),
+        re.compile(rf'(?P<time>\d+(?:\.\d+)?)\s*(?:소요\s*)?(?:작업\s*)?(?:지원\s*)?{_END_KEYWORD_PAT}', re.IGNORECASE),
+        re.compile(rf'(?:작업\s*|지원\s*)?{_END_KEYWORD_PAT}\s*[\/:,\(\[\s]+\s*(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H|hours?)\s*)?(?:\d+\s*(?:분|m|M|mins?)\s*)?)', re.IGNORECASE),
+        re.compile(rf'(?:작업\s*|지원\s*)?{_END_KEYWORD_PAT}\s*[\/:,\(\[\s]+\s*(?P<time>\d+(?:\.\d+)?)', re.IGNORECASE),
         re.compile(r'(?P<time>(?:\d+(?:\.\d+)?\s*(?:days?|d|D|일)\s*)?(?:\d+(?:\.\d+)?\s*(?:시간|h|H)\s*)?(?:\d+\s*(?:분|m|M)\s*)?)\s*소요', re.IGNORECASE),
     ]
     
-    SIMPLE_END_PATTERN = re.compile(r'^(?:작업\s*|지원\s*)?완료(?:\s*했습니다|\s*합니다|\Z|\!|\.)', re.IGNORECASE)
+    SIMPLE_END_PATTERN = re.compile(rf'^(?:작업\s*|지원\s*)?{_END_KEYWORD_PAT}(?:\s*했습니다|\s*합니다|\s*함|\s*요|\s*욥|\s*용|\Z|\!|\.)', re.IGNORECASE)
 
     @classmethod
     def parse_raw_text_to_messages(cls, full_text: str) -> List[RawKakaoMessage]:
@@ -265,7 +275,7 @@ class KakaoMessageParser:
                 reply_content = None
                 body_content = full_raw
                 
-                reply_match = re.search(r'^(.*?)에게\s*답장\s*\n([\s\S]*?)(?=\n[^\n]+완료|\n\d|\Z)', full_raw)
+                reply_match = re.search(rf'^(.*?)에게\s*답장\s*\n([\s\S]*?)(?=\n[^\n]+{_END_KEYWORD_PAT}|\n\d|\Z)', full_raw)
                 if reply_match:
                     reply_sender = reply_match.group(1).strip()
                     reply_content = reply_match.group(2).strip()
@@ -388,7 +398,7 @@ class KakaoMessageParser:
         task_desc = group_dict.get("task", "").strip()
         est_str = (group_dict.get("est") or "").strip()
         
-        is_direct_completed = bool(est_str and (("완료" in est_str) or ("소요" in est_str)))
+        is_direct_completed = bool(est_str and (any(k in est_str for k in ["완료", "완려", "완뇨", "완룡", "소요", "종료", "마무리", "끝"]) or re.search(_END_KEYWORD_PAT, est_str)))
         direct_actual_minutes = parse_duration_to_minutes(est_str) if is_direct_completed else 0
         est_minutes = parse_duration_to_minutes(est_str) if est_str else 0
         
