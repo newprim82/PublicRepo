@@ -403,17 +403,22 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     is_all_day = bool(r.get("is_all_day") == True)
     is_outlook = bool(r.get("is_outlook") == True)
 
+    est_hours = _safe_float(r.get("total_hours")) or _safe_float(r.get("estimated_hours")) or 0.0
+    # 🌟 다일(Multi-day, 2days/3days 등) 작업은 당일 카드 표출 시 하루 9.0시간 기준으로 정규화
+    raw_msg = str(r.get("raw_start_message") or "")
+    m_days = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_msg, re.IGNORECASE)
+    if (m_days and float(m_days.group(1)) >= 1.5 and est_hours > 9.0) or est_hours >= 13.5:
+        est_hours = 9.0
+
     if is_upcoming:
         elapsed_mins = 0
         elapsed_hours = 0.0
         is_overtime = False
         mins_left = max(1, (abs(diff_sec) + 59) // 60)
-        est_hours = _safe_float(r.get("total_hours")) or _safe_float(r.get("estimated_hours")) or 0.0
         raw_pct = 0
     else:
         elapsed_mins = max(0, diff_sec // 60)
         elapsed_hours = round(elapsed_mins / 60.0, 1)
-        est_hours = _safe_float(r.get("total_hours")) or _safe_float(r.get("estimated_hours")) or 0.0
         is_overtime = elapsed_hours > est_hours and est_hours > 0
 
         if is_outlook and "outlook_progress_pct" in r and pd.notna(r.get("outlook_progress_pct")):
@@ -458,6 +463,9 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     time_badge_padding = "2px 8px" if is_single_view else "1.5px 6px"
     is_leave = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
     clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
+    if m_days and float(m_days.group(1)) >= 1.5 and not re.search(r'\(\d+/\d+일차\)', clean_desc):
+        tot_d = int(float(m_days.group(1)))
+        clean_desc = f"{clean_desc} (1/{tot_d}일차)"
 
     is_both = bool(r.get("has_both") or (r.get("is_outlook") and r.get("is_kakao")))
 

@@ -47,12 +47,24 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
     else:
         return [record]
 
-    total_minutes = int(record.get("actual_minutes") or 0)
-    if total_minutes <= 0:
-        return [record]
-
     # 기본 1일당 9시간(540분)
     STANDARD_DAY_MINUTES = 540
+
+    raw_s = str(record.get("raw_start_message") or "")
+    raw_e = str(record.get("raw_end_message") or "")
+    m_s = DAY_PATTERN.search(raw_s)
+    m_e = DAY_PATTERN.search(raw_e)
+    val_s = float(m_s.group(1)) if m_s else 0.0
+    val_e = float(m_e.group(1)) if m_e else 0.0
+    day_val = max(val_s, val_e)
+
+    if day_val >= 1.0:
+        total_minutes = int(day_val * STANDARD_DAY_MINUTES)
+    else:
+        total_minutes = max(int(record.get("actual_minutes") or 0), int(record.get("estimated_minutes") or 0))
+
+    if total_minutes <= 0:
+        return [record]
     
     import math
     total_days = max(1, math.ceil(total_minutes / STANDARD_DAY_MINUTES))
@@ -65,6 +77,7 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
     # 기존에 혹시 붙어있던 (N/M일차) 패턴이 있다면 정리
     orig_desc = re.sub(r'\s*\(\d+/\d+일차\)$', '', orig_desc)
     orig_est_m = int(record.get("estimated_minutes") or total_minutes)
+    is_pending = (str(record.get("status", "")).upper() == "PENDING")
 
     while remaining_minutes > 0:
         curr_day_minutes = min(remaining_minutes, STANDARD_DAY_MINUTES)
@@ -83,16 +96,35 @@ def split_multiday_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
             del sub_rec["id"]
             
         sub_rec["msg_hash"] = f"{orig_hash}_d{day_idx + 1}"
-        sub_rec["start_time"] = curr_st.isoformat()
-        sub_rec["end_time"] = curr_ed.isoformat()
-        sub_rec["actual_minutes"] = curr_day_minutes
-        sub_rec["actual_hours"] = curr_day_hours
-        sub_rec["estimated_minutes"] = min(curr_day_minutes, orig_est_m)
-        # 🌟 원래 작업 내용 유지 + 괄호 일차 표기 (예: "업무지원 (1/2일차)")
+        sub_rec["estimated_minutes"] = min(curr_day_minutes, STANDARD_DAY_MINUTES)
+        sub_rec["estimated_hours"] = round(sub_rec["estimated_minutes"] / 60.0, 1)
+        sub_rec["total_hours"] = sub_rec["estimated_hours"]
+        # 🌟 원래 작업 내용 유지 + 괄호 일차 표기 (예: "업무지원 (1/3일차)")
         sub_rec["task_description"] = f"{orig_desc} ({day_idx + 1}/{total_days}일차)"
-        sub_rec["status"] = "COMPLETED"
         sub_rec["is_night_work"] = False  # 주간 다일 작업
         sub_rec["is_weekend_work"] = is_weekend
+
+        if is_pending:
+            if day_idx == 0:
+                sub_rec["start_time"] = curr_st.isoformat()
+                sub_rec["end_time"] = None
+                sub_rec["actual_minutes"] = 0
+                sub_rec["actual_hours"] = 0.0
+                sub_rec["status"] = "PENDING"
+            else:
+                next_st = curr_st.replace(hour=9, minute=0, second=0, microsecond=0)
+                next_ed = curr_st.replace(hour=18, minute=0, second=0, microsecond=0)
+                sub_rec["start_time"] = next_st.isoformat()
+                sub_rec["end_time"] = next_ed.isoformat()
+                sub_rec["actual_minutes"] = 0
+                sub_rec["actual_hours"] = 0.0
+                sub_rec["status"] = "SCHEDULED"
+        else:
+            sub_rec["start_time"] = curr_st.isoformat()
+            sub_rec["end_time"] = curr_ed.isoformat()
+            sub_rec["actual_minutes"] = curr_day_minutes
+            sub_rec["actual_hours"] = curr_day_hours
+            sub_rec["status"] = "COMPLETED"
         
         sub_records.append(sub_rec)
         
