@@ -1052,3 +1052,90 @@ def show_email_report_dialog(selected_team: str):
             st.markdown(card_html, unsafe_allow_html=True)
 
 
+@st.dialog("🧹 24시간 초과 미마감(진행 중) 작업 정리 도구", width="large")
+def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
+    inject_dialog_title_style()
+    now = datetime.now()
+    
+    if df_data.empty or "status" not in df_data.columns:
+        st.info("작업 데이터가 없습니다.")
+        return
+        
+    pend_df = df_data[df_data["status"] == "PENDING"].copy()
+    if pend_df.empty:
+        st.success("🎉 현재 진행 중인 미완료 작업이 없습니다.")
+        return
+        
+    pend_df["_st_dt"] = pd.to_datetime(pend_df["start_time"], errors="coerce")
+    stale_mask = (now - pend_df["_st_dt"]) >= timedelta(hours=24)
+    stale_df = pend_df[stale_mask].sort_values(by="_st_dt", ascending=True).reset_index(drop=True)
+    
+    if stale_df.empty:
+        st.success("🎉 24시간을 초과하여 방치된 미마감 작업이 없습니다. 모든 진행 작업이 정상 윈도우 내에 있습니다.")
+        return
+
+    stale_df["elapsed_hours"] = ((now - stale_df["_st_dt"]).dt.total_seconds() / 3600.0).round(1)
+    
+    st.markdown(f"### ⚠️ 24시간 이상 미마감 작업: 총 **{len(stale_df)}건**")
+    st.caption("카카오톡 완료 보고를 누락하여 하루 이상 '진행 중'으로 남아있는 작업입니다. 예정시간 기준으로 일괄 완료 처리하거나, 개별 완료시간을 지정하여 마감할 수 있습니다.")
+
+    c_btn1, c_btn2 = st.columns([1.5, 2.5])
+    with c_btn1:
+        if st.button("⚡ 전체 예정시간 기준 일괄 완료", type="primary", use_container_width=True, help="모든 미마감 작업을 각 작업의 예정시간(미지정시 1시간)으로 즉시 완료 마감합니다."):
+            hashes = stale_df["msg_hash"].dropna().tolist()
+            from src.database.supabase_client import db_manager
+            updated = db_manager.resolve_stale_pending_tasks(hashes)
+            st.success(f"총 {updated}건의 미마감 작업이 정상적으로 완료 마감되었습니다!")
+            from src.dashboard.app import clear_all_web_caches
+            clear_all_web_caches()
+            st.rerun()
+
+    st.markdown("---")
+    
+    disp_df = stale_df.copy()
+    disp_df["start_str"] = disp_df["_st_dt"].dt.strftime("%Y-%m-%d %H:%M")
+    
+    sel = st.dataframe(
+        disp_df[[
+            "start_str", "worker_name", "worker_team", "client_name", "task_description",
+            "estimated_hours", "elapsed_hours"
+        ]].rename(columns={
+            "start_str": "시작일시",
+            "worker_name": "담당자",
+            "worker_team": "소속팀",
+            "client_name": "고객사",
+            "task_description": "작업내용",
+            "estimated_hours": "예정(h)",
+            "elapsed_hours": "경과시간(h)"
+        }),
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="stale_tasks_table"
+    )
+    
+    if sel and hasattr(sel, "selection") and sel.selection.rows:
+        sel_row = stale_df.iloc[sel.selection.rows[0]]
+        st.markdown(f"#### ⏱️ [{sel_row['worker_name']} | {sel_row['client_name']}] 개별 마감 처리")
+        
+        c1, c2, c3 = st.columns([1.5, 1.5, 1])
+        with c1:
+            est_default = float(sel_row.get("estimated_hours") or 1.0)
+            custom_h = st.number_input("소요 시간(시간)", min_value=0.5, max_value=24.0, value=max(0.5, est_default), step=0.5, key="num_custom_h")
+        with c2:
+            st.write("")
+            st.write("")
+            if st.button("✅ 이 작업만 완료 마감", use_container_width=True):
+                from src.database.supabase_client import db_manager
+                custom_m = int(custom_h * 60)
+                m_hash = sel_row.get("msg_hash")
+                if m_hash:
+                    db_manager.resolve_stale_pending_tasks([m_hash], custom_minutes_map={m_hash: custom_m})
+                    st.success(f"{sel_row['worker_name']} 님의 작업이 {custom_h}시간 완료 마감되었습니다!")
+                    from src.dashboard.app import clear_all_web_caches
+                    clear_all_web_caches()
+                    st.rerun()
+
+
+

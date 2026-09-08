@@ -335,10 +335,85 @@ class DatabaseManager:
             print(f"[DB 오류] 자동완료 배치 예외: {e}")
             return []
 
-    def fetch_all_work_logs(self) -> pd.DataFrame:
+    def resolve_stale_pending_tasks(self, msg_hashes: List[str], custom_minutes_map: Optional[Dict[str, int]] = None) -> int:
         """
-        Supabase 클라우드 DB에서 전체 데이터를 최우선 조회 (오프라인 시 로컬 SQLite 조회)
-        48시간 경과한 PENDING 작업은 자동으로 COMPLETED 승격 처리
+        24시간 이상 방치된 미완료(PENDING) 작업들을 관리자가 수동 또는 예정시간 기준으로 즉시 완료(COMPLETED) 마감
+        """
+        if not msg_hashes:
+            return 0
+
+        updated_count = 0
+        now = datetime.now()
+        now_str = now.strftime("%Y-%m-%d %H:%M")
+        minutes_map = custom_minutes_map or {}
+
+        # 1. 대상 레코드 정보 조회 (예정시간 등 파악)
+        if self.use_supabase and self.supabase:
+            try:
+                res = self.supabase.table("worktime_work_logs").select("*").in_("msg_hash", msg_hashes).execute()
+                records = res.data or []
+                for r in records:
+                    m_hash = r.get("msg_hash")
+                    custom_mins = minutes_map.get(m_hash)
+                    est_m = int(r.get("estimated_minutes") or 0)
+                    act_m = custom_mins if (custom_mins is not None and custom_mins > 0) else (est_m if est_m > 0 else 60)
+                    
+                    st_str = r.get("start_time")
+                    try:
+                        st_dt = pd.to_datetime(st_str).to_pydatetime()
+                        end_dt = st_dt + timedelta(minutes=act_m)
+                        end_str = end_dt.strftime("%Y-%m-%d %H:%M")
+                    except Exception:
+                        end_str = now_str
+                        st_dt = now
+                        end_dt = now
+
+                    is_night = check_is_night_work(st_dt, end_dt, r.get("raw_start_message", ""), est_m, act_m)
+                    is_weekend = check_is_weekend_work(st_dt, end_dt, r.get("raw_start_message", ""), est_m, act_m)
+
+                    up_payload = {
+                        "status": "COMPLETED",
+                        "actual_minutes": act_m,
+                        "end_time": end_str,
+                        "is_night_work": is_night,
+                        "is_weekend_work": is_weekend,
+                        "raw_end_message": f"[관리자 수동 마감] {round(act_m / 60.0, 1)}시간 완료 처리 ({now_str})"
+                    }
+                    self.supabase.table("worktime_work_logs").update(up_payload).eq("msg_hash", m_hash).execute()
+                    updated_count += 1
+            except Exception as e:
+                print(f"[DB 오류] Supabase 미마감 작업 정리 실패: {e}")
+
+        # 2. 로컬 SQLite 동기화
+        for db_file in [config.LOCAL_DB_PATH, "kakao_work.db", "data/kakao_work.db"]:
+            if Path(str(db_file)).exists():
+                try:
+                    conn = sqlite3.connect(str(db_file))
+                    c = conn.cursor()
+                    for m_hash in msg_hashes:
+                        c.execute("SELECT estimated_minutes, start_time FROM work_logs WHERE msg_hash=?", (m_hash,))
+                        row = c.fetchone()
+                        if row:
+                            custom_mins = minutes_map.get(m_hash)
+                            est_m = int(row[0] or 0)
+                            act_m = custom_mins if (custom_mins is not None and custom_mins > 0) else (est_m if est_m > 0 else 60)
+                            c.execute("""
+                                UPDATE work_logs 
+                                SET status='COMPLETED', actual_minutes=?, end_time=?, raw_end_message=?
+                                WHERE msg_hash=?
+                            """, (act_m, now_str, f"[관리자 수동 마감] {now_str}", m_hash))
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"[DB 오류] SQLite 미마감 작업 정리 실패: {e}")
+
+        return updated_count
+
+    def fetch_all_work_logs(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
+        """
+        Supabase 클라우드 DB에서 데이터를 최우선 조회 (오프라인 시 로컬 SQLite 조회)
+        - start_date, end_date 지정 시 기간 범위 최적화 쿼리 적용
+        - 48시간 경과한 PENDING 작업은 자동으로 COMPLETED 승격 처리
         """
         df = None
         if self.use_supabase and self.supabase:
@@ -348,11 +423,14 @@ class DatabaseManager:
                 page_size = 1000
                 start = 0
                 while True:
-                    res = self.supabase.table("worktime_work_logs")\
+                    query = self.supabase.table("worktime_work_logs")\
                         .select("*")\
-                        .order("start_time", desc=True)\
-                        .range(start, start + page_size - 1)\
-                        .execute()
+                        .order("start_time", desc=True)
+                    if start_date:
+                        query = query.gte("start_time", f"{start_date} 00:00:00")
+                    if end_date:
+                        query = query.lte("start_time", f"{end_date} 23:59:59")
+                    res = query.range(start, start + page_size - 1).execute()
                     rows = res.data or []
                     all_data.extend(rows)
                     if len(rows) < page_size:
@@ -361,8 +439,8 @@ class DatabaseManager:
                     
                 df = pd.DataFrame(all_data)
 
-                # 💾 로컬 SQLite 오프라인 백업 DB에도 최신 데이터 자동 동기화
-                if not df.empty:
+                # 💾 로컬 SQLite 오프라인 백업 DB에도 최신 데이터 자동 동기화 (전체 조회 시에만)
+                if not df.empty and not start_date and not end_date:
                     self._sync_to_local_sqlite(df)
             except Exception as e:
                 print(f"[DB 오류] Supabase 조회 실패, 로컬 SQLite로 대체: {e}")
@@ -371,7 +449,16 @@ class DatabaseManager:
         if df is None:
             try:
                 conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
-                df = pd.read_sql_query("SELECT * FROM work_logs ORDER BY start_time DESC", conn)
+                sql = "SELECT * FROM work_logs WHERE 1=1"
+                params = []
+                if start_date:
+                    sql += " AND start_time >= ?"
+                    params.append(f"{start_date} 00:00:00")
+                if end_date:
+                    sql += " AND start_time <= ?"
+                    params.append(f"{end_date} 23:59:59")
+                sql += " ORDER BY start_time DESC"
+                df = pd.read_sql_query(sql, conn, params=params)
                 conn.close()
             except Exception as e:
                 print(f"[DB 오류] SQLite 데이터 조회 실패: {e}")

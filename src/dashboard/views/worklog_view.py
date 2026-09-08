@@ -3,14 +3,11 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 from ..common.ui_helpers import strip_tz
+from ...services.excel_export_service import ExcelExportService
 
 @st.cache_data(show_spinner=False)
 def _get_cached_worklog_excel(df: pd.DataFrame) -> bytes:
-    clean_df = strip_tz(df)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        clean_df.to_excel(writer, index=False, sheet_name="지원시간통계")
-    return output.getvalue()
+    return ExcelExportService.generate_report(df, title_suffix="전체 작업 원장")
 
 def render_worklog_view(df: pd.DataFrame):
     """📋 작업 지원 상세 기록 원장 & 엑셀 다운로드 화면"""
@@ -54,9 +51,9 @@ def render_worklog_view(df: pd.DataFrame):
     btn_col, _ = st.columns([2.0, 5.0])
     with btn_col:
         st.download_button(
-            label="📥 엑셀(.xlsx) 원장 다운로드",
+            label="📥 업무 현황 엑셀(.xlsx) 리포트 다운로드",
             data=excel_data,
-            file_name=f"작업지원시간_통계_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            file_name=f"업무현황_상세리포트_{datetime.now().strftime('%Y%m%d')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )

@@ -14,7 +14,8 @@ from ..common.dialogs import (
     show_kpi_workers_dialog,
     show_kpi_urgent_dialog,
     show_kpi_overdue_dialog,
-    show_weekly_detail_dialog
+    show_weekly_detail_dialog,
+    show_stale_pending_tasks_dialog
 )
 from ..common.ui_helpers import (
     strip_tz,
@@ -211,6 +212,23 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     # 3. 상단 실시간 요약 바 (Live Status Summary - 다크모드 NOC 커맨드 센터 스타일)
     summary_html = f"""<div style="background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%); border: 1px solid #005f8a; border-radius: 9px; padding: 13px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 14px rgba(0, 34, 51, 0.25);"><div style="display: flex; align-items: center; gap: 11px;"><span style="background-color: #dc2626; color: #ffffff; border: 1px solid #ef4444; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);">● LIVE 관제 중</span><span style="font-size: 16.5px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #38bdf8; background-color: rgba(0, 180, 216, 0.22); border: 1px solid rgba(56, 189, 248, 0.5); padding: 3px 9px; border-radius: 6px; font-weight: 700;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; font-weight: 600;"><span style="color: #cbd5e1;">👥 오늘 투입: <b style="color: #38bdf8; font-size: 14.5px; font-weight: 800;">{tot_workers}명</b></span><span style="color: #cbd5e1;">⏳ 진행 중: <b style="color: #fbbf24; font-size: 14.5px; font-weight: 800;">{len(pend_df)}건</b></span><span style="color: #cbd5e1;">✅ 완료: <b style="color: #4ade80; font-size: 14.5px; font-weight: 800;">{len(comp_df)}건</b></span><span style="color: #cbd5e1;">⏱️ 총 지원 공수: <b style="color: #f472b6; font-size: 14.5px; font-weight: 800;">{tot_hours}시간</b></span></div></div>"""
     st.markdown(summary_html, unsafe_allow_html=True)
+
+    # 🧹 24시간 이상 방치된 미마감(PENDING) 작업 감지 알림
+    now_kst = get_current_kst_time()
+    if not df.empty and "status" in df.columns:
+        p_mask = df["status"] == "PENDING"
+        if p_mask.any():
+            all_pend = df[p_mask].copy()
+            all_pend["_st_dt"] = pd.to_datetime(all_pend["start_time"], errors="coerce")
+            stale_pends = all_pend[(now_kst - all_pend["_st_dt"]) >= timedelta(hours=24)]
+            if not stale_pends.empty:
+                col_w1, col_w2 = st.columns([3.6, 1.2])
+                with col_w1:
+                    st.warning(f"⚠️ **미마감 작업 알림**: 완료 보고가 24시간 이상 누락되어 아직 진행 중으로 남아있는 작업이 **{len(stale_pends)}건** 있습니다.")
+                with col_w2:
+                    st.write("")
+                    if st.button(f"🧹 미마감 {len(stale_pends)}건 정리하기", key="btn_open_stale_dialog", use_container_width=True, type="primary"):
+                        show_stale_pending_tasks_dialog(df)
 
     if today_df.empty and pend_df.empty and comp_df.empty:
         st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 작업 보고 또는 일정이 아직 없습니다.")

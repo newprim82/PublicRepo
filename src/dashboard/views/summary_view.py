@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...services.email_report_service import EmailReportService
+from ...services.excel_export_service import ExcelExportService
 from ...services.ai_briefing_service import FactExtractor, AIBriefingService
 from ..common.dialogs import show_email_report_dialog
 from ..common.ui_helpers import (
@@ -33,12 +34,23 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         m_list = [str(m) for m in df["month_str"].dropna().unique() if str(m).strip()]
         month_desc = ", ".join(m_list) if m_list else ""
 
-    # 상단 헤더 & 주간 리포트 이메일 발송 툴바 (AI 재분석 버튼과 동일한 0.8 컬럼 너비로 완벽 통일)
-    h_col1, h_col2 = st.columns([4.2, 0.8])
+    # 상단 헤더 & 엑셀 다운로드 및 메일 발송 툴바
+    h_col1, h_col2, h_col3 = st.columns([3.2, 1.0, 0.8])
     with h_col1:
         st.markdown(f"### 📊 {selected_team} - Summary")
-        st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑 및 주간 정기 이메일 발송을 제공합니다.")
+        st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑, Excel 리포트 다운로드 및 정기 이메일 발송을 제공합니다.")
     with h_col2:
+        excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
+        st.download_button(
+            label="📥 엑셀 리포트",
+            data=excel_bytes,
+            file_name=f"업무현황리포트_{selected_team}_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="btn_download_excel_summary",
+            help="선택된 팀 및 기간의 업무 투입 현황을 다중 시트 Excel(.xlsx) 리포트로 다운로드합니다."
+        )
+    with h_col3:
         st.markdown(
             """
             <style>

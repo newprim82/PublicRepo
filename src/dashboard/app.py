@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.8 (Exclude estimated 0h tasks from overdue analysis & KPI)
-APP_VERSION = "v2.2.8"
+# WorkTime Dashboard v2.2.9 (Query optimization, Stale PENDING cleanup tool & Rich Excel report export)
+APP_VERSION = "v2.2.9"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -113,7 +113,8 @@ def clear_all_web_caches():
         "src.dashboard.views.home_view",
         "src.dashboard.views.outlook_calendar_widget",
         "src.database.supabase_client",
-        "src.services.team_service"
+        "src.services.team_service",
+        "src.services.excel_export_service"
     ]
     for mod_name in modules_to_reload:
         if mod_name in sys.modules:
