@@ -1,9 +1,10 @@
 import os
 import sys
+import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.1 (Fix Kim Kyunghyun 27h to 9.0h (1/3일차) in DB & Modals Permanently)
-APP_VERSION = "v2.2.1"
+# WorkTime Dashboard v2.2.2 (Fix NameError: import re in app.py)
+APP_VERSION = "v2.2.2"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
