@@ -18,7 +18,110 @@ class ScheduleSyncService:
     1. 카톡 미보고 작업 -> 일정표 시간대 도달 시 실시간 진행 작업으로 자동 승격
     2. 100% 진행률 도달 시 자동으로 완료(COMPLETED) 작업으로 전환
     3. 휴가/연차/반차 -> 실시간 진행 영역에 무조건 100%로 상시 표출
+    4. 카톡 보고와 아웃룩 일정이 동일 업무일 경우 지능적 병합 (중복 제거)
     """
+
+    @classmethod
+    def _extract_client_core_keywords(cls, text: str) -> set:
+        """
+        고객사명이나 작업 제목에서 은행, 증권, 상주, 지원 등 부가어를 뗀
+        순수 브랜드/고객사 핵심 키워드들을 추출 (예: '수협은행' -> {'수협'}, '수협상주지원' -> {'수협', '상주'})
+        """
+        if not text:
+            return set()
+        clean = re.sub(r"[\[\]\(\)\/,\-_~]", " ", str(text))
+        stopwords = {
+            "작업", "회의", "미팅", "지원", "점검", "수석", "팀장", "기술본부", "기술", "고객사", 
+            "프로젝트", "업무", "일정", "완료", "진행", "1팀", "2팀", "3팀", "기타", "사내", "내부업무", 
+            "대체근무", "근무", "일차", "상주대체근무", "상주지원", "아웃룩", "오전", "오후"
+        }
+        words = set()
+        for token in clean.split():
+            token = token.strip()
+            if len(token) < 2 or token in stopwords:
+                continue
+            # 주요 고객사 핵심 패턴 축약 (예: 수협은행 -> 수협, 국민은행 -> 국민, 신한은행 -> 신한, 등)
+            for prefix in ["수협", "국민", "신한", "하나", "농협", "기업", "신협", "대구", "IM", "iM", "KDB", "IBK", "SBI", "BGF", "AIG", "금호", "가온", "애경", "명인", "상상인", "한전"]:
+                if token.startswith(prefix) or prefix in token:
+                    words.add(prefix.upper())
+            # 일반 2글자 이상 명사 추가
+            sub_clean = re.sub(r"(?:은행|증권|생명|화재|캐피탈|저축은행|카드|센터|지점|본점|연구소|공장|공전소|사무소|IT센터|영업부|사업처)$", "", token)
+            if len(sub_clean) >= 2 and sub_clean not in stopwords:
+                words.add(sub_clean)
+            elif len(token) >= 2 and token not in stopwords:
+                words.add(token)
+        return words
+
+    @classmethod
+    def is_same_task_match(
+        cls,
+        k_client: str,
+        k_desc: str,
+        k_st_dt: Any,
+        parsed_client: str,
+        parsed_desc: str,
+        subject: str,
+        out_st_dt: Any
+    ) -> bool:
+        """
+        카카오톡 보고 작업과 아웃룩 일정이 동일한 업무인지 지능적으로 판정하는 통합 엔진
+        """
+        k_c = (k_client or "").strip()
+        p_c = (parsed_client or "").strip()
+        subj = (subject or "").strip()
+        k_d = (k_desc or "").strip()
+
+        invalid_clients = ["기타", "내부업무", "사내", "아웃룩 일정", ""]
+
+        # 1. 고객사명 완전 일치 또는 상호 포함 (유효 고객사인 경우)
+        if k_c and k_c not in invalid_clients:
+            if k_c == p_c:
+                return True
+            if k_c in subj or k_c in p_c or (p_c not in invalid_clients and p_c in k_c):
+                return True
+
+        # 2. 고객사 핵심 키워드(Core Alias) 추출 및 충돌 가드
+        k_core = cls._extract_client_core_keywords(f"{k_c} {k_d}")
+        out_core = cls._extract_client_core_keywords(f"{p_c} {subj}")
+        common_core = k_core & out_core
+
+        # 🛡️ 명시적 고객사 충돌 방어: 둘 다 명확한 고객사인데 핵심어가 완전히 상이하면 절대 오매칭 금지! (예: 수협은행 vs 하나은행)
+        if (k_c and k_c not in invalid_clients) and (p_c and p_c not in invalid_clients):
+            if k_core and out_core and not common_core:
+                return False
+
+        if common_core:
+            # 같은 날짜이고 시간차가 3시간 이내이면 동일 업무 확정
+            if hasattr(k_st_dt, "date") and hasattr(out_st_dt, "date") and k_st_dt.date() == out_st_dt.date():
+                if abs((out_st_dt - k_st_dt).total_seconds()) <= 10800:
+                    return True
+
+        # 3. 띄어쓰기 무시 N-gram 및 부분 문자열 매칭 (일반 업종/직책어 제외)
+        clean_k = re.sub(r"[\s\-_\[\]\(\)\/]", "", f"{k_c}{k_d}")
+        clean_out = re.sub(r"[\s\-_\[\]\(\)\/]", "", f"{p_c}{subj}")
+        general_words = {
+            "은행", "증권", "생명", "화재", "카드", "센터", "공장", "연구소", "작업", "회의", 
+            "지원", "점검", "수석", "팀장", "기술", "일정", "대체", "정기", "상주", "근무"
+        }
+        if len(clean_k) >= 2 and len(clean_out) >= 2:
+            overlap_count = 0
+            for i in range(len(clean_out) - 1):
+                gram = clean_out[i:i+2]
+                if gram in clean_k and gram not in general_words:
+                    overlap_count += 1
+            if overlap_count >= 2:
+                if hasattr(k_st_dt, "date") and hasattr(out_st_dt, "date") and k_st_dt.date() == out_st_dt.date():
+                    return True
+
+        # 4. 동일 시간대(±30분 이내) 단일 작업 가드 (동일 작업자 1인 1작업 룰)
+        if hasattr(k_st_dt, "date") and hasattr(out_st_dt, "date") and k_st_dt.date() == out_st_dt.date():
+            time_diff_sec = abs((out_st_dt - k_st_dt).total_seconds())
+            if time_diff_sec < 1800:
+                # 시작 시간이 30분 이내이고, 핵심어가 1개라도 일치하거나 둘 중 하나가 기타/사내이면 매칭
+                if common_core or (k_c == p_c) or (not p_c or p_c in invalid_clients):
+                    return True
+
+        return False
 
     @classmethod
     def get_synced_live_tasks(
@@ -128,13 +231,23 @@ class ScheduleSyncService:
 
         # 2. 순수 카카오톡 작업 목록 추출 (아웃룩 일정과 자기 자신 매칭 원천 방지)
         # 전달받은 데이터프레임 중 is_outlook이 아닌 순수 카카오톡 보고 작업만 분리
-        final_pend_df = kakao_pend_df[kakao_pend_df.get("is_outlook", False) != True].copy() if not kakao_pend_df.empty else pd.DataFrame()
-        final_comp_df = today_completed_df[today_completed_df.get("is_outlook", False) != True].copy() if not today_completed_df.empty else pd.DataFrame()
-
-        if not final_pend_df.empty:
+        if not kakao_pend_df.empty:
+            if "is_outlook" in kakao_pend_df.columns:
+                final_pend_df = kakao_pend_df[kakao_pend_df["is_outlook"] != True].copy()
+            else:
+                final_pend_df = kakao_pend_df.copy()
             final_pend_df["has_both"] = False
-        if not final_comp_df.empty:
+        else:
+            final_pend_df = pd.DataFrame()
+
+        if not today_completed_df.empty:
+            if "is_outlook" in today_completed_df.columns:
+                final_comp_df = today_completed_df[today_completed_df["is_outlook"] != True].copy()
+            else:
+                final_comp_df = today_completed_df.copy()
             final_comp_df["has_both"] = False
+        else:
+            final_comp_df = pd.DataFrame()
 
         # 3. 비-휴가 일반 작업 일정 처리
         work_rows = today_out[today_out["is_leave"] == False]
@@ -176,7 +289,7 @@ class ScheduleSyncService:
             # 🏢 아웃룩 제목에서 [작업자] 제거 후 고객사명과 작업 내용을 스마트 분리 파싱
             parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(r["subject"], r.get("location", ""))
 
-            # 🛡️ 동일 작업자가 카카오톡으로 이미 '동일 작업'을 보고했는지 정교하게 판정 (양쪽 모두 등록 시 has_both=True)
+            # 🛡️ 동일 작업자가 카카오톡으로 이미 '동일 작업'을 보고했는지 지능적으로 판정 (양쪽 모두 등록 시 has_both=True)
             is_dup = False
             if not final_pend_df.empty:
                 for p_idx, p_row in final_pend_df.iterrows():
@@ -187,22 +300,10 @@ class ScheduleSyncService:
                         continue
                     k_client = str(p_row.get("client_name", "")).strip()
                     k_desc = str(p_row.get("task_description", "")).strip()
-                    matched = False
-                    if k_client and k_client not in ["기타", "내부업무", "사내", "아웃룩 일정"] and (k_client == parsed_client or k_client in str(r["subject"])):
-                        matched = True
-                    else:
-                        common_words = set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", str(r["subject"]))) & set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", f"{k_client} {k_desc}"))
-                        meaningful_common = {w for w in common_words if w not in ["작업", "회의", "미팅", "지원", "점검", "수석", "팀장", "기술본부", "기술", "고객사", "프로젝트", "업무", "일정", "완료", "진행", "1팀", "2팀", "3팀"]}
-                        if meaningful_common:
-                            matched = True
-                        else:
-                            k_st = p_row.get("start_time")
-                            if pd.notna(k_st):
-                                k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
-                                if abs((st_dt - k_st_dt).total_seconds()) < 1800 and (k_client == parsed_client or not parsed_client):
-                                    matched = True
+                    k_st = p_row.get("start_time")
+                    k_st_dt = k_st.to_pydatetime() if (pd.notna(k_st) and hasattr(k_st, "to_pydatetime")) else k_st
 
-                    if matched:
+                    if cls.is_same_task_match(k_client, k_desc, k_st_dt, parsed_client, parsed_desc, r["subject"], st_dt):
                         final_pend_df.at[p_idx, "has_both"] = True
                         if r.get("schedule_type") == "교육":
                             final_pend_df.at[p_idx, "log_type"] = "교육"
@@ -218,22 +319,10 @@ class ScheduleSyncService:
                         continue
                     k_client = str(c_row.get("client_name", "")).strip()
                     k_desc = str(c_row.get("task_description", "")).strip()
-                    matched = False
-                    if k_client and k_client not in ["기타", "내부업무", "사내", "아웃룩 일정"] and (k_client == parsed_client or k_client in str(r["subject"])):
-                        matched = True
-                    else:
-                        common_words = set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", str(r["subject"]))) & set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", f"{k_client} {k_desc}"))
-                        meaningful_common = {w for w in common_words if w not in ["작업", "회의", "미팅", "지원", "점검", "수석", "팀장", "기술본부", "기술", "고객사", "프로젝트", "업무", "일정", "완료", "진행", "1팀", "2팀", "3팀"]}
-                        if meaningful_common:
-                            matched = True
-                        else:
-                            k_st = c_row.get("start_time")
-                            if pd.notna(k_st):
-                                k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
-                                if abs((st_dt - k_st_dt).total_seconds()) < 1800 and (k_client == parsed_client or not parsed_client):
-                                    matched = True
+                    k_st = c_row.get("start_time")
+                    k_st_dt = k_st.to_pydatetime() if (pd.notna(k_st) and hasattr(k_st, "to_pydatetime")) else k_st
 
-                    if matched:
+                    if cls.is_same_task_match(k_client, k_desc, k_st_dt, parsed_client, parsed_desc, r["subject"], st_dt):
                         final_comp_df.at[c_idx, "has_both"] = True
                         if r.get("schedule_type") == "교육":
                             final_comp_df.at[c_idx, "log_type"] = "교육"
@@ -440,7 +529,7 @@ class ScheduleSyncService:
                     # 🏢 비-휴가 일반 작업 일정
                     parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(subj, r.get("location", ""))
 
-                    # 중복 검사: 동일 날짜의 카카오톡에 이미 보고된 동일 작업인지 확인
+                    # 중복 검사: 동일 날짜의 카카오톡에 이미 보고된 동일 작업인지 지능적 확인
                     worker_k_tasks = kakao_tasks_by_worker.get(w_name, [])
                     is_dup = False
                     for k in worker_k_tasks:
@@ -448,22 +537,14 @@ class ScheduleSyncService:
                         if pd.isna(k_st):
                             continue
                         k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
-                        # 🌟 필수: 같은 날짜의 카카오톡 작업만 중복 비교 대상으로 한정 (과거 이력 때문에 당일 아웃룩이 누락되는 현상 원천 방지)
+                        # 🌟 필수: 같은 날짜의 카카오톡 작업만 중복 비교 대상으로 한정
                         if st_dt.date() != k_st_dt.date():
                             continue
 
                         k_client = str(k.get("client_name", "")).strip()
                         k_desc = str(k.get("task_description", "")).strip()
 
-                        if k_client and k_client not in ["기타", "내부업무", "사내", "아웃룩 일정"] and (k_client == parsed_client or k_client in subj):
-                            is_dup = True
-                            break
-                        common_words = set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", subj)) & set(re.findall(r"[가-힣a-zA-Z0-9]{2,}", f"{k_client} {k_desc}"))
-                        meaningful_common = {w for w in common_words if w not in ["작업", "회의", "미팅", "지원", "점검", "수석", "팀장", "기술본부", "기술", "고객사", "프로젝트", "업무", "일정", "완료", "진행", "1팀", "2팀", "3팀"]}
-                        if meaningful_common:
-                            is_dup = True
-                            break
-                        if abs((st_dt - k_st_dt).total_seconds()) < 1800 and (k_client == parsed_client or not parsed_client):
+                        if cls.is_same_task_match(k_client, k_desc, k_st_dt, parsed_client, parsed_desc, subj, st_dt):
                             is_dup = True
                             break
                     if is_dup:
