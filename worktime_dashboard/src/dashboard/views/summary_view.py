@@ -34,63 +34,94 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         m_list = [str(m) for m in df["month_str"].dropna().unique() if str(m).strip()]
         month_desc = ", ".join(m_list) if m_list else ""
 
-    # 상단 헤더 & 엑셀 다운로드 및 메일 발송 툴바
-    h_col1, h_col2, h_col3 = st.columns([3.2, 1.0, 0.8])
-    with h_col1:
-        st.markdown(f"### 📊 {selected_team} - Summary")
-        st.caption("주간/월간 전체 작업 실적 핵심 요약 브리핑, Excel 리포트 다운로드 및 정기 이메일 발송을 제공합니다.")
-    with h_col2:
-        excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
-        st.download_button(
-            label="📥 엑셀 리포트",
-            data=excel_bytes,
-            file_name=f"업무현황리포트_{selected_team}_{datetime.now().strftime('%Y%m%d')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            key="btn_download_excel_summary",
-            help="선택된 팀 및 기간의 업무 투입 현황을 다중 시트 Excel(.xlsx) 리포트로 다운로드합니다."
-        )
-    with h_col3:
-        st.markdown(
-            """
-            <style>
-            div.st-key-btn_trigger_email_modal button {
-                background-color: #004060 !important;
-                background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
-                color: #FFFFFF !important;
-                border: 1px solid rgba(255, 255, 255, 0.3) !important;
-                border-radius: 6px !important;
-                font-size: 13.5px !important;
-                font-weight: 700 !important;
-                height: 38px !important;
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-                transition: all 0.2s ease !important;
-            }
-            div.st-key-btn_trigger_email_modal button p {
-                color: #FFFFFF !important;
-                font-weight: 700 !important;
-                font-size: 13.5px !important;
-                letter-spacing: -0.2px !important;
-            }
-            div.st-key-btn_trigger_email_modal button:hover {
-                background-color: #00608a !important;
-                background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
-                border-color: #38bdf8 !important;
-                color: #FFFFFF !important;
-                box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
-                transform: translateY(-1px) !important;
-            }
-            div.st-key-btn_trigger_email_modal button:hover p {
-                color: #FFFFFF !important;
-            }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        def render_email_report_button(team: str):
+    # 상단 툴바 버튼 공통 스타일 (엑셀 다운로드 & 메일 발송 버튼 100% 동일 크기 및 높이 보장)
+    st.markdown(
+        """
+        <style>
+        div.st-key-btn_download_excel_summary button,
+        div.st-key-btn_trigger_email_modal button {
+            background-color: #004060 !important;
+            background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            border-radius: 6px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            line-height: 38px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+            transition: all 0.2s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 14px !important;
+            margin: 0 !important;
+            vertical-align: middle !important;
+        }
+        div.st-key-btn_download_excel_summary button p,
+        div.st-key-btn_download_excel_summary button span,
+        div.st-key-btn_trigger_email_modal button p,
+        div.st-key-btn_trigger_email_modal button span {
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            font-size: 13.5px !important;
+            letter-spacing: -0.2px !important;
+            line-height: 1 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        div.st-key-btn_download_excel_summary button:hover,
+        div.st-key-btn_trigger_email_modal button:hover {
+            background-color: #00608a !important;
+            background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
+            border-color: #38bdf8 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+        div.st-key-btn_download_excel_summary button:hover p,
+        div.st-key-btn_download_excel_summary button:hover span,
+        div.st-key-btn_trigger_email_modal button:hover p,
+        div.st-key-btn_trigger_email_modal button:hover span {
+            color: #FFFFFF !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # 상단 헤더 & 엑셀 다운로드 및 메일 발송 툴바 (2열 분할 후 우측에 버튼 2개 1:1 배치)
+    try:
+        h_left, h_right = st.columns([3.2, 1.8], vertical_alignment="center")
+    except TypeError:
+        h_left, h_right = st.columns([3.2, 1.8])
+
+    with h_left:
+        st.markdown(f"""
+        <div style="margin-top: 2px;">
+            <div style="font-size: 23px; font-weight: 800; color: #002d42; letter-spacing: -0.4px; margin-bottom: 3px;">📊 {selected_team} - Summary</div>
+            <div style="font-size: 13px; color: #64748b; font-weight: 500;">주간/월간 전체 작업 실적 핵심 요약 브리핑, Excel 리포트 다운로드 및 정기 이메일 발송을 제공합니다.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with h_right:
+        b_col1, b_col2 = st.columns([1, 1])
+        with b_col1:
+            excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
+            st.download_button(
+                label="📥 엑셀 리포트",
+                data=excel_bytes,
+                file_name=f"업무현황리포트_{selected_team}_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                key="btn_download_excel_summary",
+                help="선택된 팀 및 기간의 업무 투입 현황을 다중 시트 Excel(.xlsx) 리포트로 다운로드합니다."
+            )
+        with b_col2:
             if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
-                show_email_report_dialog(team)
-        render_email_report_button(selected_team)
+                show_email_report_dialog(selected_team)
 
     st.write("")
 
