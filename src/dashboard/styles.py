@@ -1113,19 +1113,38 @@ def apply_custom_styles():
             transition: none !important;
         }
 
-        /* 🏛️ 팝업 모달 다이얼로그 (@st.dialog) 제목 및 닫기 버튼 흰색 스타일링 */
+        /* 🏛️ 팝업 모달 다이얼로그 (@st.dialog): 흰색 바탕에 선명한 검정/딥네이비 글씨 고대비 보장 */
+        div[data-testid="stDialog"],
+        div[data-testid="stDialog"] > div,
+        div[role="dialog"],
+        div[role="dialog"] > div,
+        div[data-baseweb="modal"],
+        div[data-baseweb="modal"] > div {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
         div[data-testid="stDialog"] h1,
         div[data-testid="stDialog"] h2,
         div[data-testid="stDialog"] h3,
+        div[data-testid="stDialog"] h4,
+        div[data-testid="stDialog"] h5,
+        div[data-testid="stDialog"] h6,
         div[data-testid="stDialog"] [data-testid="stHeadingWithActionElements"] h2,
         div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h2,
+        div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h3,
+        div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h4,
         div[data-testid="stDialog"] header,
         div[data-testid="stDialog"] header *,
         div[role="dialog"] h1,
         div[role="dialog"] h2,
         div[role="dialog"] h3,
+        div[role="dialog"] h4,
+        div[role="dialog"] h5,
+        div[role="dialog"] h6,
         div[role="dialog"] [data-testid="stHeadingWithActionElements"] h2,
         div[role="dialog"] [data-testid="stMarkdownContainer"] h2,
+        div[role="dialog"] [data-testid="stMarkdownContainer"] h3,
+        div[role="dialog"] [data-testid="stMarkdownContainer"] h4,
         div[role="dialog"] header,
         div[role="dialog"] header *,
         div[data-baseweb="modal"] h1,
@@ -1133,30 +1152,64 @@ def apply_custom_styles():
         div[data-baseweb="modal"] h3,
         div[data-baseweb="modal"] header,
         div[data-baseweb="modal"] header * {
-            color: #ffffff !important;
+            color: #0f172a !important;
             font-weight: 800 !important;
-            fill: #ffffff !important;
+            fill: #0f172a !important;
         }
         div[data-testid="stDialog"] h1 *,
         div[data-testid="stDialog"] h2 *,
         div[data-testid="stDialog"] h3 *,
+        div[data-testid="stDialog"] h4 *,
         div[role="dialog"] h1 *,
         div[role="dialog"] h2 *,
-        div[role="dialog"] h3 * {
-            color: #ffffff !important;
-            fill: #ffffff !important;
+        div[role="dialog"] h3 *,
+        div[role="dialog"] h4 * {
+            color: #0f172a !important;
+            fill: #0f172a !important;
+        }
+        div[data-testid="stDialog"] p,
+        div[data-testid="stDialog"] span:not([class*="badge"]):not([style*="background"]):not([style*="color"]),
+        div[data-testid="stDialog"] label,
+        div[role="dialog"] p,
+        div[role="dialog"] span:not([class*="badge"]):not([style*="background"]):not([style*="color"]),
+        div[role="dialog"] label {
+            color: #1e293b !important;
+        }
+        div[data-testid="stDialog"] [data-testid="stCaptionContainer"] *,
+        div[role="dialog"] [data-testid="stCaptionContainer"] * {
+            color: #334155 !important;
+            font-weight: 600 !important;
         }
         div[data-testid="stDialog"] button[aria-label="Close"],
         div[data-testid="stDialog"] button[data-testid="stBaseButton-header"],
         div[role="dialog"] button[aria-label="Close"],
         div[role="dialog"] button[data-testid="stBaseButton-header"],
         div[data-baseweb="modal"] button[aria-label="Close"] {
-            color: #ffffff !important;
+            color: #0f172a !important;
         }
         div[data-testid="stDialog"] button[aria-label="Close"] svg,
         div[role="dialog"] button[aria-label="Close"] svg {
-            fill: #ffffff !important;
-            stroke: #ffffff !important;
+            fill: #0f172a !important;
+            stroke: #0f172a !important;
+        }
+
+        /* 🏛️ 모달 내부 테이블 및 데이터그리드 (흰색 바탕 검정 글씨) */
+        div[data-testid="stDialog"] div[data-testid="stDataFrame"],
+        div[data-testid="stDialog"] div[data-testid="stTable"],
+        div[role="dialog"] div[data-testid="stDataFrame"],
+        div[role="dialog"] div[data-testid="stTable"] {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+
+        /* 🏛️ 모달 내부 입력창 (st.number_input, st.text_input 등 흰 바탕 검정 글씨) */
+        div[data-testid="stDialog"] input,
+        div[data-testid="stDialog"] textarea,
+        div[role="dialog"] input,
+        div[role="dialog"] textarea {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            -webkit-text-fill-color: #0f172a !important;
         }
 
         /* 🏛️ 드롭다운 팝오버 및 셀렉트박스 옵션 가독성 */
