@@ -44,6 +44,27 @@ def apply_custom_styles():
             font-weight: normal !important;
         }
 
+        /* ☀️ 시스템 전역 강제 라이트모드 선언 (모바일 OS 다크모드 완전 무력화) */
+        :root {
+            color-scheme: light !important;
+            --primary-color: #005073;
+            --background-color: #f4f6f9;
+            --secondary-background-color: #ffffff;
+            --text-color: #0f172a;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: light !important;
+            }
+            html, body, [data-testid="stAppViewContainer"], .stApp {
+                background-color: #f4f6f9 !important;
+                color: #0f172a !important;
+            }
+            [data-testid="stSidebar"] {
+                background-color: #002d42 !important;
+            }
+        }
+
         html {
             scroll-behavior: smooth;
         }
@@ -129,7 +150,7 @@ def apply_custom_styles():
         div[data-testid="stCustomComponentV1"] iframe {
             background-color: transparent !important;
             border: none !important;
-            color-scheme: dark !important;
+            color-scheme: light !important;
         }
         div[data-testid="stCustomComponentV1"] {
             background: transparent !important;
@@ -1260,6 +1281,197 @@ def apply_custom_styles():
             color: #ffffff !important;
         }
 
+        /* ========================================================= */
+        /* 📱 모바일 (화면 폭 768px 이하) 초고시인성 콤팩트 반응형 스타일 */
+        /* ========================================================= */
+        @media (max-width: 768px) {
+            /* 1. 컨테이너 여백 슬림화 (좌우 여백 낭비 원천 차단) */
+            .block-container,
+            [data-testid="block-container"],
+            [data-testid="stMainBlockContainer"] {
+                padding-top: 0.6rem !important;
+                padding-bottom: 1.2rem !important;
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+                max-width: 100% !important;
+            }
+
+            /* 2. 사이드바 열기 버튼 위치 조정 */
+            [data-testid="stExpandSidebarButton"] {
+                top: 0.6rem !important;
+                left: 0.6rem !important;
+                padding: 4px 6px !important;
+            }
+
+            /* 3. Streamlit 가로 블록 및 컬럼 간격 컴팩트화 */
+            div[data-testid="stHorizontalBlock"] {
+                gap: 6px !important;
+            }
+            div[data-testid="stColumn"],
+            div[data-testid="column"] {
+                padding: 0 !important;
+                min-width: 0 !important;
+            }
+
+            /* 4. 🏛️ KPI 메트릭 카드 슬림화 (한눈에 쾌적하게 조망) */
+            .kpi-card {
+                padding: 8px 6px !important;
+                border-radius: 8px !important;
+                margin-bottom: 0px !important;
+                box-shadow: 0 1px 4px rgba(0, 45, 66, 0.08) !important;
+            }
+            .kpi-title {
+                font-size: 11.5px !important;
+                padding-bottom: 3px !important;
+                margin-bottom: 4px !important;
+                gap: 4px !important;
+                letter-spacing: -0.3px !important;
+            }
+            .kpi-value {
+                font-size: 20px !important;
+                margin-bottom: 4px !important;
+                line-height: 1.1 !important;
+            }
+            .kpi-unit {
+                font-size: 11px !important;
+                margin-left: 2px !important;
+            }
+            .kpi-badge {
+                font-size: 9.5px !important;
+                padding: 1px 6px !important;
+                border-radius: 4px !important;
+            }
+            /* KPI 카드 투명 오버레이 버튼 모바일 높이 동기화 */
+            div.element-container:has(.kpi-card) + div.element-container {
+                margin-top: -82px !important;
+                height: 82px !important;
+            }
+            div.element-container:has(.kpi-card) + div.element-container .stButton,
+            div.element-container:has(.kpi-card) + div.element-container button,
+            button[aria-label=" "] {
+                height: 82px !important;
+                min-height: 82px !important;
+            }
+
+            /* 5. ⏳ 실시간 진행 중인 작업 카드 (.live-task-card) 콤팩트화 */
+            .live-task-card {
+                padding: 7px 9px !important;
+                margin-bottom: 6px !important;
+                border-radius: 7px !important;
+            }
+            .live-task-card span[style*="font-size: 13.5px"] {
+                font-size: 12px !important;
+            }
+            .live-task-card div[style*="font-size: 13px"],
+            .live-task-card div[style*="font-size: 12.5px"] {
+                font-size: 11.5px !important;
+                margin-bottom: 3px !important;
+            }
+            .live-task-card div[style*="min-height: 28px"] {
+                min-height: 22px !important;
+                height: 22px !important;
+                margin-bottom: 4px !important;
+            }
+            .live-task-card .live-progress-fill + div {
+                padding: 1px 5px !important;
+                font-size: 10px !important;
+            }
+            .live-task-card .live-pct-badge {
+                font-size: 9px !important;
+                padding: 1px 3px !important;
+            }
+            .live-task-card div[style*="font-size: 10.5px"] {
+                font-size: 9.5px !important;
+                margin-top: 2px !important;
+            }
+
+            /* 6. 🏛️ Cisco ACI 탭 바 모바일 최적화 */
+            div[data-testid="stTabs"] [role="tablist"],
+            div[data-testid="stTabs"] [data-baseweb="tab-list"],
+            .stTabs [role="tablist"],
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 5px !important;
+                margin-bottom: 10px !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            div[data-testid="stTabs"] button[role="tab"],
+            div[data-testid="stTabs"] button[data-baseweb="tab"],
+            .stTabs button[role="tab"],
+            .stTabs button[data-baseweb="tab"] {
+                height: 34px !important;
+                min-height: 34px !important;
+                padding: 4px 10px !important;
+                font-size: 12px !important;
+                border-radius: 6px !important;
+            }
+            div[data-testid="stTabs"] button[role="tab"] *,
+            div[data-testid="stTabs"] button[data-baseweb="tab"] *,
+            .stTabs button[role="tab"] * {
+                font-size: 12px !important;
+            }
+
+            /* 7. 🏛️ 기준정보 패널 모바일 컴팩트화 */
+            .active-criteria-container {
+                padding: 6px 8px !important;
+                gap: 4px 8px !important;
+                margin-bottom: 10px !important;
+                border-radius: 7px !important;
+            }
+            .criteria-header {
+                font-size: 10.5px !important;
+                padding: 3px 7px !important;
+            }
+            .criteria-chip {
+                font-size: 11px !important;
+                padding: 2px 6px !important;
+                gap: 4px !important;
+            }
+            .criteria-chip .chip-label {
+                font-size: 10px !important;
+            }
+            .criteria-chip .chip-value {
+                font-size: 11px !important;
+            }
+            .criteria-count-badge {
+                font-size: 10.5px !important;
+                padding: 3px 7px !important;
+            }
+            .criteria-count-badge b {
+                font-size: 12px !important;
+            }
+
+            /* 8. 🔘 일반 버튼 및 다운로드 버튼 모바일 슬림화 */
+            div[data-testid="stButton"] > button,
+            .stButton > button,
+            button[kind="secondary"],
+            div[data-testid="stDownloadButton"] button {
+                height: 32px !important;
+                font-size: 12px !important;
+                padding: 0 10px !important;
+                border-radius: 6px !important;
+            }
+            div[data-testid="stButton"] > button p,
+            div[data-testid="stButton"] > button span,
+            div[data-testid="stDownloadButton"] button * {
+                font-size: 12px !important;
+            }
+
+            /* 9. 메인 영역 Expander 모바일 최적화 */
+            [data-testid="stMain"] [data-testid="stExpander"] summary,
+            div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary {
+                padding: 7px 10px !important;
+            }
+            [data-testid="stMain"] [data-testid="stExpander"] summary span,
+            div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary * {
+                font-size: 12.5px !important;
+            }
+            [data-testid="stMain"] [data-testid="stExpander"] [data-testid="stExpanderDetails"],
+            div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) [data-testid="stExpanderDetails"] {
+                padding: 8px 10px !important;
+            }
+        }
+
     </style>
     """, unsafe_allow_html=True)
 
@@ -1349,6 +1561,45 @@ def render_header_banner(initial_ms: int, page_tag: str):
                 padding: 1px 6px;
                 border-radius: 10px;
             }}
+            @media (max-width: 768px) {{
+                .header-bar {{
+                    padding: 7px 10px;
+                    border-radius: 7px;
+                }}
+                .header-left {{
+                    gap: 6px;
+                }}
+                .header-title {{
+                    font-size: 13px;
+                    letter-spacing: -0.5px;
+                }}
+                .header-tag {{
+                    font-size: 9.5px;
+                    padding: 1px 5px;
+                    margin-left: 2px;
+                }}
+                .status-container {{
+                    display: none !important;
+                }}
+                .status-divider {{
+                    display: none !important;
+                }}
+                .header-right {{
+                    gap: 0px;
+                }}
+                .clock-box {{
+                    padding: 2px 7px;
+                    border-radius: 12px;
+                    gap: 3px;
+                }}
+                #live-bora-clock {{
+                    font-size: 11px;
+                }}
+                .badge-bora {{
+                    font-size: 8px;
+                    padding: 1px 4px;
+                }}
+            }}
         </style>
     </head>
     <body>
@@ -1358,8 +1609,8 @@ def render_header_banner(initial_ms: int, page_tag: str):
                 <span class="header-tag">{page_tag}</span>
             </div>
             <div class="header-right">
-                <span style="font-weight: 700; color: #4ade80;"><span style="color: #22c55e; text-shadow: 0 0 8px #22c55e;">●</span> 관제 포털 정상 가동</span>
-                <span style="color: rgba(255,255,255,0.25);">|</span>
+                <span class="status-container" style="font-weight: 700; color: #4ade80;"><span style="color: #22c55e; text-shadow: 0 0 8px #22c55e;">●</span> 관제 포털 정상 가동</span>
+                <span class="status-divider" style="color: rgba(255,255,255,0.25);">|</span>
                 <div class="clock-box">
                     <span>🕒</span>
                     <span id="live-bora-clock">로딩 중...</span>
