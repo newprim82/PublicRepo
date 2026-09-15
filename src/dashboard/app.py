@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.16 (High-contrast text: black on white, white on dark backgrounds)
-APP_VERSION = "v2.2.16"
+# WorkTime Dashboard v2.2.14 (Intelligent task matching between Outlook schedule and Kakao work logs)
+APP_VERSION = "v2.2.14"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()

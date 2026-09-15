@@ -97,86 +97,42 @@ def strip_tz(df):
 
 
 def inject_dialog_title_style():
-    """모달 팝업 내부: 흰색 바탕에 선명한 검정/딥네이비 제목 및 본문 고대비 강제 적용"""
+    """모달 팝업 내부에서 상단 제목을 선명한 흰색으로 강제 주입"""
     st.markdown("""
     <style>
-    div[data-testid="stDialog"],
-    div[data-testid="stDialog"] > div,
-    div[role="dialog"],
-    div[role="dialog"] > div,
-    div[data-baseweb="modal"],
-    div[data-baseweb="modal"] > div {
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-    }
     div[data-testid="stDialog"] h1,
     div[data-testid="stDialog"] h2,
     div[data-testid="stDialog"] h3,
-    div[data-testid="stDialog"] h4,
-    div[data-testid="stDialog"] h5,
-    div[data-testid="stDialog"] h6,
     div[data-testid="stDialog"] [data-testid="stHeadingWithActionElements"] h2,
     div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h2,
-    div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h3,
-    div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h4,
     div[data-testid="stDialog"] header,
     div[data-testid="stDialog"] header *,
     div[role="dialog"] h1,
     div[role="dialog"] h2,
     div[role="dialog"] h3,
-    div[role="dialog"] h4,
-    div[role="dialog"] h5,
-    div[role="dialog"] h6,
     div[role="dialog"] [data-testid="stHeadingWithActionElements"] h2,
     div[role="dialog"] [data-testid="stMarkdownContainer"] h2,
-    div[role="dialog"] [data-testid="stMarkdownContainer"] h3,
-    div[role="dialog"] [data-testid="stMarkdownContainer"] h4,
     div[role="dialog"] header,
     div[role="dialog"] header *,
     div[data-baseweb="modal"] h1,
     div[data-baseweb="modal"] h2,
-    div[data-baseweb="modal"] h3,
-    div[data-baseweb="modal"] header,
-    div[data-baseweb="modal"] header * {
-        color: #0f172a !important;
+    div[data-baseweb="modal"] h3 {
+        color: #ffffff !important;
         font-weight: 800 !important;
-        fill: #0f172a !important;
+        fill: #ffffff !important;
     }
     div[data-testid="stDialog"] h1 *,
     div[data-testid="stDialog"] h2 *,
     div[data-testid="stDialog"] h3 *,
-    div[data-testid="stDialog"] h4 *,
     div[role="dialog"] h1 *,
     div[role="dialog"] h2 *,
-    div[role="dialog"] h3 *,
-    div[role="dialog"] h4 * {
-        color: #0f172a !important;
-        fill: #0f172a !important;
-    }
-    div[data-testid="stDialog"] p,
-    div[data-testid="stDialog"] span:not([class*="badge"]):not([style*="background"]):not([style*="color"]),
-    div[data-testid="stDialog"] label,
-    div[role="dialog"] p,
-    div[role="dialog"] span:not([class*="badge"]):not([style*="background"]):not([style*="color"]),
-    div[role="dialog"] label {
-        color: #1e293b !important;
-    }
-    div[data-testid="stDialog"] [data-testid="stCaptionContainer"] *,
-    div[role="dialog"] [data-testid="stCaptionContainer"] * {
-        color: #334155 !important;
-        font-weight: 600 !important;
+    div[role="dialog"] h3 * {
+        color: #ffffff !important;
+        fill: #ffffff !important;
     }
     div[data-testid="stDialog"] button[aria-label="Close"],
-    div[data-testid="stDialog"] button[data-testid="stBaseButton-header"],
-    div[role="dialog"] button[aria-label="Close"],
-    div[role="dialog"] button[data-testid="stBaseButton-header"],
-    div[data-baseweb="modal"] button[aria-label="Close"] {
-        color: #0f172a !important;
-    }
-    div[data-testid="stDialog"] button[aria-label="Close"] svg,
-    div[role="dialog"] button[aria-label="Close"] svg {
-        fill: #0f172a !important;
-        stroke: #0f172a !important;
+    div[role="dialog"] button[aria-label="Close"] {
+        color: #ffffff !important;
     }
     /* ⚡ 모달 팝업 및 뒷배경 페이드 애니메이션 완전 제거 */
     div[data-baseweb="backdrop"],
