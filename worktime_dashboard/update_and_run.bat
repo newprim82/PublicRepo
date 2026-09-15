@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 chcp 65001 > nul
 title 팀 지원 시간 대시보드 [업데이트 및 실행]
 
@@ -18,11 +18,9 @@ timeout /t 1 /nobreak > nul
 
 echo.
 echo [2/4] GitHub에서 최신 소스코드를 내려받습니다...
-git checkout -- worktime_dashboard/data/worklog.db >nul 2>&1
+git checkout -- data/worklog.db >nul 2>&1
 git fetch origin main
 git pull origin main
-
-cd /d "%~dp0worktime_dashboard"
 pip install -r requirements.txt
 
 echo.

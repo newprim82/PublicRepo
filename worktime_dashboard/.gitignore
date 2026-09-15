@@ -1,0 +1,25 @@
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment Variables (Secrets)
+.env
+.env.local
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Local Database (Local backup only, synced via Supabase)
+data/*.db
+*.db
+@AutomationLog.txt
+
+# Backup files
+backup/
+data/.session_cache.json
+*.cache
+collector_status.json

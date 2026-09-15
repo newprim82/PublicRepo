@@ -32,5 +32,6 @@ jobs:
           GMAIL_SENDER_EMAIL: ${{ secrets.GMAIL_SENDER_EMAIL || 'newprim82@gmail.com' }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD || 'Rlarudgus1!' }}
           DEFAULT_RECIPIENT_EMAIL: ${{ secrets.DEFAULT_RECIPIENT_EMAIL || 'ymmoon@sangsanginworld.co.kr' }}
+        working-directory: worktime_dashboard
         run: |
           python -m src.scripts.send_weekly_report
