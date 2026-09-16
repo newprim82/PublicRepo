@@ -527,7 +527,11 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
 
     facts = FactExtractor.extract_facts(df_active, prev_df, selected_team, current_period_label)
 
-    b_col1, b_col2 = st.columns([4.2, 0.8])
+    try:
+        b_col1, b_col2 = st.columns([4.3, 0.7], vertical_alignment="center")
+    except TypeError:
+        b_col1, b_col2 = st.columns([4.3, 0.7])
+
     with b_col1:
         st.markdown(f"""
         <div style="display: flex; align-items: center; justify-content: space-between; height: 100%; min-height: 42px; padding-top: 6px;">
@@ -542,24 +546,48 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         st.markdown(
             """
             <style>
+            /* AI 재분석 버튼: 상단 엑셀/메일 발송 버튼과 동일한 규격(약 140px, 높이 38px) 및 디자인 100% 일원화 */
+            div.st-key-btn_refresh_ai_briefing {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            div.st-key-btn_refresh_ai_briefing > div {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
             div.st-key-btn_refresh_ai_briefing button {
                 background-color: #004060 !important;
                 background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
                 color: #FFFFFF !important;
                 border: 1px solid rgba(255, 255, 255, 0.3) !important;
                 border-radius: 6px !important;
-                font-size: 13px !important;
-                font-weight: 800 !important;
+                font-size: 13.5px !important;
+                font-weight: 700 !important;
                 height: 38px !important;
+                min-height: 38px !important;
+                max-height: 38px !important;
+                line-height: 38px !important;
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
                 transition: all 0.2s ease !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                padding: 0 10px !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+                width: 100% !important;
+                text-decoration: none !important;
+                cursor: pointer !important;
             }
-            div.st-key-btn_refresh_ai_briefing button p,
-            div.st-key-btn_refresh_ai_briefing button span {
+            div.st-key-btn_refresh_ai_briefing button * {
                 color: #FFFFFF !important;
-                font-weight: 800 !important;
-                font-size: 13px !important;
+                font-weight: 700 !important;
+                font-size: 13.5px !important;
                 letter-spacing: -0.2px !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
             }
             div.st-key-btn_refresh_ai_briefing button:hover {
                 background-color: #00608a !important;
@@ -569,8 +597,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
                 transform: translateY(-1px) !important;
             }
-            div.st-key-btn_refresh_ai_briefing button:hover p,
-            div.st-key-btn_refresh_ai_briefing button:hover span {
+            div.st-key-btn_refresh_ai_briefing button:hover * {
                 color: #FFFFFF !important;
             }
             </style>
