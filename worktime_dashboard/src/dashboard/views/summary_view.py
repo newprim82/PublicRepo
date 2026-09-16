@@ -38,15 +38,17 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     st.markdown(
         """
         <style>
-        /* 엑셀 다운로드 및 메일 발송 버튼 완벽 일원화 (동일 높이 38px, 동일 폭, 완벽 일직선 수평 정렬) */
+        /* 엑셀 다운로드 및 메일 발송 버튼: 기존 메일 발송 버튼 크기(약 140px, 높이 38px) 100% 동일 일원화 */
         div.st-key-btn_download_excel_summary,
         div.st-key-btn_trigger_email_modal {
-            display: flex !important;
-            align-items: flex-end !important;
-            margin-top: auto !important;
-            margin-bottom: 0 !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        div.st-key-btn_download_excel_summary > div,
+        div.st-key-btn_trigger_email_modal > div {
+            width: 100% !important;
+            margin: 0 !important;
             padding: 0 !important;
         }
         div.st-key-btn_download_excel_summary button,
@@ -72,7 +74,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
-            padding: 0 14px !important;
+            padding: 0 10px !important;
             margin: 0 !important;
             box-sizing: border-box !important;
             width: 100% !important;
@@ -121,13 +123,13 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         unsafe_allow_html=True
     )
 
-    # 상단 헤더 & 엑셀 다운로드 및 메일 발송 툴바 (3열 분할: 3.2 : 1.0 : 1.0 완벽 일직선 수평 정렬)
+    # 상단 헤더 & 우측 버튼 영역 (좌측 3.6 : 우측 1.4 -> 버튼당 약 140px 기존 메일 버튼 크기로 1:1 완벽 수평 정렬)
     try:
-        h_col1, h_col2, h_col3 = st.columns([3.2, 1.0, 1.0], vertical_alignment="bottom")
+        h_left, h_right = st.columns([3.6, 1.4], vertical_alignment="bottom")
     except TypeError:
-        h_col1, h_col2, h_col3 = st.columns([3.2, 1.0, 1.0])
+        h_left, h_right = st.columns([3.6, 1.4])
 
-    with h_col1:
+    with h_left:
         st.markdown(f"""
         <div style="margin-bottom: 2px;">
             <div style="font-size: 22px; font-weight: 800; color: #002d42; letter-spacing: -0.4px; margin-bottom: 3px;">📊 {selected_team} - Summary</div>
@@ -135,21 +137,27 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         </div>
         """, unsafe_allow_html=True)
 
-    with h_col2:
-        excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
-        st.download_button(
-            label="📥 엑셀 리포트",
-            data=excel_bytes,
-            file_name=f"업무현황리포트_{selected_team}_{datetime.now().strftime('%Y%m%d')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-            key="btn_download_excel_summary",
-            help="선택된 팀 및 기간의 업무 투입 현황을 다중 시트 Excel(.xlsx) 리포트로 다운로드합니다."
-        )
+    with h_right:
+        try:
+            b_col1, b_col2 = st.columns([1, 1], vertical_alignment="bottom")
+        except TypeError:
+            b_col1, b_col2 = st.columns([1, 1])
 
-    with h_col3:
-        if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
-            show_email_report_dialog(selected_team)
+        with b_col1:
+            excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
+            st.download_button(
+                label="📥 엑셀 리포트",
+                data=excel_bytes,
+                file_name=f"업무현황리포트_{selected_team}_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+                key="btn_download_excel_summary",
+                help="선택된 팀 및 기간의 업무 투입 현황을 다중 시트 Excel(.xlsx) 리포트로 다운로드합니다."
+            )
+
+        with b_col2:
+            if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
+                show_email_report_dialog(selected_team)
 
     st.write("")
 
