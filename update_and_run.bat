@@ -17,12 +17,15 @@ taskkill /F /IM streamlit.exe >nul 2>&1
 timeout /t 1 /nobreak > nul
 
 echo.
-echo [2/4] GitHub에서 최신 소스코드를 내려받습니다...
-git checkout -- worktime_dashboard/data/worklog.db >nul 2>&1
+echo [2/4] GitHub에서 최신 소스코드를 강제 동기화하여 내려받습니다...
 git fetch origin main
-git pull origin main
+git reset --hard origin/main
 
-cd /d "%~dp0worktime_dashboard"
+if exist "%~dp0worktime_dashboard\requirements.txt" (
+    cd /d "%~dp0worktime_dashboard"
+) else (
+    cd /d "%~dp0"
+)
 pip install -r requirements.txt
 
 echo.

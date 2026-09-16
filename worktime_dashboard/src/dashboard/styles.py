@@ -577,33 +577,62 @@ def apply_custom_styles():
             visibility: visible !important;
         }
 
-        /* 🏛️ 전역 다운로드 버튼 스타일링 (선명한 화이트 볼드 텍스트) */
-        div[data-testid="stDownloadButton"] button,
+        /* 🏛️ 전역 다운로드 버튼 스타일링 (메일 발송 버튼과 높이 38px 및 디자인 100% 완벽 일원화) */
+        div[data-testid="stDownloadButton"] > button,
+        div[data-testid="stDownloadButton"] > a,
         [data-testid="stDownloadButton"] button,
-        .stDownloadButton button {
-            background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
-            background-color: #005073 !important;
-            color: #ffffff !important;
-            border: 1px solid #002233 !important;
+        .stDownloadButton button,
+        .stDownloadButton a {
+            background-color: #004060 !important;
+            background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
             border-radius: 6px !important;
-            padding: 8px 18px !important;
-            box-shadow: 0 2px 5px rgba(0, 80, 115, 0.3) !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            line-height: 38px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+            transition: all 0.2s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 14px !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            text-decoration: none !important;
         }
         div[data-testid="stDownloadButton"] button *,
+        div[data-testid="stDownloadButton"] a *,
         [data-testid="stDownloadButton"] button *,
-        .stDownloadButton button * {
-            color: #ffffff !important;
-            font-weight: 800 !important;
+        .stDownloadButton button *,
+        .stDownloadButton a * {
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
             font-size: 13.5px !important;
-            opacity: 1 !important;
-            visibility: visible !important;
+            letter-spacing: -0.2px !important;
+            line-height: 1 !important;
         }
         div[data-testid="stDownloadButton"] button:hover,
-        [data-testid="stDownloadButton"] button:hover {
-            background-color: #003852 !important;
+        div[data-testid="stDownloadButton"] a:hover,
+        [data-testid="stDownloadButton"] button:hover,
+        .stDownloadButton button:hover,
+        .stDownloadButton a:hover {
+            background-color: #00608a !important;
+            background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
+            border-color: #38bdf8 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+            transform: translateY(-1px) !important;
         }
-        div[data-testid="stDownloadButton"] button:hover * {
-            color: #38bdf8 !important;
+        div[data-testid="stDownloadButton"] button:hover *,
+        div[data-testid="stDownloadButton"] a:hover *,
+        [data-testid="stDownloadButton"] button:hover *,
+        .stDownloadButton button:hover *,
+        .stDownloadButton a:hover * {
+            color: #FFFFFF !important;
         }
 
         /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 (완벽 중앙 정렬 & 입체감) */

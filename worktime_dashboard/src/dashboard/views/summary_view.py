@@ -38,8 +38,21 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     st.markdown(
         """
         <style>
+        /* 엑셀 다운로드 및 메일 발송 버튼 완벽 일원화 (동일 높이 38px, 동일 폭, 완벽 일직선 수평 정렬) */
+        div.st-key-btn_download_excel_summary,
+        div.st-key-btn_trigger_email_modal {
+            display: flex !important;
+            align-items: flex-end !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
         div.st-key-btn_download_excel_summary button,
-        div.st-key-btn_trigger_email_modal button {
+        div.st-key-btn_download_excel_summary a,
+        div.st-key-btn_trigger_email_modal button,
+        div[data-testid="stDownloadButton"] button,
+        div[data-testid="stDownloadButton"] a,
+        .stDownloadButton button,
+        .stDownloadButton a {
             background-color: #004060 !important;
             background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
             color: #FFFFFF !important;
@@ -58,22 +71,32 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             justify-content: center !important;
             padding: 0 14px !important;
             margin: 0 !important;
-            vertical-align: middle !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+            text-decoration: none !important;
+            cursor: pointer !important;
         }
-        div.st-key-btn_download_excel_summary button p,
-        div.st-key-btn_download_excel_summary button span,
-        div.st-key-btn_trigger_email_modal button p,
-        div.st-key-btn_trigger_email_modal button span {
+        div.st-key-btn_download_excel_summary button *,
+        div.st-key-btn_download_excel_summary a *,
+        div.st-key-btn_trigger_email_modal button *,
+        div[data-testid="stDownloadButton"] button *,
+        div[data-testid="stDownloadButton"] a *,
+        .stDownloadButton button *,
+        .stDownloadButton a * {
             color: #FFFFFF !important;
             font-weight: 700 !important;
             font-size: 13.5px !important;
             letter-spacing: -0.2px !important;
             line-height: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
+            white-space: nowrap !important;
         }
         div.st-key-btn_download_excel_summary button:hover,
-        div.st-key-btn_trigger_email_modal button:hover {
+        div.st-key-btn_download_excel_summary a:hover,
+        div.st-key-btn_trigger_email_modal button:hover,
+        div[data-testid="stDownloadButton"] button:hover,
+        div[data-testid="stDownloadButton"] a:hover,
+        .stDownloadButton button:hover,
+        .stDownloadButton a:hover {
             background-color: #00608a !important;
             background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
             border-color: #38bdf8 !important;
@@ -81,10 +104,13 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
             transform: translateY(-1px) !important;
         }
-        div.st-key-btn_download_excel_summary button:hover p,
-        div.st-key-btn_download_excel_summary button:hover span,
-        div.st-key-btn_trigger_email_modal button:hover p,
-        div.st-key-btn_trigger_email_modal button:hover span {
+        div.st-key-btn_download_excel_summary button:hover *,
+        div.st-key-btn_download_excel_summary a:hover *,
+        div.st-key-btn_trigger_email_modal button:hover *,
+        div[data-testid="stDownloadButton"] button:hover *,
+        div[data-testid="stDownloadButton"] a:hover *,
+        .stDownloadButton button:hover *,
+        .stDownloadButton a:hover * {
             color: #FFFFFF !important;
         }
         </style>
@@ -92,36 +118,35 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         unsafe_allow_html=True
     )
 
-    # 상단 헤더 & 엑셀 다운로드 및 메일 발송 툴바 (2열 분할 후 우측에 버튼 2개 1:1 배치)
+    # 상단 헤더 & 엑셀 다운로드 및 메일 발송 툴바 (3열 분할: 3.2 : 1.0 : 1.0 완벽 일직선 수평 정렬)
     try:
-        h_left, h_right = st.columns([3.2, 1.8], vertical_alignment="center")
+        h_col1, h_col2, h_col3 = st.columns([3.2, 1.0, 1.0], vertical_alignment="bottom")
     except TypeError:
-        h_left, h_right = st.columns([3.2, 1.8])
+        h_col1, h_col2, h_col3 = st.columns([3.2, 1.0, 1.0])
 
-    with h_left:
+    with h_col1:
         st.markdown(f"""
-        <div style="margin-top: 2px;">
-            <div style="font-size: 23px; font-weight: 800; color: #002d42; letter-spacing: -0.4px; margin-bottom: 3px;">📊 {selected_team} - Summary</div>
+        <div style="margin-bottom: 2px;">
+            <div style="font-size: 22px; font-weight: 800; color: #002d42; letter-spacing: -0.4px; margin-bottom: 3px;">📊 {selected_team} - Summary</div>
             <div style="font-size: 13px; color: #64748b; font-weight: 500;">주간/월간 전체 작업 실적 핵심 요약 브리핑, Excel 리포트 다운로드 및 정기 이메일 발송을 제공합니다.</div>
         </div>
         """, unsafe_allow_html=True)
 
-    with h_right:
-        b_col1, b_col2 = st.columns([1, 1])
-        with b_col1:
-            excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
-            st.download_button(
-                label="📥 엑셀 리포트",
-                data=excel_bytes,
-                file_name=f"업무현황리포트_{selected_team}_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-                key="btn_download_excel_summary",
-                help="선택된 팀 및 기간의 업무 투입 현황을 다중 시트 Excel(.xlsx) 리포트로 다운로드합니다."
-            )
-        with b_col2:
-            if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
-                show_email_report_dialog(selected_team)
+    with h_col2:
+        excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
+        st.download_button(
+            label="📥 엑셀 리포트",
+            data=excel_bytes,
+            file_name=f"업무현황리포트_{selected_team}_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+            key="btn_download_excel_summary",
+            help="선택된 팀 및 기간의 업무 투입 현황을 다중 시트 Excel(.xlsx) 리포트로 다운로드합니다."
+        )
+
+    with h_col3:
+        if st.button("📧 메일 발송", use_container_width=True, key="btn_trigger_email_modal"):
+            show_email_report_dialog(selected_team)
 
     st.write("")
 
