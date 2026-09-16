@@ -43,7 +43,10 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         div.st-key-btn_trigger_email_modal {
             display: flex !important;
             align-items: flex-end !important;
-            margin: 0 !important;
+            margin-top: auto !important;
+            margin-bottom: 0 !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
             padding: 0 !important;
         }
         div.st-key-btn_download_excel_summary button,

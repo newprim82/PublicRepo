@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 chcp 65001 > nul
 title 팀 지원 시간 대시보드 [업데이트 및 실행]
 
@@ -19,7 +19,13 @@ timeout /t 1 /nobreak > nul
 echo.
 echo [2/4] GitHub에서 최신 소스코드를 강제 동기화하여 내려받습니다...
 git fetch origin main
-git reset --hard origin/main
+if %ERRORLEVEL% NEQ 0 (
+    echo [경고] git fetch에 실패했습니다. 네트워크 또는 권한을 확인하세요.
+) else (
+    git reset --hard origin/main
+    echo [동기화 완료] 현재 반영된 최신 커밋:
+    git log -1 --oneline
+)
 
 if exist "%~dp0worktime_dashboard\requirements.txt" (
     cd /d "%~dp0worktime_dashboard"
