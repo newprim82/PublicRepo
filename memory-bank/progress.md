@@ -6,7 +6,8 @@
 - [x] 모노레포 구조화 (`worktime_dashboard/`) 및 루트 프록시 호환성 구축
 - [x] Summary 뷰 버튼(엑셀, 메일, AI 재분석) 규격(140px, 38px) 및 수평선 일원화
 - [x] 신규 스킬(`task-observer`, `claude-mem`, `claude-code-setup`) 분석 및 메모리 뱅크 구축
-- [x] 아웃룩 삭제 일정 자동 감지 및 DB(SQLite / Supabase) 동기화 삭제 기능 구현
+- [x] 아웃룩 삭제 일정 자동 감지 및 DB(SQLite / Supabase) 동기화 삭제 기능 구현 (v2.2.14)
+- [x] 라이브 관제 3단 구조(진행 중인 작업 / 오늘 예정 일정 / 오늘 완료된 작업) 개편 및 아웃룩 예정 일정 연동 (v2.2.15)
 
 
 ## 2. 지속 관리 체크리스트

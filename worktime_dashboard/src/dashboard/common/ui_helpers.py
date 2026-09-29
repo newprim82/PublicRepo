@@ -479,6 +479,109 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
     return f"""<div class="live-task-card" data-start="{st_dt_iso}" data-est="{est_hours}" data-single-view="{'true' if is_single_view else 'false'}" style="background: #ffffff; border: 1px solid #e1e4e8; border-left: 4px solid {border_color}; border-radius: 8px; padding: {card_padding}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{edu_badge}{allday_badge}{night_badge}{weekend_badge}</div><span style="{time_badge_style} border-radius: 6px; padding: {time_badge_padding}; font-size: 10.5px; font-weight: 700; white-space: nowrap;">{time_badge_label}</span></div><div style="font-size: {client_font_size}; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{client_tooltip}">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #e9ecef; border-radius: 6px; border: {bar_border}; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center;" title="{desc_tooltip}"><div class="live-progress-bar live-progress-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: {bar_width_pct}%; background: {bar_bg}; border-radius: 5px; transition: width 0.8s ease-in-out;\"></div><div style="position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; font-size: 11px; font-weight: 600; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); gap: 4px;"><span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;" title="{desc_tooltip}">{clean_desc}</span><span class="live-pct-badge" style="font-weight: 700; color: #ffffff; font-size: 10px; white-space: nowrap; background: rgba(0,0,0,0.4); padding: 1px 3px; border-radius: 4px;">{pct_display}</span></div></div><div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #64748b; margin-top: 3px; gap: 4px;"><span style="display: flex; align-items: center; white-space: nowrap; flex-shrink: 0;">{source_badge}⏱️ 예정 {est_hours}h</span><span class="live-elapsed-time" style="color: {elapsed_color}; white-space: nowrap; flex-shrink: 0;">{elapsed_html}</span></div></div>"""
 
 
+def get_upcoming_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bool = False) -> str:
+    """오늘 예정 일정(SCHEDULED) 카드 HTML 생성 (시작 대기/남은 시간 안내)"""
+    w_name = r["worker_name"]
+    w_title = title_mappings.get(w_name) or r.get("worker_title") or ""
+    title_str = get_job_title_badge(w_title)
+    c_name = r["client_name"]
+    t_desc = r["task_description"]
+
+    # 🛡️ 아웃룩 일정 고객사명/작업내용 최종 정규화 안전망 (캐시 지연 대비)
+    if c_name in ["아웃룩 일정", "기타"] or "아웃룩" in str(c_name):
+        from src.services.client_normalizer import parse_outlook_subject_to_client_and_task
+        clean_raw = re.sub(r"^\[.*?\]\s*", "", str(t_desc))
+        pc, pt = parse_outlook_subject_to_client_and_task(clean_raw)
+        if pc and pc not in ["아웃룩 일정", "기타"]:
+            c_name = pc
+            t_desc = pt
+
+    def _safe_float(val, default=0.0):
+        if val is None or pd.isna(val):
+            return default
+        try:
+            return float(val)
+        except Exception:
+            return default
+
+    st_dt = r.get("start_time")
+    if pd.isna(st_dt):
+        st_dt = None
+    elif isinstance(st_dt, str):
+        try:
+            st_dt = pd.to_datetime(st_dt)
+        except Exception:
+            st_dt = None
+
+    ed_dt = r.get("end_time") or r.get("scheduled_end_time")
+    if pd.isna(ed_dt):
+        ed_dt = None
+    elif isinstance(ed_dt, str):
+        try:
+            ed_dt = pd.to_datetime(ed_dt)
+        except Exception:
+            ed_dt = None
+
+    dur_hours = _safe_float(r.get("display_hours")) or _safe_float(r.get("total_hours")) or _safe_float(r.get("estimated_hours")) or 0.0
+
+    st_str = st_dt.strftime("%H:%M") if (st_dt is not None and pd.notna(st_dt)) else "??"
+    ed_str = ed_dt.strftime("%H:%M") if (ed_dt is not None and pd.notna(ed_dt)) else "??"
+
+    # 남은 시간 계산
+    if st_dt is not None and pd.notna(st_dt):
+        st_dt_naive = st_dt.replace(tzinfo=None) if hasattr(st_dt, 'tzinfo') and st_dt.tzinfo else st_dt
+        diff_sec = int((st_dt_naive - kst_now_naive).total_seconds())
+    else:
+        diff_sec = 0
+
+    if diff_sec > 3600:
+        h_left = diff_sec // 3600
+        m_left = (diff_sec % 3600) // 60
+        status_text = f"⏱️ {h_left}시간 {m_left}분 후 시작"
+        status_bg = "#f1f5f9"
+        status_color = "#475569"
+        status_border = "#cbd5e1"
+    elif diff_sec > 0:
+        m_left = max(1, diff_sec // 60)
+        status_text = f"⏱️ {m_left}분 후 시작 (곧 시작)"
+        status_bg = "#fef3c7"
+        status_color = "#b45309"
+        status_border = "#fde68a"
+    else:
+        status_text = "⏳ 시작 대기 (미착수)"
+        status_bg = "#fef2f2"
+        status_color = "#b91c1c"
+        status_border = "#fecaca"
+
+    is_night_flag = bool(st_dt is not None and pd.notna(st_dt) and (st_dt.hour >= 18 or st_dt.hour < 6))
+    night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
+
+    rank_color = get_job_title_color(w_title)
+    border_color = rank_color
+
+    card_padding = "10px 12px; margin-bottom: 8px;" if is_single_view else "10px 11px; margin-bottom: 9px;"
+    client_font_size = "13px" if is_single_view else "12.5px"
+    time_badge_padding = "2px 8px" if is_single_view else "1.5px 6px"
+
+    clean_desc = re.sub(r"^\[📅?\s*(일정완료|아웃룩|예정)\]\s*", "", str(t_desc)).strip()
+
+    is_outlook = bool(r.get("is_outlook") == True)
+    is_kakao = bool(r.get("is_kakao") == True or (not is_outlook))
+    is_both = bool(r.get("has_both") or (is_outlook and is_kakao))
+
+    if is_both:
+        source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 2px; vertical-align: middle; line-height: 1.2;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 4px; vertical-align: middle; line-height: 1.2;">O</span>'
+    elif is_outlook:
+        source_badge = '<span style="background-color: #0284c7; color: #ffffff; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 4px; vertical-align: middle; line-height: 1.2;">O</span>'
+    else:
+        source_badge = '<span style="background-color: #FEE500; color: #371d1e; font-size: 10px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; margin-right: 4px; vertical-align: middle; line-height: 1.2;">K</span>'
+
+    desc_tooltip = html.escape(str(clean_desc), quote=True)
+    client_tooltip = html.escape(str(c_name), quote=True)
+
+    return f"""<div class="live-task-card upcoming-card" style="background: #ffffff; border: 1px solid #e0e7ff; border-left: 4px solid {border_color}; border-radius: 8px; padding: {card_padding}; box-shadow: 0 1px 3px rgba(0,0,0,0.04);"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;"><div><span style="font-size: 13.5px; font-weight: 700; color: #0f172a;">👤 {w_name}{title_str}</span>{night_badge}</div><span style="background-color: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; border-radius: 6px; padding: {time_badge_padding}; font-size: 10.5px; font-weight: 700; white-space: nowrap;">📅 {st_str}~{ed_str} ({dur_hours}h)</span></div><div style="font-size: {client_font_size}; color: #005073; font-weight: 700; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{client_tooltip}">🏢 {c_name}</div><div style="position: relative; overflow: hidden; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1; margin-bottom: 5px; min-height: 28px; display: flex; align-items: center; padding: 3px 8px;" title="{desc_tooltip}"><div style="width: 100%; display: flex; align-items: center; font-size: 11.5px; font-weight: 600; color: #334155; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{source_badge}<span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{clean_desc}</span></div></div><div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; margin-top: 3px; gap: 4px;"><span style="color: #64748b; white-space: nowrap; flex-shrink: 0;">⏱️ 예정 공수 {dur_hours}h</span><span style="background-color: {status_bg}; color: {status_color}; border: 1px solid {status_border}; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0;">{status_text}</span></div></div>"""
+
+
 def get_leave_card_html(r: dict, is_single_view: bool = False) -> str:
     """휴가/연차/반차 전용 100% 완료 상태 카드 HTML (일반 진행/완료 카드와 높이·너비·비율 100% 완벽 일치)"""
     w_name = r["worker_name"]

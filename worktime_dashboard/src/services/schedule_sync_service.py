@@ -128,13 +128,16 @@ class ScheduleSyncService:
         cls,
         kakao_pend_df: pd.DataFrame,
         today_completed_df: pd.DataFrame,
+        kakao_sched_df: Optional[pd.DataFrame] = None,
         outlook_df: Optional[pd.DataFrame] = None
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, List[Dict[str, Any]]]:
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, List[Dict[str, Any]]]:
         """
         카카오톡 진행 작업과 아웃룩 일정을 병합하여
-        1) 최종 실시간 진행 작업 데이터프레임 (merged_pend_df)
-        2) 아웃룩에서 100% 완료로 승격된 작업 데이터프레임 (auto_completed_df)
-        3) 오늘 휴가/연차/반차 목록 (leave_records)
+        1) 최종 실시간 진행 작업 데이터프레임 (final_pend_df)
+        2) 오늘 예정 일정 데이터프레임 (final_sched_df)
+        3) 카카오톡 완료 작업 데이터프레임 (final_comp_df)
+        4) 아웃룩에서 100% 완료로 승격된 작업 데이터프레임 (auto_comp_df)
+        5) 오늘 휴가/연차/반차 목록 (leave_records)
         을 반환
         """
         now = get_current_kst_time().replace(tzinfo=None)
@@ -155,7 +158,8 @@ class ScheduleSyncService:
                 outlook_df = pd.DataFrame()
 
         if outlook_df.empty or "start_time" not in outlook_df.columns:
-            return kakao_pend_df, today_completed_df, pd.DataFrame(), []
+            empty_sched = kakao_sched_df if (kakao_sched_df is not None and not kakao_sched_df.empty) else pd.DataFrame()
+            return kakao_pend_df, empty_sched, today_completed_df, pd.DataFrame(), []
 
         # 오늘 아웃룩 일정 필터링
         today_out = outlook_df.copy()
@@ -168,6 +172,7 @@ class ScheduleSyncService:
         today_out = today_out.drop_duplicates(subset=["worker_name", "subject", "start_time"])
 
         promoted_pend_rows = []
+        upcoming_rows = []
         auto_completed_rows = []
         team_info = TeamService.get_team_members_info()
 
@@ -384,14 +389,56 @@ class ScheduleSyncService:
                     "is_night_work": False,
                     "is_weekend_work": False
                 })
+            # C. 시작 30분 전 이전 -> 오늘 예정 일정 (SCHEDULED)
+            else:
+                is_night = bool(st_dt.hour >= 18 or st_dt.hour < 6 or ed_dt.hour > 18)
+                upcoming_rows.append({
+                    "msg_hash": f"OUTLOOK_SCHED_{r.get('entry_id', '')}",
+                    "log_type": "작업",
+                    "worker_name": w_name,
+                    "worker_title": w_title,
+                    "worker_team": w_team,
+                    "client_name": parsed_client,
+                    "task_description": f"[📅 예정] {parsed_desc}",
+                    "start_time": st_time,
+                    "end_time": ed_time,
+                    "scheduled_start_time": st_time,
+                    "scheduled_end_time": ed_time,
+                    "estimated_minutes": int(dur_hours * 60),
+                    "actual_minutes": 0,
+                    "actual_hours": 0.0,
+                    "estimated_hours": dur_hours,
+                    "total_hours": dur_hours,
+                    "display_hours": dur_hours,
+                    "status": "SCHEDULED",
+                    "is_outlook": True,
+                    "is_all_day": is_all_day,
+                    "has_both": False,
+                    "is_night_work": is_night,
+                    "is_weekend_work": False
+                })
 
         if promoted_pend_rows:
             prom_df = pd.DataFrame(promoted_pend_rows)
             final_pend_df = pd.concat([final_pend_df, prom_df], ignore_index=True)
 
+        if kakao_sched_df is not None and not kakao_sched_df.empty:
+            if "is_outlook" in kakao_sched_df.columns:
+                final_sched_df = kakao_sched_df[kakao_sched_df["is_outlook"] != True].copy()
+            else:
+                final_sched_df = kakao_sched_df.copy()
+            final_sched_df["has_both"] = False
+        else:
+            final_sched_df = pd.DataFrame()
+
+        if upcoming_rows:
+            up_df = pd.DataFrame(upcoming_rows)
+            final_sched_df = pd.concat([final_sched_df, up_df], ignore_index=True)
+            final_sched_df = final_sched_df.drop_duplicates(subset=["worker_name", "start_time", "task_description"], keep="first")
+
         auto_comp_df = pd.DataFrame(auto_completed_rows) if auto_completed_rows else pd.DataFrame()
 
-        return final_pend_df, final_comp_df, auto_comp_df, leave_records
+        return final_pend_df, final_sched_df, final_comp_df, auto_comp_df, leave_records
 
     @classmethod
     def combine_all_work_logs(

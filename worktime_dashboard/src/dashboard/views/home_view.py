@@ -24,6 +24,7 @@ from ..common.ui_helpers import (
     get_job_title_rank,
     get_team_theme,
     get_live_task_card_html,
+    get_upcoming_task_card_html,
     get_leave_card_html,
     is_same_team,
     format_raw_chat_display,
@@ -54,6 +55,89 @@ def _render_single_team_pending_cards(pend_df: pd.DataFrame, title_mappings: dic
                 st.markdown(card_html, unsafe_allow_html=True)
             except Exception as e_card:
                 print(f"[단일팀 카드 렌더링 예외]: {e_card}")
+
+
+def _render_single_team_upcoming_cards(sched_df: pd.DataFrame, title_mappings: dict):
+    """🏢 단일 팀 오늘 예정 일정 카드 렌더링"""
+    kst_now_naive = get_current_kst_time().replace(tzinfo=None)
+    t_sched = sched_df.copy()
+    t_sched = t_sched.loc[:, ~t_sched.columns.duplicated()]
+    t_sched["_rank_score"] = t_sched.apply(
+        lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""),
+        axis=1
+    )
+    t_sched["_st_sort"] = pd.to_datetime(t_sched["start_time"], errors="coerce")
+    t_sched = t_sched.sort_values(by=["_st_sort", "_rank_score"], ascending=[True, True])
+
+    s_cols = st.columns(4)
+    for idx, (_, r) in enumerate(t_sched.iterrows()):
+        with s_cols[idx % 4]:
+            try:
+                card_html = get_upcoming_task_card_html(r, title_mappings, kst_now_naive, is_single_view=True)
+                st.markdown(card_html, unsafe_allow_html=True)
+            except Exception as e_card:
+                print(f"[단일팀 예정 카드 렌더링 예외]: {e_card}")
+
+
+def _render_kanban_upcoming_cards(t_sched: pd.DataFrame, title_mappings: dict):
+    """🏛️ 전체 팀 칸반 열 오늘 예정 일정 카드 렌더링"""
+    kst_now_naive = get_current_kst_time().replace(tzinfo=None)
+    t_sched_sorted = t_sched.copy()
+    t_sched_sorted = t_sched_sorted.loc[:, ~t_sched_sorted.columns.duplicated()]
+    t_sched_sorted["_rank_score"] = t_sched_sorted.apply(
+        lambda r: get_job_title_rank(title_mappings.get(r["worker_name"]) or r.get("worker_title") or ""),
+        axis=1
+    )
+    t_sched_sorted["_st_sort"] = pd.to_datetime(t_sched_sorted["start_time"], errors="coerce")
+    t_sched_sorted = t_sched_sorted.sort_values(by=["_st_sort", "_rank_score"], ascending=[True, True])
+
+    for idx, (_, r) in enumerate(t_sched_sorted.iterrows()):
+        try:
+            card_html = get_upcoming_task_card_html(r, title_mappings, kst_now_naive, is_single_view=False)
+            st.markdown(card_html, unsafe_allow_html=True)
+        except Exception as e_card:
+            print(f"[칸반 예정 카드 렌더링 예외]: {e_card}")
+
+
+def render_upcoming_schedule_section(sched_df: pd.DataFrame, selected_team: str):
+    """📅 오늘 예정 일정 섹션 (3단 라이브 관제 구조의 중간 섹션)"""
+    st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #6366f1; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>📅 오늘 예정 일정</span><span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 연동 )</span><span style="background: #e0e7ff; color: #4338ca; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(sched_df)}건</span></div>""", unsafe_allow_html=True)
+
+    if sched_df.empty:
+        st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; color: #94a3b8; font-size: 12.5px; font-weight: 600; margin-bottom: 8px;'>오늘 추가로 예정된 일정이 없습니다.</div>", unsafe_allow_html=True)
+        return
+
+    if selected_team == "전체 팀":
+        base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
+        teams_to_render = list(base_teams)
+        for extra_t in sched_df["worker_team"].unique():
+            if extra_t and not any(is_same_team(extra_t, bt) for bt in teams_to_render):
+                teams_to_render.append(extra_t)
+
+        title_mappings = TeamService.get_title_mappings()
+        team_cols = st.columns(len(teams_to_render))
+
+        for c_idx, t_name in enumerate(teams_to_render):
+            with team_cols[c_idx]:
+                theme = get_team_theme(t_name)
+                t_sched = sched_df[sched_df["worker_team"].apply(lambda t: is_same_team(t, t_name))]
+                cnt_str = f"📅 {len(t_sched)}건 예정" if len(t_sched) > 0 else "0건"
+                cnt_bg = "#e0e7ff" if len(t_sched) > 0 else "#f1f5f9"
+                cnt_color = "#4338ca" if len(t_sched) > 0 else "#64748b"
+                cnt_border = "#c7d2fe" if len(t_sched) > 0 else "#cbd5e1"
+
+                st.markdown(f"""<div style="background: {theme['bg_gradient']}; border: 1.5px solid {theme['border']}; border-top: 4px solid #6366f1; border-radius: 8px; padding: 10px 8px; margin-bottom: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 5px;"><span style="font-size: 17px;">{theme['icon']}</span><span style="font-size: 15px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{t_name}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 800;">{theme['tag']}</span></div><div><span style="background-color: {cnt_bg}; color: {cnt_color}; border: 1px solid {cnt_border}; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">{cnt_str}</span></div></div>""", unsafe_allow_html=True)
+
+                if t_sched.empty:
+                    st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 26px 8px; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 10px;'>예정 일정 없음</div>", unsafe_allow_html=True)
+                else:
+                    _render_kanban_upcoming_cards(t_sched, title_mappings)
+    else:
+        title_mappings = TeamService.get_title_mappings()
+        theme = get_team_theme(selected_team)
+        with st.container(border=True):
+            st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid #6366f1; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">📅 {len(sched_df)}건 예정</span></div>""", unsafe_allow_html=True)
+            _render_single_team_upcoming_cards(sched_df, title_mappings)
 
 
 def _render_kanban_pending_cards(t_pend: pd.DataFrame, title_mappings: dict):
@@ -169,18 +253,22 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     if selected_team != "전체 팀" and not today_df.empty:
         today_df = today_df[today_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
 
-    # 2. 진행 중(PENDING) vs 오늘 완료(COMPLETED) 분리
+    # 2. 진행 중(PENDING) vs 예정(SCHEDULED) vs 오늘 완료(COMPLETED) 분리
     if not today_df.empty:
         pend_df = today_df[today_df["status"] == "PENDING"].sort_values("start_time", ascending=False)
+        sched_df = today_df[today_df["status"] == "SCHEDULED"].sort_values("start_time", ascending=True)
         comp_df = today_df[today_df["status"] == "COMPLETED"].sort_values("start_time", ascending=False)
     else:
         pend_df = today_df.iloc[0:0]
+        sched_df = today_df.iloc[0:0]
         comp_df = today_df.iloc[0:0]
 
-    # 📅 [신규] 아웃룩 스케줄 동기화 및 미래시 승격 (카톡 미보고 작업 자동 진행 & 100% 자동 완료 & 휴가 100%)
+    # 📅 [신규] 아웃룩 스케줄 동기화 및 3단 라이브 승격 (진행 중 / 예정 / 완료 & 휴가 100%)
     leave_records = []
     try:
-        pend_df, comp_df, auto_comp_df, leave_records = ScheduleSyncService.get_synced_live_tasks(pend_df, comp_df)
+        pend_df, sched_df, comp_df, auto_comp_df, leave_records = ScheduleSyncService.get_synced_live_tasks(
+            pend_df, comp_df, sched_df
+        )
         if not auto_comp_df.empty:
             comp_df = pd.concat([comp_df, auto_comp_df], ignore_index=True)
             comp_df = comp_df.drop_duplicates(subset=["worker_name", "start_time", "task_description"], keep="first")
@@ -192,6 +280,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     if selected_team != "전체 팀":
         if not pend_df.empty:
             pend_df = pend_df[pend_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
+        if not sched_df.empty:
+            sched_df = sched_df[sched_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
         if not comp_df.empty:
             comp_df = comp_df[comp_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
         if leave_records:
@@ -202,6 +292,8 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         tot_workers_set.update(comp_df["worker_name"].dropna().unique())
     if not pend_df.empty:
         tot_workers_set.update(pend_df["worker_name"].dropna().unique())
+    if not sched_df.empty:
+        tot_workers_set.update(sched_df["worker_name"].dropna().unique())
     if leave_records:
         tot_workers_set.update([l["worker_name"] for l in leave_records if l.get("worker_name")])
     tot_workers = len(tot_workers_set)
@@ -211,7 +303,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     tot_hours = round(tot_comp_h + tot_pend_h, 1)
 
     # 3. 상단 실시간 요약 바 (Live Status Summary - 다크모드 NOC 커맨드 센터 스타일)
-    summary_html = f"""<div style="background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%); border: 1px solid #005f8a; border-radius: 9px; padding: 13px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 14px rgba(0, 34, 51, 0.25);"><div style="display: flex; align-items: center; gap: 11px;"><span style="background-color: #dc2626; color: #ffffff; border: 1px solid #ef4444; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);">● LIVE 관제 중</span><span style="font-size: 16.5px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #38bdf8; background-color: rgba(0, 180, 216, 0.22); border: 1px solid rgba(56, 189, 248, 0.5); padding: 3px 9px; border-radius: 6px; font-weight: 700;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; font-weight: 600;"><span style="color: #cbd5e1;">👥 오늘 투입: <b style="color: #38bdf8; font-size: 14.5px; font-weight: 800;">{tot_workers}명</b></span><span style="color: #cbd5e1;">⏳ 진행 중: <b style="color: #fbbf24; font-size: 14.5px; font-weight: 800;">{len(pend_df)}건</b></span><span style="color: #cbd5e1;">✅ 완료: <b style="color: #4ade80; font-size: 14.5px; font-weight: 800;">{len(comp_df)}건</b></span><span style="color: #cbd5e1;">⏱️ 총 지원 공수: <b style="color: #f472b6; font-size: 14.5px; font-weight: 800;">{tot_hours}시간</b></span></div></div>"""
+    summary_html = f"""<div style="background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%); border: 1px solid #005f8a; border-radius: 9px; padding: 13px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 14px rgba(0, 34, 51, 0.25);"><div style="display: flex; align-items: center; gap: 11px;"><span style="background-color: #dc2626; color: #ffffff; border: 1px solid #ef4444; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 8px rgba(220, 38, 38, 0.4);">● LIVE 관제 중</span><span style="font-size: 16.5px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">오늘 ({today_date.strftime('%Y년 %m월 %d일')}) 실시간 현장 지원 현황</span><span style="font-size: 12px; color: #38bdf8; background-color: rgba(0, 180, 216, 0.22); border: 1px solid rgba(56, 189, 248, 0.5); padding: 3px 9px; border-radius: 6px; font-weight: 700;">선택: {selected_team}</span></div><div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; font-weight: 600;"><span style="color: #cbd5e1;">👥 오늘 투입: <b style="color: #38bdf8; font-size: 14.5px; font-weight: 800;">{tot_workers}명</b></span><span style="color: #cbd5e1;">⏳ 진행 중: <b style="color: #fbbf24; font-size: 14.5px; font-weight: 800;">{len(pend_df)}건</b></span><span style="color: #cbd5e1;">📅 예정: <b style="color: #818cf8; font-size: 14.5px; font-weight: 800;">{len(sched_df)}건</b></span><span style="color: #cbd5e1;">✅ 완료: <b style="color: #4ade80; font-size: 14.5px; font-weight: 800;">{len(comp_df)}건</b></span><span style="color: #cbd5e1;">⏱️ 총 지원 공수: <b style="color: #f472b6; font-size: 14.5px; font-weight: 800;">{tot_hours}시간</b></span></div></div>"""
     st.markdown(summary_html, unsafe_allow_html=True)
 
     # 🧹 24시간 이상 방치된 미마감(PENDING) 작업 감지 알림
@@ -231,11 +323,11 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                     if st.button(f"🧹 미마감 {len(stale_pends)}건 정리하기", key="btn_open_stale_dialog", use_container_width=True, type="primary"):
                         show_stale_pending_tasks_dialog(df_raw)
 
-    if today_df.empty and pend_df.empty and comp_df.empty:
+    if today_df.empty and pend_df.empty and sched_df.empty and comp_df.empty:
         st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 작업 보고 또는 일정이 아직 없습니다.")
         return
 
-    # 4 & 5. 🏛️ LIVE 관제 중 하위 전체 내용을 하나로 묶는 대형 통합 네모 컨테이너
+    # 4, 5 & 6. 🏛️ LIVE 관제 중 하위 전체 내용을 하나로 묶는 대형 통합 네모 컨테이너
     with st.container(border=True):
         st.markdown('<span class="live-board-main-container" style="display:none;"></span>', unsafe_allow_html=True)
 
@@ -243,7 +335,11 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         render_live_pending_section(pend_df, selected_team, leave_records=leave_records)
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
-        # 5. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)
+        # 5. 📅 오늘 예정 일정(SCHEDULED) 섹션 (3단 라이브 관제의 중간 섹션)
+        render_upcoming_schedule_section(sched_df, selected_team)
+        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
+
+        # 6. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)
         st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #10b981; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">✅ 오늘 완료된 작업 <span style="background: #ede9fe; color: #5b21b6; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(comp_df)}건</span></div>""", unsafe_allow_html=True)
         if comp_df.empty:
             st.info("오늘 완료 보고된 작업이 아직 없습니다.")
