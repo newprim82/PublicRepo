@@ -101,7 +101,8 @@ def _render_kanban_upcoming_cards(t_sched: pd.DataFrame, title_mappings: dict):
 
 def render_upcoming_schedule_section(sched_df: pd.DataFrame, selected_team: str):
     """📅 오늘 예정 일정 섹션 (3단 라이브 관제 구조의 중간 섹션)"""
-    st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #6366f1; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>📅 오늘 예정 일정</span><span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 연동 )</span><span style="background: #e0e7ff; color: #4338ca; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(sched_df)}건</span></div>""", unsafe_allow_html=True)
+    badge_txt = '📅 아웃룩' if selected_team != "전체 팀" else 'O'
+    st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #6366f1; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>📅 오늘 예정 일정</span><span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 5px; border-radius: 3px; vertical-align: middle;">{badge_txt}</span> 연동 )</span><span style="background: #e0e7ff; color: #4338ca; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(sched_df)}건</span></div>""", unsafe_allow_html=True)
 
     if sched_df.empty:
         st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; color: #94a3b8; font-size: 12.5px; font-weight: 600; margin-bottom: 8px;'>오늘 추가로 예정된 일정이 없습니다.</div>", unsafe_allow_html=True)
