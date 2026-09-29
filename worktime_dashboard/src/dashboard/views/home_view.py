@@ -287,6 +287,14 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         if leave_records:
             leave_records = [l for l in leave_records if is_same_team(l.get("worker_team", ""), selected_team)]
 
+    # 🏖️ 사용자 확정 원칙: 근무 시간대(18:00 이전)에는 휴가 카드가 완료된 작업에 조기 표출되지 않도록 필터링
+    # (18:00 퇴근 시점이 지나 실시간 상단 부재 영역에서 내려간 뒤에만 완료된 작업으로 정상 전환 표출)
+    if kst_now.hour < 18 and not comp_df.empty:
+        if "is_leave" in comp_df.columns:
+            comp_df = comp_df[comp_df["is_leave"] != True]
+        if "client_name" in comp_df.columns:
+            comp_df = comp_df[~comp_df["client_name"].astype(str).str.contains("휴가|연차", regex=True)]
+
     tot_workers_set = set()
     if not comp_df.empty:
         tot_workers_set.update(comp_df["worker_name"].dropna().unique())

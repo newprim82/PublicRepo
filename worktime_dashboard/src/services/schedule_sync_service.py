@@ -195,7 +195,7 @@ class ScheduleSyncService:
             w_title = team_info.get(w_name, {}).get("title", "")
             w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
 
-            # 1-A. 근무 시간(18:00 이전)에만 실시간 진행 섹션 상단 부재 현황에 표출 (18시 이후에는 상단 자동 숨김)
+            # 1-A. 근무 시간(18:00 이전)에만 실시간 진행 섹션 상단 부재 현황에 표출
             if now.hour < 18:
                 leave_records.append({
                     "worker_name": w_name,
@@ -209,30 +209,30 @@ class ScheduleSyncService:
                     "progress_pct": 100,  # 무조건 100%
                     "color_tag": r.get("color_tag", "#ec4899")
                 })
-
-            # 1-B. 휴가는 오늘 완료된 작업 섹션에 항상 100% 완료 카드로 표출 (업무량 산정은 0h 제외)
-            auto_completed_rows.append({
-                "msg_hash": f"OUTLOOK_LEAVE_{r.get('entry_id', '')}",
-                "log_type": "휴가",
-                "worker_name": w_name,
-                "worker_title": w_title,
-                "worker_team": w_team,
-                "client_name": f"🏖️ {l_type}",
-                "task_description": f"[{l_type}] {r['subject']}",
-                "start_time": st_time,
-                "end_time": ed_time,
-                "estimated_minutes": 0,
-                "actual_minutes": 0,
-                "actual_hours": 0.0,
-                "estimated_hours": 0.0,
-                "total_hours": 0.0,
-                "display_hours": dur_hours,
-                "status": "COMPLETED",
-                "is_outlook": True,
-                "is_leave": True,
-                "is_night_work": False,
-                "is_weekend_work": False
-            })
+            else:
+                # 1-B. 퇴근 시간(18:00 이후): 실시간 상단에서는 숨겨지고 오늘 완료된 작업 섹션으로 이동 표출 (업무량 산정은 0h 제외)
+                auto_completed_rows.append({
+                    "msg_hash": f"OUTLOOK_LEAVE_{r.get('entry_id', '')}",
+                    "log_type": "휴가",
+                    "worker_name": w_name,
+                    "worker_title": w_title,
+                    "worker_team": w_team,
+                    "client_name": f"🏖️ {l_type}",
+                    "task_description": f"[{l_type}] {r['subject']}",
+                    "start_time": st_time,
+                    "end_time": ed_time,
+                    "estimated_minutes": 0,
+                    "actual_minutes": 0,
+                    "actual_hours": 0.0,
+                    "estimated_hours": 0.0,
+                    "total_hours": 0.0,
+                    "display_hours": dur_hours,
+                    "status": "COMPLETED",
+                    "is_outlook": True,
+                    "is_leave": True,
+                    "is_night_work": False,
+                    "is_weekend_work": False
+                })
 
         # 2. 순수 카카오톡 작업 목록 추출 (아웃룩 일정과 자기 자신 매칭 원천 방지)
         # 전달받은 데이터프레임 중 is_outlook이 아닌 순수 카카오톡 보고 작업만 분리
@@ -564,8 +564,9 @@ class ScheduleSyncService:
                         "actual_hours": 0.0,       # 🌟 업무량 산정 완전 제외 (0.0h)
                         "estimated_hours": 0.0,
                         "total_hours": 0.0,
-                        "display_hours": dur_hours, # 🌟 카드 뱃지 표출용 (9.0h / 4.5h)
-                        "status": "SCHEDULED" if st_dt > now else "COMPLETED",
+                        # 🏖️ 당일(오늘) 휴가는 18:00 이전에는 실시간 부재 전용이므로 COMPLETED가 아닌 SCHEDULED 부여,
+                        # 18:00 이후 또는 과거 날짜의 휴가는 COMPLETED 부여
+                        "status": "SCHEDULED" if (st_dt.date() == now.date() and now.hour < 18) or st_dt > now else "COMPLETED",
                         "is_outlook": True,
                         "is_leave": True,
                         "is_night_work": False,
