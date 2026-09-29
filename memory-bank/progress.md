@@ -1,0 +1,15 @@
+# Progress & Milestones
+
+## 1. 완료된 주요 마일스톤
+- [x] 카카오톡 실시간 업무 메시지 수집 및 아웃룩 일정 지능형 매칭 엔진 (v2.2.14)
+- [x] NTP(time.bora.net) 표준 시계 상단 관제 배너 연동
+- [x] 모노레포 구조화 (`worktime_dashboard/`) 및 루트 프록시 호환성 구축
+- [x] Summary 뷰 버튼(엑셀, 메일, AI 재분석) 규격(140px, 38px) 및 수평선 일원화
+- [x] 신규 스킬(`task-observer`, `claude-mem`, `claude-code-setup`) 분석 및 메모리 뱅크 구축
+- [x] 아웃룩 삭제 일정 자동 감지 및 DB(SQLite / Supabase) 동기화 삭제 기능 구현
+
+
+## 2. 지속 관리 체크리스트
+- [ ] 신규 UI 컴포넌트 추가 시 버튼 규격(38px) 및 줄 맞춤 유지 검증
+- [ ] 사용자 교정 및 피드백 신호 발생 시 `task-observer` 원칙에 따라 스킬/규칙 자동 개선
+- [ ] 세션 간 주요 아키텍처 변경 발생 시 `claude-mem` 메모리 뱅크 동기화

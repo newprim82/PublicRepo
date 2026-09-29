@@ -4,7 +4,7 @@ import re
 import threading
 import time
 from datetime import datetime, date, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 # Windows 전용 COM 모듈
 try:
@@ -57,15 +57,16 @@ def clean_worker_name(raw: str) -> str:
         return m.group(1).strip()
     return re.sub(r"\s*(수석|과장|대리|사원|팀장|본부장|부장|차장|이사|상무|전무)$", "", raw).strip()
 
-def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleRecord]:
+def extract_outlook_schedules_with_meta(months_ahead: int = 2) -> Tuple[List[OutlookScheduleRecord], Dict[str, Any]]:
     """
-    PC B의 Outlook 데스크톱 앱에서 내 일정 및 공유 캘린더 일정을 안전하게 추출
+    PC B의 Outlook 데스크톱 앱에서 내 일정 및 공유 캘린더 일정을 안전하게 추출하고,
+    삭제 동기화를 위한 메타데이터(수집 기간, 대상 작업자)를 함께 반환
     - '종일' 체크 시 09:00~18:00 (8.0h) 자동 시간 보정
     - 휴가/연차/반차 자동 감지
     """
     if not WIN32_AVAILABLE:
         safe_print("[-] Windows COM 모듈이 지원되지 않는 환경입니다.")
-        return []
+        return [], {}
 
     try:
         pythoncom.CoInitialize()
@@ -77,7 +78,7 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
         namespace = outlook.GetNamespace("MAPI")
     except Exception as e:
         safe_print(f"[-] Outlook MAPI 연결 실패: {e}")
-        return []
+        return [], {}
 
     # 1. 날짜 필터링 범위 (현재 달 1일 ~ N개월 후 말일)
     now = get_current_kst_time()
@@ -350,21 +351,32 @@ def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleReco
         except Exception as e_sh:
             safe_print(f"[-] Outlook 공유 캘린더 '{name}' 접근 시도 실패 (권한/사서함 확인 필요): {e_sh}")
 
+    meta = {
+        "start_time": f"{start_date_str}:00" if len(start_date_str) == 16 else start_date_str,
+        "end_time": f"{end_date_str}:59" if len(end_date_str) == 16 else end_date_str,
+        "target_workers": list(processed_clean_names)
+    }
+
+    return records, meta
+
+
+def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleRecord]:
+    """하위 호환용 래퍼: 레코드 목록만 반환"""
+    records, _ = extract_outlook_schedules_with_meta(months_ahead=months_ahead)
     return records
 
 
-
 def run_outlook_collection_cycle() -> Dict[str, Any]:
-    """10분 정기 아웃룩 스케줄 동기화 사이클 실행"""
+    """10분 정기 아웃룩 스케줄 동기화 사이클 실행 (추가/수정 및 아웃룩에서 삭제된 일정 DB 자동 삭제 동기화)"""
     safe_print(f"[{get_current_kst_time().strftime('%Y-%m-%d %H:%M:%S')}] 📅 아웃룩 캘린더 동기화 가동...")
-    records = extract_outlook_schedules(months_ahead=2)
+    records, meta = extract_outlook_schedules_with_meta(months_ahead=2)
     if not records:
         safe_print("[-] 아웃룩에서 수집된 일정이 없습니다.")
         return {"success": False, "count": 0}
 
-    # DB 저장 (로컬 SQLite 및 Supabase)
-    saved = db_manager.save_outlook_schedules(records)
-    safe_print(f"[✓] 아웃룩 스케줄 총 {len(records)}건 추출 완료 (DB 저장: {saved}건)")
+    # DB 저장 및 아웃룩에서 삭제된 일정 동기화 삭제 (로컬 SQLite 및 Supabase)
+    saved = db_manager.save_outlook_schedules(records, sync_delete=True, sync_meta=meta)
+    safe_print(f"[✓] 아웃룩 스케줄 동기화 완료: 추출 {len(records)}건, DB 저장 {saved}건 (삭제된 일정 자동 정리)")
     from collections import Counter
     counts = Counter([r.worker_name for r in records])
     for w, c in counts.items():
@@ -376,3 +388,4 @@ def run_outlook_collection_cycle() -> Dict[str, Any]:
 if __name__ == "__main__":
     res = run_outlook_collection_cycle()
     safe_print(f"실행 결과: {res}")
+

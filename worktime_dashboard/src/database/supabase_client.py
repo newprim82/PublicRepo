@@ -635,9 +635,15 @@ class DatabaseManager:
         
         return df
 
-    def save_outlook_schedules(self, records: List[OutlookScheduleRecord]) -> int:
+    def save_outlook_schedules(
+        self,
+        records: List[OutlookScheduleRecord],
+        sync_delete: bool = True,
+        sync_meta: Optional[Dict[str, Any]] = None
+    ) -> int:
         """
-        아웃룩 일정 레코드들을 Supabase(클라우드) 및 로컬 SQLite에 Upsert 저장
+        아웃룩 일정 레코드들을 Supabase(클라우드) 및 로컬 SQLite에 Upsert 저장하고,
+        아웃룩에서 삭제된 일정(동기화 대상 기간 및 작업자 범위 내)을 DB에서도 감지하여 자동 삭제합니다.
         """
         if not records:
             return 0
@@ -691,7 +697,96 @@ class DatabaseManager:
         except Exception as e:
             print(f"[DB 오류] 로컬 SQLite 아웃룩 스케줄 저장 실패: {e}")
 
+        # 3. 🗑️ 아웃룩에서 삭제된 일정 감지 및 DB 삭제 (동기화)
+        if sync_delete and sync_meta and records:
+            try:
+                self._delete_removed_outlook_schedules(records, sync_meta)
+            except Exception as e_del:
+                print(f"[DB 오류] 아웃룩 삭제 일정 동기화 처리 중 오류: {e_del}")
+
         return saved_count
+
+    def _delete_removed_outlook_schedules(
+        self,
+        current_records: List[OutlookScheduleRecord],
+        sync_meta: Dict[str, Any]
+    ) -> int:
+        """
+        아웃룩 수집 범위(동기화 대상 기간 및 대상 작업자) 내에서,
+        더 이상 아웃룩에 존재하지 않는(사용자가 아웃룩에서 삭제한) 일정을 찾아
+        로컬 SQLite 및 Supabase에서 동기화 삭제합니다.
+        """
+        start_time = sync_meta.get("start_time")
+        end_time = sync_meta.get("end_time")
+        target_workers = sync_meta.get("target_workers", [])
+
+        if not start_time or not end_time or not target_workers:
+            return 0
+
+        current_entry_ids = set(r.entry_id for r in current_records if r.entry_id)
+        if not current_entry_ids:
+            return 0
+
+        deleted_entry_ids = set()
+
+        # 1. 로컬 SQLite에서 수집 범위 내 기존 entry_id 조회하여 삭제 대상 식별
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            placeholders = ",".join(["?"] * len(target_workers))
+            sql = f"""
+                SELECT entry_id FROM outlook_schedules
+                WHERE start_time >= ? AND start_time <= ?
+                AND worker_name IN ({placeholders})
+            """
+            cursor.execute(sql, [start_time, end_time] + list(target_workers))
+            rows = cursor.fetchall()
+            for row in rows:
+                eid = row[0]
+                if eid and eid not in current_entry_ids:
+                    deleted_entry_ids.add(eid)
+
+            if deleted_entry_ids:
+                del_list = list(deleted_entry_ids)
+                chunk_size = 100
+                for i in range(0, len(del_list), chunk_size):
+                    chunk = del_list[i:i + chunk_size]
+                    del_placeholders = ",".join(["?"] * len(chunk))
+                    cursor.execute(
+                        f"DELETE FROM outlook_schedules WHERE entry_id IN ({del_placeholders})",
+                        chunk
+                    )
+                conn.commit()
+                print(f"[DB] [Local SQLite] [삭제 동기화] 아웃룩 삭제 감지: {len(deleted_entry_ids)}건 삭제 완료")
+            conn.close()
+        except Exception as e:
+            print(f"[DB 오류] 로컬 SQLite 삭제 동기화 실패: {e}")
+
+        # 2. Supabase Cloud DB에서도 삭제 대상 레코드 조회 및 삭제
+        if self.use_supabase and self.supabase:
+            try:
+                query = self.supabase.table("worktime_outlook_schedules").select("entry_id")
+                query = query.gte("start_time", start_time).lte("start_time", end_time)
+                query = query.in_("worker_name", target_workers)
+                res = query.execute()
+                if res.data:
+                    for item in res.data:
+                        eid = item.get("entry_id")
+                        if eid and eid not in current_entry_ids:
+                            deleted_entry_ids.add(eid)
+
+                if deleted_entry_ids:
+                    del_list = list(deleted_entry_ids)
+                    chunk_size = 50
+                    for i in range(0, len(del_list), chunk_size):
+                        chunk = del_list[i:i + chunk_size]
+                        self.supabase.table("worktime_outlook_schedules").delete().in_("entry_id", chunk).execute()
+                    print(f"[DB] [Cloud] [삭제 동기화] Supabase 아웃룩 삭제 감지: {len(deleted_entry_ids)}건 삭제 완료")
+            except Exception as e:
+                print(f"[DB 오류] Supabase 삭제 동기화 실패: {e}")
+
+        return len(deleted_entry_ids)
+
 
     def fetch_outlook_schedules(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
         """
@@ -758,6 +853,11 @@ def fetch_outlook_schedules(start_date: Optional[str] = None, end_date: Optional
     """모듈 레벨 안전 헬퍼"""
     return db_manager.fetch_outlook_schedules(start_date, end_date)
 
-def save_outlook_schedules(records: List[OutlookScheduleRecord]) -> int:
+def save_outlook_schedules(
+    records: List[OutlookScheduleRecord],
+    sync_delete: bool = True,
+    sync_meta: Optional[Dict[str, Any]] = None
+) -> int:
     """모듈 레벨 안전 헬퍼"""
-    return db_manager.save_outlook_schedules(records)
+    return db_manager.save_outlook_schedules(records, sync_delete=sync_delete, sync_meta=sync_meta)
+
