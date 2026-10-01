@@ -470,7 +470,8 @@ def render_main_content_frame(
 def main():
     from src.parser.reply_matcher import WorkLogMatcher
 
-    df_raw = load_data()
+    with st.spinner("⏳ 잠시만 기다려주세요... DB에서 최신 작업 데이터를 불러오는 중입니다."):
+        df_raw = load_data()
     team_mappings = TeamService.get_team_mappings()
     all_workers_list = sorted(df_raw["worker_name"].dropna().unique()) if not df_raw.empty else []
 
