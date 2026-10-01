@@ -358,10 +358,7 @@ def apply_custom_styles():
         div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] div,
         div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] strong,
         div[data-testid="stNotificationContentWarning"],
-        div[data-testid="stNotificationContentWarning"] *,
-        div[data-testid="stDialog"] div[data-testid="stAlert"] *,
-        div[role="dialog"] div[data-testid="stAlert"] *,
-        div[data-baseweb="modal"] div[data-testid="stAlert"] * {
+        div[data-testid="stNotificationContentWarning"] * {
             color: #713f12 !important;
             font-weight: 700 !important;
         }
@@ -372,11 +369,20 @@ def apply_custom_styles():
             color: #075985 !important;
             font-weight: 700 !important;
         }
-        /* success (초록색 배경) -> 짙은 그린 텍스트 */
+        /* success (초록색 배경) -> 짙은 그린 텍스트 (다이얼로그/모달 내부에서는 선명한 흰색 보장) */
         div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]),
         div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"],
         div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"] * {
             color: #14532d !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stDialog"] div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) *,
+        div[role="dialog"] div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) *,
+        div[data-baseweb="modal"] div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) *,
+        div[data-testid="stDialog"] div[data-testid="stAlertContentSuccess"] *,
+        .email-send-result-card,
+        .email-send-result-card * {
+            color: #ffffff !important;
             font-weight: 700 !important;
         }
         /* error (빨간색 배경) -> 짙은 레드 텍스트 */

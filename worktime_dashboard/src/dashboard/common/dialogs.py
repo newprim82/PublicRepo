@@ -1006,9 +1006,11 @@ def show_email_report_dialog(selected_team: str):
             if success:
                 st.markdown(
                     f"""
-                    <div style="background: rgba(22, 163, 74, 0.25); border: 1.5px solid #22c55e; border-radius: 8px; padding: 12px 16px; margin: 12px 0; color: #ffffff !important; font-size: 13.5px; font-weight: 600; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
-                        <span style="font-size: 18px; line-height: 1.2;">✅</span>
-                        <div style="color: #ffffff !important; word-break: break-all;">{send_msg.replace('✅ ', '')}</div>
+                    <div class="email-send-result-card" style="background: rgba(22, 163, 74, 0.3) !important; border: 1.5px solid #22c55e !important; border-radius: 8px !important; padding: 13px 18px !important; margin: 12px 0 !important; display: flex !important; align-items: flex-start !important; gap: 10px !important;">
+                        <span style="font-size: 19px; line-height: 1.2;">✅</span>
+                        <div style="color: #ffffff !important; font-size: 13.5px !important; font-weight: 700 !important; line-height: 1.55 !important; word-break: break-all !important;">
+                            {send_msg.replace('✅ ', '')}
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -1016,9 +1018,11 @@ def show_email_report_dialog(selected_team: str):
             else:
                 st.markdown(
                     f"""
-                    <div style="background: rgba(220, 38, 38, 0.25); border: 1.5px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin: 12px 0; color: #ffffff !important; font-size: 13.5px; font-weight: 600; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
-                        <span style="font-size: 18px; line-height: 1.2;">❌</span>
-                        <div style="color: #ffffff !important; word-break: break-all;">{send_msg.replace('❌ ', '')}</div>
+                    <div class="email-send-result-card" style="background: rgba(220, 38, 38, 0.3) !important; border: 1.5px solid #ef4444 !important; border-radius: 8px !important; padding: 13px 18px !important; margin: 12px 0 !important; display: flex !important; align-items: flex-start !important; gap: 10px !important;">
+                        <span style="font-size: 19px; line-height: 1.2;">❌</span>
+                        <div style="color: #ffffff !important; font-size: 13.5px !important; font-weight: 700 !important; line-height: 1.55 !important; word-break: break-all !important;">
+                            {send_msg.replace('❌ ', '')}
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -1075,21 +1079,41 @@ def show_email_report_dialog(selected_team: str):
 
             p_label = item.get("period_label", "")
             rcpts = item.get("recipient_emails", "")
-            # 보낸 모든 수신자 이메일을 생략 없이 온전히 노출
+            
+            # 📬 수신자 이메일 목록을 쉼표 기준으로 분리하여 1줄에 1개씩 렌더링
             rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
-            rcpts_html = ", ".join([f"<span style='color: #f8fafc; font-weight: 600;'>{em}</span>" for em in rcpt_list]) if rcpt_list else "<span style='color: #94a3b8;'>-</span>"
+            if rcpt_list:
+                email_rows_html = "".join([
+                    f'<div style="color: #ffffff !important; font-size: 12px; font-weight: 600; padding: 2px 0; display: flex; align-items: center; gap: 7px; word-break: break-all;">'
+                    f'<span style="color: #38bdf8; font-size: 11px;">✉️</span>'
+                    f'<span style="color: #ffffff !important;">{em}</span>'
+                    f'</div>'
+                    for em in rcpt_list
+                ])
+            else:
+                email_rows_html = '<div style="color: #94a3b8; font-size: 11.5px;">-</div>'
 
             card_html = f"""
-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px;">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;">
-                    {badge_html}
-                    <span style="color: #38bdf8; font-weight: 700;">{p_label}</span>
-                    <span style="color: #475569;">|</span>
-                    <span style="color: #94a3b8; font-size: 11.5px; word-break: break-all;">수신: {rcpts_html}</span>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1.2px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 11px 15px; margin-bottom: 9px; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">
+                <!-- 상단 헤더: 구분 뱃지, 대상 기간, 일시, 성공/실패 -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 7px; margin-bottom: 7px; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        {badge_html}
+                        <span style="color: #38bdf8; font-weight: 700; font-size: 12.5px;">{p_label}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap; flex-shrink: 0;">
+                        <span style="color: #94a3b8; font-size: 11px;">{short_dt}</span>
+                        {status_html}
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0;">
-                    <span style="color: #94a3b8; font-size: 11px;">{short_dt}</span>
-                    {status_html}
+                <!-- 하단: 수신 메일 주소 목록 (메일 주소별 1줄씩 100% 전체 노출) -->
+                <div>
+                    <div style="color: #94a3b8; font-size: 11px; font-weight: 700; margin-bottom: 4px;">
+                        📬 수신 이메일 ({len(rcpt_list)}건):
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 3px; padding-left: 2px;">
+                        {email_rows_html}
+                    </div>
                 </div>
             </div>
             """
