@@ -963,6 +963,8 @@ class MonthlyWorklogService:
     ) -> bool:
         cls._init_dispatch_log_table()
         now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 1. 로컬 SQLite 최우선 저장
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cur = conn.cursor()
@@ -979,15 +981,48 @@ class MonthlyWorklogService:
             ))
             conn.commit()
             conn.close()
-            return True
         except Exception as e:
-            print(f"[MonthlyWorklogService] 전용 발송 이력 저장 실패: {e}")
-            return False
+            print(f"[MonthlyWorklogService] 전용 발송 이력 SQLite 저장 오류: {e}")
+
+        # 2. Supabase Cloud DB 동기화 시도 (테이블 미존재 시에도 안전 패스)
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                db_manager.supabase.table("worktime_team_monthly_worklog_dispatch_logs").insert({
+                    "team_name": team_name,
+                    "target_month": target_month,
+                    "recipient_email": recipient_email,
+                    "sender_email": sender_email,
+                    "dispatch_type": dispatch_type,
+                    "total_records": total_records,
+                    "total_hours": total_hours,
+                    "excel_filename": excel_filename,
+                    "status": status,
+                    "error_message": error_message,
+                    "created_at": now_str
+                }).execute()
+            except Exception:
+                pass
+
+        return True
 
     @classmethod
     def get_recent_dispatches(cls, team_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
-        """팀 전월 엑셀 원장 발송 전용 최근 이력 조회"""
+        """팀 전월 엑셀 원장 발송 전용 최근 이력 조회 (Supabase -> 로컬 SQLite Fallback)"""
         cls._init_dispatch_log_table()
+
+        # 1. Supabase Cloud DB 조회 시도
+        if db_manager.use_supabase and db_manager.supabase:
+            try:
+                query = db_manager.supabase.table("worktime_team_monthly_worklog_dispatch_logs").select("*")
+                if team_name:
+                    query = query.eq("team_name", team_name)
+                res = query.order("created_at", desc=True).limit(limit).execute()
+                if res.data:
+                    return res.data
+            except Exception:
+                pass
+
+        # 2. 로컬 SQLite Fallback
         logs = []
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
@@ -1010,5 +1045,5 @@ class MonthlyWorklogService:
                 logs.append(dict(r))
             conn.close()
         except Exception as e:
-            print(f"[MonthlyWorklogService] 발송 이력 조회 실패: {e}")
+            print(f"[MonthlyWorklogService] 발송 이력 SQLite 조회 실패: {e}")
         return logs
