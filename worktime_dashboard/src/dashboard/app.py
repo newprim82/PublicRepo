@@ -65,6 +65,7 @@ from src.dashboard.views.duration_view import render_duration_view
 from src.dashboard.views.cost_estimation_view import render_cost_estimation_view
 from src.dashboard.views.holiday_management_view import render_holiday_management_view
 from src.dashboard.views.email_schedule_view import render_email_schedule_view
+from src.dashboard.views.monthly_worklog_dispatch_view import render_monthly_worklog_dispatch_view
 
 # -------------------------------------------------------------
 # 1. 단 1회 백그라운드 10분 수집 데몬 기동
@@ -442,6 +443,8 @@ def render_main_content_frame(
         render_client_view(df)
     elif curr_page == "⏱️ 예정 vs 실제 소요시간":
         render_duration_view(df)
+    elif curr_page == "📑 팀 전월 엑셀 원장 정기 발송":
+        render_monthly_worklog_dispatch_view()
     elif curr_page in [
         "💰 예상 비용산정",
         "💰 팀원별 예상 청구금액",
@@ -685,7 +688,7 @@ def main():
                 df = df_filtered_base.iloc[0:0]
 
 
-        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
+        # 3. 📊 작업 디테일 (세부 분석 화면 전환)
         detail_menu_items = [
             "📅 작업 캘린더 & 밀도 히트맵",
             "🔍 전체 작업 스마트 검색",
@@ -694,7 +697,8 @@ def main():
             "🏢 팀별 업무량 비교",
             "📈 월별/일별 추이",
             "🏢 고객사별 공수 분포",
-            "⏱️ 예정 vs 실제 소요시간"
+            "⏱️ 예정 vs 실제 소요시간",
+            "📑 팀 전월 엑셀 원장 정기 발송"
         ]
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
         with st.expander("📊 분석", expanded=is_detail_active):
