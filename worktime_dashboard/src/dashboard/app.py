@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.22 (Chart font colors set to solid black for maximum contrast)
-APP_VERSION = "v2.2.22"
+# WorkTime Dashboard v2.2.23 (Client billing menu separated into sidebar and in-page horizontal tab bar removed)
+APP_VERSION = "v2.2.23"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -352,7 +352,9 @@ def render_main_content_frame(
         "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
         "📋 작업 기록 원장 & 엑셀",
         "💰 예상 비용산정",
+        "💰 팀원별 예상 청구금액",
         "💰 예상 비용산정 대시보드",
+        "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
         "⚙️ 직급별 시간당 단가 설정"
     ]
@@ -433,7 +435,14 @@ def render_main_content_frame(
         render_client_view(df)
     elif curr_page == "⏱️ 예정 vs 실제 소요시간":
         render_duration_view(df)
-    elif curr_page in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드", "✏️ 업무 시간 직접 수정 장표", "⚙️ 직급별 시간당 단가 설정"]:
+    elif curr_page in [
+        "💰 예상 비용산정",
+        "💰 팀원별 예상 청구금액",
+        "💰 예상 비용산정 대시보드",
+        "🏢 고객사별 청구 금액",
+        "✏️ 업무 시간 직접 수정 장표",
+        "⚙️ 직급별 시간당 단가 설정"
+    ]:
         render_cost_estimation_view(
             df=df,
             df_raw=df_raw,
@@ -690,14 +699,18 @@ def main():
         # 4. 💰 예상 비용산정 (접이식 대메뉴: 분석 아래쪽 배치, 로그인 시에만 노출)
         if is_auth:
             cost_menu_items = [
-                "💰 예상 비용산정 대시보드",
+                "💰 팀원별 예상 청구금액",
+                "🏢 고객사별 청구 금액",
                 "✏️ 업무 시간 직접 수정 장표",
                 "⚙️ 직급별 시간당 단가 설정"
             ]
-            is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") == "💰 예상 비용산정")
+            is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
             with st.expander("💰 예상 비용산정", expanded=is_cost_active):
                 for c_item in cost_menu_items:
-                    is_active = (st.session_state["current_page"] == c_item or (c_item == "💰 예상 비용산정 대시보드" and st.session_state["current_page"] == "💰 예상 비용산정"))
+                    is_active = (
+                        st.session_state["current_page"] == c_item or 
+                        (c_item == "💰 팀원별 예상 청구금액" and st.session_state["current_page"] in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
+                    )
                     btn_prefix = "▸ " if is_active else "  "
                     st.button(
                         f"{btn_prefix}{c_item}",

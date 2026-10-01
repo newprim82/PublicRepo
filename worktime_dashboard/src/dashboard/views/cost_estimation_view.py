@@ -193,17 +193,28 @@ def render_cost_estimation_view(
     df_calc = CostEstimationService.calculate_costs(df)
     kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
 
+    # 페이지별 타이틀 및 설명 동적 매핑
+    page_titles = {
+        "💰 팀원별 예상 청구금액": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
+        "💰 예상 비용산정": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
+        "💰 예상 비용산정 대시보드": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
+        "🏢 고객사별 청구 금액": ("🏢", "고객사별 프로젝트/지원 예상 청구 금액", "고객사 및 프로젝트별 투입 공수(h)와 총 청구 예상 금액을 집계 분석합니다."),
+        "✏️ 업무 시간 직접 수정 장표": ("✏️", "업무 시간 직접 수정 장표", "아웃룩 '종일(9.0h)' 등록 작업 및 지원 공수를 직접 검토하고 영구 수정합니다."),
+        "⚙️ 직급별 시간당 단가 설정": ("⚙️", "직급별 시간당 단가 설정", "사업본부 청구용 직급별 시간당 단가(원/h)를 설정하고 DB에 영구 저장합니다.")
+    }
+    icon, title_txt, desc_txt = page_titles.get(curr_page, ("💰", "프로젝트/현장지원 예상 비용산정", "기술본부 인력의 투입 공수 및 직급별 단가를 기준으로 예상 청구 금액을 산출합니다."))
+
     # 2. 상단 헤더 및 조회 기준 요약 배지 바 (선명한 다크 네이비 & 화이트 배지)
     col_t1, col_t2 = st.columns([7, 3])
     with col_t1:
-        st.markdown("""
+        st.markdown(f"""
         <div style="margin-bottom: 14px;">
             <div class="cost-main-title">
-                <span>💰</span>
-                <span>프로젝트/현장지원 예상 비용산정</span>
+                <span>{icon}</span>
+                <span>{title_txt}</span>
             </div>
             <div class="cost-main-desc">
-                기술본부 인력의 투입 공수(h) 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출하고, 인정 공수를 직접 검토·조정합니다.
+                {desc_txt}
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -249,32 +260,10 @@ def render_cost_estimation_view(
     </div>
     """, unsafe_allow_html=True)
 
-    # 4. 4대 세부 메뉴 탭 구성 (사이드바 서브메뉴와 완벽 연동)
-    tab_options = [
-        "👤 팀원/직급별 정산표",
-        "🏢 고객사별 청구 금액",
-        "✏️ 업무 시간 직접 수정 장표",
-        "⚙️ 직급별 시간당 단가 설정"
-    ]
-    def_idx = 0
-    if curr_page == "✏️ 업무 시간 직접 수정 장표":
-        def_idx = 2
-    elif curr_page == "⚙️ 직급별 시간당 단가 설정":
-        def_idx = 3
-
-    selected_sub_tab = st.radio(
-        "정산 세부 메뉴 선택",
-        options=tab_options,
-        index=def_idx,
-        horizontal=True,
-        label_visibility="collapsed",
-        key="cost_sub_tab_radio"
-    )
-
     # =========================================================
-    # 탭 1: 팀원/직급별 정산표
+    # 1. 👤 팀원별 예상 청구금액
     # =========================================================
-    if selected_sub_tab == "👤 팀원/직급별 정산표":
+    if curr_page in ["💰 팀원별 예상 청구금액", "💰 예상 비용산정", "💰 예상 비용산정 대시보드"]:
         st.markdown('<div class="cost-table-header-cisco"><span>👤</span><span>팀원별 투입 공수 및 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
 
         worker_df = CostEstimationService.get_worker_cost_summary(df_calc)
@@ -397,7 +386,7 @@ def render_cost_estimation_view(
     # =========================================================
     # 탭 2: 고객사별 청구 금액
     # =========================================================
-    elif selected_sub_tab == "🏢 고객사별 청구 금액":
+    elif curr_page == "🏢 고객사별 청구 금액":
         st.markdown('<div class="cost-table-header-cisco"><span>🏢</span><span>고객사/프로젝트별 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
         client_df = CostEstimationService.get_client_cost_summary(df_calc)
         if client_df.empty:
@@ -458,7 +447,7 @@ def render_cost_estimation_view(
     # =========================================================
     # 탭 3: 업무 시간 직접 수정 장표 (크리티컬 기능)
     # =========================================================
-    elif selected_sub_tab == "✏️ 업무 시간 직접 수정 장표":
+    elif curr_page == "✏️ 업무 시간 직접 수정 장표":
         st.markdown('<div class="cost-table-header-cisco"><span>✏️</span><span>업무 시간 직접 수정 장표 (DB 영구 보존 오버라이드)</span></div>', unsafe_allow_html=True)
         st.markdown("""
         <div class="cost-info-box-cisco">
@@ -600,7 +589,7 @@ def render_cost_estimation_view(
     # =========================================================
     # 탭 4: 직급별 시간당 단가 설정
     # =========================================================
-    elif selected_sub_tab == "⚙️ 직급별 시간당 단가 설정":
+    elif curr_page == "⚙️ 직급별 시간당 단가 설정":
         st.markdown('<div class="cost-table-header-cisco"><span>⚙️</span><span>직급별 시간당 지원 금액(단가) 설정</span></div>', unsafe_allow_html=True)
         st.markdown("""
         <div class="cost-info-box-cisco">
