@@ -475,6 +475,11 @@ def render_cost_estimation_view(
 
             df_edit_src = df_calc.copy()
 
+            # 🛡️ 이미 완료(COMPLETED)된 작업만 표출 (진행 중 PENDING/SCHEDULED 작업 배제)
+            if "status" in df_edit_src.columns:
+                comp_mask = df_edit_src["status"].astype(str).str.upper().isin(["COMPLETED", "완료"])
+                df_edit_src = df_edit_src[comp_mask]
+
             if only_allday:
                 df_edit_src = df_edit_src[df_edit_src["billable_hours"] >= 9.0]
 
@@ -490,10 +495,10 @@ def render_cost_estimation_view(
             if "start_time" in df_edit_src.columns:
                 df_edit_src = df_edit_src.sort_values(by="start_time", ascending=False)
 
-            st.caption(f"검색/필터 결과: 총 **{len(df_edit_src)}**건의 작업")
+            st.caption(f"검색/필터 결과: 총 **{len(df_edit_src)}**건의 작업 (✅ 완료된 작업 기준)")
 
             if df_edit_src.empty:
-                st.info("조건에 일치하는 작업이 없습니다.")
+                st.info("조회 조건에 해당하는 '완료' 작업 데이터가 없습니다. (진행 중인 작업은 완료 보고 후 본 장표에 표출됩니다)")
             else:
                 # 1) msg_hash 안전 추출
                 if "msg_hash" in df_edit_src.columns:

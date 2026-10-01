@@ -42,6 +42,11 @@ class CostEstimationService:
 
         df_calc = df.copy()
 
+        # 🛡️ 이미 완료(COMPLETED)된 작업만 예상 비용 산정 및 시간 수정 대상으로 포함 (진행 중 PENDING/SCHEDULED 제외)
+        if "status" in df_calc.columns:
+            comp_mask = df_calc["status"].astype(str).str.upper().isin(["COMPLETED", "완료"])
+            df_calc = df_calc[comp_mask].copy()
+
         # 직급 동기화
         if "worker_name" in df_calc.columns:
             if "worker_title" not in df_calc.columns or df_calc["worker_title"].isna().all():
