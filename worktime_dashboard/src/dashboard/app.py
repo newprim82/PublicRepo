@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.19 (Standalone Estimated Cost Billing Menu below Analysis)
-APP_VERSION = "v2.2.19"
+# WorkTime Dashboard v2.2.20 (Cost estimation accordion menu with sub-items)
+APP_VERSION = "v2.2.20"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -351,7 +351,10 @@ def render_main_content_frame(
     admin_only_pages = [
         "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
         "📋 작업 기록 원장 & 엑셀",
-        "💰 예상 비용산정"
+        "💰 예상 비용산정",
+        "💰 예상 비용산정 대시보드",
+        "✏️ 업무 시간 직접 수정 장표",
+        "⚙️ 직급별 시간당 단가 설정"
     ]
     if curr_page in admin_only_pages and not AuthManager.is_authenticated():
         st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
@@ -430,7 +433,7 @@ def render_main_content_frame(
         render_client_view(df)
     elif curr_page == "⏱️ 예정 vs 실제 소요시간":
         render_duration_view(df)
-    elif curr_page == "💰 예상 비용산정":
+    elif curr_page in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드", "✏️ 업무 시간 직접 수정 장표", "⚙️ 직급별 시간당 단가 설정"]:
         render_cost_estimation_view(
             df=df,
             df_raw=df_raw,
@@ -438,7 +441,8 @@ def render_main_content_frame(
             team_mappings=team_mappings,
             month_desc=month_desc,
             worker_desc=worker_desc,
-            extra_chips_str=extra_chips_str
+            extra_chips_str=extra_chips_str,
+            curr_page=curr_page
         )
 
 
@@ -683,19 +687,26 @@ def main():
                     args=(d_item,)
                 )
 
-        # 4. 💰 예상 비용산정 (독립 대메뉴: 분석 아래쪽 배치, 로그인 시에만 노출)
+        # 4. 💰 예상 비용산정 (접이식 대메뉴: 분석 아래쪽 배치, 로그인 시에만 노출)
         if is_auth:
-            st.markdown('<div style="height: 6px;"></div>', unsafe_allow_html=True)
-            is_cost_active = (st.session_state.get("current_page") == "💰 예상 비용산정")
-            btn_cost_prefix = "▸ " if is_cost_active else ""
-            st.button(
-                f"{btn_cost_prefix}💰 예상 비용산정",
-                key="btn_nav_cost_estimation_main",
-                type="primary" if is_cost_active else "secondary",
-                use_container_width=True,
-                on_click=set_nav_page,
-                args=("💰 예상 비용산정",)
-            )
+            cost_menu_items = [
+                "💰 예상 비용산정 대시보드",
+                "✏️ 업무 시간 직접 수정 장표",
+                "⚙️ 직급별 시간당 단가 설정"
+            ]
+            is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") == "💰 예상 비용산정")
+            with st.expander("💰 예상 비용산정", expanded=is_cost_active):
+                for c_item in cost_menu_items:
+                    is_active = (st.session_state["current_page"] == c_item or (c_item == "💰 예상 비용산정 대시보드" and st.session_state["current_page"] == "💰 예상 비용산정"))
+                    btn_prefix = "▸ " if is_active else "  "
+                    st.button(
+                        f"{btn_prefix}{c_item}",
+                        key=f"nav_cost_{c_item}",
+                        use_container_width=True,
+                        type="primary" if is_active else "secondary",
+                        on_click=set_nav_page,
+                        args=(c_item,)
+                    )
 
         # 4. 🤖 카카오톡 실시간 연동 (로그인 시에만 노출)
         if is_auth:

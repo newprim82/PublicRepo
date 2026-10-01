@@ -19,7 +19,8 @@ def render_cost_estimation_view(
     team_mappings: dict,
     month_desc: str = "",
     worker_desc: str = "",
-    extra_chips_str: str = ""
+    extra_chips_str: str = "",
+    curr_page: str = "💰 예상 비용산정"
 ):
     """
     💰 [예상 비용산정] 메인 관제 캔버스
@@ -173,18 +174,33 @@ def render_cost_estimation_view(
     </div>
     """, unsafe_allow_html=True)
 
-    # 4. 4대 탭 메뉴 구성
-    tab_worker, tab_client, tab_adjust, tab_settings = st.tabs([
+    # 4. 4대 세부 메뉴 탭 구성 (사이드바 서브메뉴와 완벽 연동)
+    tab_options = [
         "👤 팀원/직급별 정산표",
         "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
         "⚙️ 직급별 시간당 단가 설정"
-    ])
+    ]
+    def_idx = 0
+    if curr_page == "✏️ 업무 시간 직접 수정 장표":
+        def_idx = 2
+    elif curr_page == "⚙️ 직급별 시간당 단가 설정":
+        def_idx = 3
+
+    selected_sub_tab = st.radio(
+        "정산 세부 메뉴 선택",
+        options=tab_options,
+        index=def_idx,
+        horizontal=True,
+        label_visibility="collapsed",
+        key=f"cost_sub_tab_radio_{curr_page}"
+    )
+    st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
 
     # =========================================================
     # 탭 1: 팀원/직급별 정산표
     # =========================================================
-    with tab_worker:
+    if selected_sub_tab == "👤 팀원/직급별 정산표":
         st.markdown('<div class="cost-table-header">👤 팀원별 투입 공수 및 예상 청구 금액 정산표</div>', unsafe_allow_html=True)
 
         worker_df = CostEstimationService.get_worker_cost_summary(df_calc)
@@ -288,7 +304,7 @@ def render_cost_estimation_view(
     # =========================================================
     # 탭 2: 고객사별 청구 금액
     # =========================================================
-    with tab_client:
+    elif selected_sub_tab == "🏢 고객사별 청구 금액":
         st.markdown('<div class="cost-table-header">🏢 고객사/프로젝트별 예상 청구 금액 정산표</div>', unsafe_allow_html=True)
         client_df = CostEstimationService.get_client_cost_summary(df_calc)
         if client_df.empty:
@@ -342,7 +358,7 @@ def render_cost_estimation_view(
     # =========================================================
     # 탭 3: 업무 시간 직접 수정 장표 (크리티컬 기능)
     # =========================================================
-    with tab_adjust:
+    elif selected_sub_tab == "✏️ 업무 시간 직접 수정 장표":
         st.markdown("""
         <div class="cost-table-header">
             ✏️ 업무 시간 직접 수정 장표 (DB 영구 보존 오버라이드)
@@ -508,7 +524,7 @@ def render_cost_estimation_view(
     # =========================================================
     # 탭 4: 직급별 시간당 단가 설정
     # =========================================================
-    with tab_settings:
+    elif selected_sub_tab == "⚙️ 직급별 시간당 단가 설정":
         st.markdown("""
         <div class="cost-table-header">
             ⚙️ 직급별 시간당 지원 금액(단가) 설정
