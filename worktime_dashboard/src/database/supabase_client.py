@@ -119,11 +119,9 @@ class DatabaseManager:
         """)
         default_rates = [
             ("수석", 80000),
-            ("차장", 70000),
             ("과장", 60000),
             ("대리", 50000),
-            ("사원", 35000),
-            ("기타", 50000)
+            ("사원", 35000)
         ]
         cursor.executemany("INSERT OR IGNORE INTO hourly_rates (job_title, hourly_rate) VALUES (?, ?)", default_rates)
 
@@ -913,19 +911,16 @@ class DatabaseManager:
         except Exception as e:
             print(f"[DB 오류] 직급별 단가 로컬 조회 실패: {e}")
 
-        # 기본 폴백값
+        # 기본 폴백값 (사원, 대리, 과장, 수석 4가지 고정)
         default_fallback = {
             "수석": 80000,
-            "차장": 70000,
             "과장": 60000,
             "대리": 50000,
-            "사원": 35000,
-            "기타": 50000
+            "사원": 35000
         }
-        for k, v in default_fallback.items():
-            if k not in rates:
-                rates[k] = v
-        return rates
+        valid_titles = ["수석", "과장", "대리", "사원"]
+        clean_rates = {k: rates.get(k, default_fallback[k]) for k in valid_titles}
+        return clean_rates
 
     def save_hourly_rates(self, rates: Dict[str, int]) -> bool:
         """

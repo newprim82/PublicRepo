@@ -640,44 +640,27 @@ def render_cost_estimation_view(
             st.markdown("<h5 style='color: #002d42; font-weight: 800;'>👔 직급별 시간당 단가 (원 / 시간)</h5>", unsafe_allow_html=True)
             
             rate_inputs = {}
-            ordered_titles = ["수석", "차장", "과장", "대리", "사원", "기타"]
-            for t in current_rates.keys():
-                if t not in ordered_titles:
-                    ordered_titles.append(t)
+            ordered_titles = ["수석", "과장", "대리", "사원"]
+            cols = st.columns(4)
 
-            cols_per_row = 3
-            rows = [ordered_titles[i:i + cols_per_row] for i in range(0, len(ordered_titles), cols_per_row)]
+            for idx, t in enumerate(ordered_titles):
+                with cols[idx]:
+                    val = current_rates.get(t, 50000)
+                    rate_inputs[t] = st.number_input(
+                        f"👔 {t} 단가 (원/h):",
+                        min_value=0,
+                        max_value=1000000,
+                        value=int(val),
+                        step=5000,
+                        format="%d",
+                        key=f"input_rate_{t}"
+                    )
 
-            for row_titles in rows:
-                cols = st.columns(len(row_titles))
-                for idx, t in enumerate(row_titles):
-                    with cols[idx]:
-                        val = current_rates.get(t, 50000)
-                        rate_inputs[t] = st.number_input(
-                            f"👔 {t} 단가 (원/h):",
-                            min_value=0,
-                            max_value=1000000,
-                            value=int(val),
-                            step=5000,
-                            format="%d",
-                            key=f"input_rate_{t}"
-                        )
-
-            st.markdown("<hr style='margin: 15px 0; border-color: #cbd5e1;'>", unsafe_allow_html=True)
-            st.markdown("<h5 style='color: #002d42; font-weight: 800;'>➕ 신규 직급 단가 추가 (선택)</h5>", unsafe_allow_html=True)
-            c_new1, c_new2 = st.columns(2)
-            with c_new1:
-                new_title_name = st.text_input("새 직급명 (예: 인턴, 고문 등):", key="txt_new_title_rate")
-            with c_new2:
-                new_title_rate = st.number_input("새 직급 시간당 단가 (원/h):", min_value=0, max_value=1000000, value=40000, step=5000, format="%d", key="num_new_title_rate")
-
+            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
             btn_submit_rates = st.form_submit_button("💾 직급별 단가 설정 저장", type="primary", use_container_width=True)
 
             if btn_submit_rates:
-                updated_rates = dict(rate_inputs)
-                if new_title_name.strip():
-                    updated_rates[new_title_name.strip()] = int(new_title_rate)
-
+                updated_rates = {t: int(rate_inputs[t]) for t in ordered_titles}
                 success = CostEstimationService.save_hourly_rates(updated_rates)
                 if success:
                     st.success("🎉 직급별 시간당 단가가 성공적으로 저장되었습니다!")

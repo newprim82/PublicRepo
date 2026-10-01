@@ -240,8 +240,8 @@ class CostEstimationService:
         else:
             grouped["cost_share_pct"] = 0.0
 
-        # 직급 순서 정렬 (수석 -> 차장 -> 과장 -> 대리 -> 사원)
-        order_dict = {"수석": 1, "차장": 2, "과장": 3, "대리": 4, "사원": 5, "기타": 6}
+        # 직급 순서 정렬 (수석 -> 과장 -> 대리 -> 사원)
+        order_dict = {"수석": 1, "과장": 2, "대리": 3, "사원": 4}
         grouped["sort_order"] = grouped["worker_title"].map(lambda x: order_dict.get(x, 99))
         grouped = grouped.sort_values(by="sort_order").drop(columns=["sort_order"]).reset_index(drop=True)
 
