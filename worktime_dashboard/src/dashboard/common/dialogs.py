@@ -963,7 +963,6 @@ def show_email_report_dialog(selected_team: str):
     # 🔒 비용산정 보안 검증: 사전 등록된 승인 수신자(화이트리스트) 여부 판별
     is_cost_auth = AuthorizedRecipientService.is_all_authorized(mail_rcpt)
     unauth_list = AuthorizedRecipientService.get_unauthorized_recipients(mail_rcpt)
-    auth_list = AuthorizedRecipientService.get_authorized_recipients()
 
     if is_cost_auth:
         st.markdown(
@@ -985,25 +984,6 @@ def show_email_report_dialog(selected_team: str):
             """,
             unsafe_allow_html=True
         )
-
-    with st.expander(f"🔐 비용산정 승인 수신자 목록 ({len(auth_list)}명)", expanded=False):
-        st.caption("비용산정 대시보드는 보안을 위해 아래 등록된 사전 승인 수신자에게만 발송됩니다.")
-        for auth_em in auth_list:
-            st.markdown(f"- 📧 `{auth_em}`")
-        
-        from ...auth.auth_manager import AuthManager
-        if AuthManager.is_authenticated():
-            st.markdown("<div style='margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 8px;'></div>", unsafe_allow_html=True)
-            c_add1, c_add2 = st.columns([3, 1])
-            with c_add1:
-                new_auth_em = st.text_input("신규 승인 수신자 등록", placeholder="user@sangsanginworld.co.kr", key="txt_add_new_auth_em", label_visibility="collapsed")
-            with c_add2:
-                if st.button("➕ 등록", key="btn_submit_add_auth_em", use_container_width=True):
-                    if AuthorizedRecipientService.add_authorized_recipient(new_auth_em):
-                        st.toast(f"'{new_auth_em}' 승인 등록 완료!", icon="✅")
-                        st.rerun()
-                    else:
-                        st.error("유효한 이메일 주소를 입력하십시오.")
 
     st.markdown("<div style='font-size: 12px; color: #cbd5e1; margin-top: 4px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
     
