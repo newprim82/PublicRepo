@@ -333,13 +333,13 @@ def render_cost_estimation_view(
     </div>
     """, unsafe_allow_html=True)
 
-    # 🎓 비용 산정 정책 안내 (교육 및 휴가 청구 제외)
+    # 🎓 비용 산정 정책 안내 (교육, 휴가 및 비청구 사내업무 청구 제외)
     st.markdown("""
     <div style="background: #f8fafc; border: 1.2px solid #cbd5e1; border-left: 5px solid #0284c7; border-radius: 8px; padding: 9px 14px; margin-bottom: 16px; font-size: 12.5px; color: #334155; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
         <div>
-            <span>💡 <b>비용 산정 정책:</b> 구분이 <b>[교육]</b>(사내/수강 교육)이거나 <b>[휴가]</b>인 항목은 외부 고객사 청구 대상이 아니므로 <b>예상 비용 산정 대상에서 자동 제외(0.0h / 0원)</b>됩니다.</span>
+            <span>💡 <b>비용 산정 정책:</b> 구분이 <b>[교육]</b>·<b>[휴가]</b>인 항목 및 비청구 사내업무(<b>1on1, 내부업무</b> 등)는 외부 고객사 청구 대상이 아니므로 <b>예상 청구 금액 산정 대상에서 원천 제외</b>됩니다. (고객사 정산표에서 제외 목록을 실시간 추가/저장 가능)</span>
         </div>
-        <span style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">교육·휴가 청구 제외</span>
+        <span style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">교육·휴가·사내업무 제외</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -486,8 +486,16 @@ def render_cost_estimation_view(
 
         period_header_suffix = f" ({current_report_period})" if current_report_period != "전체 기간" else ""
 
-    # 1. 계산된 예상 비용 데이터프레임 도출 (선택된 주기 df_active 기준)
-    df_calc = CostEstimationService.calculate_costs(df_active)
+    # 🚫 비청구 대상(1on1, 내부업무 등) 관리자 제외 목록 로드 및 세션 동기화
+    if "cost_excluded_clients" not in st.session_state:
+        st.session_state["cost_excluded_clients"] = CostEstimationService.get_excluded_clients()
+    current_excluded_clients = list(st.session_state.get(
+        "multiselect_excluded_cost_clients",
+        st.session_state.get("cost_excluded_clients", [])
+    ))
+
+    # 1. 계산된 예상 비용 데이터프레임 도출 (선택된 주기 df_active 기준, 비청구 제외 목록 적용)
+    df_calc = CostEstimationService.calculate_costs(df_active, excluded_clients=current_excluded_clients)
     kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
 
     # 3. 상단 4대 메트릭 화이트 펄스 카드
@@ -681,6 +689,67 @@ def render_cost_estimation_view(
         # 🏢 고객사/프로젝트별 예상 청구 금액 정산표 (직급별 점유율 바로 아래 배치)
         # -------------------------------------------------------------
         st.markdown(f'<div class="cost-table-header-cisco" style="margin-top: 24px;"><span>🏢</span><span>고객사/프로젝트별 예상 청구 금액 정산표{period_header_suffix}</span></div>', unsafe_allow_html=True)
+
+        # 🚫 청구 제외 대상(1on1, 사내업무 등) 관리 패널 & 현재 제외 배지
+        raw_clients_pool = []
+        if "client_name" in df_active.columns:
+            raw_clients_pool.extend([str(c).strip() for c in df_active["client_name"].dropna().unique() if str(c).strip()])
+        if df_raw is not None and not df_raw.empty and "client_name" in df_raw.columns:
+            raw_clients_pool.extend([str(c).strip() for c in df_raw["client_name"].dropna().unique() if str(c).strip()])
+        raw_clients_pool.extend(current_excluded_clients)
+        all_candidate_clients = sorted(list(set(raw_clients_pool)))
+
+        if "multiselect_excluded_cost_clients" not in st.session_state:
+            st.session_state["multiselect_excluded_cost_clients"] = [c for c in current_excluded_clients if c in all_candidate_clients]
+
+        # 현재 제외 중인 항목 배지 표시
+        if current_excluded_clients:
+            badge_spans = " ".join([
+                f'<span style="display: inline-block; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 2px 8px; border-radius: 4px; font-weight: 700; margin: 2px; font-size: 11.5px;">🚫 {c}</span>'
+                for c in current_excluded_clients
+            ])
+            st.markdown(f"""
+            <div style="background: #ffffff; border: 1.2px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 12.5px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <span style="font-weight: 800; color: #991b1b;">🚫 현재 청구 제외 대상 ({len(current_excluded_clients)}건):</span> {badge_spans}
+                    </div>
+                    <span style="color: #64748b; font-size: 11px;">※ 위 항목은 청구 금액 정산표, 파이 차트, 총 청구 KPI 및 엑셀 다운로드에서 완전 제외됩니다.</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with st.expander("⚙️ 청구 제외 고객사/사내업무 설정 (1on1, 사내미팅 등 비청구 대상 추가/삭제)", expanded=False):
+            st.markdown("""
+            <div style="font-size: 12.5px; color: #475569; margin-bottom: 10px; line-height: 1.5;">
+                💡 <b>1on1(팀장 1:1 미팅)</b>, <b>내부업무</b> 등 외부 고객사에 청구되지 않아야 하는 비청구 사내 항목을 선택하세요.<br>
+                목록을 수정한 후 <b>[💾 제외 목록 영구 저장]</b> 버튼을 누르면 DB 및 시스템 설정에 영구 보존됩니다.
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_ex1, col_ex2, col_ex3 = st.columns([7, 2, 1.5])
+            with col_ex1:
+                selected_excluded = st.multiselect(
+                    "청구 금액 정산에서 제외할 고객사/사내업무 선택:",
+                    options=all_candidate_clients,
+                    key="multiselect_excluded_cost_clients",
+                    placeholder="제외할 고객사 또는 업무명을 검색/선택하세요...",
+                    label_visibility="collapsed"
+                )
+            with col_ex2:
+                if st.button("💾 제외 목록 영구 저장", key="btn_save_excluded_clients", type="primary", use_container_width=True):
+                    CostEstimationService.save_excluded_clients(selected_excluded)
+                    st.session_state["cost_excluded_clients"] = selected_excluded
+                    st.session_state["multiselect_excluded_cost_clients"] = selected_excluded
+                    st.toast("✅ 청구 제외 목록이 영구 저장되었습니다!", icon="💾")
+                    st.rerun()
+            with col_ex3:
+                if st.button("🔄 기본값 복원", key="btn_reset_excluded_clients", use_container_width=True, help="기본 제외 목록 ['1on1', '내부업무']로 복원합니다."):
+                    CostEstimationService.save_excluded_clients(CostEstimationService.DEFAULT_EXCLUDED_CLIENTS)
+                    st.session_state["cost_excluded_clients"] = list(CostEstimationService.DEFAULT_EXCLUDED_CLIENTS)
+                    st.session_state["multiselect_excluded_cost_clients"] = list(CostEstimationService.DEFAULT_EXCLUDED_CLIENTS)
+                    st.toast("🔄 기본 제외 목록(['1on1', '내부업무'])으로 복원되었습니다.", icon="🔄")
+                    st.rerun()
         client_df = CostEstimationService.get_client_cost_summary(df_calc)
         if client_df.empty:
             st.info("조회 기준에 해당하는 고객사 작업 데이터가 없습니다.")

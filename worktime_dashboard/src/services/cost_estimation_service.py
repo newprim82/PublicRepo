@@ -1,5 +1,10 @@
+import os
+import json
+import sqlite3
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 import pandas as pd
+from ..config import config
 from ..database.supabase_client import db_manager
 from .team_service import TeamService
 
@@ -10,7 +15,133 @@ class CostEstimationService:
     2. 업무 시간 직접 수정 및 영구 보존 오버라이드
     3. 조회 기준(기간, 팀, 팀원, 고객사) 기반 예상 청구 금액 실시간 산정
     4. 팀원별, 고객사별, 직급별 다차원 정산 통계 집계
+    5. 비청구 고객사/사내업무(1on1, 내부업무 등) 영구 제외 관리
     """
+
+    EXCLUDED_CLIENTS_FILE = config.LOCAL_DB_PATH.parent / "excluded_cost_clients.json"
+    DEFAULT_EXCLUDED_CLIENTS = ["1on1", "내부업무"]
+    _cached_excluded_clients: Optional[List[str]] = None
+
+    @classmethod
+    def get_excluded_clients(cls) -> List[str]:
+        """
+        청구 금액 정산에서 제외할 고객사/사내업무 목록 조회
+        기본값: ["1on1", "내부업무"]
+        """
+        if cls._cached_excluded_clients is not None:
+            return list(cls._cached_excluded_clients)
+
+        excluded: List[str] = []
+
+        # 1. Supabase 조회 시도
+        try:
+            if db_manager.use_supabase and db_manager.supabase:
+                res = db_manager.supabase.table("worktime_excluded_cost_clients").select("client_name").execute()
+                if res.data:
+                    for r in res.data:
+                        c = str(r.get("client_name", "")).strip()
+                        if c and c not in excluded:
+                            excluded.append(c)
+        except Exception:
+            pass
+
+        # 2. 로컬 SQLite 조회 시도
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS excluded_cost_clients (
+                    client_name TEXT PRIMARY KEY,
+                    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+                )
+            """)
+            cursor.execute("SELECT client_name FROM excluded_cost_clients")
+            for (c,) in cursor.fetchall():
+                c_str = str(c).strip()
+                if c_str and c_str not in excluded:
+                    excluded.append(c_str)
+            conn.close()
+        except Exception:
+            pass
+
+        # 3. 로컬 JSON 파일 조회
+        if cls.EXCLUDED_CLIENTS_FILE.exists():
+            try:
+                with open(cls.EXCLUDED_CLIENTS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        for c in data:
+                            c_str = str(c).strip()
+                            if c_str and c_str not in excluded:
+                                excluded.append(c_str)
+            except Exception:
+                pass
+
+        # 기본값 병합 (비어있으면 기본값 적용 및 자동 영구 저장)
+        if not excluded:
+            excluded = list(cls.DEFAULT_EXCLUDED_CLIENTS)
+            try:
+                cls.save_excluded_clients(excluded)
+            except Exception:
+                pass
+
+        cls._cached_excluded_clients = excluded
+        return list(excluded)
+
+    @classmethod
+    def save_excluded_clients(cls, clients: List[str]) -> bool:
+        """
+        청구 금액 정산에서 제외할 고객사/사내업무 목록 영구 저장
+        (로컬 JSON, 로컬 SQLite, Supabase 동시 저장)
+        """
+        clean_clients = []
+        seen = set()
+        for c in clients:
+            c_str = str(c).strip()
+            if c_str and c_str.lower() not in seen:
+                seen.add(c_str.lower())
+                clean_clients.append(c_str)
+
+        cls._cached_excluded_clients = clean_clients
+
+        # 1. 로컬 JSON 저장
+        try:
+            cls.EXCLUDED_CLIENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(cls.EXCLUDED_CLIENTS_FILE, "w", encoding="utf-8") as f:
+                json.dump(clean_clients, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"[CostEstimationService] JSON 저장 오류: {e}")
+
+        # 2. 로컬 SQLite 저장
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS excluded_cost_clients (
+                    client_name TEXT PRIMARY KEY,
+                    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+                )
+            """)
+            cursor.execute("DELETE FROM excluded_cost_clients")
+            cursor.executemany(
+                "INSERT INTO excluded_cost_clients (client_name) VALUES (?)",
+                [(c,) for c in clean_clients]
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[CostEstimationService] SQLite 저장 오류: {e}")
+
+        # 3. Supabase 저장 시도
+        try:
+            if db_manager.use_supabase and db_manager.supabase:
+                payloads = [{"client_name": c} for c in clean_clients]
+                if payloads:
+                    db_manager.supabase.table("worktime_excluded_cost_clients").upsert(payloads).execute()
+        except Exception:
+            pass
+
+        return True
 
     @classmethod
     def get_hourly_rates(cls) -> Dict[str, int]:
@@ -23,7 +154,12 @@ class CostEstimationService:
         return db_manager.save_hourly_rates(rates)
 
     @classmethod
-    def calculate_costs(cls, df: pd.DataFrame, custom_rates: Optional[Dict[str, int]] = None) -> pd.DataFrame:
+    def calculate_costs(
+        cls,
+        df: pd.DataFrame,
+        custom_rates: Optional[Dict[str, int]] = None,
+        excluded_clients: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         """
         작업 데이터프레임에 직급, 단가, 청구 인정 공수, 예상 청구 금액을 부여하여 반환
         """
@@ -41,6 +177,16 @@ class CostEstimationService:
         if "log_type" in df_calc.columns:
             edu_mask = df_calc["log_type"].astype(str).str.strip() == "교육"
             df_calc = df_calc[~edu_mask].copy()
+
+        # 🚫 3. 비청구 대상(1on1, 사내업무 등) 고객사 원천 제외 필터링
+        if excluded_clients is None:
+            excluded_clients = cls.get_excluded_clients()
+
+        if excluded_clients and "client_name" in df_calc.columns:
+            ex_set = {str(c).strip().lower() for c in excluded_clients if str(c).strip()}
+            if ex_set:
+                client_clean_series = df_calc["client_name"].astype(str).str.strip().str.lower()
+                df_calc = df_calc[~client_clean_series.isin(ex_set)].copy()
 
         #完了 작업이 0건이거나 빈 데이터프레임일 때 조기 반환 (TypeError 방지)
         if df_calc.empty:
@@ -302,15 +448,20 @@ class CostEstimationService:
         return grouped
 
     @classmethod
-    def get_monthly_billing_trend(cls, df_raw: pd.DataFrame, custom_rates: Optional[Dict[str, int]] = None) -> pd.DataFrame:
+    def get_monthly_billing_trend(
+        cls,
+        df_raw: pd.DataFrame,
+        custom_rates: Optional[Dict[str, int]] = None,
+        excluded_clients: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         """
         월별 청구 추이 및 전월 대비(MoM) 증감률 분석 데이터 집계
         """
         if df_raw.empty:
             return pd.DataFrame()
 
-        # 전체 완료 작업 기준 비용 산정
-        df_calc = cls.calculate_costs(df_raw, custom_rates=custom_rates)
+        # 전체 완료 작업 기준 비용 산정 (제외 대상 고객사 반영)
+        df_calc = cls.calculate_costs(df_raw, custom_rates=custom_rates, excluded_clients=excluded_clients)
         if df_calc.empty:
             return pd.DataFrame()
 
