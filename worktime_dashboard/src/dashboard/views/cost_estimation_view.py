@@ -51,16 +51,20 @@ def render_cost_estimation_view(
         line-height: 1.5;
     }
 
-    /* 2. 상단 필터 요약 박스 */
+    /* 2. 상단 필터 요약 박스 (텍스트 길이에 맞춘 플렉서블 핏) */
     .cost-filter-summary-card {
         background: #ffffff !important;
         border: 1.5px solid #cbd5e1 !important;
         border-radius: 8px !important;
-        padding: 8px 14px !important;
+        padding: 7px 14px !important;
         text-align: right !important;
-        font-size: 12.5px !important;
+        font-size: 12px !important;
         color: #334155 !important;
         box-shadow: 0 1px 4px rgba(0, 45, 66, 0.05) !important;
+        width: fit-content !important;
+        max-width: 100% !important;
+        margin-left: auto !important;
+        display: inline-block !important;
     }
 
     /* 3. 4대 KPI 메트릭 화이트 펄스 카드 (summary_view 표준 일원화) */
@@ -290,9 +294,11 @@ def render_cost_estimation_view(
         team_text = selected_team if selected_team else "전체 팀"
         worker_text = worker_desc if worker_desc else "전체 인원"
         st.markdown(f"""
-        <div class="cost-filter-summary-card">
-            <div>📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
-            <div style="margin-top: 3px;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
+        <div style="display: flex; justify-content: flex-end; width: 100%;">
+            <div class="cost-filter-summary-card">
+                <div>📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
+                <div style="margin-top: 3px;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
