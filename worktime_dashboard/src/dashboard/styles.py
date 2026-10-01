@@ -1362,8 +1362,70 @@ def apply_custom_styles():
             font-weight: 800 !important;
             box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3) !important;
         }
-        [data-testid="stPills"] button[aria-selected="true"] * {
-            color: #ffffff !important;
+        /* ========================================================================= */
+        /* ☀️ 흰색 바탕 고대비 절대 가독성 보장 규칙 (사용자 필수 원칙: 흰색 바탕엔 무조건 검은색 글자) */
+        /* ========================================================================= */
+        .main label,
+        .main label *,
+        .main div[data-testid="stWidgetLabel"],
+        .main div[data-testid="stWidgetLabel"] *,
+        .main [data-testid="stWidgetLabel"] p,
+        .main [data-testid="stWidgetLabel"] span,
+        [data-testid="stAppViewContainer"] > .main label,
+        [data-testid="stAppViewContainer"] > .main label *,
+        [data-testid="stAppViewContainer"] > .main div[data-testid="stWidgetLabel"] * {
+            color: #000000 !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* 메인 영역 셀렉트박스 및 텍스트 인풋: 흰색 바탕에 최적화된 밝은 배경 + 선명한 검은 글씨 + 뚜렷한 테두리 */
+        .main [data-baseweb="input"],
+        .main [data-baseweb="base-input"],
+        .main [data-baseweb="select"] > div,
+        .main div[data-baseweb="select"] {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 1.5px solid #94a3b8 !important;
+            border-radius: 6px !important;
+        }
+        .main [data-baseweb="input"] input,
+        .main [data-baseweb="base-input"] input,
+        .main [data-baseweb="select"] span,
+        .main [data-baseweb="select"] div,
+        .main div[data-baseweb="select"] * {
+            color: #000000 !important;
+            font-weight: 600 !important;
+        }
+        .main [data-baseweb="select"] svg {
+            fill: #000000 !important;
+            color: #000000 !important;
+        }
+
+        /* 탭(stTabs) 텍스트: 비선택 탭도 흐린 글자 원천 차단 -> 선명한 블랙(#000000) */
+        .stTabs [data-baseweb="tab"] p,
+        .stTabs [data-baseweb="tab"] span,
+        .stTabs [data-baseweb="tab"] div,
+        div[data-testid="stTabs"] button[role="tab"] * {
+            color: #000000 !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+        }
+        .stTabs [data-baseweb="tab"][aria-selected="true"] p,
+        .stTabs [data-baseweb="tab"][aria-selected="true"] span,
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
+            color: #0284c7 !important;
+            font-weight: 800 !important;
+        }
+
+        /* 토글 스위치 & 체크박스 */
+        .main [data-testid="stToggle"] label span,
+        .main [data-testid="stCheckbox"] label span,
+        .main [data-testid="stRadio"] label span {
+            color: #000000 !important;
+            font-weight: 700 !important;
         }
 
     </style>

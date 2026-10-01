@@ -12,7 +12,7 @@ from ..common.ui_helpers import get_current_kst_time, strip_tz
 
 def render_monthly_worklog_dispatch_view():
     """
-    📑 [팀 전월 엑셀 원장 정기 발송] 메인 뷰 (Cisco ACI 테마 표준 100% 준수)
+    📑 [팀 전월 엑셀 원장 정기 발송] 메인 뷰 (흰색 바탕 100% 고대비 블랙 텍스트 표준 준수)
     - 매달 1일 08:00에 기술1팀 인원 전체에 대한 전월 카톡/아웃룩 엑셀 원장을 팀메일로 정기 전달
     - 기본 팀메일: GE101@sangsanginworld.co.kr (수정 및 저장 가능)
     - 즉시 테스트 발송 및 엑셀 원장(.xlsx) 브라우저 다운로드 제공
@@ -20,51 +20,99 @@ def render_monthly_worklog_dispatch_view():
     """
     st.markdown("""
     <style>
-    /* 🏛️ Cisco ACI 표준 테마: 월간 엑셀 원장 발송 화면 전용 스타일 */
+    /* ☀️ 흰색 바탕 고대비 절대 가독성 보장 전용 CSS (라벨, 인풋, 카드, 탭 전부 검은색 글자) */
     .monthly-hero {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(2, 44, 67, 0.95) 100%);
-        border: 1.5px solid rgba(56, 189, 248, 0.35);
-        border-radius: 12px;
-        padding: 20px 24px;
-        margin-bottom: 22px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        background: #ffffff !important;
+        border: 1.5px solid #0284c7 !important;
+        border-left: 6px solid #0284c7 !important;
+        border-radius: 10px !important;
+        padding: 18px 24px !important;
+        margin-bottom: 22px !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06) !important;
     }
     .monthly-hero-title {
         font-size: 21px !important;
-        font-weight: 800 !important;
-        color: #38bdf8 !important;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 6px;
+        font-weight: 900 !important;
+        color: #000000 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        margin-bottom: 6px !important;
     }
     .monthly-hero-desc {
-        font-size: 13px !important;
-        color: #cbd5e1 !important;
-        line-height: 1.6;
+        font-size: 13.5px !important;
+        color: #000000 !important;
+        font-weight: 500 !important;
+        line-height: 1.6 !important;
     }
     .metric-card-box {
-        background: rgba(15, 23, 42, 0.7);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 8px;
-        padding: 14px 16px;
-        text-align: center;
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 14px 16px !important;
+        text-align: center !important;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
     }
     .metric-card-title {
-        font-size: 11.5px;
-        font-weight: 700;
-        color: #94a3b8;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        color: #000000 !important;
     }
     .metric-card-value {
-        font-size: 23px;
-        font-weight: 900;
-        color: #ffffff;
-        margin-top: 4px;
+        font-size: 23px !important;
+        font-weight: 900 !important;
+        color: #000000 !important;
+        margin-top: 4px !important;
+    }
+    /* 라벨 텍스트: 무조건 선명한 블랙 강제 */
+    label,
+    div[data-testid="stWidgetLabel"] p,
+    div[data-testid="stWidgetLabel"] span,
+    div[data-testid="stWidgetLabel"] * {
+        color: #000000 !important;
+        font-weight: 800 !important;
+        font-size: 13.5px !important;
+    }
+    /* 셀렉트박스 & 인풋창: 흰색 배경 + 선명한 검은 글씨 + 뚜렷한 테두리 */
+    div[data-baseweb="input"],
+    div[data-baseweb="base-input"],
+    div[data-baseweb="select"] > div {
+        background-color: #ffffff !important;
+        background: #ffffff !important;
+        border: 1.5px solid #94a3b8 !important;
+        border-radius: 6px !important;
+    }
+    div[data-baseweb="input"] input,
+    div[data-baseweb="base-input"] input,
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div,
+    div[data-baseweb="select"] * {
+        color: #000000 !important;
+        font-weight: 700 !important;
+    }
+    div[data-baseweb="select"] svg {
+        fill: #000000 !important;
+        color: #000000 !important;
+    }
+    /* 토글 스위치 텍스트 */
+    div[data-testid="stToggle"] label span {
+        color: #000000 !important;
+        font-weight: 800 !important;
+    }
+    /* 탭 헤더 글자색 선명한 블랙 강제 */
+    div[data-testid="stTabs"] button[role="tab"] * {
+        color: #000000 !important;
+        font-weight: 800 !important;
+        font-size: 14px !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
+        color: #0284c7 !important;
+        font-weight: 900 !important;
     }
     /* 다운로드 버튼 텍스트 선명한 화이트 보장 */
     div.stDownloadButton > button {
         background-color: #0284c7 !important;
-        border: 1px solid #38bdf8 !important;
+        border: 1px solid #0369a1 !important;
         border-radius: 6px !important;
         color: #ffffff !important;
         font-weight: 800 !important;
@@ -102,7 +150,7 @@ def render_monthly_worklog_dispatch_view():
     default_team_idx = all_teams.index("기술 1팀") if "기술 1팀" in all_teams else 0
 
     with col_cfg:
-        st.markdown("#### ⚙️ 팀별 정기 발송 설정")
+        st.markdown("<h4 style='color: #000000; font-weight: 900;'>⚙️ 팀별 정기 발송 설정</h4>", unsafe_allow_html=True)
         selected_team = st.selectbox(
             "🏢 대상 팀 선택:",
             options=all_teams,
@@ -139,7 +187,7 @@ def render_monthly_worklog_dispatch_view():
             st.rerun()
 
     with col_action:
-        st.markdown("#### 🚀 즉시 테스트 발송 & 원장 다운로드")
+        st.markdown("<h4 style='color: #000000; font-weight: 900;'>🚀 즉시 테스트 발송 & 원장 다운로드</h4>", unsafe_allow_html=True)
         
         # 발송 대상 월 선택 (기본: 전월)
         target_month = st.selectbox(
@@ -158,27 +206,27 @@ def render_monthly_worklog_dispatch_view():
         kakao_cnt = len(team_df[~team_df["is_outlook"]]) if "is_outlook" in team_df.columns else tot_rows
         outlook_cnt = len(team_df[team_df["is_outlook"]]) if "is_outlook" in team_df.columns else 0
 
-        # 요약 미니 카드
+        # 요약 미니 카드 (흰색 바탕 + 고대비 블랙 수치)
         mc1, mc2, mc3 = st.columns(3)
         with mc1:
             st.markdown(f"""
             <div class="metric-card-box">
                 <div class="metric-card-title">총 업무/일정</div>
-                <div class="metric-card-value" style="color: #38bdf8;">{tot_rows:,}<span style="font-size: 13px;">건</span></div>
+                <div class="metric-card-value" style="color: #000000 !important;">{tot_rows:,}<span style="font-size: 13px; font-weight: 700; color: #000000 !important;">건</span></div>
             </div>
             """, unsafe_allow_html=True)
         with mc2:
             st.markdown(f"""
             <div class="metric-card-box">
                 <div class="metric-card-title">총 투입 공수</div>
-                <div class="metric-card-value" style="color: #4ade80;">{tot_hours:,.1f}<span style="font-size: 13px;">h</span></div>
+                <div class="metric-card-value" style="color: #000000 !important;">{tot_hours:,.1f}<span style="font-size: 13px; font-weight: 700; color: #000000 !important;">h</span></div>
             </div>
             """, unsafe_allow_html=True)
         with mc3:
             st.markdown(f"""
             <div class="metric-card-box">
                 <div class="metric-card-title">카톡 / 아웃룩</div>
-                <div class="metric-card-value" style="font-size: 16px; margin-top: 8px; color: #f1f5f9;">{kakao_cnt} / {outlook_cnt}</div>
+                <div class="metric-card-value" style="font-size: 17px !important; margin-top: 8px !important; color: #000000 !important;">{kakao_cnt} / {outlook_cnt}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -219,10 +267,10 @@ def render_monthly_worklog_dispatch_view():
                 key="btn_download_monthly_worklog"
             )
 
-    st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 28px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border: 0; border-top: 1px solid #cbd5e1; margin: 28px 0 20px 0;'>", unsafe_allow_html=True)
 
     # 3. 실시간 데이터 미리보기 (탭 구성)
-    st.markdown(f"#### 📊 [{selected_team}] {target_month} 원장 데이터 실시간 미리보기")
+    st.markdown(f"<h4 style='color: #000000; font-weight: 900;'>📊 [{selected_team}] {target_month} 원장 데이터 실시간 미리보기</h4>", unsafe_allow_html=True)
     
     if team_df.empty:
         st.info(f"선택하신 [{selected_team}]의 {target_month} 데이터가 없습니다.")
@@ -303,10 +351,10 @@ def render_monthly_worklog_dispatch_view():
                     hide_index=True
                 )
 
-    st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 28px 0 20px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border: 0; border-top: 1px solid #cbd5e1; margin: 28px 0 20px 0;'>", unsafe_allow_html=True)
 
-    # 4. 최근 발송 이력
-    st.markdown("#### 📜 최근 발송 이력 (전월 엑셀 원장 발송)")
+    # 4. 최근 발송 이력 (흰색 카드 + 선명한 블랙 텍스트)
+    st.markdown("<h4 style='color: #000000; font-weight: 900;'>📜 최근 발송 이력 (전월 엑셀 원장 발송)</h4>", unsafe_allow_html=True)
     recent_logs = EmailDispatchService.get_recent_dispatches(limit=10)
     # 전월 원장 관련 이력 우선 필터링
     monthly_logs = [item for item in recent_logs if "전월 원장" in str(item.get("period_label", "")) or "원장" in str(item.get("subject", ""))]
@@ -320,26 +368,26 @@ def render_monthly_worklog_dispatch_view():
             d_type = item.get("dispatch_type", "MANUAL_IMMEDIATE")
             d_badge = '<span style="background:#0284c7; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">🚀 즉시 발송</span>' if "MANUAL" in d_type else '<span style="background:#16a34a; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">⏳ 정기 자동</span>'
             status = item.get("status", "SUCCESS")
-            status_html = '<span style="color:#4ade80; font-weight:800; font-size:11.5px;">✅ 성공</span>' if status == "SUCCESS" else '<span style="color:#f87171; font-weight:800; font-size:11.5px;">❌ 실패</span>'
+            status_html = '<span style="color:#15803d; font-weight:800; font-size:11.5px;">✅ 성공</span>' if status == "SUCCESS" else '<span style="color:#b91c1c; font-weight:800; font-size:11.5px;">❌ 실패</span>'
             dt_str = str(item.get("created_at", "")).replace("T", " ")
             short_dt = dt_str[:16] if len(dt_str) >= 16 else dt_str
             p_label = item.get("period_label", "")
             rcpts = item.get("recipient_emails") or item.get("recipient_email") or ""
 
             st.markdown(f"""
-            <div style="background: rgba(15, 23, 42, 0.7); border: 1.2px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 11px 15px; margin-bottom: 9px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 7px; margin-bottom: 7px;">
+            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-bottom: 9px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         {d_badge}
-                        <span style="color: #38bdf8; font-weight: 700; font-size: 12.5px;">{p_label}</span>
+                        <span style="color: #000000; font-weight: 800; font-size: 13px;">{p_label}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #94a3b8; font-size: 11px;">{short_dt}</span>
+                        <span style="color: #334155; font-size: 11.5px; font-weight: 600;">{short_dt}</span>
                         {status_html}
                     </div>
                 </div>
-                <div style="color: #ffffff; font-size: 12px; font-weight: 600;">
-                    <span style="color: #38bdf8;">✉️ 수신 메일:</span> {rcpts}
+                <div style="color: #000000; font-size: 12.5px; font-weight: 700;">
+                    <span style="color: #0284c7;">✉️ 수신 메일:</span> {rcpts}
                 </div>
             </div>
             """, unsafe_allow_html=True)
