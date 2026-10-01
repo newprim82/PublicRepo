@@ -66,6 +66,7 @@ from src.dashboard.views.cost_estimation_view import render_cost_estimation_view
 from src.dashboard.views.holiday_management_view import render_holiday_management_view
 from src.dashboard.views.email_schedule_view import render_email_schedule_view
 from src.dashboard.views.monthly_worklog_dispatch_view import render_monthly_worklog_dispatch_view
+from src.dashboard.views.account_management_view import render_account_management_view
 
 # -------------------------------------------------------------
 # 1. 단 1회 백그라운드 10분 수집 데몬 기동
@@ -352,7 +353,24 @@ def render_main_content_frame(
         render_login_page()
         return
 
-    # 🔒 관리자 전용 페이지 가드
+    # 🔒 Super Admin 최고 관리자(newprim) 전용 페이지 가드
+    super_admin_only_pages = [
+        "📅 법정 및 임시 공휴일 관리",
+        "📬 정기 메일 발송 대상 관리",
+        "📑 팀 전월 엑셀 원장 정기 발송",
+        "👥 시스템 관리자 계정 관리"
+    ]
+    if curr_page in super_admin_only_pages:
+        if not AuthManager.is_authenticated():
+            st.warning("🔒 최고 관리자(Super Admin) 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
+            render_login_page()
+            return
+        elif not AuthManager.is_super_admin():
+            st.error("🚫 최고 관리자(Super Admin: newprim) 전용 메뉴입니다. 일반 관리자는 접근할 수 없습니다.")
+            st.info("좌측 사이드바에서 다른 메뉴를 이용해주세요.")
+            return
+
+    # 🔒 일반 관리자(Admin) 전용 페이지 가드
     admin_only_pages = [
         "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
         "📋 작업 기록 원장 & 엑셀",
@@ -362,10 +380,7 @@ def render_main_content_frame(
         "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
         "🕒 시간 수정 감사 이력",
-        "⚙️ 직급별 시간당 단가 설정",
-        "📅 법정 및 임시 공휴일 관리",
-        "📬 정기 메일 발송 대상 관리",
-        "📑 팀 전월 엑셀 원장 정기 발송"
+        "⚙️ 직급별 시간당 단가 설정"
     ]
     if curr_page in admin_only_pages and not AuthManager.is_authenticated():
         st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
@@ -470,6 +485,8 @@ def render_main_content_frame(
         render_holiday_management_view()
     elif curr_page == "📬 정기 메일 발송 대상 관리":
         render_email_schedule_view()
+    elif curr_page == "👥 시스템 관리자 계정 관리":
+        render_account_management_view()
 
 
 # -------------------------------------------------------------
@@ -872,12 +889,13 @@ def main():
                         except Exception as e:
                             st.error(f"파일 처리 중 오류: {e}")
 
-        # 5. 🛠️ 시스템 관리 (로그인 시에만 노출)
-        if is_auth:
+        # 5. 🛠️ 시스템 관리 (Super Admin: newprim 로그인 시에만 노출)
+        if is_auth and AuthManager.is_super_admin():
             sys_mgmt_items = [
                 "📅 법정 및 임시 공휴일 관리",
                 "📬 정기 메일 발송 대상 관리",
-                "📑 팀 전월 엑셀 원장 정기 발송"
+                "📑 팀 전월 엑셀 원장 정기 발송",
+                "👥 시스템 관리자 계정 관리"
             ]
             is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
             with st.expander("🛠️ 시스템 관리", expanded=is_sys_active):
@@ -916,7 +934,8 @@ def main():
             )
         else:
             current_admin = AuthManager.get_current_user() or "newprim"
-            if st.button(f"🚪 Logout ({current_admin})", key="btn_sidebar_standalone_logout", use_container_width=True):
+            role_label = "Super Admin" if AuthManager.is_super_admin() else "Admin"
+            if st.button(f"🚪 Logout ({current_admin} · {role_label})", key="btn_sidebar_standalone_logout", use_container_width=True):
                 AuthManager.logout()
                 st.toast("👋 로그아웃되었습니다. 일반 조회 모드로 전환됩니다.", icon="ℹ️")
                 st.rerun()
