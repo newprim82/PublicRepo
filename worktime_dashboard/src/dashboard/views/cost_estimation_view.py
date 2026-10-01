@@ -432,35 +432,49 @@ def render_cost_estimation_view(
         df_active = df_scope.copy()
 
     # -------------------------------------------------------------
-    # 📅 보고서 조회 기준 기간 산출 (월간/주간 드릴다운 및 실제 데이터 일자 범위 반영)
+    # 📅 보고서 조회 기준 기간 산출 (월간: 'YYYY년 M월', 주간 드릴다운: '며칠~며칠' 반영)
     # -------------------------------------------------------------
-    date_range_str = ""
-    if "start_time" in df_active.columns and not df_active["start_time"].dropna().empty:
-        valid_st = pd.to_datetime(df_active["start_time"], errors="coerce").dropna()
-        if not valid_st.empty:
-            min_d = valid_st.min().strftime("%Y.%m.%d")
-            max_d = valid_st.max().strftime("%Y.%m.%d")
-            date_range_str = f"{min_d} ~ {max_d}" if min_d != max_d else min_d
-
     if sel_period != "🗓️ 월간 전체 종합":
+        # 주간 드릴다운인 경우: 주차명 및 며칠~며칠 유지 (예: "9월 1주차 (08.31~09.06)")
         target_week = sel_period.replace("📌 ", "").strip()
         current_report_period = target_week
         period_header_suffix = f" ({target_week})"
     else:
-        clean_month = str(month_desc).strip() if month_desc else ""
-        if clean_month and clean_month != "전체 기간":
-            if "~" in clean_month or (date_range_str and date_range_str in clean_month):
-                current_report_period = clean_month
-            elif date_range_str:
-                current_report_period = f"{clean_month} ({date_range_str})"
-            else:
-                current_report_period = clean_month
-        elif date_range_str:
-            current_report_period = date_range_str
+        # 월간 전체 종합인 경우: 'YYYY년 M월' 형태로 깔끔하게 표기
+        raw_m = str(month_desc).strip() if month_desc else ""
+        match_ym = re.match(r"^(\d{4})-(\d{1,2})$", raw_m)
+        if match_ym:
+            current_report_period = f"{match_ym.group(1)}년 {int(match_ym.group(2))}월"
+        elif "," in raw_m and any(re.search(r"\d{4}-\d{1,2}", p) for p in raw_m.split(",")):
+            formatted_list = []
+            for p in raw_m.split(","):
+                m_sub = re.search(r"(\d{4})-(\d{1,2})", p)
+                if m_sub:
+                    formatted_list.append(f"{m_sub.group(1)}년 {int(m_sub.group(2))}월")
+                else:
+                    formatted_list.append(p.strip())
+            current_report_period = ", ".join(formatted_list)
+        elif "년" in raw_m and "월" in raw_m and "~" not in raw_m:
+            current_report_period = raw_m
+        elif raw_m and raw_m != "전체 기간":
+            current_report_period = raw_m
         else:
-            current_report_period = "전체 기간"
-        
-        period_header_suffix = f" ({current_report_period})" if current_report_period != "전체 기간" else (f" ({date_range_str})" if date_range_str else "")
+            # month_desc가 "전체 기간"이거나 비어있을 때 데이터에서 실제 월 또는 일자 범위 확인
+            if "start_time" in df_active.columns and not df_active["start_time"].dropna().empty:
+                valid_st = pd.to_datetime(df_active["start_time"], errors="coerce").dropna()
+                if not valid_st.empty:
+                    min_dt = valid_st.min()
+                    max_dt = valid_st.max()
+                    if min_dt.year == max_dt.year and min_dt.month == max_dt.month:
+                        current_report_period = f"{min_dt.year}년 {min_dt.month}월"
+                    else:
+                        current_report_period = f"{min_dt.strftime('%Y.%m.%d')} ~ {max_dt.strftime('%Y.%m.%d')}"
+                else:
+                    current_report_period = "전체 기간"
+            else:
+                current_report_period = "전체 기간"
+
+        period_header_suffix = f" ({current_report_period})" if current_report_period != "전체 기간" else ""
 
     # 1. 계산된 예상 비용 데이터프레임 도출 (선택된 주기 df_active 기준)
     df_calc = CostEstimationService.calculate_costs(df_active)

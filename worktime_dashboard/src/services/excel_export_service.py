@@ -378,9 +378,12 @@ class ExcelExportService:
             if "start_time" in data.columns and not data["start_time"].dropna().empty:
                 valid_st = pd.to_datetime(data["start_time"], errors="coerce").dropna()
                 if not valid_st.empty:
-                    min_d = valid_st.min().strftime("%Y.%m.%d")
-                    max_d = valid_st.max().strftime("%Y.%m.%d")
-                    period_text = f"{min_d} ~ {max_d}" if min_d != max_d else min_d
+                    min_dt = valid_st.min()
+                    max_dt = valid_st.max()
+                    if min_dt.year == max_dt.year and min_dt.month == max_dt.month:
+                        period_text = f"{min_dt.year}년 {min_dt.month}월"
+                    else:
+                        period_text = f"{min_dt.strftime('%Y.%m.%d')} ~ {max_dt.strftime('%Y.%m.%d')}"
                 else:
                     period_text = "전체 기간"
             else:
