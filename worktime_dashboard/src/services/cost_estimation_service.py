@@ -99,13 +99,29 @@ class CostEstimationService:
         df_calc["billable_hours"] = raw_hours
         df_calc.loc[is_leave_mask, "billable_hours"] = 0.0
 
+        # ⏱️ 수파베이스/로컬 보정 공수 맵 매핑 (사용자가 직접 수정한 인정 공수 영구 반영)
+        df_calc["is_time_adjusted"] = False
+        if "original_hours" not in df_calc.columns:
+            df_calc["original_hours"] = df_calc["billable_hours"]
+        if "note" not in df_calc.columns:
+            df_calc["note"] = ""
+
+        adj_records = db_manager.get_adjusted_records_map()
+        if adj_records and "msg_hash" in df_calc.columns:
+            for idx, mh in df_calc["msg_hash"].items():
+                mh_str = str(mh).strip()
+                if mh_str in adj_records:
+                    rec = adj_records[mh_str]
+                    orig_val = float(rec.get("original_hours", df_calc.at[idx, "billable_hours"]))
+                    adj_val = float(rec.get("adjusted_hours", df_calc.at[idx, "billable_hours"]))
+                    df_calc.at[idx, "original_hours"] = orig_val
+                    df_calc.at[idx, "billable_hours"] = adj_val
+                    df_calc.at[idx, "is_time_adjusted"] = True
+                    df_calc.at[idx, "note"] = str(rec.get("note", ""))
+
         # 예상 청구 금액 = 청구 인정 공수 * 직급별 단가 (안전한 수치형 연산)
         calc_cost = (df_calc["billable_hours"].astype(float) * df_calc["hourly_rate"].astype(float)).round()
         df_calc["estimated_cost"] = pd.to_numeric(calc_cost, errors="coerce").fillna(0).astype(int)
-
-        # 보정 여부 플래그
-        if "is_time_adjusted" not in df_calc.columns:
-            df_calc["is_time_adjusted"] = False
 
         return df_calc
 

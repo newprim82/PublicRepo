@@ -1002,6 +1002,49 @@ class DatabaseManager:
 
         return adj_map
 
+    def get_adjusted_records_map(self) -> Dict[str, Dict[str, Any]]:
+        """
+        작업 고유 키(msg_hash)별 보정 전체 레코드 매핑 반환
+        반환: {msg_hash: {"adjusted_hours": float, "original_hours": float, "note": str}}
+        """
+        rec_map = {}
+        # 1. Supabase 시도
+        if self.use_supabase and self.supabase:
+            try:
+                res = self.supabase.table("worktime_adjusted_work_logs").select("msg_hash, adjusted_hours, original_hours, note").execute()
+                if res.data:
+                    for r in res.data:
+                        h_key = str(r.get("msg_hash", "")).strip()
+                        if h_key:
+                            rec_map[h_key] = {
+                                "adjusted_hours": float(r.get("adjusted_hours", 0.0)),
+                                "original_hours": float(r.get("original_hours", 0.0)),
+                                "note": str(r.get("note", ""))
+                            }
+                    if rec_map:
+                        return rec_map
+            except Exception:
+                pass
+
+        # 2. 로컬 SQLite 조회
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("SELECT msg_hash, adjusted_hours, original_hours, note FROM adjusted_work_logs")
+            for h_key, adj_h, orig_h, note_val in cursor.fetchall():
+                h_key = str(h_key).strip()
+                if h_key:
+                    rec_map[h_key] = {
+                        "adjusted_hours": float(adj_h or 0.0),
+                        "original_hours": float(orig_h or 0.0),
+                        "note": str(note_val or "")
+                    }
+            conn.close()
+        except Exception as e:
+            print(f"[DB 오류] 보정 레코드 로컬 조회 실패: {e}")
+
+        return rec_map
+
     def save_adjusted_work_log(
         self,
         msg_hash: str,
