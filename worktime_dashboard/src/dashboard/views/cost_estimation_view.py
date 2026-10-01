@@ -10,7 +10,13 @@ import plotly.graph_objects as go
 from ...services.cost_estimation_service import CostEstimationService
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...auth.auth_manager import AuthManager
-from ..common.ui_helpers import get_job_title_badge, get_job_title_color, get_job_title_rank
+from ..common.ui_helpers import (
+    get_job_title_badge,
+    get_job_title_color,
+    get_job_title_rank,
+    get_available_weeks_for_df,
+    is_same_team
+)
 
 
 def render_cost_estimation_view(
@@ -261,10 +267,6 @@ def render_cost_estimation_view(
     </style>
     """, unsafe_allow_html=True)
 
-    # 1. 계산된 예상 비용 데이터프레임 도출
-    df_calc = CostEstimationService.calculate_costs(df)
-    kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
-
     # 페이지별 타이틀 및 설명 동적 매핑
     page_titles = {
         "💰 팀원별 예상 청구금액": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
@@ -293,7 +295,11 @@ def render_cost_estimation_view(
         """, unsafe_allow_html=True)
 
     with col_t2:
-        period_text = month_desc if month_desc else "전체 기간"
+        cur_sel_period = st.session_state.get("cost_estimation_period_selector", "🗓️ 월간 전체 종합")
+        if cur_sel_period != "🗓️ 월간 전체 종합":
+            period_text = f"{month_desc} ({cur_sel_period.replace('📌 ', '').strip()})" if month_desc else cur_sel_period.replace('📌 ', '').strip()
+        else:
+            period_text = month_desc if month_desc else "전체 기간"
         team_text = selected_team if selected_team else "전체 팀"
         worker_text = worker_desc if worker_desc else "전체 인원"
         st.markdown(f"""
@@ -325,6 +331,109 @@ def render_cost_estimation_view(
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # =========================================================
+    # 📅 보고서 조회 주기 선택 (월간 전체 종합 vs 각 주차별 상세 드릴다운)
+    # =========================================================
+    df_scope = df.copy()
+    available_weeks = get_available_weeks_for_df(df_scope, month_desc=month_desc)
+    if not available_weeks and df_filtered_base is not None and not df_filtered_base.empty:
+        available_weeks = get_available_weeks_for_df(df_filtered_base, month_desc=month_desc)
+    if not available_weeks and df_raw is not None and not df_raw.empty:
+        available_weeks = get_available_weeks_for_df(df_raw, month_desc=month_desc)
+
+    period_options = ["🗓️ 월간 전체 종합"] + [f"📌 {w}" for w in available_weeks]
+
+    st.markdown("""
+    <style>
+        div.st-key-cost_estimation_period_selector [data-testid="stWidgetLabel"],
+        div.st-key-cost_estimation_period_selector [data-testid="stWidgetLabel"] *,
+        div.st-key-cost_estimation_period_selector label,
+        div.st-key-cost_estimation_period_selector label * {
+            color: #002d42 !important;
+            font-size: 14.5px !important;
+            font-weight: 800 !important;
+        }
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] {
+            background: #ffffff !important;
+            border: 1.5px solid #005f8a !important;
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+            box-shadow: 0 2px 6px rgba(0,45,66,0.06) !important;
+            margin-bottom: 16px !important;
+        }
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label {
+            background: #f1f5f9 !important;
+            border: 1.2px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 5px 12px !important;
+            margin: 0 !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label:hover {
+            background: #e2e8f0 !important;
+            border-color: #0284c7 !important;
+        }
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label p,
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label span {
+            color: #002d42 !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+        }
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label[data-checked="true"],
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label:has(input:checked) {
+            background: #005073 !important;
+            border-color: #002d42 !important;
+        }
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label[data-checked="true"] p,
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label:has(input:checked) p,
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label[data-checked="true"] span,
+        div.st-key-cost_estimation_period_selector div[role="radiogroup"] label:has(input:checked) span {
+            color: #ffffff !important;
+            font-weight: 900 !important;
+        }
+    </style>
+    <div style="font-size: 14.5px; font-weight: 800; color: #002d42 !important; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+        <span>🗓️</span>
+        <span style="color: #002d42 !important; font-weight: 800 !important;">보고서 조회 주기 선택 (월간 / 주간 드릴다운)</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if available_weeks:
+        sel_period = st.radio(
+            "보고서 조회 주기 선택 (월간 / 주간 드릴다운)",
+            options=period_options,
+            horizontal=True,
+            key="cost_estimation_period_selector",
+            label_visibility="collapsed"
+        )
+    else:
+        sel_period = "🗓️ 월간 전체 종합"
+
+    # 선택된 주기에 따른 활성 데이터셋(df_active) 분기
+    if sel_period != "🗓️ 월간 전체 종합":
+        target_week = sel_period.replace("📌 ", "").strip()
+        # 💡 월 경계(예: 8/31~9/6)에 걸친 주차도 7일 전체 데이터가 누락 없이 온전히 조회되도록 df_filtered_base 또는 df_raw에서 주간 데이터 추출
+        if df_filtered_base is not None and not df_filtered_base.empty and "week_label" in df_filtered_base.columns:
+            df_active = df_filtered_base[df_filtered_base["week_label"] == target_week].copy()
+        elif df_raw is not None and not df_raw.empty and "week_label" in df_raw.columns:
+            df_active = df_raw[df_raw["week_label"] == target_week].copy()
+            if selected_team not in ["전체", "전체 팀"] and not df_active.empty:
+                df_active["worker_team"] = df_active["worker_name"].map(team_mappings).fillna(df_active.get("worker_team", "")).fillna(UNASSIGNED_TEAM)
+                df_active = df_active[df_active["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
+        else:
+            df_active = df_scope[df_scope["week_label"] == target_week].copy()
+    else:
+        df_active = df_scope.copy()
+
+    # 1. 계산된 예상 비용 데이터프레임 도출 (선택된 주기 df_active 기준)
+    period_header_suffix = f" ({target_week})" if sel_period != "🗓️ 월간 전체 종합" else ""
+    df_calc = CostEstimationService.calculate_costs(df_active)
+    kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
 
     # 3. 상단 4대 메트릭 화이트 펄스 카드
     tot_cost_str = f"₩ {kpis['total_cost']:,}"
@@ -361,7 +470,7 @@ def render_cost_estimation_view(
     # 1. 👤 팀원별 예상 청구금액
     # =========================================================
     if curr_page in ["💰 팀원별 예상 청구금액", "💰 예상 비용산정", "💰 예상 비용산정 대시보드", "🏢 고객사별 청구 금액"]:
-        st.markdown('<div class="cost-table-header-cisco"><span>👤</span><span>팀원별 투입 공수 및 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="cost-table-header-cisco"><span>👤</span><span>팀원별 투입 공수 및 예상 청구 금액 정산표{period_header_suffix}</span></div>', unsafe_allow_html=True)
 
         worker_df = CostEstimationService.get_worker_cost_summary(df_calc)
         if worker_df.empty:
@@ -446,7 +555,7 @@ def render_cost_estimation_view(
                 )
                 st.plotly_chart(fig_w, use_container_width=True)
 
-        st.markdown('<div class="cost-table-header-cisco" style="margin-top: 20px;"><span>👔</span><span>직급별 공수 및 청구 금액 점유율</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="cost-table-header-cisco" style="margin-top: 20px;"><span>👔</span><span>직급별 공수 및 청구 금액 점유율{period_header_suffix}</span></div>', unsafe_allow_html=True)
         title_df = CostEstimationService.get_title_cost_summary(df_calc)
         if not title_df.empty:
             col_t_tab1, col_t_tab2 = st.columns([6, 4])
@@ -504,7 +613,7 @@ def render_cost_estimation_view(
         # -------------------------------------------------------------
         # 🏢 고객사/프로젝트별 예상 청구 금액 정산표 (직급별 점유율 바로 아래 배치)
         # -------------------------------------------------------------
-        st.markdown('<div class="cost-table-header-cisco" style="margin-top: 24px;"><span>🏢</span><span>고객사/프로젝트별 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="cost-table-header-cisco" style="margin-top: 24px;"><span>🏢</span><span>고객사/프로젝트별 예상 청구 금액 정산표{period_header_suffix}</span></div>', unsafe_allow_html=True)
         client_df = CostEstimationService.get_client_cost_summary(df_calc)
         if client_df.empty:
             st.info("조회 기준에 해당하는 고객사 작업 데이터가 없습니다.")
