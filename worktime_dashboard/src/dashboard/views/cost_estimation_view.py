@@ -393,7 +393,8 @@ def render_cost_estimation_view(
                         "보정 건수": "{:,}건"
                     }),
                     use_container_width=True,
-                    height=360
+                    height=360,
+                    hide_index=True
                 )
 
                 csv_data = display_worker_df.to_csv(index=False).encode("utf-8-sig")
@@ -471,7 +472,8 @@ def render_cost_estimation_view(
                         "금액 점유율(%)": "{:.1f}%"
                     }),
                     use_container_width=True,
-                    height=240
+                    height=240,
+                    hide_index=True
                 )
             with col_t_tab2:
                 fig_t = px.pie(
@@ -671,7 +673,8 @@ def render_cost_estimation_view(
                     "작업건수": "{:,}건"
                 }),
                 use_container_width=True,
-                height=220
+                height=220,
+                hide_index=True
             )
 
             csv_mom_data = disp_mom_df.to_csv(index=False).encode("utf-8-sig")
@@ -715,7 +718,8 @@ def render_cost_estimation_view(
                         "보정 건수": "{:,}건"
                     }),
                     use_container_width=True,
-                    height=380
+                    height=380,
+                    hide_index=True
                 )
 
                 csv_c_data = disp_client_df.to_csv(index=False).encode("utf-8-sig")
