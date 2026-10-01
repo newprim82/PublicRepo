@@ -27,6 +27,40 @@ def render_login_page():
             color: #94a3b8;
             margin-top: 6px;
         }
+        .login-security-box {
+            background: #ffffff;
+            border: 1.2px solid #cbd5e1;
+            border-left: 4.5px solid #005073;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin-top: 16px;
+            box-shadow: 0 2px 6px rgba(0, 45, 66, 0.05);
+            text-align: left;
+        }
+        .login-security-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #002d42;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+        .login-security-badge {
+            background: #f0fdf4;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        .login-security-desc {
+            font-size: 11.5px;
+            color: #475569;
+            line-height: 1.6;
+        }
     </style>
     """, unsafe_allow_html=True)
 
@@ -61,7 +95,13 @@ def render_login_page():
 
         with st.form("admin_login_form", clear_on_submit=False):
             u_input = st.text_input("👤 관리자 아이디 (ID)", placeholder="아이디 입력", key="login_id_field")
-            p_input = st.text_input("🔑 비밀번호 (Password)", type="password", placeholder="비밀번호 입력", key="login_pw_field")
+            p_input = st.text_input(
+                "🔑 비밀번호 (Password)",
+                type="password",
+                placeholder="비밀번호 입력",
+                key="login_pw_field",
+                help="비밀번호는 PBKDF2-HMAC-SHA256 (16바이트 솔트 + 100,000회 해시) 방식으로 단방향 암호화되어 안전하게 보관됩니다."
+            )
             
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             submit = st.form_submit_button("🔓 로그인 (Login)", type="primary", use_container_width=True)
@@ -73,5 +113,20 @@ def render_login_page():
                     st.rerun()
                 else:
                     st.error("⚠️ 아이디 또는 비밀번호가 올바르지 않습니다.")
+
+        # 🛡️ 비밀번호 단방향 암호화 보존 방식 명시 박스
+        st.markdown("""
+        <div class="login-security-box">
+            <div class="login-security-title">
+                <span>🛡️</span>
+                <span>비밀번호 단방향 암호화 보안 표준</span>
+                <span class="login-security-badge">PBKDF2-HMAC-SHA256</span>
+            </div>
+            <div class="login-security-desc">
+                • <b>단방향 해시(One-Way Hash):</b> 복호화 키 자체가 세상에 존재하지 않는 완전 단방향 암호화 방식으로, 관리자나 개발자도 원래 비밀번호를 복원할 수 없습니다.<br>
+                • <b>솔트(Salt) & 100,000회 해시:</b> 계정마다 무작위 16바이트 고유 솔트(Salt)와 100,000회 반복 스트레칭을 적용하여 레인보우 테이블 및 무차별 대입 공격을 원천 방어합니다.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
