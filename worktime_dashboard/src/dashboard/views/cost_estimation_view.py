@@ -495,22 +495,52 @@ def render_cost_estimation_view(
             if df_edit_src.empty:
                 st.info("조건에 일치하는 작업이 없습니다.")
             else:
-                edit_df = pd.DataFrame()
-                edit_df["msg_hash"] = df_edit_src["msg_hash"].astype(str)
-                
-                if "start_time" in df_edit_src.columns:
-                    edit_df["일자"] = pd.to_datetime(df_edit_src["start_time"]).dt.strftime("%Y-%m-%d %H:%M")
+                # 1) msg_hash 안전 추출
+                if "msg_hash" in df_edit_src.columns:
+                    mh_series = df_edit_src["msg_hash"].astype(str)
+                elif "id" in df_edit_src.columns:
+                    mh_series = df_edit_src["id"].astype(str)
                 else:
-                    edit_df["일자"] = ""
+                    mh_series = df_edit_src.index.astype(str)
 
-                edit_df["작업자"] = df_edit_src["worker_name"].astype(str)
-                edit_df["직급"] = df_edit_src["worker_title"].astype(str)
-                edit_df["고객사"] = df_edit_src["client_name"].astype(str)
-                edit_df["작업내용"] = df_edit_src["task_description"].astype(str)
-                edit_df["출처"] = df_edit_src["msg_hash"].apply(lambda x: "📅 아웃룩" if str(x).startswith("OUTLOOK_") else "💬 카카오톡")
-                edit_df["기존공수(h)"] = df_edit_src.get("original_hours", df_edit_src["billable_hours"]).round(1)
-                edit_df["인정공수(h)"] = df_edit_src["billable_hours"].round(1)
-                edit_df["비고"] = df_edit_src.get("note", "").fillna("").astype(str)
+                # 2) 일자 포맷
+                if "start_time" in df_edit_src.columns:
+                    date_series = pd.to_datetime(df_edit_src["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M").fillna("-")
+                else:
+                    date_series = pd.Series("-", index=df_edit_src.index)
+
+                # 3) 작업자/직급/고객사/작업내용/출처
+                worker_series = df_edit_src["worker_name"].fillna("미지정").astype(str) if "worker_name" in df_edit_src.columns else pd.Series("미지정", index=df_edit_src.index)
+                title_series = df_edit_src["worker_title"].fillna("기타").astype(str) if "worker_title" in df_edit_src.columns else pd.Series("기타", index=df_edit_src.index)
+                client_series = df_edit_src["client_name"].fillna("기타").astype(str) if "client_name" in df_edit_src.columns else pd.Series("기타", index=df_edit_src.index)
+                desc_series = df_edit_src["task_description"].fillna("").astype(str) if "task_description" in df_edit_src.columns else pd.Series("", index=df_edit_src.index)
+                source_series = mh_series.apply(lambda x: "📅 아웃룩" if str(x).startswith("OUTLOOK_") else "💬 카카오톡")
+
+                # 4) 공수 및 비고 (결측치 및 컬럼 부재 안전 처리)
+                if "original_hours" in df_edit_src.columns:
+                    orig_h_series = pd.to_numeric(df_edit_src["original_hours"], errors="coerce").fillna(df_edit_src["billable_hours"]).round(1)
+                else:
+                    orig_h_series = pd.to_numeric(df_edit_src["billable_hours"], errors="coerce").fillna(0.0).round(1)
+
+                adj_h_series = pd.to_numeric(df_edit_src["billable_hours"], errors="coerce").fillna(0.0).round(1)
+
+                if "note" in df_edit_src.columns:
+                    note_series = df_edit_src["note"].fillna("").astype(str)
+                else:
+                    note_series = pd.Series("", index=df_edit_src.index)
+
+                edit_df = pd.DataFrame({
+                    "msg_hash": mh_series,
+                    "일자": date_series,
+                    "작업자": worker_series,
+                    "직급": title_series,
+                    "고객사": client_series,
+                    "작업내용": desc_series,
+                    "출처": source_series,
+                    "기존공수(h)": orig_h_series,
+                    "인정공수(h)": adj_h_series,
+                    "비고": note_series
+                }, index=df_edit_src.index)
 
                 column_config = {
                     "msg_hash": None,
@@ -541,6 +571,7 @@ def render_cost_estimation_view(
                 edited_data = st.data_editor(
                     edit_df,
                     column_config=column_config,
+                    column_order=["일자", "작업자", "직급", "고객사", "작업내용", "출처", "기존공수(h)", "인정공수(h)", "비고"],
                     disabled=["msg_hash", "일자", "작업자", "직급", "고객사", "작업내용", "출처", "기존공수(h)"],
                     hide_index=True,
                     use_container_width=True,
