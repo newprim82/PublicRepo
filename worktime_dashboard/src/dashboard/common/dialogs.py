@@ -1043,29 +1043,49 @@ def show_email_report_dialog(selected_team: str):
     # 📋 최근 메일 발송 이력 (최근 5회)
     # ==========================================
     st.markdown("<div style='margin-top: 18px; margin-bottom: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12);'></div>", unsafe_allow_html=True)
-    st.markdown(
-        """
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px;">
-            <div style="font-size: 13.5px; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
-                <span>📋</span><span>최근 메일 발송 이력 (최근 5회)</span>
+    
+    col_hist_h, col_hist_f = st.columns([1.5, 2.5])
+    with col_hist_h:
+        st.markdown(
+            """
+            <div style="font-size: 13.5px; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px; padding-top: 4px;">
+                <span>📋</span><span>최근 메일 발송 이력</span>
             </div>
-            <span style="font-size: 11px; color: #94a3b8;">DB 자동 기록 중</span>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+            """,
+            unsafe_allow_html=True
+        )
+    with col_hist_f:
+        hist_filter = st.radio(
+            "발송 유형 필터",
+            ["전체 이력", "⏳ 주기적 자동", "🚀 수동 즉시"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="radio_dispatch_hist_filter"
+        )
+
+    # 필터 매핑
+    dispatch_type_filter = None
+    if hist_filter == "⏳ 주기적 자동":
+        dispatch_type_filter = "AUTO"
+    elif hist_filter == "🚀 수동 즉시":
+        dispatch_type_filter = "MANUAL"
 
     try:
         from src.services.email_dispatch_service import EmailDispatchService
-        recent_logs = EmailDispatchService.get_recent_dispatches(limit=5)
+        recent_logs = EmailDispatchService.get_recent_dispatches(limit=10, dispatch_type=dispatch_type_filter)
     except Exception as e:
         recent_logs = []
 
     if not recent_logs:
+        empty_msg = (
+            "⏳ 아직 실행된 주기적 자동 발송 이력이 없습니다.<br><span style='font-size: 11px; color: #64748b;'>매주 월요일 오전 08:00 배치 스케줄러 가동 시 자동으로 기록됩니다.</span>"
+            if hist_filter == "⏳ 주기적 자동"
+            else "아직 발송된 메일 이력이 없습니다."
+        )
         st.markdown(
-            """
-            <div style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 14px; text-align: center; color: #94a3b8; font-size: 12px;">
-                아직 발송된 메일 이력이 없습니다.
+            f"""
+            <div style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 6px; padding: 14px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.5;">
+                {empty_msg}
             </div>
             """,
             unsafe_allow_html=True

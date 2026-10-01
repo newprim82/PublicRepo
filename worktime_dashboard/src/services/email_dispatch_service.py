@@ -124,9 +124,10 @@ class EmailDispatchService:
         return True
 
     @classmethod
-    def get_recent_dispatches(cls, limit: int = 5) -> List[Dict[str, Any]]:
+    def get_recent_dispatches(cls, limit: int = 10, dispatch_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        최근 발송 이력 N건 최신순 조회
+        최근 발송 이력 N건 최신순 조회 (수동 즉시 / 주기적 자동 발송 유형별 필터링 지원)
+        - dispatch_type: None (전체), 'AUTO' (주간/월간 정기 발송 전체), 'MANUAL' (수동 즉시), 또는 개별 타입('AUTO_WEEKLY' 등)
         """
         cls.init_table()
         dispatches = []
@@ -134,11 +135,16 @@ class EmailDispatchService:
         # 1. Supabase 클라우드 조회 시도
         if db_manager.use_supabase and db_manager.supabase:
             try:
-                res = db_manager.supabase.table('worktime_email_dispatch_logs')\
-                    .select('*')\
-                    .order('created_at', desc=True)\
-                    .limit(limit)\
-                    .execute()
+                query = db_manager.supabase.table('worktime_email_dispatch_logs').select('*')
+                if dispatch_type:
+                    d_upper = dispatch_type.upper()
+                    if d_upper in ('AUTO', 'SCHEDULED'):
+                        query = query.in_('dispatch_type', ['AUTO_WEEKLY', 'AUTO_MONTHLY'])
+                    elif d_upper == 'MANUAL':
+                        query = query.eq('dispatch_type', 'MANUAL_IMMEDIATE')
+                    else:
+                        query = query.eq('dispatch_type', dispatch_type)
+                res = query.order('created_at', desc=True).limit(limit).execute()
                 if res.data:
                     return res.data
             except Exception:
@@ -149,13 +155,29 @@ class EmailDispatchService:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute("""
+            
+            where_clause = ""
+            params = []
+            if dispatch_type:
+                d_upper = dispatch_type.upper()
+                if d_upper in ('AUTO', 'SCHEDULED'):
+                    where_clause = "WHERE dispatch_type IN ('AUTO_WEEKLY', 'AUTO_MONTHLY')"
+                elif d_upper == 'MANUAL':
+                    where_clause = "WHERE dispatch_type = 'MANUAL_IMMEDIATE'"
+                else:
+                    where_clause = "WHERE dispatch_type = ?"
+                    params.append(dispatch_type)
+            
+            sql = f"""
                 SELECT id, dispatch_type, recipient_emails, sender_email,
                        selected_team, period_label, subject, status, error_message, created_at
                 FROM email_dispatch_logs
+                {where_clause}
                 ORDER BY created_at DESC, id DESC
                 LIMIT ?
-            """, (limit,))
+            """
+            params.append(limit)
+            cursor.execute(sql, tuple(params))
             rows = cursor.fetchall()
             for r in rows:
                 dispatches.append(dict(r))

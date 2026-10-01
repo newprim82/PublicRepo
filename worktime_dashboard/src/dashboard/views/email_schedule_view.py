@@ -287,9 +287,101 @@ def render_email_schedule_view():
                             else:
                                 st.error(msg)
 
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
+    # 5. ⏳ 정기 메일(주기적 자동 발송) 실행 이력 (최신 10건)
+    st.markdown("""
+    <div style="font-size: 15px; font-weight: 800; color: #002d42; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <span>⏳</span><span>정기 메일(주기적 자동 발송) 실행 이력</span>
+        </div>
+        <span style="font-size: 12px; color: #64748b; font-weight: 600;">최근 10회 기록</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    try:
+        from src.services.email_dispatch_service import EmailDispatchService
+        sched_logs = EmailDispatchService.get_recent_dispatches(limit=10, dispatch_type="AUTO")
+    except Exception:
+        sched_logs = []
+
+    if not sched_logs:
+        st.markdown("""
+        <div style="background: #ffffff; border: 1.2px dashed #cbd5e1; border-radius: 8px; padding: 20px; text-align: center; color: #64748b; font-size: 13px; line-height: 1.6;">
+            ⏳ 아직 자동 실행된 정기 메일 발송 이력이 없습니다.<br>
+            <span style="font-size: 11.5px; color: #94a3b8;">매주 월요일 오전 08:00에 배치 스케줄러가 가동되면 여기에 자동으로 발송 결과가 기록됩니다.</span>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        for item in sched_logs:
+            d_type = item.get("dispatch_type", "AUTO_WEEKLY")
+            badge_text = "⏳ 주간 정기 자동" if d_type == "AUTO_WEEKLY" else "📅 월간 정기 자동"
+            status = item.get("status", "SUCCESS")
+            status_html = '<span style="color:#15803d; font-weight:800; font-size:12px; background:#dcfce7; padding:3px 8px; border-radius:4px;">✅ 성공</span>' if status == "SUCCESS" else '<span style="color:#b91c1c; font-weight:800; font-size:12px; background:#fee2e2; padding:3px 8px; border-radius:4px;">❌ 실패</span>'
+            dt_str = str(item.get("created_at", "")).replace("T", " ")
+            short_dt = dt_str[0:16] if len(dt_str) >= 16 else dt_str
+            p_label = item.get("period_label", "")
+            rcpts = item.get("recipient_emails", "")
+            rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
+            email_rows_html = "".join([
+                f'<div style="color: #0f172a; font-size: 12.5px; font-weight: 600; padding: 2px 0; display: flex; align-items: center; gap: 7px; word-break: break-all;">'
+                f'<span style="color: #0284c7; font-size: 11px;">✉️</span>'
+                f'<span>{em}</span>'
+                f'</div>'
+                for em in rcpt_list
+            ])
+
+            card_html = f"""
+            <div style="background: #ffffff; border: 1.2px solid #e2e8f0; border-left: 4.5px solid #16a34a; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,45,66,0.03);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 7px; margin-bottom: 7px; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: #16a34a; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800;">{badge_text}</span>
+                        <span style="color: #002d42; font-weight: 800; font-size: 13px;">{p_label}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 11.5px;">
+                        <span style="color: #64748b;">{short_dt}</span>
+                        {status_html}
+                    </div>
+                </div>
+                <div>
+                    <div style="color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 3px;">
+                        📬 수신 이메일 ({len(rcpt_list)}건):
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 2px; padding-left: 2px;">
+                        {email_rows_html}
+                    </div>
+                </div>
+            </div>
+            """
+            st.markdown(card_html, unsafe_allow_html=True)
+
+    if is_auth:
+        col_test_btn, _ = st.columns([2, 3])
+        with col_test_btn:
+            if st.button("⚡ 주간 정기 자동 발송 즉시 테스트 실행", type="secondary", use_container_width=True, key="btn_test_auto_weekly"):
+                with st.spinner("⏳ 등록된 모든 수신자에게 정기 주간 리포트 발송 중..."):
+                    from src.services.email_sender import EmailSender
+                    active_emails = EmailScheduleService.get_active_recipient_emails()
+                    if not active_emails:
+                        st.warning("활성화된 정기 수신자가 없습니다.")
+                    else:
+                        ok, msg = EmailSender.send_weekly_report(
+                            recipient_emails=active_emails,
+                            sender_email="newprim82@gmail.com",
+                            sender_password="dlugbvfuhgdozkgr",
+                            selected_team="기술 1팀",
+                            dispatch_type="AUTO_WEEKLY"
+                        )
+                        if ok:
+                            st.toast("✅ 정기 자동 발송 테스트 성공! 이력에 기록되었습니다.", icon="🎉")
+                            st.success(msg)
+                            st.rerun()
+                        else:
+                            st.error(msg)
+
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
-    # 5. 안내 배너
+    # 6. 안내 배너
     st.markdown("""
     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; font-size: 12.5px; color: #475569; line-height: 1.6;">
         💡 <b>정기 발송 동작 안내</b><br>
