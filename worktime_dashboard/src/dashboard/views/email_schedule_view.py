@@ -321,15 +321,35 @@ def render_email_schedule_view():
             dt_str = str(item.get("created_at", "")).replace("T", " ")
             short_dt = dt_str[0:16] if len(dt_str) >= 16 else dt_str
             p_label = item.get("period_label", "")
-            rcpts = item.get("recipient_emails", "")
             rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
-            email_rows_html = "".join([
-                f'<div style="color: #0f172a; font-size: 12.5px; font-weight: 600; padding: 2px 0; display: flex; align-items: center; gap: 7px; word-break: break-all;">'
-                f'<span style="color: #0284c7; font-size: 11px;">✉️</span>'
-                f'<span>{em}</span>'
-                f'</div>'
-                for em in rcpt_list
-            ])
+            from src.services.authorized_recipient_service import AuthorizedRecipientService
+            auth_set = set(m.lower().strip() for m in AuthorizedRecipientService.get_authorized_recipients())
+
+            email_rows = []
+            for em_entry in rcpt_list:
+                clean = em_entry.strip()
+                if "[비용산정]" in clean or "(비용산정)" in clean:
+                    pure_em = clean.replace("[비용산정]", "").replace("(비용산정)", "").strip()
+                    tag_html = '<span style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700;">💰 비용산정</span>'
+                elif "[일반실적]" in clean or "(일반실적)" in clean:
+                    pure_em = clean.replace("[일반실적]", "").replace("(일반실적)", "").strip()
+                    tag_html = '<span style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700;">📋 일반실적</span>'
+                else:
+                    pure_em = clean
+                    if pure_em.lower() in auth_set:
+                        tag_html = '<span style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700;">💰 비용산정</span>'
+                    else:
+                        tag_html = '<span style="background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700;">📋 일반실적</span>'
+
+                email_rows.append(
+                    f'<div style="color: #0f172a; font-size: 12.5px; font-weight: 600; padding: 2.5px 0; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; word-break: break-all;">'
+                    f'<span style="color: #0284c7; font-size: 11px;">✉️</span>'
+                    f'<span>{pure_em}</span>'
+                    f'{tag_html}'
+                    f'</div>'
+                )
+
+            email_rows_html = "".join(email_rows) if email_rows else '<div style="color: #94a3b8; font-size: 11.5px;">-</div>'
 
             card_html = f"""
             <div style="background: #ffffff; border: 1.2px solid #e2e8f0; border-left: 4.5px solid #16a34a; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,45,66,0.03);">

@@ -157,20 +157,30 @@ class EmailSender:
                     server.sendmail(sender, group_recipients, msg.as_string())
                     server.quit()
 
-                # DB 발송 이력 기록
-                try:
-                    from .email_dispatch_service import EmailDispatchService
-                    EmailDispatchService.record_dispatch(
-                        dispatch_type=dispatch_type,
-                        recipient_emails=", ".join(group_recipients),
-                        sender_email=sender,
-                        selected_team=selected_team,
-                        period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
-                        subject=subject,
-                        status="SUCCESS"
-                    )
-                except Exception as log_err:
-                    print(f"[EmailSender] DB 로깅 알림: {log_err}")
+                pass
+
+            # 🔒 발송 완료 후 DB에는 '단 1건'의 통합 이력으로 기록 (수신자별 [비용산정] / [일반실적] 태그 결합)
+            tagged_recipients = []
+            for em in auth_recipients:
+                tagged_recipients.append(f"{em} [비용산정]")
+            for em in unauth_recipients:
+                tagged_recipients.append(f"{em} [일반실적]")
+
+            combined_rcpts_str = ", ".join(tagged_recipients)
+
+            try:
+                from .email_dispatch_service import EmailDispatchService
+                EmailDispatchService.record_dispatch(
+                    dispatch_type=dispatch_type,
+                    recipient_emails=combined_rcpts_str,
+                    sender_email=sender,
+                    selected_team=selected_team,
+                    period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
+                    subject=subject,
+                    status="SUCCESS"
+                )
+            except Exception as log_err:
+                print(f"[EmailSender] DB 로깅 알림: {log_err}")
 
             # 완료 알림 메시지 구성
             if auth_recipients and unauth_recipients:
