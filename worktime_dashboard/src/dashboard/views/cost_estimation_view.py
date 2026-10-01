@@ -21,7 +21,8 @@ def render_cost_estimation_view(
     month_desc: str = "",
     worker_desc: str = "",
     extra_chips_str: str = "",
-    curr_page: str = "💰 예상 비용산정"
+    curr_page: str = "💰 예상 비용산정",
+    df_filtered_base: Optional[pd.DataFrame] = None
 ):
     """
     💰 [예상 비용산정] 메인 관제 캔버스 (Cisco ACI Light-Canvas 테마 표준 100% 준수)
@@ -492,14 +493,27 @@ def render_cost_estimation_view(
         # -------------------------------------------------------------
         # 📈 전월 대비 MoM 월별 청구 추이 및 증감 분석 (기능 5)
         # -------------------------------------------------------------
-        st.markdown('<div class="cost-table-header-cisco" style="margin-top: 24px;"><span>📈</span><span>월별 청구 추이 및 전월 대비(MoM) 증감 분석</span></div>', unsafe_allow_html=True)
-        st.markdown("""
+        scope_title = f"[{selected_team}]" if selected_team and selected_team != "전체 팀" else "[전체 기술본부]"
+        st.markdown(f'<div class="cost-table-header-cisco" style="margin-top: 24px;"><span>📈</span><span>{scope_title} 월별 청구 추이 및 전월 대비(MoM) 증감 분석</span></div>', unsafe_allow_html=True)
+        st.markdown(f"""
         <div class="cost-info-box-cisco">
-            💡 <b>월별 청구 추이 가이드:</b> 최근 12개월간의 월별 청구 금액 및 투입 공수 변화 추이를 확인하고, 전월 대비(MoM) 증감률(%)을 통해 지원 규모의 변동성을 파악합니다.
+            💡 <b>월별 청구 추이 가이드:</b> <b>{scope_title}</b> 인력의 최근 12개월간 월별 청구 금액 및 투입 공수 변화 추이를 확인하고, 전월 대비(MoM) 증감률(%)을 통해 지원 규모의 변동성을 파악합니다.
         </div>
         """, unsafe_allow_html=True)
 
-        trend_df = CostEstimationService.get_monthly_billing_trend(df_raw)
+        # 🎯 현재 선택된 팀/팀원/고객사 필터가 반영된 베이스 데이터셋 적용 (월 필터만 제외하여 전체 기간 월별 추이 산출)
+        if df_filtered_base is not None and not df_filtered_base.empty:
+            trend_target_df = df_filtered_base
+        else:
+            trend_target_df = df_raw.copy()
+            if selected_team and selected_team != "전체 팀":
+                team_workers = [w for w, t in team_mappings.items() if t == selected_team]
+                if team_workers:
+                    trend_target_df = trend_target_df[trend_target_df["worker_name"].isin(team_workers)]
+                elif "worker_team" in trend_target_df.columns:
+                    trend_target_df = trend_target_df[trend_target_df["worker_team"] == selected_team]
+
+        trend_df = CostEstimationService.get_monthly_billing_trend(trend_target_df)
         if trend_df.empty:
             st.info("월별 청구 추이를 분석할 완료 작업 데이터가 충분하지 않습니다.")
         else:

@@ -448,6 +448,7 @@ def render_main_content_frame(
         render_cost_estimation_view(
             df=df,
             df_raw=df_raw,
+            df_filtered_base=df_filtered_base,
             selected_team=selected_team,
             team_mappings=team_mappings,
             month_desc=month_desc,
