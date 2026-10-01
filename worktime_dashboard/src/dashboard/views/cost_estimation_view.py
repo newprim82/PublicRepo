@@ -457,7 +457,7 @@ def render_cost_estimation_view(
         """, unsafe_allow_html=True)
 
         if df_calc.empty:
-            st.warning("수정할 대상 작업이 없습니다.")
+            st.info("선택된 조회 조건에 해당하는 '완료' 작업 데이터가 없습니다. (진행 중인 작업은 완료 보고 후 본 장표에 표출됩니다)")
         else:
             f_col1, f_col2, f_col3 = st.columns([4, 3, 3])
             with f_col1:

@@ -27,18 +27,8 @@ class CostEstimationService:
         """
         작업 데이터프레임에 직급, 단가, 청구 인정 공수, 예상 청구 금액을 부여하여 반환
         """
-        if df.empty:
-            empty_df = df.copy()
-            for col in ["hourly_rate", "billable_hours", "estimated_cost", "is_time_adjusted"]:
-                if col not in empty_df.columns:
-                    empty_df[col] = 0
-            return empty_df
-
         rates = custom_rates or cls.get_hourly_rates()
         default_rate = rates.get("기타", 50000)
-
-        title_map = TeamService.get_title_mappings()
-        team_map = TeamService.get_team_mappings()
 
         df_calc = df.copy()
 
@@ -46,6 +36,17 @@ class CostEstimationService:
         if "status" in df_calc.columns:
             comp_mask = df_calc["status"].astype(str).str.upper().isin(["COMPLETED", "완료"])
             df_calc = df_calc[comp_mask].copy()
+
+        # 완료 작업이 0건이거나 빈 데이터프레임일 때 조기 반환 (TypeError 방지)
+        if df_calc.empty:
+            empty_df = df_calc.copy()
+            for col in ["hourly_rate", "billable_hours", "estimated_cost", "is_time_adjusted"]:
+                if col not in empty_df.columns:
+                    empty_df[col] = 0
+            return empty_df
+
+        title_map = TeamService.get_title_mappings()
+        team_map = TeamService.get_team_mappings()
 
         # 직급 동기화
         if "worker_name" in df_calc.columns:
@@ -69,7 +70,9 @@ class CostEstimationService:
                     return v
             return default_rate
 
-        df_calc["hourly_rate"] = df_calc["worker_title"].apply(_get_rate)
+        df_calc["hourly_rate"] = pd.to_numeric(
+            df_calc["worker_title"].apply(_get_rate), errors="coerce"
+        ).fillna(default_rate).astype(int)
 
         # 청구 인정 공수(billable_hours) 산정
         # 휴가/연차는 청구 금액 0원 (공수 0.0h)
@@ -90,14 +93,15 @@ class CostEstimationService:
             raw_hours = pd.Series(0.0, index=df_calc.index)
 
         # 음수 공수 방어
-        raw_hours = raw_hours.clip(lower=0.0)
+        raw_hours = pd.to_numeric(raw_hours, errors="coerce").fillna(0.0).clip(lower=0.0)
 
         # 휴가는 0.0h 강제, 일반 업무는 raw_hours
         df_calc["billable_hours"] = raw_hours
         df_calc.loc[is_leave_mask, "billable_hours"] = 0.0
 
-        # 예상 청구 금액 = 청구 인정 공수 * 직급별 단가
-        df_calc["estimated_cost"] = (df_calc["billable_hours"] * df_calc["hourly_rate"]).round().astype(int)
+        # 예상 청구 금액 = 청구 인정 공수 * 직급별 단가 (안전한 수치형 연산)
+        calc_cost = (df_calc["billable_hours"].astype(float) * df_calc["hourly_rate"].astype(float)).round()
+        df_calc["estimated_cost"] = pd.to_numeric(calc_cost, errors="coerce").fillna(0).astype(int)
 
         # 보정 여부 플래그
         if "is_time_adjusted" not in df_calc.columns:
