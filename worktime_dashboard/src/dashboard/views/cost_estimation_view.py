@@ -23,93 +23,168 @@ def render_cost_estimation_view(
     curr_page: str = "💰 예상 비용산정"
 ):
     """
-    💰 [예상 비용산정] 메인 관제 캔버스
-    1. 직급별 시간당 단가 관리 (DB 저장, 변동 가능)
+    💰 [예상 비용산정] 메인 관제 캔버스 (Cisco ACI Light-Canvas 테마 표준 100% 준수)
+    1. 직급별 시간당 단가 관리 (DB 영구 저장, 동적 수정)
     2. 업무 시간 직접 수정 및 영구 보존 (아웃룩 '종일' 등 오버라이드)
     3. 조회 기준(기간, 팀, 팀원, 고객사) 연동 예상 청구 금액 산정
     4. 팀원별, 고객사별, 직급별 다차원 정산 대시보드
     """
     st.markdown("""
     <style>
-    /* 예상 비용산정 전용 KPI 카드 스타일 */
-    .cost-kpi-container {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 14px;
-        margin-bottom: 22px;
+    /* 🏛️ Cisco ACI 표준 테마: 예상 비용산정 전용 스타일 */
+
+    /* 1. 상단 타이틀 및 설명 */
+    .cost-main-title {
+        font-size: 21px !important;
+        font-weight: 800 !important;
+        color: #002d42 !important;
+        letter-spacing: -0.4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
-    @media (max-width: 900px) {
-        .cost-kpi-container {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-    @media (max-width: 600px) {
-        .cost-kpi-container {
-            grid-template-columns: 1fr;
-        }
-    }
-    .cost-kpi-card {
-        background: linear-gradient(135deg, rgba(13, 27, 42, 0.85) 0%, rgba(20, 40, 65, 0.75) 100%);
-        border: 1px solid rgba(0, 180, 216, 0.35);
-        border-radius: 10px;
-        padding: 16px 18px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        position: relative;
-        overflow: hidden;
-        transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-    .cost-kpi-card:hover {
-        transform: translateY(-2px);
-        border-color: #00e5ff;
-    }
-    .cost-kpi-card::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: #00b4d8;
-    }
-    .cost-kpi-card.accent-gold::before {
-        background: #ffd166;
-    }
-    .cost-kpi-card.accent-green::before {
-        background: #06d6a0;
-    }
-    .cost-kpi-card.accent-purple::before {
-        background: #b5179e;
-    }
-    .cost-kpi-label {
-        font-size: 12.5px;
-        color: #94a3b8;
-        font-weight: 700;
-        letter-spacing: 0.3px;
-        margin-bottom: 6px;
-    }
-    .cost-kpi-value {
-        font-size: 24px;
-        font-weight: 800;
-        color: #ffffff;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
-    }
-    .cost-kpi-sub {
-        font-size: 11.5px;
-        color: #00e5ff;
-        margin-top: 5px;
-        font-weight: 600;
+    .cost-main-desc {
+        font-size: 13px !important;
+        color: #475569 !important;
+        margin-top: 4px;
+        font-weight: 500;
+        line-height: 1.5;
     }
 
-    /* 테이블 헤더 커스텀 */
-    .cost-table-header {
-        background: rgba(0, 180, 216, 0.12);
-        border-left: 3px solid #00b4d8;
-        padding: 8px 12px;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        font-size: 14px;
+    /* 2. 상단 필터 요약 박스 */
+    .cost-filter-summary-card {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 8px 14px !important;
+        text-align: right !important;
+        font-size: 12.5px !important;
+        color: #334155 !important;
+        box-shadow: 0 1px 4px rgba(0, 45, 66, 0.05) !important;
+    }
+
+    /* 3. 4대 KPI 메트릭 화이트 펄스 카드 (summary_view 표준 일원화) */
+    .cost-kpi-row {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .cost-kpi-card-white {
+        flex: 1;
+        min-width: 180px;
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        padding: 16px 18px !important;
+        box-shadow: 0 2px 8px rgba(0, 45, 66, 0.06) !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .cost-kpi-card-white:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 14px rgba(0, 45, 66, 0.12) !important;
+    }
+    .cost-kpi-card-white.top-navy { border-top: 5px solid #005073 !important; }
+    .cost-kpi-card-white.top-blue { border-top: 5px solid #0284c7 !important; }
+    .cost-kpi-card-white.top-green { border-top: 5px solid #10b981 !important; }
+    .cost-kpi-card-white.top-purple { border-top: 5px solid #8b5cf6 !important; }
+
+    .cost-kpi-label-gray {
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        margin-bottom: 4px;
+        letter-spacing: 0.2px;
+    }
+    .cost-kpi-val-bold {
+        font-size: 26px !important;
+        font-weight: 900 !important;
+        letter-spacing: -0.5px;
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, monospace !important;
+    }
+    .cost-kpi-sub-text {
+        margin-top: 6px;
+        font-size: 11.5px !important;
         font-weight: 700;
-        color: #ffffff;
+    }
+
+    /* 4. 가로 세그먼트 탭 라디오 버튼 (라디오 원형 완전 제거 & 캡슐 버튼화) */
+    div.st-key-cost_sub_tab_radio [data-testid="stWidgetLabel"] {
+        display: none !important;
+    }
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] {
+        background: #ffffff !important;
+        border: 1.5px solid #005f8a !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+        box-shadow: 0 2px 6px rgba(0, 45, 66, 0.06) !important;
+        margin-bottom: 16px !important;
+    }
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label {
+        background: #f1f5f9 !important;
+        border: 1.2px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        padding: 7px 16px !important;
+        margin: 0 !important;
+        cursor: pointer !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label:hover {
+        background: #e2e8f0 !important;
+        border-color: #0284c7 !important;
+    }
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label input[type="radio"] {
+        display: none !important;
+    }
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] p,
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label span {
+        color: #002d42 !important;
+        font-size: 13.5px !important;
+        font-weight: 800 !important;
+    }
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label[data-checked="true"],
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label:has(input:checked) {
+        background: #005073 !important;
+        border-color: #002d42 !important;
+    }
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label[data-checked="true"] p,
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label:has(input:checked) p,
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label[data-checked="true"] span,
+    div.st-key-cost_sub_tab_radio div[role="radiogroup"] label:has(input:checked) span {
+        color: #ffffff !important;
+        font-weight: 900 !important;
+    }
+
+    /* 5. 섹션 테이블/장표 헤더 배너 */
+    .cost-table-header-cisco {
+        background: #e0f2fe !important;
+        border-left: 4px solid #0284c7 !important;
+        padding: 9px 14px !important;
+        border-radius: 6px !important;
+        margin-bottom: 12px !important;
+        font-size: 14.5px !important;
+        font-weight: 800 !important;
+        color: #002d42 !important;
+        box-shadow: 0 1px 3px rgba(0, 45, 66, 0.04) !important;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* 6. 알림/안내 카드 */
+    .cost-info-box-cisco {
+        background: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 10px 14px !important;
+        font-size: 12.5px !important;
+        color: #334155 !important;
+        line-height: 1.6 !important;
+        margin-bottom: 14px !important;
+        box-shadow: 0 1px 3px rgba(0, 45, 66, 0.03) !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -118,16 +193,17 @@ def render_cost_estimation_view(
     df_calc = CostEstimationService.calculate_costs(df)
     kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
 
-    # 2. 상단 헤더 및 조회 기준 요약 배지 바
+    # 2. 상단 헤더 및 조회 기준 요약 배지 바 (선명한 다크 네이비 & 화이트 배지)
     col_t1, col_t2 = st.columns([7, 3])
     with col_t1:
-        st.markdown(f"""
-        <div style="margin-bottom: 12px;">
-            <div style="font-size: 20px; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                <span>💰 프로젝트/현장지원 예상 비용산정</span>
+        st.markdown("""
+        <div style="margin-bottom: 14px;">
+            <div class="cost-main-title">
+                <span>💰</span>
+                <span>프로젝트/현장지원 예상 비용산정</span>
             </div>
-            <div style="font-size: 12.5px; color: #94a3b8; margin-top: 4px;">
-                사업본부 청구용 시간당 지원 단가를 기반으로 예상 청구 금액을 산출하고, 인정 공수를 직접 검토·수정합니다.
+            <div class="cost-main-desc">
+                기술본부 인력의 투입 공수(h) 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출하고, 인정 공수를 직접 검토·조정합니다.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -137,39 +213,38 @@ def render_cost_estimation_view(
         team_text = selected_team if selected_team else "전체 팀"
         worker_text = worker_desc if worker_desc else "전체 인원"
         st.markdown(f"""
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px 12px; text-align: right; font-size: 12px; color: #cbd5e1;">
-            <div>📅 <b>기간:</b> <span style="color: #00e5ff;">{period_text}</span></div>
-            <div style="margin-top: 2px;">🏢 <b>대상:</b> <span style="color: #38bdf8;">{team_text}</span> | <span style="color: #a78bfa;">{worker_text}</span></div>
+        <div class="cost-filter-summary-card">
+            <div>📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
+            <div style="margin-top: 3px;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
         </div>
         """, unsafe_allow_html=True)
 
-    # 3. 상단 4대 메트릭 KPI 카드
+    # 3. 상단 4대 메트릭 화이트 펄스 카드
     tot_cost_str = f"₩ {kpis['total_cost']:,}"
     tot_hours_str = f"{kpis['total_billable_hours']:,.1f} h"
-    worker_info_str = f"{kpis['worker_count']}명 (평균 {kpis['avg_hourly_rate']:,}원/h)"
-    adj_info_str = f"{kpis['adjusted_count']}건 ({kpis['adjusted_count']/max(1, kpis['total_tasks'])*100:.1f}%)"
+    adj_pct = (kpis['adjusted_count'] / max(1, kpis['total_tasks'])) * 100
 
     st.markdown(f"""
-    <div class="cost-kpi-container">
-        <div class="cost-kpi-card accent-gold">
-            <div class="cost-kpi-label">💳 총 예상 청구금액</div>
-            <div class="cost-kpi-value" style="color: #ffd166;">{tot_cost_str}</div>
-            <div class="cost-kpi-sub">총 {kpis['total_tasks']:,}건 작업 기준</div>
+    <div class="cost-kpi-row">
+        <div class="cost-kpi-card-white top-navy">
+            <div class="cost-kpi-label-gray">💳 총 예상 청구금액</div>
+            <div class="cost-kpi-val-bold" style="color: #005073;">{tot_cost_str}</div>
+            <div class="cost-kpi-sub-text" style="color: #0284c7;">총 {kpis['total_tasks']:,}건 작업 기준</div>
         </div>
-        <div class="cost-kpi-card accent-green">
-            <div class="cost-kpi-label">⏱️ 총 투입 인정 공수</div>
-            <div class="cost-kpi-value" style="color: #06d6a0;">{tot_hours_str}</div>
-            <div class="cost-kpi-sub">휴가 0h 제외 실제 청구 공수</div>
+        <div class="cost-kpi-card-white top-blue">
+            <div class="cost-kpi-label-gray">⏱️ 총 투입 인정 공수</div>
+            <div class="cost-kpi-val-bold" style="color: #0284c7;">{tot_hours_str}</div>
+            <div class="cost-kpi-sub-text" style="color: #10b981;">휴가 0h 제외 실제 청구 공수</div>
         </div>
-        <div class="cost-kpi-card">
-            <div class="cost-kpi-label">👥 투입 인력 / 평균 단가</div>
-            <div class="cost-kpi-value">{kpis['worker_count']}명</div>
-            <div class="cost-kpi-sub">가중평균 {kpis['avg_hourly_rate']:,}원/h</div>
+        <div class="cost-kpi-card-white top-green">
+            <div class="cost-kpi-label-gray">👥 투입 인력 / 평균 단가</div>
+            <div class="cost-kpi-val-bold" style="color: #10b981;">{kpis['worker_count']}명</div>
+            <div class="cost-kpi-sub-text" style="color: #64748b;">가중평균 {kpis['avg_hourly_rate']:,}원/h</div>
         </div>
-        <div class="cost-kpi-card accent-purple">
-            <div class="cost-kpi-label">✏️ 시간 보정(수정) 작업</div>
-            <div class="cost-kpi-value" style="color: #e0aaff;">{kpis['adjusted_count']}건</div>
-            <div class="cost-kpi-sub">관리자 인정 공수 영구 오버라이드</div>
+        <div class="cost-kpi-card-white top-purple">
+            <div class="cost-kpi-label-gray">✏️ 시간 보정(수정) 작업</div>
+            <div class="cost-kpi-val-bold" style="color: #8b5cf6;">{kpis['adjusted_count']}건</div>
+            <div class="cost-kpi-sub-text" style="color: #8b5cf6;">관리자 인정 공수 영구 오버라이드 ({adj_pct:.1f}%)</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -193,15 +268,14 @@ def render_cost_estimation_view(
         index=def_idx,
         horizontal=True,
         label_visibility="collapsed",
-        key=f"cost_sub_tab_radio_{curr_page}"
+        key="cost_sub_tab_radio"
     )
-    st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
 
     # =========================================================
     # 탭 1: 팀원/직급별 정산표
     # =========================================================
     if selected_sub_tab == "👤 팀원/직급별 정산표":
-        st.markdown('<div class="cost-table-header">👤 팀원별 투입 공수 및 예상 청구 금액 정산표</div>', unsafe_allow_html=True)
+        st.markdown('<div class="cost-table-header-cisco"><span>👤</span><span>팀원별 투입 공수 및 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
 
         worker_df = CostEstimationService.get_worker_cost_summary(df_calc)
         if worker_df.empty:
@@ -214,7 +288,6 @@ def render_cost_estimation_view(
                     "팀원명", "소속팀", "직급", "시간당 단가(원)", "인정 공수(h)", "예상 청구금액(원)", "작업 건수", "보정 건수"
                 ]
 
-                # 포맷팅
                 st.dataframe(
                     display_worker_df.style.format({
                         "시간당 단가(원)": "{:,.0f}원",
@@ -227,7 +300,6 @@ def render_cost_estimation_view(
                     height=360
                 )
 
-                # 엑셀 다운로드
                 csv_data = display_worker_df.to_csv(index=False).encode("utf-8-sig")
                 st.download_button(
                     label="📥 팀원별 정산표 CSV 다운로드",
@@ -238,7 +310,6 @@ def render_cost_estimation_view(
                 )
 
             with col_w2:
-                # 상위 10명 예상 청구 금액 바 차트
                 top_workers = worker_df.head(10).sort_values(by="total_cost", ascending=True)
                 fig_w = px.bar(
                     top_workers,
@@ -247,23 +318,27 @@ def render_cost_estimation_view(
                     orientation="h",
                     text="total_cost",
                     title="🏆 예상 청구 금액 Top 10 팀원",
-                    labels={"total_cost": "예상 청구금액 (원)", "worker_name": "팀원"},
-                    color="total_cost",
-                    color_continuous_scale="Blues"
+                    labels={"total_cost": "예상 청구금액 (원)", "worker_name": "팀원"}
                 )
-                fig_w.update_traces(texttemplate='₩ %{text:,.0f}', textposition='outside')
+                fig_w.update_traces(
+                    marker_color="#005073",
+                    texttemplate='₩ %{text:,.0f}',
+                    textposition='outside',
+                    textfont=dict(color="#002d42", size=11, family="Pretendard, sans-serif")
+                )
                 fig_w.update_layout(
-                    template="plotly_dark",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
+                    template="plotly_white",
+                    paper_bgcolor="#ffffff",
+                    plot_bgcolor="#ffffff",
+                    font=dict(color="#002d42", family="Pretendard, sans-serif"),
+                    title=dict(font=dict(size=14, color="#002d42", family="Pretendard, sans-serif")),
                     height=360,
                     margin=dict(l=20, r=40, t=40, b=20),
                     showlegend=False
                 )
                 st.plotly_chart(fig_w, use_container_width=True)
 
-        # 직급별 요약 분포
-        st.markdown('<div class="cost-table-header" style="margin-top: 20px;">👔 직급별 공수 및 청구 금액 점유율</div>', unsafe_allow_html=True)
+        st.markdown('<div class="cost-table-header-cisco" style="margin-top: 20px;"><span>👔</span><span>직급별 공수 및 청구 금액 점유율</span></div>', unsafe_allow_html=True)
         title_df = CostEstimationService.get_title_cost_summary(df_calc)
         if not title_df.empty:
             col_t_tab1, col_t_tab2 = st.columns([6, 4])
@@ -289,13 +364,19 @@ def render_cost_estimation_view(
                     values="total_cost",
                     title="직급별 청구 금액 비중",
                     hole=0.45,
-                    color_discrete_sequence=px.colors.sequential.Teal
+                    color_discrete_sequence=["#005073", "#0284c7", "#06b6d4", "#10b981", "#64748b"]
                 )
-                fig_t.update_traces(textposition='inside', textinfo='percent+label')
+                fig_t.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label',
+                    textfont=dict(size=12, family="Pretendard, sans-serif")
+                )
                 fig_t.update_layout(
-                    template="plotly_dark",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
+                    template="plotly_white",
+                    paper_bgcolor="#ffffff",
+                    plot_bgcolor="#ffffff",
+                    font=dict(color="#002d42", family="Pretendard, sans-serif"),
+                    title=dict(font=dict(size=14, color="#002d42", family="Pretendard, sans-serif")),
                     height=240,
                     margin=dict(l=10, r=10, t=35, b=10)
                 )
@@ -305,7 +386,7 @@ def render_cost_estimation_view(
     # 탭 2: 고객사별 청구 금액
     # =========================================================
     elif selected_sub_tab == "🏢 고객사별 청구 금액":
-        st.markdown('<div class="cost-table-header">🏢 고객사/프로젝트별 예상 청구 금액 정산표</div>', unsafe_allow_html=True)
+        st.markdown('<div class="cost-table-header-cisco"><span>🏢</span><span>고객사/프로젝트별 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
         client_df = CostEstimationService.get_client_cost_summary(df_calc)
         if client_df.empty:
             st.info("조회 기준에 해당하는 고객사 작업 데이터가 없습니다.")
@@ -343,13 +424,19 @@ def render_cost_estimation_view(
                     values="total_cost",
                     title="🏆 주요 고객사 청구 금액 점유율",
                     hole=0.45,
-                    color_discrete_sequence=px.colors.qualitative.Prism
+                    color_discrete_sequence=["#005073", "#0284c7", "#0ea5e9", "#14b8a6", "#10b981", "#f59e0b", "#8b5cf6", "#64748b"]
                 )
-                fig_c.update_traces(textposition='inside', textinfo='percent+label')
+                fig_c.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label',
+                    textfont=dict(size=11, family="Pretendard, sans-serif")
+                )
                 fig_c.update_layout(
-                    template="plotly_dark",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
+                    template="plotly_white",
+                    paper_bgcolor="#ffffff",
+                    plot_bgcolor="#ffffff",
+                    font=dict(color="#002d42", family="Pretendard, sans-serif"),
+                    title=dict(font=dict(size=14, color="#002d42", family="Pretendard, sans-serif")),
                     height=380,
                     margin=dict(l=10, r=10, t=40, b=20)
                 )
@@ -359,21 +446,17 @@ def render_cost_estimation_view(
     # 탭 3: 업무 시간 직접 수정 장표 (크리티컬 기능)
     # =========================================================
     elif selected_sub_tab == "✏️ 업무 시간 직접 수정 장표":
+        st.markdown('<div class="cost-table-header-cisco"><span>✏️</span><span>업무 시간 직접 수정 장표 (DB 영구 보존 오버라이드)</span></div>', unsafe_allow_html=True)
         st.markdown("""
-        <div class="cost-table-header">
-            ✏️ 업무 시간 직접 수정 장표 (DB 영구 보존 오버라이드)
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("""
-        <div style="font-size: 12.5px; color: #94a3b8; margin-bottom: 12px;">
-            💡 <b>안내:</b> 아웃룩에서 사전 예정 시간이 정해지지 않아 <b>'종일(9.0h)'</b>로 등록되었거나 카카오톡 보고 시간이 잘못된 작업을 검토하여 실제 청구할 인정 공수(h)를 <b>직접 입력</b>하여 수정합니다. 여기서 수정한 공수는 수집기가 다시 실행되더라도 <b>영구 보존</b>됩니다.
+        <div class="cost-info-box-cisco">
+            💡 <b>시간 직접 수정 가이드:</b> 아웃룩에서 사전 예정 시간이 정해지지 않아 <b>'종일(9.0h)'</b>로 등록되었거나 카카오톡 보고 시간이 잘못된 작업을 검토하여 실제 청구할 인정 공수(h)를 <b>직접 입력</b>하여 수정합니다.<br>
+            여기서 수정한 공수는 수집기가 10분마다 다시 실행되더라도 <b>영구 보존</b>됩니다.
         </div>
         """, unsafe_allow_html=True)
 
         if df_calc.empty:
             st.warning("수정할 대상 작업이 없습니다.")
         else:
-            # 필터 툴바
             f_col1, f_col2, f_col3 = st.columns([4, 3, 3])
             with f_col1:
                 only_allday = st.checkbox(
@@ -383,31 +466,25 @@ def render_cost_estimation_view(
                     key="chk_filter_allday"
                 )
             with f_col2:
-                # 작업자 선택
                 w_list = ["전체"] + sorted(df_calc["worker_name"].dropna().unique().tolist())
                 sel_worker_adj = st.selectbox("👤 작업자 필터:", options=w_list, index=0, key="sb_adj_worker")
             with f_col3:
                 search_kw = st.text_input("🔍 고객사 / 작업내용 검색:", placeholder="검색어 입력...", key="txt_adj_search")
 
-            # 필터 적용
             df_edit_src = df_calc.copy()
 
-            # 종일 필터
             if only_allday:
                 df_edit_src = df_edit_src[df_edit_src["billable_hours"] >= 9.0]
 
-            # 작업자 필터
             if sel_worker_adj != "전체":
                 df_edit_src = df_edit_src[df_edit_src["worker_name"] == sel_worker_adj]
 
-            # 키워드 검색
             if search_kw:
                 kw = search_kw.strip().lower()
                 c_mask = df_edit_src["client_name"].astype(str).str.lower().str.contains(kw, na=False)
                 t_mask = df_edit_src["task_description"].astype(str).str.lower().str.contains(kw, na=False)
                 df_edit_src = df_edit_src[c_mask | t_mask]
 
-            # 날짜 정렬 (최신순)
             if "start_time" in df_edit_src.columns:
                 df_edit_src = df_edit_src.sort_values(by="start_time", ascending=False)
 
@@ -416,11 +493,9 @@ def render_cost_estimation_view(
             if df_edit_src.empty:
                 st.info("조건에 일치하는 작업이 없습니다.")
             else:
-                # data_editor용 데이터프레임 가공
                 edit_df = pd.DataFrame()
                 edit_df["msg_hash"] = df_edit_src["msg_hash"].astype(str)
                 
-                # 날짜 문자열
                 if "start_time" in df_edit_src.columns:
                     edit_df["일자"] = pd.to_datetime(df_edit_src["start_time"]).dt.strftime("%Y-%m-%d %H:%M")
                 else:
@@ -430,22 +505,13 @@ def render_cost_estimation_view(
                 edit_df["직급"] = df_edit_src["worker_title"].astype(str)
                 edit_df["고객사"] = df_edit_src["client_name"].astype(str)
                 edit_df["작업내용"] = df_edit_src["task_description"].astype(str)
-                
-                # 출처 표기
                 edit_df["출처"] = df_edit_src["msg_hash"].apply(lambda x: "📅 아웃룩" if str(x).startswith("OUTLOOK_") else "💬 카카오톡")
-                
-                # 기존 공수 (읽기 전용 참조)
                 edit_df["기존공수(h)"] = df_edit_src.get("original_hours", df_edit_src["billable_hours"]).round(1)
-
-                # 수정할 인정 공수 (직접 입력 컬럼)
                 edit_df["인정공수(h)"] = df_edit_src["billable_hours"].round(1)
-
-                # 수정 사유 / 비고
                 edit_df["비고"] = df_edit_src.get("note", "").fillna("").astype(str)
 
-                # Streamlit data_editor 설정
                 column_config = {
-                    "msg_hash": None, # 숨김
+                    "msg_hash": None,
                     "일자": st.column_config.TextColumn("일자", disabled=True, width="medium"),
                     "작업자": st.column_config.TextColumn("작업자", disabled=True, width="small"),
                     "직급": st.column_config.TextColumn("직급", disabled=True, width="small"),
@@ -480,11 +546,9 @@ def render_cost_estimation_view(
                     key="editor_cost_adjust"
                 )
 
-                # 변경 감지 및 저장 버튼
                 col_save_btn, col_save_info = st.columns([4, 6])
                 with col_save_btn:
                     if st.button("💾 수정한 시간 일괄 DB 영구 저장", type="primary", use_container_width=True, key="btn_save_adjusted_hours"):
-                        # 변경된 행 추출
                         records_to_save = []
                         orig_map = dict(zip(edit_df["msg_hash"], zip(edit_df["인정공수(h)"], edit_df["비고"])))
 
@@ -494,7 +558,6 @@ def render_cost_estimation_view(
                             new_note = str(row["비고"])
                             orig_h, orig_note = orig_map.get(mh, (new_h, new_note))
 
-                            # 값이 달라졌거나 비고가 달라졌으면 저장 대상
                             if abs(new_h - orig_h) > 0.01 or new_note != orig_note:
                                 records_to_save.append({
                                     "msg_hash": mh,
@@ -515,7 +578,7 @@ def render_cost_estimation_view(
 
                 with col_save_info:
                     st.markdown("""
-                    <div style="font-size: 11.5px; color: #64748b; line-height: 1.6; padding-top: 4px;">
+                    <div style="font-size: 12px; color: #64748b; line-height: 1.6; padding-top: 4px;">
                         • 인정공수 셀을 더블클릭하거나 클릭 후 숫자를 직접 입력하세요.<br>
                         • 수정 후 위의 [💾 수정한 시간 일괄 DB 영구 저장] 버튼을 누르면 실시간 반영됩니다.
                     </div>
@@ -525,26 +588,21 @@ def render_cost_estimation_view(
     # 탭 4: 직급별 시간당 단가 설정
     # =========================================================
     elif selected_sub_tab == "⚙️ 직급별 시간당 단가 설정":
+        st.markdown('<div class="cost-table-header-cisco"><span>⚙️</span><span>직급별 시간당 지원 금액(단가) 설정</span></div>', unsafe_allow_html=True)
         st.markdown("""
-        <div class="cost-table-header">
-            ⚙️ 직급별 시간당 지원 금액(단가) 설정
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("""
-        <div style="font-size: 12.5px; color: #94a3b8; margin-bottom: 16px;">
-            💡 사업본부에 청구할 직급별 시간당 단가(원/h)를 설정합니다. 단가는 언제든 수정 가능하며, DB에 영구 저장되어 모든 비용 계산에 즉시 반영됩니다.
+        <div class="cost-info-box-cisco">
+            💡 <b>단가 관리 가이드:</b> 사업본부에 청구할 직급별 시간당 단가(원/h)를 설정합니다.<br>
+            단가는 언제든 수정 가능하며, DB에 영구 저장되어 모든 비용 계산에 즉시 반영됩니다.
         </div>
         """, unsafe_allow_html=True)
 
         current_rates = CostEstimationService.get_hourly_rates()
 
         with st.form("form_hourly_rates_settings"):
-            st.markdown("##### 👔 직급별 시간당 단가 (원 / 시간)")
+            st.markdown("<h5 style='color: #002d42; font-weight: 800;'>👔 직급별 시간당 단가 (원 / 시간)</h5>", unsafe_allow_html=True)
             
             rate_inputs = {}
-            # 기본 직급 순서
             ordered_titles = ["수석", "차장", "과장", "대리", "사원", "기타"]
-            # 추가 커스텀 직급이 있을 경우
             for t in current_rates.keys():
                 if t not in ordered_titles:
                     ordered_titles.append(t)
@@ -567,8 +625,8 @@ def render_cost_estimation_view(
                             key=f"input_rate_{t}"
                         )
 
-            st.markdown("<hr style='margin: 15px 0; border-color: rgba(255,255,255,0.1);'>", unsafe_allow_html=True)
-            st.markdown("##### ➕ 신규 직급 단가 추가 (선택)")
+            st.markdown("<hr style='margin: 15px 0; border-color: #cbd5e1;'>", unsafe_allow_html=True)
+            st.markdown("<h5 style='color: #002d42; font-weight: 800;'>➕ 신규 직급 단가 추가 (선택)</h5>", unsafe_allow_html=True)
             c_new1, c_new2 = st.columns(2)
             with c_new1:
                 new_title_name = st.text_input("새 직급명 (예: 인턴, 고문 등):", key="txt_new_title_rate")
