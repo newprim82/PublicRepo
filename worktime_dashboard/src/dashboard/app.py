@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.21 (Unified Cisco ACI theme colors for estimated cost billing view)
-APP_VERSION = "v2.2.21"
+# WorkTime Dashboard v2.2.22 (Chart font colors set to solid black for maximum contrast)
+APP_VERSION = "v2.2.22"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()

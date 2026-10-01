@@ -324,16 +324,27 @@ def render_cost_estimation_view(
                     marker_color="#005073",
                     texttemplate='₩ %{text:,.0f}',
                     textposition='outside',
-                    textfont=dict(color="#002d42", size=11, family="Pretendard, sans-serif")
+                    textfont=dict(color="#000000", size=12, family="Pretendard, sans-serif")
                 )
                 fig_w.update_layout(
                     template="plotly_white",
                     paper_bgcolor="#ffffff",
                     plot_bgcolor="#ffffff",
-                    font=dict(color="#002d42", family="Pretendard, sans-serif"),
-                    title=dict(font=dict(size=14, color="#002d42", family="Pretendard, sans-serif")),
+                    font=dict(color="#000000", family="Pretendard, sans-serif"),
+                    title=dict(font=dict(size=14, color="#000000", family="Pretendard, sans-serif")),
+                    xaxis=dict(
+                        title=dict(text="예상 청구금액 (원)", font=dict(color="#000000", size=12, family="Pretendard, sans-serif")),
+                        tickfont=dict(color="#000000", size=11, family="Pretendard, sans-serif"),
+                        showgrid=True,
+                        gridcolor="#e2e8f0"
+                    ),
+                    yaxis=dict(
+                        title=dict(text="팀원", font=dict(color="#000000", size=12, family="Pretendard, sans-serif")),
+                        tickfont=dict(color="#000000", size=12, family="Pretendard, sans-serif"),
+                        showgrid=False
+                    ),
                     height=360,
-                    margin=dict(l=20, r=40, t=40, b=20),
+                    margin=dict(l=20, r=100, t=40, b=30),
                     showlegend=False
                 )
                 st.plotly_chart(fig_w, use_container_width=True)
@@ -369,14 +380,15 @@ def render_cost_estimation_view(
                 fig_t.update_traces(
                     textposition='inside',
                     textinfo='percent+label',
-                    textfont=dict(size=12, family="Pretendard, sans-serif")
+                    textfont=dict(size=12, color="#ffffff", family="Pretendard, sans-serif")
                 )
                 fig_t.update_layout(
                     template="plotly_white",
                     paper_bgcolor="#ffffff",
                     plot_bgcolor="#ffffff",
-                    font=dict(color="#002d42", family="Pretendard, sans-serif"),
-                    title=dict(font=dict(size=14, color="#002d42", family="Pretendard, sans-serif")),
+                    font=dict(color="#000000", family="Pretendard, sans-serif"),
+                    title=dict(font=dict(size=14, color="#000000", family="Pretendard, sans-serif")),
+                    legend=dict(font=dict(color="#000000", size=11, family="Pretendard, sans-serif")),
                     height=240,
                     margin=dict(l=10, r=10, t=35, b=10)
                 )
@@ -429,14 +441,15 @@ def render_cost_estimation_view(
                 fig_c.update_traces(
                     textposition='inside',
                     textinfo='percent+label',
-                    textfont=dict(size=11, family="Pretendard, sans-serif")
+                    textfont=dict(size=11, color="#ffffff", family="Pretendard, sans-serif")
                 )
                 fig_c.update_layout(
                     template="plotly_white",
                     paper_bgcolor="#ffffff",
                     plot_bgcolor="#ffffff",
-                    font=dict(color="#002d42", family="Pretendard, sans-serif"),
-                    title=dict(font=dict(size=14, color="#002d42", family="Pretendard, sans-serif")),
+                    font=dict(color="#000000", family="Pretendard, sans-serif"),
+                    title=dict(font=dict(size=14, color="#000000", family="Pretendard, sans-serif")),
+                    legend=dict(font=dict(color="#000000", size=11, family="Pretendard, sans-serif")),
                     height=380,
                     margin=dict(l=10, r=10, t=40, b=20)
                 )
