@@ -5,22 +5,21 @@ from datetime import datetime
 from typing import Dict, Any, List
 
 from ...services.monthly_worklog_service import MonthlyWorklogService
-from ...services.email_dispatch_service import EmailDispatchService
 from ...services.team_service import TeamService
-from ..common.ui_helpers import get_current_kst_time, strip_tz
+from ..common.ui_helpers import get_current_kst_time
 
 
 def render_monthly_worklog_dispatch_view():
     """
-    📑 [팀 전월 엑셀 원장 정기 발송] 메인 뷰 (흰색 바탕 100% 고대비 블랙 텍스트 표준 준수)
+    📑 [팀 전월 엑셀 원장 정기 발송] 메인 뷰 (시스템 관리 하위 메뉴)
     - 매달 1일 08:00에 기술1팀 인원 전체에 대한 전월 카톡/아웃룩 엑셀 원장을 팀메일로 정기 전달
     - 기본 팀메일: GE101@sangsanginworld.co.kr (수정 및 저장 가능)
     - 즉시 테스트 발송 및 엑셀 원장(.xlsx) 브라우저 다운로드 제공
-    - 실시간 팀원별 집계 및 원장 데이터 미리보기
+    - 팀 전월 엑셀 원장 전용 독립 발송 이력 제공 (서머리 이력과 100% 분리)
     """
     st.markdown("""
     <style>
-    /* ☀️ 흰색 바탕 고대비 절대 가독성 보장 전용 CSS (라벨, 인풋, 카드, 탭 전부 검은색 글자) */
+    /* ☀️ 흰색 바탕 100% 고대비 블랙 텍스트 표준 스타일 */
     .monthly-hero {
         background: #ffffff !important;
         border: 1.5px solid #0284c7 !important;
@@ -64,7 +63,7 @@ def render_monthly_worklog_dispatch_view():
         color: #000000 !important;
         margin-top: 4px !important;
     }
-    /* 라벨 텍스트: 무조건 선명한 블랙 강제 */
+    /* 라벨 텍스트: 선명한 블랙 강제 */
     label,
     div[data-testid="stWidgetLabel"] p,
     div[data-testid="stWidgetLabel"] span,
@@ -73,7 +72,7 @@ def render_monthly_worklog_dispatch_view():
         font-weight: 800 !important;
         font-size: 13.5px !important;
     }
-    /* 셀렉트박스 & 인풋창: 흰색 배경 + 선명한 검은 글씨 + 뚜렷한 테두리 */
+    /* 셀렉트박스 & 인풋창 */
     div[data-baseweb="input"],
     div[data-baseweb="base-input"],
     div[data-baseweb="select"] > div {
@@ -94,22 +93,12 @@ def render_monthly_worklog_dispatch_view():
         fill: #000000 !important;
         color: #000000 !important;
     }
-    /* 토글 스위치 텍스트 */
+    /* 토글 스위치 */
     div[data-testid="stToggle"] label span {
         color: #000000 !important;
         font-weight: 800 !important;
     }
-    /* 탭 헤더 글자색 선명한 블랙 강제 */
-    div[data-testid="stTabs"] button[role="tab"] * {
-        color: #000000 !important;
-        font-weight: 800 !important;
-        font-size: 14px !important;
-    }
-    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
-        color: #0284c7 !important;
-        font-weight: 900 !important;
-    }
-    /* 다운로드 버튼 텍스트 선명한 화이트 보장 */
+    /* 다운로드 버튼 */
     div.stDownloadButton > button {
         background-color: #0284c7 !important;
         border: 1px solid #0369a1 !important;
@@ -269,125 +258,54 @@ def render_monthly_worklog_dispatch_view():
 
     st.markdown("<hr style='border: 0; border-top: 1px solid #cbd5e1; margin: 28px 0 20px 0;'>", unsafe_allow_html=True)
 
-    # 3. 실시간 데이터 미리보기 (탭 구성)
-    st.markdown(f"<h4 style='color: #000000; font-weight: 900;'>📊 [{selected_team}] {target_month} 원장 데이터 실시간 미리보기</h4>", unsafe_allow_html=True)
-    
-    if team_df.empty:
-        st.info(f"선택하신 [{selected_team}]의 {target_month} 데이터가 없습니다.")
+    # 3. 팀 전월 엑셀 원장 독립 발송 이력 (서머리 이력과 완전 분리)
+    st.markdown(f"<h4 style='color: #000000; font-weight: 900;'>📜 [{selected_team}] 전월 엑셀 원장 최근 발송 이력</h4>", unsafe_allow_html=True)
+    dedicated_logs = MonthlyWorklogService.get_recent_dispatches(team_name=selected_team, limit=10)
+
+    if not dedicated_logs:
+        st.markdown(
+            f"""
+            <div style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; color: #475569; font-size: 13px; line-height: 1.6;">
+                ⏳ 아직 발송된 <b>[{selected_team}]</b> 전월 엑셀 원장 이력이 없습니다.<br>
+                <span style="font-size: 11.5px; color: #64748b;">위의 [🚀 지금 즉시 팀 메일로 발송] 버튼을 누르거나 매달 1일 08:00 자동 발송 시 여기에만 독립적으로 기록됩니다.</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
-        tab1, tab2, tab3 = st.tabs([
-            "👥 팀원별 투입 현황 요약",
-            "💬 카카오톡 업무 원장",
-            "📅 아웃룩 캘린더 원장"
-        ])
-
-        with tab1:
-            worker_group = team_df.groupby("worker_name")
-            w_list = []
-            for w_name, w_sub in worker_group:
-                w_title = w_sub["worker_title"].dropna().iloc[0] if "worker_title" in w_sub.columns and not w_sub["worker_title"].dropna().empty else ""
-                k_sub = w_sub[~w_sub["is_outlook"]] if "is_outlook" in w_sub.columns else w_sub
-                o_sub = w_sub[w_sub["is_outlook"]] if "is_outlook" in w_sub.columns else pd.DataFrame()
-                k_h = round(k_sub["actual_hours"].sum(), 1) if "actual_hours" in k_sub.columns else 0.0
-                o_h = round(o_sub["actual_hours"].sum(), 1) if not o_sub.empty and "actual_hours" in o_sub.columns else 0.0
-                tot_h = round(w_sub["actual_hours"].sum(), 1) if "actual_hours" in w_sub.columns else 0.0
-                ngt_h = round(w_sub[w_sub.get("is_night_work") == True]["actual_hours"].sum(), 1) if "actual_hours" in w_sub.columns and "is_night_work" in w_sub.columns else 0.0
-                wkd_h = round(w_sub[w_sub.get("is_weekend_work") == True]["actual_hours"].sum(), 1) if "actual_hours" in w_sub.columns and "is_weekend_work" in w_sub.columns else 0.0
-
-                w_list.append({
-                    "담당자": w_name,
-                    "직급": w_title,
-                    "카톡 건수": len(k_sub),
-                    "카톡 공수(h)": k_h,
-                    "아웃룩 건수": len(o_sub),
-                    "아웃룩 공수(h)": o_h,
-                    "총 건수": len(w_sub),
-                    "총 공수(h)": tot_h,
-                    "야간(h)": ngt_h,
-                    "주말(h)": wkd_h
-                })
-            
-            w_df_summary = pd.DataFrame(w_list).sort_values(by="총 공수(h)", ascending=False)
-            st.dataframe(w_df_summary, use_container_width=True, hide_index=True)
-
-        with tab2:
-            kakao_df = team_df[~team_df["is_outlook"]].copy() if "is_outlook" in team_df.columns else team_df.copy()
-            if kakao_df.empty:
-                st.info("카카오톡 업무 지원 기록이 없습니다.")
-            else:
-                disp_k_cols = ["start_time", "end_time", "status", "log_type", "worker_name", "worker_title", "client_name", "task_description", "actual_hours", "is_night_work", "is_weekend_work"]
-                disp_k_cols = [c for c in disp_k_cols if c in kakao_df.columns]
-                k_out = strip_tz(kakao_df[disp_k_cols].copy())
-                if "status" in k_out.columns:
-                    k_out["status"] = k_out["status"].map({"COMPLETED": "완료", "PENDING": "진행"}).fillna(k_out["status"])
-                st.dataframe(
-                    k_out.rename(columns={
-                        "start_time": "시작시각", "end_time": "완료시각", "status": "상태",
-                        "log_type": "구분", "worker_name": "담당자", "worker_title": "직급",
-                        "client_name": "고객사", "task_description": "작업내용",
-                        "actual_hours": "소요(h)", "is_night_work": "야간", "is_weekend_work": "주말"
-                    }),
-                    use_container_width=True,
-                    hide_index=True
-                )
-
-        with tab3:
-            outlook_df = team_df[team_df["is_outlook"]].copy() if "is_outlook" in team_df.columns else pd.DataFrame()
-            if outlook_df.empty:
-                st.info("아웃룩 캘린더 일정이 없습니다.")
-            else:
-                disp_o_cols = ["start_time", "end_time", "status", "log_type", "worker_name", "worker_title", "task_description", "actual_hours"]
-                disp_o_cols = [c for c in disp_o_cols if c in outlook_df.columns]
-                o_out = strip_tz(outlook_df[disp_o_cols].copy())
-                if "status" in o_out.columns:
-                    o_out["status"] = o_out["status"].map({"COMPLETED": "완료", "PENDING": "예정"}).fillna(o_out["status"])
-                st.dataframe(
-                    o_out.rename(columns={
-                        "start_time": "시작일시", "end_time": "종료일시", "status": "상태",
-                        "log_type": "일정구분", "worker_name": "담당자", "worker_title": "직급",
-                        "task_description": "일정 내용", "actual_hours": "인정공수(h)"
-                    }),
-                    use_container_width=True,
-                    hide_index=True
-                )
-
-    st.markdown("<hr style='border: 0; border-top: 1px solid #cbd5e1; margin: 28px 0 20px 0;'>", unsafe_allow_html=True)
-
-    # 4. 최근 발송 이력 (흰색 카드 + 선명한 블랙 텍스트)
-    st.markdown("<h4 style='color: #000000; font-weight: 900;'>📜 최근 발송 이력 (전월 엑셀 원장 발송)</h4>", unsafe_allow_html=True)
-    recent_logs = EmailDispatchService.get_recent_dispatches(limit=10)
-    # 전월 원장 관련 이력 우선 필터링
-    monthly_logs = [item for item in recent_logs if "전월 원장" in str(item.get("period_label", "")) or "원장" in str(item.get("subject", ""))]
-    if not monthly_logs:
-        monthly_logs = recent_logs[:5]
-
-    if not monthly_logs:
-        st.info("아직 발송된 이력이 없습니다.")
-    else:
-        for item in monthly_logs:
+        for item in dedicated_logs:
             d_type = item.get("dispatch_type", "MANUAL_IMMEDIATE")
-            d_badge = '<span style="background:#0284c7; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">🚀 즉시 발송</span>' if "MANUAL" in d_type else '<span style="background:#16a34a; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">⏳ 정기 자동</span>'
+            d_badge = '<span style="background:#0284c7; color:#ffffff; padding:2.5px 8px; border-radius:4px; font-size:11px; font-weight:800;">🚀 즉시 발송</span>' if "MANUAL" in d_type else '<span style="background:#16a34a; color:#ffffff; padding:2.5px 8px; border-radius:4px; font-size:11px; font-weight:800;">⏳ 정기 자동</span>'
             status = item.get("status", "SUCCESS")
-            status_html = '<span style="color:#15803d; font-weight:800; font-size:11.5px;">✅ 성공</span>' if status == "SUCCESS" else '<span style="color:#b91c1c; font-weight:800; font-size:11.5px;">❌ 실패</span>'
+            status_html = '<span style="color:#15803d; font-weight:800; font-size:12px;">✅ 성공</span>' if status == "SUCCESS" else '<span style="color:#b91c1c; font-weight:800; font-size:12px;" title="' + str(item.get("error_message", "")) + '">❌ 실패</span>'
             dt_str = str(item.get("created_at", "")).replace("T", " ")
             short_dt = dt_str[:16] if len(dt_str) >= 16 else dt_str
-            p_label = item.get("period_label", "")
-            rcpts = item.get("recipient_emails") or item.get("recipient_email") or ""
+            t_month = item.get("target_month", "")
+            t_name = item.get("team_name", selected_team)
+            rcpt = item.get("recipient_email", "")
+            tot_rec = item.get("total_records", 0)
+            tot_h = float(item.get("total_hours", 0.0) or 0.0)
+            fn = item.get("excel_filename", "")
 
             st.markdown(f"""
-            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-bottom: 9px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 8px;">
+            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 13px 18px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 9px; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         {d_badge}
-                        <span style="color: #000000; font-weight: 800; font-size: 13px;">{p_label}</span>
+                        <span style="color: #000000; font-weight: 800; font-size: 13.5px;">[{t_name}] {t_month} 전월 원장</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="color: #334155; font-size: 11.5px; font-weight: 600;">{short_dt}</span>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="color: #475569; font-size: 12px; font-weight: 600;">{short_dt}</span>
                         {status_html}
                     </div>
                 </div>
-                <div style="color: #000000; font-size: 12.5px; font-weight: 700;">
-                    <span style="color: #0284c7;">✉️ 수신 메일:</span> {rcpts}
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12.5px;">
+                    <div style="color: #000000; font-weight: 700;">
+                        <span style="color: #0284c7;">✉️ 수신 팀메일:</span> {rcpt}
+                    </div>
+                    <div style="color: #475569; font-weight: 600;">
+                        📊 실적: <b style="color: #000000;">{tot_rec:,}건</b> ({tot_h:,.1f}h) | 📎 첨부: <span style="color: #0284c7;">{fn}</span>
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)

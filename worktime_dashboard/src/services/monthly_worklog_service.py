@@ -867,16 +867,21 @@ class MonthlyWorklogService:
                 server.starttls()
                 server.login(sender, password)
                 server.sendmail(sender, recipients, msg.as_string())
-                server.quit()
+            clean_team_fn = team_name.replace(" ", "")
+            clean_month_fn = month_str.replace("-", "")
+            excel_filename = f"{clean_team_fn}_{clean_month_fn}_전월_업무원장_통합리포트.xlsx"
+            tot_act_h = round(team_df["actual_hours"].sum(), 1) if "actual_hours" in team_df.columns else 0.0
 
-            # DB 발송 이력 기록
-            EmailDispatchService.record_dispatch(
-                dispatch_type=dispatch_type,
-                recipient_emails=", ".join(recipients),
+            # 📑 팀 전월 엑셀 원장 전용 DB 발송 이력 기록
+            cls.record_dispatch(
+                team_name=team_name,
+                target_month=month_str,
+                recipient_email=", ".join(recipients),
                 sender_email=sender,
-                selected_team=team_name,
-                period_label=f"{team_name} {month_str} 전월 원장",
-                subject=subject,
+                dispatch_type=dispatch_type,
+                total_records=len(team_df),
+                total_hours=tot_act_h,
+                excel_filename=excel_filename,
                 status="SUCCESS"
             )
 
@@ -884,27 +889,126 @@ class MonthlyWorklogService:
 
         except smtplib.SMTPAuthenticationError as e:
             err_msg = f"❌ Gmail 인증 실패: 구글 앱 비밀번호를 확인해주세요 ({e})"
-            EmailDispatchService.record_dispatch(
-                dispatch_type=dispatch_type,
-                recipient_emails=", ".join(recipients),
+            cls.record_dispatch(
+                team_name=team_name,
+                target_month=month_str,
+                recipient_email=", ".join(recipients) if 'recipients' in locals() else str(target_email),
                 sender_email=sender,
-                selected_team=team_name,
-                period_label=f"{team_name} {month_str} 전월 원장",
-                subject=subject,
+                dispatch_type=dispatch_type,
+                total_records=len(team_df) if 'team_df' in locals() else 0,
+                total_hours=round(team_df["actual_hours"].sum(), 1) if 'team_df' in locals() and "actual_hours" in team_df.columns else 0.0,
                 status="FAILED",
                 error_message=err_msg
             )
             return False, err_msg
         except Exception as e:
             err_msg = f"❌ 메일 발송 실패: {str(e)}"
-            EmailDispatchService.record_dispatch(
-                dispatch_type=dispatch_type,
-                recipient_emails=", ".join(recipients),
+            cls.record_dispatch(
+                team_name=team_name,
+                target_month=month_str,
+                recipient_email=", ".join(recipients) if 'recipients' in locals() else str(target_email),
                 sender_email=sender,
-                selected_team=team_name,
-                period_label=f"{team_name} {month_str} 전월 원장",
-                subject=subject,
+                dispatch_type=dispatch_type,
+                total_records=len(team_df) if 'team_df' in locals() else 0,
+                total_hours=round(team_df["actual_hours"].sum(), 1) if 'team_df' in locals() and "actual_hours" in team_df.columns else 0.0,
                 status="FAILED",
                 error_message=err_msg
             )
             return False, err_msg
+
+    # =========================================================
+    # 6. 팀 전월 엑셀 원장 전용 발송 이력 관리 (서머리 이력과 완전 분리)
+    # =========================================================
+    @classmethod
+    def _init_dispatch_log_table(cls):
+        try:
+            db_path = config.LOCAL_DB_PATH
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(db_path))
+            cur = conn.cursor()
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS team_monthly_worklog_dispatch_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    team_name TEXT NOT NULL,
+                    target_month TEXT NOT NULL,
+                    recipient_email TEXT NOT NULL,
+                    sender_email TEXT NOT NULL,
+                    dispatch_type TEXT NOT NULL,
+                    total_records INTEGER DEFAULT 0,
+                    total_hours REAL DEFAULT 0.0,
+                    excel_filename TEXT DEFAULT '',
+                    status TEXT NOT NULL,
+                    error_message TEXT DEFAULT '',
+                    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+                )
+            """)
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+    @classmethod
+    def record_dispatch(
+        cls,
+        team_name: str,
+        target_month: str,
+        recipient_email: str,
+        sender_email: str,
+        dispatch_type: str = "MANUAL_IMMEDIATE",
+        total_records: int = 0,
+        total_hours: float = 0.0,
+        excel_filename: str = "",
+        status: str = "SUCCESS",
+        error_message: str = ""
+    ) -> bool:
+        cls._init_dispatch_log_table()
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO team_monthly_worklog_dispatch_logs (
+                    team_name, target_month, recipient_email, sender_email,
+                    dispatch_type, total_records, total_hours, excel_filename,
+                    status, error_message, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                team_name, target_month, recipient_email, sender_email,
+                dispatch_type, total_records, total_hours, excel_filename,
+                status, error_message, now_str
+            ))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"[MonthlyWorklogService] 전용 발송 이력 저장 실패: {e}")
+            return False
+
+    @classmethod
+    def get_recent_dispatches(cls, team_name: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """팀 전월 엑셀 원장 발송 전용 최근 이력 조회"""
+        cls._init_dispatch_log_table()
+        logs = []
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            if team_name:
+                cur.execute("""
+                    SELECT * FROM team_monthly_worklog_dispatch_logs
+                    WHERE team_name = ?
+                    ORDER BY id DESC
+                    LIMIT ?
+                """, (team_name, limit))
+            else:
+                cur.execute("""
+                    SELECT * FROM team_monthly_worklog_dispatch_logs
+                    ORDER BY id DESC
+                    LIMIT ?
+                """, (limit,))
+            for r in cur.fetchall():
+                logs.append(dict(r))
+            conn.close()
+        except Exception as e:
+            print(f"[MonthlyWorklogService] 발송 이력 조회 실패: {e}")
+        return logs

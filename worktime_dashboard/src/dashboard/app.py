@@ -364,7 +364,8 @@ def render_main_content_frame(
         "🕒 시간 수정 감사 이력",
         "⚙️ 직급별 시간당 단가 설정",
         "📅 법정 및 임시 공휴일 관리",
-        "📬 정기 메일 발송 대상 관리"
+        "📬 정기 메일 발송 대상 관리",
+        "📑 팀 전월 엑셀 원장 정기 발송"
     ]
     if curr_page in admin_only_pages and not AuthManager.is_authenticated():
         st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
@@ -688,7 +689,7 @@ def main():
                 df = df_filtered_base.iloc[0:0]
 
 
-        # 3. 📊 작업 디테일 (세부 분석 화면 전환)
+        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
         detail_menu_items = [
             "📅 작업 캘린더 & 밀도 히트맵",
             "🔍 전체 작업 스마트 검색",
@@ -697,8 +698,7 @@ def main():
             "🏢 팀별 업무량 비교",
             "📈 월별/일별 추이",
             "🏢 고객사별 공수 분포",
-            "⏱️ 예정 vs 실제 소요시간",
-            "📑 팀 전월 엑셀 원장 정기 발송"
+            "⏱️ 예정 vs 실제 소요시간"
         ]
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
         with st.expander("📊 분석", expanded=is_detail_active):
@@ -876,7 +876,8 @@ def main():
         if is_auth:
             sys_mgmt_items = [
                 "📅 법정 및 임시 공휴일 관리",
-                "📬 정기 메일 발송 대상 관리"
+                "📬 정기 메일 발송 대상 관리",
+                "📑 팀 전월 엑셀 원장 정기 발송"
             ]
             is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
             with st.expander("🛠️ 시스템 관리", expanded=is_sys_active):
