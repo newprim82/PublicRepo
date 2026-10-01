@@ -186,6 +186,43 @@ def render_cost_estimation_view(
         margin-bottom: 14px !important;
         box-shadow: 0 1px 3px rgba(0, 45, 66, 0.03) !important;
     }
+
+    /* 7. 직급별 단가 설정 폼 내부 텍스트 완전 선명화 및 버튼 스타일 */
+    div[data-testid="stForm"] {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        padding: 24px 20px !important;
+        box-shadow: 0 2px 8px rgba(0, 45, 66, 0.05) !important;
+    }
+    div[data-testid="stForm"] label,
+    div[data-testid="stForm"] [data-testid="stWidgetLabel"] p,
+    div[data-testid="stForm"] [data-testid="stWidgetLabel"] span {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        font-size: 14px !important;
+    }
+    div[data-testid="stForm"] button[kind="primary"] {
+        background: linear-gradient(135deg, #005073 0%, #00364d 100%) !important;
+        border: none !important;
+        color: #ffffff !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        padding: 10px 0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 6px rgba(0, 45, 66, 0.2) !important;
+    }
+    div[data-testid="stForm"] input {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-weight: 800 !important;
+        font-size: 16px !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+    }
+    div[data-testid="stForm"] button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #0284c7 0%, #005073 100%) !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -636,34 +673,60 @@ def render_cost_estimation_view(
 
         current_rates = CostEstimationService.get_hourly_rates()
 
+        title_cards = [
+            {"title": "수석", "badge_color": "#005073", "border_color": "#005073", "icon": "👑", "tag": "수석"},
+            {"title": "과장", "badge_color": "#0284c7", "border_color": "#0284c7", "icon": "💼", "tag": "과장"},
+            {"title": "대리", "badge_color": "#10b981", "border_color": "#10b981", "icon": "⚡", "tag": "대리"},
+            {"title": "사원", "badge_color": "#8b5cf6", "border_color": "#8b5cf6", "icon": "🌱", "tag": "사원"}
+        ]
+
         with st.form("form_hourly_rates_settings"):
-            st.markdown("<h5 style='color: #002d42; font-weight: 800;'>👔 직급별 시간당 단가 (원 / 시간)</h5>", unsafe_allow_html=True)
+            st.markdown("""
+            <div style="margin-bottom: 14px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+                <span style="font-size: 17px; font-weight: 900; color: #000000; letter-spacing: -0.3px;">👔 4대 표준 직급별 시간당 지원 단가 (원 / 시간)</span>
+                <span style="font-size: 12.5px; color: #475569; margin-left: 8px; font-weight: 600;">각 직급의 1시간당 청구 금액을 설정합니다.</span>
+            </div>
+            """, unsafe_allow_html=True)
             
             rate_inputs = {}
-            ordered_titles = ["수석", "과장", "대리", "사원"]
             cols = st.columns(4)
 
-            for idx, t in enumerate(ordered_titles):
+            for idx, c_info in enumerate(title_cards):
+                t = c_info["title"]
+                val = current_rates.get(t, 50000)
                 with cols[idx]:
-                    val = current_rates.get(t, 50000)
+                    st.markdown(f"""
+                    <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-top: 6px solid {c_info['badge_color']}; border-radius: 10px; padding: 12px 14px 10px 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                            <span style="font-size: 22px; font-weight: 900; color: #000000; letter-spacing: -0.5px;">{c_info['icon']} {t}</span>
+                            <span style="background: {c_info['badge_color']}; color: #ffffff; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 4px;">{c_info['tag']}</span>
+                        </div>
+                        <div style="font-size: 12px; font-weight: 800; color: #000000; margin-top: 2px;">
+                            시간당 단가 (원/h)
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
                     rate_inputs[t] = st.number_input(
-                        f"👔 {t} 단가 (원/h):",
+                        f"{t} 단가",
                         min_value=0,
                         max_value=1000000,
                         value=int(val),
                         step=5000,
                         format="%d",
-                        key=f"input_rate_{t}"
+                        key=f"input_rate_{t}",
+                        label_visibility="collapsed"
                     )
 
-            st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
-            btn_submit_rates = st.form_submit_button("💾 직급별 단가 설정 저장", type="primary", use_container_width=True)
+            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+            btn_submit_rates = st.form_submit_button("💾 4대 직급 단가 일괄 저장 (DB 영구 보존)", type="primary", use_container_width=True)
 
             if btn_submit_rates:
+                ordered_titles = [c["title"] for c in title_cards]
                 updated_rates = {t: int(rate_inputs[t]) for t in ordered_titles}
                 success = CostEstimationService.save_hourly_rates(updated_rates)
                 if success:
-                    st.success("🎉 직급별 시간당 단가가 성공적으로 저장되었습니다!")
+                    st.success("🎉 4대 직급 시간당 단가가 성공적으로 저장되었습니다!")
                     st.toast("✅ 단가 저장 완료! 예상 비용이 실시간으로 재계산됩니다.", icon="💰")
                     st.cache_data.clear()
                     st.rerun()
