@@ -3,8 +3,12 @@ import pandas as pd
 from datetime import datetime, date
 from typing import Dict, Any, List
 
-from ...services.holiday_service import HolidayService
-from ...auth.auth_manager import AuthManager
+try:
+    from src.services.holiday_service import HolidayService
+    from src.auth.auth_manager import AuthManager
+except ImportError:
+    from ...services.holiday_service import HolidayService
+    from ...auth.auth_manager import AuthManager
 
 
 def render_holiday_management_view():

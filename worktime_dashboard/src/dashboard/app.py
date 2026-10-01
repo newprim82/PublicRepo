@@ -63,6 +63,7 @@ from src.dashboard.views.trend_view import render_trend_view
 from src.dashboard.views.client_view import render_client_view
 from src.dashboard.views.duration_view import render_duration_view
 from src.dashboard.views.cost_estimation_view import render_cost_estimation_view
+from src.dashboard.views.holiday_management_view import render_holiday_management_view
 
 # -------------------------------------------------------------
 # 1. 단 1회 백그라운드 10분 수집 데몬 기동
@@ -460,7 +461,6 @@ def render_main_content_frame(
             curr_page=curr_page
         )
     elif curr_page == "📅 법정 및 임시 공휴일 관리":
-        from .views.holiday_management_view import render_holiday_management_view
         render_holiday_management_view()
 
 
@@ -881,17 +881,15 @@ def main():
                         on_click=set_nav_page,
                         args=(s_item,)
                     )
-                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    if st.button("🔄 새로고침", use_container_width=True):
-                        clear_all_web_caches()
-                        st.rerun()
-                with col_btn2:
-                    if st.button("🧹 캐시 초기화", use_container_width=True):
-                        clear_all_web_caches()
-                        st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
-                        st.rerun()
+                st.markdown("<div style='height: 4px; border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 0 6px 0;'></div>", unsafe_allow_html=True)
+                if st.button("🔄 실시간 데이터 새로고침", key="btn_sys_refresh_full", use_container_width=True):
+                    clear_all_web_caches()
+                    st.toast("🔄 실시간 데이터가 새로고침되었습니다!", icon="✅")
+                    st.rerun()
+                if st.button("🧹 웹 캐시 전체 초기화", key="btn_sys_clear_cache_full", use_container_width=True):
+                    clear_all_web_caches()
+                    st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
+                    st.rerun()
 
         # 6. 🔑 사이드바 최하단 독립 로그인 / 로그아웃 버튼 (실시간 대시보드 스타일)
         st.markdown('<div style="height: 25px;"></div><div style="border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;"></div>', unsafe_allow_html=True)
