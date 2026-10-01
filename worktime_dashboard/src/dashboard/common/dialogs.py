@@ -8,6 +8,7 @@ import plotly.express as px
 from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, strip_tz, get_current_kst_time, to_naive_kst
 from ...services.email_report_service import EmailReportService
 from ...services.email_sender import EmailSender
+from ...services.authorized_recipient_service import AuthorizedRecipientService
 from ...services.team_service import TeamService
 from ...services.reward_leave_service import RewardLeaveService
 from ...analytics.stats_service import StatsService
@@ -958,8 +959,53 @@ def show_email_report_dialog(selected_team: str):
         value="ymmoon@sangsanginworld.co.kr",
         key="dialog_recipient_email"
     )
-    st.markdown("<div style='font-size: 12px; color: #cbd5e1; margin-top: -6px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
-    st.write("")
+
+    # 🔒 비용산정 보안 검증: 사전 등록된 승인 수신자(화이트리스트) 여부 판별
+    is_cost_auth = AuthorizedRecipientService.is_all_authorized(mail_rcpt)
+    unauth_list = AuthorizedRecipientService.get_unauthorized_recipients(mail_rcpt)
+    auth_list = AuthorizedRecipientService.get_authorized_recipients()
+
+    if is_cost_auth:
+        st.markdown(
+            """
+            <div style="background: rgba(22, 163, 74, 0.15); border: 1.5px solid #16a34a; border-left: 5px solid #22c55e; padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: #dcfce7; margin-top: 4px; margin-bottom: 12px; line-height: 1.5;">
+                🔒 <b>[보안 인가 완료]</b> 사전 등록된 수신자입니다.<br>
+                <b>💰 예상 비용산정 대시보드 전체(청구금액, 팀원별 정산표, 엑셀 개인장표)</b>가 보고서 본문 및 첨부파일에 안전하게 포함되어 함께 발송됩니다.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f"""
+            <div style="background: rgba(234, 88, 12, 0.15); border: 1.5px solid #ea580c; border-left: 5px solid #f97316; padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: #ffedd5; margin-top: 4px; margin-bottom: 12px; line-height: 1.5;">
+                ⚠️ <b>[비용산정 제외 안내]</b> 등록되지 않은 수신자(<code>{', '.join(unauth_list)}</code>)가 포함되어 있습니다.<br>
+                민감한 재무 정보 보호를 위해 <b>예상 비용산정 대시보드는 제외</b>되고, 일반 업무 실적 Summary만 발송됩니다.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    with st.expander(f"🔐 비용산정 승인 수신자 목록 ({len(auth_list)}명)", expanded=False):
+        st.caption("비용산정 대시보드는 보안을 위해 아래 등록된 사전 승인 수신자에게만 발송됩니다.")
+        for auth_em in auth_list:
+            st.markdown(f"- 📧 `{auth_em}`")
+        
+        from ...auth.auth_manager import AuthManager
+        if AuthManager.is_authenticated():
+            st.markdown("<div style='margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.15); padding-top: 8px;'></div>", unsafe_allow_html=True)
+            c_add1, c_add2 = st.columns([3, 1])
+            with c_add1:
+                new_auth_em = st.text_input("신규 승인 수신자 등록", placeholder="user@sangsanginworld.co.kr", key="txt_add_new_auth_em", label_visibility="collapsed")
+            with c_add2:
+                if st.button("➕ 등록", key="btn_submit_add_auth_em", use_container_width=True):
+                    if AuthorizedRecipientService.add_authorized_recipient(new_auth_em):
+                        st.toast(f"'{new_auth_em}' 승인 등록 완료!", icon="✅")
+                        st.rerun()
+                    else:
+                        st.error("유효한 이메일 주소를 입력하십시오.")
+
+    st.markdown("<div style='font-size: 12px; color: #cbd5e1; margin-top: 4px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
     
     if st.button("🚀 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
         with st.spinner("🤖 Gemini AI 심층 브리핑 생성 및 이메일 전송 중..."):

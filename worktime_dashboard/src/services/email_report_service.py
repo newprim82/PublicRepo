@@ -8,6 +8,8 @@ from ..database.supabase_client import DatabaseManager
 from ..services.team_service import TeamService, UNASSIGNED_TEAM
 from ..services.client_normalizer import normalize_client_name
 from ..services.ai_briefing_service import FactExtractor, AIBriefingService
+from .cost_estimation_service import CostEstimationService
+from .excel_export_service import ExcelExportService
 
 KST = timezone(timedelta(hours=9))
 
@@ -23,8 +25,10 @@ class EmailReportService:
         available_weeks_override: Optional[List[str]] = None,
         df_scope_override: Optional[pd.DataFrame] = None,
         team_mappings_override: Optional[dict] = None,
+        include_cost_estimation: bool = False,
+        return_cost_excel: bool = False,
         **kwargs
-    ) -> Tuple[str, str, bytes]:
+    ) -> Any:
         """
         대시보드의 '📊 Summary' 페이지와 100% 동일한 내용의
         업무 실적 Summary 반응형 HTML 리포트 및 분석 엑셀 파일을 생성합니다.
@@ -564,7 +568,184 @@ class EmailReportService:
             </table>
             """
 
-        subject = f"📊 [업무 실적 Summary] {current_period_label}"
+        # ----------------------------------------------------
+        # 8-1. 💰 예상 비용산정 대시보드 (사전 승인 수신자 전용 대외비 섹션)
+        # ----------------------------------------------------
+        cost_dashboard_html = ""
+        cost_excel_bytes = None
+        worker_cost_df = pd.DataFrame()
+        client_cost_df = pd.DataFrame()
+
+        if include_cost_estimation and not df_active.empty:
+            try:
+                df_calc = CostEstimationService.calculate_costs(df_active)
+                cost_kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
+                worker_cost_df = CostEstimationService.get_worker_cost_summary(df_calc)
+                client_cost_df = CostEstimationService.get_client_cost_summary(df_calc)
+
+                # 별도 비용 정산 다중 시트 엑셀 바이트 생성 (첫 탭: 요약표, 2번째 탭부터: 개인장표)
+                try:
+                    cost_excel_bytes = ExcelExportService.generate_cost_estimation_report(
+                        df_calc=df_calc,
+                        worker_df=worker_cost_df,
+                        title_suffix=current_period_label
+                    )
+                except Exception:
+                    cost_excel_bytes = None
+
+                # 팀원별 정산 요약 표 행 생성
+                worker_cost_rows_html = ""
+                for c_idx, (_, r) in enumerate(worker_cost_df.iterrows(), start=1):
+                    bg_row = "#f8fafc" if c_idx % 2 == 1 else "#ffffff"
+                    worker_cost_rows_html += f"""
+                    <tr style="background-color: {bg_row}; border-bottom: 1px solid #e2e8f0; font-size: 12px;">
+                        <td style="padding: 7px 8px; text-align: center; color: #64748b;">{c_idx}</td>
+                        <td style="padding: 7px 8px; font-weight: bold; color: #002d42;">{r.get('worker_name', '')}</td>
+                        <td style="padding: 7px 8px; text-align: center; color: #475569;">{r.get('worker_team', '')}</td>
+                        <td style="padding: 7px 8px; text-align: center; color: #475569;">{r.get('worker_title', '')}</td>
+                        <td style="padding: 7px 8px; text-align: right; color: #334155;">{int(r.get('hourly_rate', 0)):,}원</td>
+                        <td style="padding: 7px 8px; text-align: right; font-weight: bold; color: #005073;">{float(r.get('total_hours', 0.0)):,.1f}h</td>
+                        <td style="padding: 7px 8px; text-align: right; color: #d97706;">{float(r.get('overtime_hours', 0.0)):,.1f}h</td>
+                        <td style="padding: 7px 8px; text-align: right; color: #475569;">₩ {int(r.get('base_cost', 0)):,}</td>
+                        <td style="padding: 7px 8px; text-align: right; color: #16a34a; font-weight: 600;">+₩ {int(r.get('overtime_premium', 0)):,}</td>
+                        <td style="padding: 7px 8px; text-align: right; font-weight: 900; color: #005073; background: #f0f9ff;">₩ {int(r.get('total_cost', 0)):,}</td>
+                        <td style="padding: 7px 8px; text-align: center; color: #64748b;">{int(r.get('task_count', 0))}건</td>
+                    </tr>
+                    """
+
+                # 합계 행
+                sum_h = float(worker_cost_df["total_hours"].sum()) if not worker_cost_df.empty else 0.0
+                sum_ot_h = float(worker_cost_df["overtime_hours"].sum()) if not worker_cost_df.empty else 0.0
+                sum_base = int(worker_cost_df["base_cost"].sum()) if not worker_cost_df.empty else 0
+                sum_prem = int(worker_cost_df["overtime_premium"].sum()) if not worker_cost_df.empty else 0
+                sum_cost = int(worker_cost_df["total_cost"].sum()) if not worker_cost_df.empty else 0
+                sum_tasks = int(worker_cost_df["task_count"].sum()) if not worker_cost_df.empty else 0
+
+                worker_cost_total_html = f"""
+                <tr style="background-color: #e0f2fe; border-top: 2px solid #005073; border-bottom: 2px solid #005073; font-size: 12px; font-weight: bold;">
+                    <td colspan="4" style="padding: 8px 10px; text-align: center; color: #002d42;">총 합 계 ({len(worker_cost_df)}명)</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #002d42;">-</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #005073;">{sum_h:,.1f}h</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #d97706;">{sum_ot_h:,.1f}h</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #002d42;">₩ {sum_base:,}</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #16a34a;">+₩ {sum_prem:,}</td>
+                    <td style="padding: 8px 10px; text-align: right; color: #005073; font-size: 13px; font-weight: 900;">₩ {sum_cost:,}</td>
+                    <td style="padding: 8px 10px; text-align: center; color: #002d42;">{sum_tasks:,}건</td>
+                </tr>
+                """
+
+                # 상위 5개 고객사 정산 행
+                client_cost_rows_html = ""
+                top_clients = client_cost_df.head(5) if not client_cost_df.empty else pd.DataFrame()
+                for c_rank, (_, cr) in enumerate(top_clients.iterrows(), start=1):
+                    bg_c = "#f8fafc" if c_rank % 2 == 1 else "#ffffff"
+                    client_cost_rows_html += f"""
+                    <tr style="background-color: {bg_c}; border-bottom: 1px solid #e2e8f0; font-size: 12px;">
+                        <td style="padding: 6px 8px; text-align: center; color: #64748b;">{c_rank}위</td>
+                        <td style="padding: 6px 8px; font-weight: bold; color: #002d42;">{cr.get('client_name', '')}</td>
+                        <td style="padding: 6px 8px; text-align: center; color: #475569;">{int(cr.get('worker_count', 0))}명</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #005073; font-weight: bold;">{float(cr.get('total_hours', 0.0)):,.1f}h</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #d97706;">{float(cr.get('overtime_hours', 0.0)):,.1f}h</td>
+                        <td style="padding: 6px 8px; text-align: right; font-weight: 900; color: #005073;">₩ {int(cr.get('total_cost', 0)):,}</td>
+                    </tr>
+                    """
+
+                cost_dashboard_html = f"""
+                <!-- 6. 💰 예상 비용산정 대시보드 전체 (사전 승인 수신자 전용 대외비) -->
+                <div style="margin-top: 32px; margin-bottom: 24px; border-top: 2px dashed #0284c7; padding-top: 22px;">
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px;">
+                        <tr>
+                            <td>
+                                <div style="font-size: 16px; font-weight: 900; color: #002d42; display: flex; align-items: center; gap: 6px;">
+                                    <span>💰</span><span>6. 예상 비용산정 대시보드 (근로기준법 제56조 1.5배 할증 반영)</span>
+                                </div>
+                            </td>
+                            <td style="text-align: right;">
+                                <span style="font-size: 11px; color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; padding: 4px 10px; border-radius: 4px; font-weight: bold;">
+                                    🔒 사전 승인 수신자 보안 전송
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- 비용 KPI 카드 4개 -->
+                    <table width="100%" cellpadding="0" cellspacing="8" border="0" style="margin-bottom: 16px;">
+                        <tr>
+                            <td width="25%" style="background: #ffffff; border: 1px solid #cbd5e1; border-top: 4px solid #005073; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                <div style="font-size: 11px; color: #64748b; font-weight: bold;">💳 총 예상 청구금액</div>
+                                <div style="font-size: 19px; font-weight: 900; color: #005073; margin: 3px 0;">₩ {cost_kpis['total_cost']:,}</div>
+                                <div style="font-size: 10.5px; color: #0284c7;">기본 ₩{cost_kpis['total_base_cost']:,} + 할증 ₩{cost_kpis['total_overtime_premium']:,}</div>
+                            </td>
+                            <td width="25%" style="background: #ffffff; border: 1px solid #cbd5e1; border-top: 4px solid #0284c7; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                <div style="font-size: 11px; color: #64748b; font-weight: bold;">⏱️ 총 인정 공수</div>
+                                <div style="font-size: 19px; font-weight: 900; color: #0284c7; margin: 3px 0;">{cost_kpis['total_billable_hours']:,.1f} h</div>
+                                <div style="font-size: 10.5px; color: #d97706;">야간·주말: {cost_kpis['total_overtime_hours']:,.1f} h (1.5배)</div>
+                            </td>
+                            <td width="25%" style="background: #ffffff; border: 1px solid #cbd5e1; border-top: 4px solid #10b981; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                <div style="font-size: 11px; color: #64748b; font-weight: bold;">👥 투입 인원 & 가중단가</div>
+                                <div style="font-size: 19px; font-weight: 900; color: #10b981; margin: 3px 0;">{cost_kpis['worker_count']} 명</div>
+                                <div style="font-size: 10.5px; color: #64748b;">가중평균 ₩{cost_kpis['avg_hourly_rate']:,}/h</div>
+                            </td>
+                            <td width="25%" style="background: #ffffff; border: 1px solid #cbd5e1; border-top: 4px solid #8b5cf6; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                <div style="font-size: 11px; color: #64748b; font-weight: bold;">✏️ 시간 보정(수정)</div>
+                                <div style="font-size: 19px; font-weight: 900; color: #8b5cf6; margin: 3px 0;">{cost_kpis['adjusted_count']} 건</div>
+                                <div style="font-size: 10.5px; color: #8b5cf6;">관리자 영구 오버라이드</div>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- 팀원별 정산 요약표 -->
+                    <div style="font-size: 13.5px; font-weight: 800; color: #002d42; margin-bottom: 6px;">👤 팀원별 투입 공수 및 예상 청구 금액 정산표 (요약)</div>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-bottom: 18px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+                        <thead>
+                            <tr style="background-color: #002d42; color: #ffffff; font-size: 11.5px;">
+                                <th style="padding: 7px 8px; text-align: center;">순번</th>
+                                <th style="padding: 7px 8px; text-align: left;">팀원명</th>
+                                <th style="padding: 7px 8px; text-align: center;">소속팀</th>
+                                <th style="padding: 7px 8px; text-align: center;">직급</th>
+                                <th style="padding: 7px 8px; text-align: right;">단가</th>
+                                <th style="padding: 7px 8px; text-align: right;">총 인정공수</th>
+                                <th style="padding: 7px 8px; text-align: right;">야간·주말</th>
+                                <th style="padding: 7px 8px; text-align: right;">기본 금액</th>
+                                <th style="padding: 7px 8px; text-align: right;">할증 가산액</th>
+                                <th style="padding: 7px 8px; text-align: right; background: #004165;">최종 청구금액</th>
+                                <th style="padding: 7px 8px; text-align: center;">건수</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {worker_cost_rows_html}
+                            {worker_cost_total_html}
+                        </tbody>
+                    </table>
+
+                    <!-- 상위 고객사 정산 요약표 -->
+                    <div style="font-size: 13.5px; font-weight: 800; color: #002d42; margin-bottom: 6px;">🏢 고객사별 예상 청구 금액 현황 (상위 5개사)</div>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+                        <thead>
+                            <tr style="background-color: #003652; color: #ffffff; font-size: 11.5px;">
+                                <th style="padding: 6px 8px; text-align: center;">순위</th>
+                                <th style="padding: 6px 8px; text-align: left;">고객사명</th>
+                                <th style="padding: 6px 8px; text-align: center;">투입 인원</th>
+                                <th style="padding: 6px 8px; text-align: right;">총 공수</th>
+                                <th style="padding: 6px 8px; text-align: right;">야간·주말</th>
+                                <th style="padding: 6px 8px; text-align: right;">최종 예상 청구금액</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {client_cost_rows_html if client_cost_rows_html else '<tr><td colspan="6" style="text-align: center; padding: 12px; color: #94a3b8;">데이터 없음</td></tr>'}
+                        </tbody>
+                    </table>
+
+                    <div style="font-size: 11.5px; color: #64748b; line-height: 1.5; background: #f8fafc; padding: 8px 12px; border-radius: 4px; border: 1px solid #e2e8f0;">
+                        💡 <b>상세 장표 안내</b>: 개인별 투입 내역(고객사, 지원 시간대, 근로기준법 1.5배 할증 산정 상세)은 첨부된 <b>정산 엑셀 파일(Estimated_Cost_Report)</b>의 하단 개인별 탭에서 개별 장표로 직접 확인하실 수 있습니다.
+                    </div>
+                </div>
+                """
+            except Exception as cost_e:
+                cost_dashboard_html = f"<!-- 비용산정 섹션 렌더링 오류: {cost_e} -->"
+
+        subject_prefix = "📊 [업무 실적 및 예상 비용산정 Summary]" if include_cost_estimation else "📊 [업무 실적 Summary]"
+        subject = f"{subject_prefix} {current_period_label}"
 
         # ----------------------------------------------------
         # 9. 최종 반응형 HTML 템플릿 조립 (대시보드 Summary와 100% 일치)
@@ -724,6 +905,8 @@ class EmailReportService:
                                 {team_table_html if team_table_html else '<tr><td colspan="8" style="text-align: center; padding: 15px; color: #94a3b8;">데이터 없음</td></tr>'}
                             </tbody>
                         </table>
+
+                        {cost_dashboard_html}
                     </td>
                 </tr>
 
@@ -813,6 +996,24 @@ class EmailReportService:
             if weekly_matrix_rows:
                 pd.DataFrame(weekly_matrix_rows).to_excel(writer, index=False, sheet_name="주차별_집계")
 
+            # Sheet 6: 비용_요약표 (사전 승인된 수신자 전용)
+            if include_cost_estimation and not worker_cost_df.empty:
+                cost_summary_cols = [
+                    "worker_name", "worker_team", "worker_title", "hourly_rate",
+                    "total_hours", "overtime_hours", "base_cost", "overtime_premium", "total_cost",
+                    "task_count"
+                ]
+                cost_disp_df = worker_cost_df[[c for c in cost_summary_cols if c in worker_cost_df.columns]].copy()
+                cost_disp_df = cost_disp_df.rename(columns={
+                    "worker_name": "팀원명", "worker_team": "소속팀", "worker_title": "직급",
+                    "hourly_rate": "시간당단가(원)", "total_hours": "총인정공수(h)", "overtime_hours": "야간·주말공수(h)",
+                    "base_cost": "기본금액(원)", "overtime_premium": "할증가산액(원)", "total_cost": "최종청구금액(원)",
+                    "task_count": "작업건수"
+                })
+                cost_disp_df.to_excel(writer, index=False, sheet_name="비용_요약표")
+
         excel_bytes = excel_buffer.getvalue()
 
+        if return_cost_excel:
+            return subject, html_content, excel_bytes, cost_excel_bytes
         return subject, html_content, excel_bytes

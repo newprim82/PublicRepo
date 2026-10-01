@@ -10,6 +10,7 @@ from typing import List, Union, Tuple, Optional
 from datetime import datetime
 
 from .email_report_service import EmailReportService
+from .authorized_recipient_service import AuthorizedRecipientService
 
 def get_secret(key: str, default: str = "") -> str:
     """Streamlit secrets 또는 OS 환경변수에서 안전하게 설정값을 가져옵니다."""
@@ -71,8 +72,12 @@ class EmailSender:
         if not recipients:
             return False, "수신자 이메일 주소가 지정되지 않았습니다."
 
+        # 🔒 보안 통제: 사전 등록된 인가 수신자(화이트리스트) 여부 철저 검증
+        is_cost_authorized = AuthorizedRecipientService.is_all_authorized(recipients)
+        unauth_recipients = AuthorizedRecipientService.get_unauthorized_recipients(recipients)
+
         try:
-            subject, html_content, excel_bytes = EmailReportService.generate_weekly_report(
+            report_res = EmailReportService.generate_weekly_report(
                 target_week_label=target_week_label,
                 selected_team=selected_team,
                 df_active_override=df_active_override,
@@ -82,8 +87,15 @@ class EmailSender:
                 available_weeks_override=available_weeks_override,
                 df_scope_override=df_scope_override,
                 team_mappings_override=team_mappings_override,
+                include_cost_estimation=is_cost_authorized,
+                return_cost_excel=True,
                 **kwargs
             )
+            if len(report_res) == 4:
+                subject, html_content, excel_bytes, cost_excel_bytes = report_res
+            else:
+                subject, html_content, excel_bytes = report_res
+                cost_excel_bytes = None
 
             # 2. 이메일 메시지 조립 (기업 스팸 필터 통과를 위한 RFC 표준 헤더 완비)
             msg = MIMEMultipart("mixed")
@@ -103,15 +115,25 @@ class EmailSender:
             msg.attach(msg_body)
 
             # 엑셀 파일 첨부 (표준 인코딩 파일명)
+            today_str = datetime.now().strftime("%Y%m%d")
             if excel_bytes:
                 excel_attachment = MIMEApplication(excel_bytes, _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                today_str = datetime.now().strftime("%Y%m%d")
                 excel_attachment.add_header(
                     "Content-Disposition",
                     "attachment",
-                    filename=f"Weekly_Report_{today_str}.xlsx"
+                    filename=f"Work_Summary_{today_str}.xlsx"
                 )
                 msg.attach(excel_attachment)
+
+            # 🔒 사전 등록 수신자일 경우: 예상 비용산정 전용 엑셀(첫 탭 요약표, 2번째 탭부터 개인장표) 추가 첨부
+            if is_cost_authorized and cost_excel_bytes:
+                cost_attachment = MIMEApplication(cost_excel_bytes, _subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                cost_attachment.add_header(
+                    "Content-Disposition",
+                    "attachment",
+                    filename=f"Estimated_Cost_Report_{today_str}.xlsx"
+                )
+                msg.attach(cost_attachment)
 
             # 3. Gmail SMTP 발송 (SSL 465 시도 -> TLS 587 Fallback)
             try:
@@ -126,7 +148,10 @@ class EmailSender:
                 server.sendmail(sender, recipients, msg.as_string())
                 server.quit()
 
-            success_msg = f"✅ {', '.join(recipients)} (총 {len(recipients)}명)에게 주간 보고서가 성공적으로 발송되었습니다!"
+            cost_status_tag = " (💰 예상 비용산정 대시보드 및 정산 엑셀 안전 포함)" if is_cost_authorized else (
+                f" (⚠️ 미등록 수신자 [{', '.join(unauth_recipients)}]가 포함되어 보안상 비용산정 내역은 제외됨)" if unauth_recipients else ""
+            )
+            success_msg = f"✅ {', '.join(recipients)} (총 {len(recipients)}명)에게 주간 보고서가 성공적으로 발송되었습니다!{cost_status_tag}"
             try:
                 from .email_dispatch_service import EmailDispatchService
                 EmailDispatchService.record_dispatch(
