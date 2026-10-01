@@ -517,8 +517,7 @@ def render_cost_estimation_view(
         st.markdown('<div class="cost-table-header-cisco"><span>✏️</span><span>업무 시간 직접 수정 장표 (DB 영구 보존 오버라이드)</span></div>', unsafe_allow_html=True)
         st.markdown("""
         <div class="cost-info-box-cisco">
-            💡 <b>시간 직접 수정 가이드:</b> 아웃룩에서 사전 예정 시간이 정해지지 않아 <b>'종일(9.0h)'</b>로 등록되었거나 카카오톡 보고 시간이 잘못된 작업을 검토하여 실제 청구할 인정 공수(h)를 <b>직접 입력</b>하여 수정합니다.<br>
-            여기서 수정한 공수는 수집기가 10분마다 다시 실행되더라도 <b>영구 보존</b>됩니다.
+            💡 <b>시간 직접 수정 가이드:</b> 아웃룩에서 사전 예정 시간이 정해지지 않아 <b>'종일(9.0h)'</b>로 등록되었거나 카카오톡 보고 시간이 잘못된 작업을 검토하여 실제 청구할 인정 공수(h)를 <b>직접 입력</b>하여 수정합니다. 여기서 수정한 공수는 수집기가 10분마다 다시 실행되더라도 <b>영구 보존</b>됩니다.
         </div>
         """, unsafe_allow_html=True)
 
@@ -683,8 +682,7 @@ def render_cost_estimation_view(
                 with col_save_info:
                     st.markdown("""
                     <div style="font-size: 12px; color: #64748b; line-height: 1.6; padding-top: 4px;">
-                        • 인정공수 셀을 더블클릭하거나 클릭 후 숫자를 직접 입력하세요.<br>
-                        • 수정 후 위의 [💾 수정한 시간 일괄 DB 영구 저장] 버튼을 누르면 실시간 반영됩니다.
+                        • 인정공수 셀을 더블클릭하거나 클릭 후 숫자를 직접 입력하세요. 수정 후 [💾 수정한 시간 일괄 DB 영구 저장] 버튼을 누르면 실시간 반영됩니다.
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -695,8 +693,7 @@ def render_cost_estimation_view(
         st.markdown('<div class="cost-table-header-cisco"><span>⚙️</span><span>직급별 시간당 지원 금액(단가) 설정</span></div>', unsafe_allow_html=True)
         st.markdown("""
         <div class="cost-info-box-cisco">
-            💡 <b>단가 관리 가이드:</b> 사업본부에 청구할 직급별 시간당 단가(원/h)를 설정합니다.<br>
-            단가는 언제든 수정 가능하며, DB에 영구 저장되어 모든 비용 계산에 즉시 반영됩니다.
+            💡 <b>단가 관리 가이드:</b> 사업본부에 청구할 직급별 시간당 단가(원/h)를 설정합니다. 단가는 언제든 수정 가능하며, DB에 영구 저장되어 모든 비용 계산에 즉시 반영됩니다.
         </div>
         """, unsafe_allow_html=True)
 
