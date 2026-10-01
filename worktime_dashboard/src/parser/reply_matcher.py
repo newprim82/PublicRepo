@@ -146,6 +146,8 @@ def check_is_weekend_work(
         if getattr(end_dt, "tzinfo", None) is not None:
             end_dt = end_dt.replace(tzinfo=None)
 
+    from ..services.holiday_service import HolidayService
+
     # 실제 작업 종료 시각 산출
     if actual_minutes > 0:
         effective_end_dt = start_dt + timedelta(minutes=actual_minutes)
@@ -154,14 +156,16 @@ def check_is_weekend_work(
     elif estimated_minutes > 0:
         effective_end_dt = start_dt + timedelta(minutes=estimated_minutes)
     else:
-        effective_end_dt = start_dt + timedelta(minutes=60) if start_dt.weekday() in [5, 6] else start_dt
+        is_h_start, _ = HolidayService.is_weekend_or_holiday(start_dt.date())
+        effective_end_dt = start_dt + timedelta(minutes=60) if is_h_start else start_dt
 
     cur_date = start_dt.date()
     end_date = effective_end_dt.date()
 
     weekend_minutes = 0.0
     while cur_date <= end_date:
-        if cur_date.weekday() in [5, 6]:  # 토(5) 또는 일(6)
+        is_h_day, _ = HolidayService.is_weekend_or_holiday(cur_date)
+        if is_h_day:  # 토(5), 일(6) 또는 법정/대체/임시 공휴일
             day_start = datetime.combine(cur_date, datetime.min.time())
             day_end = datetime.combine(cur_date, datetime.max.time())
 

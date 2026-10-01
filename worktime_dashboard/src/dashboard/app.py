@@ -261,8 +261,10 @@ def load_data() -> pd.DataFrame:
         df["is_weekend_work"] = False
         if "start_time" in df.columns and not df.empty:
             st_dt = pd.to_datetime(df["start_time"], errors="coerce")
+            from src.services.holiday_service import HolidayService
+            all_holidays = HolidayService.get_all_holiday_dates()
             night_candidate_mask = (st_dt.dt.hour >= 18) | (st_dt.dt.hour < 6)
-            weekend_candidate_mask = st_dt.dt.dayofweek >= 5
+            weekend_candidate_mask = (st_dt.dt.dayofweek >= 5) | (st_dt.dt.strftime("%Y-%m-%d").isin(all_holidays))
 
             def _eval_night(row):
                 try:
@@ -357,7 +359,8 @@ def render_main_content_frame(
         "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
         "🕒 시간 수정 감사 이력",
-        "⚙️ 직급별 시간당 단가 설정"
+        "⚙️ 직급별 시간당 단가 설정",
+        "📅 법정 및 임시 공휴일 관리"
     ]
     if curr_page in admin_only_pages and not AuthManager.is_authenticated():
         st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
@@ -456,6 +459,9 @@ def render_main_content_frame(
             extra_chips_str=extra_chips_str,
             curr_page=curr_page
         )
+    elif curr_page == "📅 법정 및 임시 공휴일 관리":
+        from .views.holiday_management_view import render_holiday_management_view
+        render_holiday_management_view()
 
 
 # -------------------------------------------------------------
@@ -859,7 +865,23 @@ def main():
 
         # 5. 🛠️ 시스템 관리 (로그인 시에만 노출)
         if is_auth:
-            with st.expander("🛠️ 시스템 관리", expanded=False):
+            sys_mgmt_items = [
+                "📅 법정 및 임시 공휴일 관리"
+            ]
+            is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
+            with st.expander("🛠️ 시스템 관리", expanded=is_sys_active):
+                for s_item in sys_mgmt_items:
+                    is_active = (st.session_state.get("current_page") == s_item)
+                    btn_prefix = "▸ " if is_active else "  "
+                    st.button(
+                        f"{btn_prefix}{s_item}",
+                        key=f"nav_sys_{s_item}",
+                        use_container_width=True,
+                        type="primary" if is_active else "secondary",
+                        on_click=set_nav_page,
+                        args=(s_item,)
+                    )
+                st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
                     if st.button("🔄 새로고침", use_container_width=True):
