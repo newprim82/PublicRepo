@@ -100,6 +100,11 @@ def render_holiday_management_view():
         line-height: 1.5;
         font-weight: 600;
     }
+    label, div[data-testid="stWidgetLabel"] p, div[data-testid="stWidgetLabel"] span {
+        color: #002d42 !important;
+        font-weight: 800 !important;
+        font-size: 13.5px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -143,7 +148,7 @@ def render_holiday_management_view():
     holidays_this_year = HolidayService.get_holidays_for_year(current_year)
     statutory_cnt = sum(1 for h in holidays_this_year if h["holiday_type"] == "법정공휴일")
     substitute_cnt = sum(1 for h in holidays_this_year if h["holiday_type"] == "대체공휴일")
-    custom_holidays = HolidayService.get_custom_holidays()
+    custom_holidays = HolidayService.get_custom_holidays(force_reload=True)
     custom_cnt = len(custom_holidays)
 
     # 4대 KPI 카드
@@ -200,6 +205,7 @@ def render_holiday_management_view():
                     current_user = AuthManager.get_current_user() or "관리자"
                     success = HolidayService.add_custom_holiday(d_str, input_name.strip(), created_by=current_user)
                     if success:
+                        st.cache_data.clear()
                         st.toast(f"✅ {d_str} ({input_name.strip()}) 임시공휴일이 등록되었습니다!", icon="🎉")
                         st.rerun()
                     else:
@@ -223,6 +229,7 @@ def render_holiday_management_view():
                 with c_item2:
                     if st.button("🗑️ 삭제", key=f"btn_del_holiday_{d_key}", use_container_width=True):
                         HolidayService.delete_custom_holiday(d_key)
+                        st.cache_data.clear()
                         st.toast(f"🗑️ {d_key} 공휴일이 삭제되었습니다.", icon="ℹ️")
                         st.rerun()
 

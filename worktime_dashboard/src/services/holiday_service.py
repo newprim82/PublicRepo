@@ -127,10 +127,6 @@ class HolidayService:
             except Exception:
                 pass
 
-        # 정부 과거 임시공휴일 기본 기본값 (예: 2024-10-01 국군의 날)
-        if "2024-10-01" not in holidays:
-            holidays["2024-10-01"] = "국군의 날 임시공휴일"
-
         cls._cached_custom_holidays = holidays
         return holidays
 
@@ -191,6 +187,7 @@ class HolidayService:
             pass
 
         # 캐시 갱신
+        cls._cached_custom_holidays = None
         cls.get_custom_holidays(force_reload=True)
         return True
 
@@ -233,6 +230,7 @@ class HolidayService:
         except Exception:
             pass
 
+        cls._cached_custom_holidays = None
         cls.get_custom_holidays(force_reload=True)
         return True
 
