@@ -11,6 +11,7 @@ except ImportError:
 from src.services.team_service import TeamService
 from src.services.client_normalizer import parse_outlook_subject_to_client_and_task
 from src.dashboard.common.ui_helpers import get_current_kst_time
+from src.parser.reply_matcher import check_is_night_work
 
 class ScheduleSyncService:
     """
@@ -391,7 +392,7 @@ class ScheduleSyncService:
                 })
             # C. 시작 30분 전 이전 -> 오늘 예정 일정 (SCHEDULED)
             else:
-                is_night = bool(st_dt.hour >= 18 or st_dt.hour < 6 or ed_dt.hour > 18)
+                is_night = check_is_night_work(st_dt, ed_dt, parsed_desc, int(dur_hours * 60))
                 upcoming_rows.append({
                     "msg_hash": f"OUTLOOK_SCHED_{r.get('entry_id', '')}",
                     "log_type": "작업",

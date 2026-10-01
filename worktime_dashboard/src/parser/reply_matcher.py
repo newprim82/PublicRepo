@@ -50,13 +50,12 @@ def check_is_night_work(
     actual_minutes: int = 0
 ) -> bool:
     """
-    사용자 지정 야간 판정 기준:
-    1. ★ 시작 보고 시각 조건: 18:00 이후 ~ 익일 06:00 사이에 시작 보고가 시작되어야 함
-       - 당일 18:00~23:59:59 또는 자정 넘어 00:00~05:59:59
-       - 06:00 이후(예: 06:10, 07:00, 08:30 등) 시작 작업은 주간 작업으로 분류(False)!
-    2. ★ 작업 시간 조건: [18:00 ~ 익일 06:00] 야간 윈도우 내에서 일한 시간이 1시간(60분) 이상이어야 함!
-       - 18시 이후에 시작했더라도 야간 근무 시간이 1시간 미만(예: 30분, 45분)이면 야간 아님(False)!
-    3. ★ 절대 규칙: 'day', 'days', 다일(16시간 이상) 작업은 주간 연속 지원 업무이므로 야간 작업에서 무조건 제외(False)!
+    근로기준법 제56조 준수 야간근로 판정 기준 (22:00 ~ 익일 06:00):
+    1. 야간근로 시간대: 오후 10시(22:00)부터 다음 날 오전 6시(06:00) 사이
+    2. 작업 시간 조건: 야간 윈도우 [22:00 ~ 익일 06:00] 내에서 실제 일한 시간이 1시간(60분) 이상이어야 함!
+       - 22:00 이전에 시작했더라도 22:00 이후까지 작업하여 야간 구간 근무가 1시간 이상이면 야간 인정.
+       - 22:00 이후에 시작했더라도 야간 근무 시간이 1시간 미만(예: 30분, 45분)이면 야간 아님(False).
+    3. 절대 규칙: 'day', 'days', 다일(16시간 이상) 작업은 주간 연속 지원 업무이므로 야간 작업에서 무조건 제외(False)!
     """
     # 0. 타입 및 타임존 안전 정규화 (str / Timestamp / tz-aware -> naive datetime)
     if isinstance(start_dt, str):
@@ -84,10 +83,6 @@ def check_is_night_work(
     if estimated_minutes >= 16 * 60 or actual_minutes >= 16 * 60:
         return False
 
-    # 3. 시작 시각 윈도우 검사 (18시 이후 ~ 익일 06시 이전 시작)
-    if not (start_dt.hour >= 18 or start_dt.hour < 6):
-        return False
-
     # 실제 작업 종료 시각 산출 (카톡 늦게 올린 시각이 아닌 실제 작업 소요시간 기준)
     if actual_minutes > 0:
         effective_end_dt = start_dt + timedelta(minutes=actual_minutes)
@@ -102,12 +97,14 @@ def check_is_night_work(
     if (effective_end_dt - start_dt).total_seconds() / 3600.0 > 16.0:
         return False
 
-    # 4. [18:00 ~ 익일 06:00] 야간 윈도우와 작업 시간 겹침 계산
-    if start_dt.hour >= 18:
-        w_start = start_dt.replace(hour=18, minute=0, second=0, microsecond=0)
+    # 3. 근로기준법 제56조 [22:00 ~ 익일 06:00] 야간 윈도우와 작업 시간 겹침 계산
+    if start_dt.hour >= 12:
+        # 낮 12시 이후 시작된 작업 -> 당일 22:00 ~ 익일 06:00 야간 윈도우
+        w_start = start_dt.replace(hour=22, minute=0, second=0, microsecond=0)
         w_end = (start_dt + timedelta(days=1)).replace(hour=6, minute=0, second=0, microsecond=0)
-    else:  # start_dt.hour < 6
-        w_start = (start_dt - timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0)
+    else:
+        # 자정 이후~낮 12시 이전 시작된 작업 -> 전일 22:00 ~ 당일 06:00 야간 윈도우
+        w_start = (start_dt - timedelta(days=1)).replace(hour=22, minute=0, second=0, microsecond=0)
         w_end = start_dt.replace(hour=6, minute=0, second=0, microsecond=0)
 
     overlap_start = max(start_dt, w_start)
@@ -115,7 +112,7 @@ def check_is_night_work(
 
     if overlap_end > overlap_start:
         overlap_minutes = (overlap_end - overlap_start).total_seconds() / 60.0
-        return overlap_minutes >= 60.0  # 1시간 이상 근무 시 True
+        return overlap_minutes >= 60.0  # 1시간(60분) 이상 야간 윈도우 내 근무 시 True
 
     return False
 

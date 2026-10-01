@@ -627,7 +627,7 @@ def main():
                 selected_titles = ["사원", "대리", "과장", "수석"] if title_mode == "전체 직급" else st.multiselect("직급 선택:", options=["사원", "대리", "과장", "수석"], default=["사원", "대리", "과장", "수석"], label_visibility="collapsed", key="sb_filter_titles")
 
                 # 야간/주말 필터
-                night_only = st.checkbox("🌙 야간 작업만 보기 (18시~06시, 1h 이상)", key="sb_filter_night_only")
+                night_only = st.checkbox("🌙 야간 작업만 보기 (22시~06시, 1h 이상)", key="sb_filter_night_only")
                 weekend_only = st.checkbox("🏖️ 주말 작업만 보기", key="sb_filter_weekend_only")
 
             # 필터 적용
