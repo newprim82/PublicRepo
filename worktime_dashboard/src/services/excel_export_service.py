@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import io
+import re
 from datetime import datetime
 import pandas as pd
 import openpyxl
@@ -311,3 +312,349 @@ class ExcelExportService:
         wb.save(output)
         output.seek(0)
         return output.getvalue()
+
+    @classmethod
+    def generate_cost_estimation_report(
+        cls,
+        df_calc: pd.DataFrame,
+        worker_df: pd.DataFrame,
+        title_suffix: str = ""
+    ) -> bytes:
+        """
+        💰 팀원별 예상 청구 금액 및 상세 투입 내역 다중 시트 Excel 리포트 생성
+        - Sheet 1: 팀 전체 정산표 (전체 팀원 요약 + 합계 행)
+        - Sheet 2 ~ N: 각 팀원별 상세 지원 내역 탭 (지원일시, 고객사, 업무내용, 공수, 할증배율, 금액 산정 내역)
+        """
+        if df_calc.empty or worker_df.empty:
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "정산 데이터 없음"
+            ws["A1"] = "조회 조건에 해당하는 정산 데이터가 없습니다."
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+            return output.getvalue()
+
+        # 전처리
+        data = df_calc.copy()
+        for dt_col in ["start_time", "end_time"]:
+            if dt_col in data.columns:
+                data[dt_col] = pd.to_datetime(data[dt_col], errors="coerce")
+
+        wb = openpyxl.Workbook()
+        default_sheet = wb.active
+
+        # 색상 및 스타일 정의
+        navy_dark = "002D42"     # 다크 네이비 헤더
+        navy_sub = "0284C7"      # 스카이 블루 (서브 헤더)
+        gray_bg = "F8FAFC"       # 지브라 배경
+        summary_bg = "E0F2FE"    # 요약/합계 행 배경
+        border_light = Side(border_style="thin", color="CBD5E1")
+        border_double = Side(border_style="double", color="002D42")
+        border_top_thin = Side(border_style="thin", color="002D42")
+
+        box_border = Border(left=border_light, right=border_light, top=border_light, bottom=border_light)
+        total_border = Border(left=border_light, right=border_light, top=border_top_thin, bottom=border_double)
+
+        font_title = Font(name="맑은 고딕", size=15, bold=True, color="002D42")
+        font_subtitle = Font(name="맑은 고딕", size=10, color="64748B")
+        font_th = Font(name="맑은 고딕", size=10.5, bold=True, color="FFFFFF")
+        font_td = Font(name="맑은 고딕", size=10)
+        font_td_bold = Font(name="맑은 고딕", size=10, bold=True, color="0F172A")
+        font_total = Font(name="맑은 고딕", size=10.5, bold=True, color="002D42")
+
+        fill_th = PatternFill(start_color=navy_dark, end_color=navy_dark, fill_type="solid")
+        fill_sub_th = PatternFill(start_color=navy_sub, end_color=navy_sub, fill_type="solid")
+        fill_zebra = PatternFill(start_color=gray_bg, end_color=gray_bg, fill_type="solid")
+        fill_white = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+        fill_total = PatternFill(start_color=summary_bg, end_color=summary_bg, fill_type="solid")
+
+        align_center = Alignment(horizontal="center", vertical="center")
+        align_left = Alignment(horizontal="left", vertical="center")
+        align_right = Alignment(horizontal="right", vertical="center")
+
+        period_text = title_suffix if title_suffix else "전체 기간"
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        # =========================================================
+        # Sheet 1: 팀 전체 정산표
+        # =========================================================
+        ws_all = wb.create_sheet(title="팀 전체 정산표")
+        ws_all.sheet_properties.tabColor = "002D42"
+        ws_all.views.sheetView[0].showGridLines = True
+
+        ws_all["A1"] = f"📊 팀원별 투입 공수 및 예상 청구 금액 정산표 ({period_text})"
+        ws_all["A1"].font = font_title
+        ws_all["A2"] = f"출력 일시: {now_str} | 대상 팀원: {len(worker_df):,}명 | 총 작업: {len(data):,}건"
+        ws_all["A2"].font = font_subtitle
+
+        headers_all = [
+            "순번", "팀원명", "소속팀", "직급", "시간당 단가(원)",
+            "총 인정공수(h)", "야간·주말(h)", "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)",
+            "작업 건수", "보정 건수"
+        ]
+        start_row = 4
+        for col_idx, h in enumerate(headers_all, start=1):
+            cell = ws_all.cell(row=start_row, column=col_idx, value=h)
+            cell.font = font_th
+            cell.fill = fill_th
+            cell.alignment = align_center
+            cell.border = box_border
+
+        curr_row = start_row + 1
+        for idx, (_, r) in enumerate(worker_df.iterrows(), start=1):
+            row_data = [
+                idx,
+                str(r.get("worker_name", "")),
+                str(r.get("worker_team", "")),
+                str(r.get("worker_title", "")),
+                int(r.get("hourly_rate", 0)),
+                float(r.get("total_hours", 0.0)),
+                float(r.get("overtime_hours", 0.0)),
+                int(r.get("base_cost", 0)),
+                int(r.get("overtime_premium", 0)),
+                int(r.get("total_cost", 0)),
+                int(r.get("task_count", 0)),
+                int(r.get("adjusted_count", 0))
+            ]
+
+            fill_row = fill_zebra if idx % 2 == 1 else fill_white
+            for col_idx, val in enumerate(row_data, start=1):
+                cell = ws_all.cell(row=curr_row, column=col_idx, value=val)
+                cell.font = font_td_bold if col_idx in [2, 10] else font_td
+                cell.fill = fill_row
+                cell.border = box_border
+
+                if col_idx in [1, 3, 4]:
+                    cell.alignment = align_center
+                elif col_idx == 2:
+                    cell.alignment = align_center
+                elif col_idx in [5, 8, 9, 10]:
+                    cell.alignment = align_right
+                    cell.number_format = '#,##0"원"'
+                elif col_idx in [6, 7]:
+                    cell.alignment = align_right
+                    cell.number_format = '0.0"h"'
+                elif col_idx in [11, 12]:
+                    cell.alignment = align_right
+                    cell.number_format = '#,##0"건"'
+
+            curr_row += 1
+
+        # 합계 행 추가
+        sum_total_hours = round(float(worker_df["total_hours"].sum()), 1) if "total_hours" in worker_df.columns else 0.0
+        sum_ot_hours = round(float(worker_df["overtime_hours"].sum()), 1) if "overtime_hours" in worker_df.columns else 0.0
+        sum_base = int(worker_df["base_cost"].sum()) if "base_cost" in worker_df.columns else 0
+        sum_prem = int(worker_df["overtime_premium"].sum()) if "overtime_premium" in worker_df.columns else 0
+        sum_cost = int(worker_df["total_cost"].sum()) if "total_cost" in worker_df.columns else 0
+        sum_tasks = int(worker_df["task_count"].sum()) if "task_count" in worker_df.columns else 0
+        sum_adjs = int(worker_df["adjusted_count"].sum()) if "adjusted_count" in worker_df.columns else 0
+
+        tot_row_data = [
+            "합계", f"{len(worker_df)}명", "-", "-", "-",
+            sum_total_hours, sum_ot_hours, sum_base, sum_prem, sum_cost,
+            sum_tasks, sum_adjs
+        ]
+        for col_idx, val in enumerate(tot_row_data, start=1):
+            cell = ws_all.cell(row=curr_row, column=col_idx, value=val)
+            cell.font = font_total
+            cell.fill = fill_total
+            cell.border = total_border
+
+            if col_idx in [1, 2, 3, 4, 5]:
+                cell.alignment = align_center
+            elif col_idx in [6, 7]:
+                cell.alignment = align_right
+                cell.number_format = '0.0"h"'
+            elif col_idx in [8, 9, 10]:
+                cell.alignment = align_right
+                cell.number_format = '#,##0"원"'
+            elif col_idx in [11, 12]:
+                cell.alignment = align_right
+                cell.number_format = '#,##0"건"'
+
+        curr_row += 2
+        guide_cell = ws_all.cell(
+            row=curr_row, column=1,
+            value="💡 엑셀 하단의 팀원별 탭을 클릭하시면 개인별 상세 지원 내역(고객사, 시간대, 근로기준법 할증 배율 등)을 직접 확인하실 수 있습니다."
+        )
+        guide_cell.font = font_subtitle
+
+        # =========================================================
+        # Sheet 2 ~ N: 개인별 상세 탭
+        # =========================================================
+        existing_sheet_names = set(wb.sheetnames)
+
+        for _, w_info in worker_df.iterrows():
+            w_name = str(w_info.get("worker_name", "")).strip()
+            if not w_name:
+                continue
+
+            w_team = str(w_info.get("worker_team", ""))
+            w_title = str(w_info.get("worker_title", ""))
+            w_rate = int(w_info.get("hourly_rate", 0))
+
+            # 안전한 시트명 생성 (최대 31자, 특수문자 제거)
+            safe_name = re.sub(r'[\\/*?:\[\]]', '', w_name).strip()
+            tab_base = f"{safe_name}({w_title})" if w_title else safe_name
+            tab_base = tab_base[:28]
+            sheet_title = tab_base
+            s_idx = 1
+            while sheet_title in existing_sheet_names:
+                suffix = f"_{s_idx}"
+                sheet_title = f"{tab_base[:31-len(suffix)]}{suffix}"
+                s_idx += 1
+            existing_sheet_names.add(sheet_title)
+
+            ws_p = wb.create_sheet(title=sheet_title)
+            ws_p.sheet_properties.tabColor = "0284C7"
+            ws_p.views.sheetView[0].showGridLines = True
+
+            # 팀원별 데이터 필터링
+            w_data = data[data["worker_name"] == w_name].copy()
+            if "start_time" in w_data.columns:
+                w_data = w_data.sort_values(by="start_time", ascending=True)
+
+            w_tot_h = float(w_info.get("total_hours", 0.0))
+            w_ot_h = float(w_info.get("overtime_hours", 0.0))
+            w_base_c = int(w_info.get("base_cost", 0))
+            w_prem_c = int(w_info.get("overtime_premium", 0))
+            w_tot_c = int(w_info.get("total_cost", 0))
+            w_task_cnt = int(w_info.get("task_count", len(w_data)))
+            w_adj_cnt = int(w_info.get("adjusted_count", 0))
+
+            # 상단 헤더 영역
+            ws_p["A1"] = f"👤 {w_name} ({w_title}) 업무 지원 및 예상 청구 금액 상세 내역"
+            ws_p["A1"].font = font_title
+            ws_p["A2"] = f"소속: {w_team} | 직급: {w_title} | 적용 단가: ₩{w_rate:,}/h | 정산 기간: {period_text} | 출력: {now_str}"
+            ws_p["A2"].font = font_subtitle
+
+            ws_p["A3"] = f"📌 정산 요약: 총 인정공수 {w_tot_h:,.1f}h (야간·주말: {w_ot_h:,.1f}h) | 기본 금액 ₩{w_base_c:,.0f} | 할증 가산액 +₩{w_prem_c:,.0f} | 최종 청구금액 ₩{w_tot_c:,.0f} (총 {w_task_cnt:,}건)"
+            ws_p["A3"].font = font_td_bold
+
+            # 테이블 헤더
+            p_headers = [
+                "No.", "지원일자", "시작시각", "종료시각", "고객사명", "지원 업무 내용",
+                "인정공수(h)", "근무구분", "할증배율", "시간당 단가(원)",
+                "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "공수보정", "비고"
+            ]
+            p_start_row = 5
+            for col_idx, h in enumerate(p_headers, start=1):
+                cell = ws_p.cell(row=p_start_row, column=col_idx, value=h)
+                cell.font = font_th
+                cell.fill = fill_th
+                cell.alignment = align_center
+                cell.border = box_border
+
+            p_curr_row = p_start_row + 1
+            for row_num, (_, r) in enumerate(w_data.iterrows(), start=1):
+                st_dt = r.get("start_time")
+                ed_dt = r.get("end_time")
+                date_str = st_dt.strftime("%Y-%m-%d") if pd.notna(st_dt) and hasattr(st_dt, "strftime") else str(st_dt)[:10]
+                st_time_str = st_dt.strftime("%H:%M") if pd.notna(st_dt) and hasattr(st_dt, "strftime") else str(st_dt)[11:16]
+                ed_time_str = ed_dt.strftime("%H:%M") if pd.notna(ed_dt) and hasattr(ed_dt, "strftime") else str(ed_dt)[11:16]
+
+                is_nt = bool(r.get("is_night_work", False))
+                is_wk = bool(r.get("is_weekend_work", False))
+                if is_nt and is_wk:
+                    work_type = "야간+휴일"
+                elif is_wk:
+                    work_type = "주말·휴일"
+                elif is_nt:
+                    work_type = "야간근무"
+                else:
+                    work_type = "주간(일반)"
+
+                mult = float(r.get("rate_multiplier", 1.0))
+                mult_str = f"{mult:.1f}배"
+
+                is_adj = bool(r.get("is_time_adjusted", False))
+                adj_str = "수정보정" if is_adj else "정상"
+
+                p_row_data = [
+                    row_num,
+                    date_str,
+                    st_time_str,
+                    ed_time_str,
+                    str(r.get("client_name", "")),
+                    str(r.get("task_description", "")),
+                    float(r.get("billable_hours", 0.0)),
+                    work_type,
+                    mult_str,
+                    int(r.get("hourly_rate", w_rate)),
+                    int(r.get("base_cost", 0)),
+                    int(r.get("overtime_premium", 0)),
+                    int(r.get("estimated_cost", 0)),
+                    adj_str,
+                    str(r.get("note", ""))
+                ]
+
+                fill_p_row = fill_zebra if row_num % 2 == 1 else fill_white
+                for col_idx, val in enumerate(p_row_data, start=1):
+                    cell = ws_p.cell(row=p_curr_row, column=col_idx, value=val)
+                    cell.font = font_td_bold if col_idx == 13 else font_td
+                    cell.fill = fill_p_row
+                    cell.border = box_border
+
+                    if col_idx in [1, 2, 3, 4, 8, 9, 14]:
+                        cell.alignment = align_center
+                    elif col_idx in [5, 6, 15]:
+                        cell.alignment = align_left
+                    elif col_idx == 7:
+                        cell.alignment = align_right
+                        cell.number_format = '0.0"h"'
+                    elif col_idx in [10, 11, 12, 13]:
+                        cell.alignment = align_right
+                        cell.number_format = '#,##0"원"'
+
+                p_curr_row += 1
+
+            # 팀원 개인 합계 행
+            p_tot_data = [
+                "합계", "-", "-", "-", "-", f"총 {len(w_data)}건 지원",
+                w_tot_h, "-", "-", "-",
+                w_base_c, w_prem_c, w_tot_c,
+                f"{w_adj_cnt}건", "-"
+            ]
+            for col_idx, val in enumerate(p_tot_data, start=1):
+                cell = ws_p.cell(row=p_curr_row, column=col_idx, value=val)
+                cell.font = font_total
+                cell.fill = fill_total
+                cell.border = total_border
+
+                if col_idx in [1, 2, 3, 4, 5, 8, 9, 10, 15]:
+                    cell.alignment = align_center
+                elif col_idx == 6:
+                    cell.alignment = align_center
+                elif col_idx == 7:
+                    cell.alignment = align_right
+                    cell.number_format = '0.0"h"'
+                elif col_idx in [11, 12, 13]:
+                    cell.alignment = align_right
+                    cell.number_format = '#,##0"원"'
+                elif col_idx == 14:
+                    cell.alignment = align_center
+
+        # 기본 빈 시트 제거
+        if default_sheet in wb.worksheets:
+            wb.remove(default_sheet)
+
+        # 전체 시트 열 너비 자동 조정
+        for ws in wb.worksheets:
+            for col in ws.columns:
+                max_len = 0
+                col_letter = get_column_letter(col[0].column)
+                for cell in col:
+                    if cell.row < 4:
+                        continue
+                    val_str = str(cell.value or "")
+                    val_len = sum(2 if ord(ch) > 127 else 1 for ch in val_str)
+                    if val_len > max_len:
+                        max_len = val_len
+                ws.column_dimensions[col_letter].width = max(min(max_len + 4, 50), 11)
+
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        return output.getvalue()
+

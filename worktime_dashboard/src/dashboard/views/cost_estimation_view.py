@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from ...services.cost_estimation_service import CostEstimationService
+from ...services.excel_export_service import ExcelExportService
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...auth.auth_manager import AuthManager
 from ..common.ui_helpers import (
@@ -506,14 +507,36 @@ def render_cost_estimation_view(
                     hide_index=True
                 )
 
-                csv_data = display_worker_df.to_csv(index=False).encode("utf-8-sig")
-                st.download_button(
-                    label="📥 팀원별 정산표 CSV 다운로드",
-                    data=csv_data,
-                    file_name=f"팀원별_예상청구비용_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    key="btn_dl_worker_cost_csv"
-                )
+                col_btn_w1, col_btn_w2 = st.columns([1.6, 1])
+                with col_btn_w1:
+                    try:
+                        excel_worker_data = ExcelExportService.generate_cost_estimation_report(
+                            df_calc=df_calc,
+                            worker_df=worker_df,
+                            title_suffix=period_header_suffix.strip(" ()")
+                        )
+                        st.download_button(
+                            label="📥 정산 엑셀 다운로드 (개인별 상세 탭 포함)",
+                            data=excel_worker_data,
+                            file_name=f"팀원별_예상청구비용_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key="btn_dl_worker_cost_excel",
+                            type="primary",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"엑셀 생성 오류: {e}")
+
+                with col_btn_w2:
+                    csv_data = display_worker_df.to_csv(index=False).encode("utf-8-sig")
+                    st.download_button(
+                        label="📄 요약 표 CSV 다운로드",
+                        data=csv_data,
+                        file_name=f"팀원별_예상청구비용_요약_{datetime.now().strftime('%Y%m%d')}.csv",
+                        mime="text/csv",
+                        key="btn_dl_worker_cost_csv",
+                        use_container_width=True
+                    )
 
             with col_w2:
                 top_workers = worker_df.head(10).sort_values(by="total_cost", ascending=True)
