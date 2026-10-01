@@ -727,6 +727,13 @@ def render_cost_estimation_view(
             </div>
             """, unsafe_allow_html=True)
 
+            # 🔄 기본값 복원 콜백 (위젯 인스턴스화 전에 실행되어 에러 방지)
+            def _on_reset_excluded_callback():
+                default_ex = list(CostEstimationService.DEFAULT_EXCLUDED_CLIENTS)
+                CostEstimationService.save_excluded_clients(default_ex)
+                st.session_state["cost_excluded_clients"] = default_ex
+                st.session_state["multiselect_excluded_cost_clients"] = default_ex
+
             col_ex1, col_ex2, col_ex3 = st.columns([7, 2, 1.5])
             with col_ex1:
                 selected_excluded = st.multiselect(
@@ -740,16 +747,16 @@ def render_cost_estimation_view(
                 if st.button("💾 제외 목록 영구 저장", key="btn_save_excluded_clients", type="primary", use_container_width=True):
                     CostEstimationService.save_excluded_clients(selected_excluded)
                     st.session_state["cost_excluded_clients"] = selected_excluded
-                    st.session_state["multiselect_excluded_cost_clients"] = selected_excluded
                     st.toast("✅ 청구 제외 목록이 영구 저장되었습니다!", icon="💾")
                     st.rerun()
             with col_ex3:
-                if st.button("🔄 기본값 복원", key="btn_reset_excluded_clients", use_container_width=True, help="기본 제외 목록 ['1on1', '내부업무']로 복원합니다."):
-                    CostEstimationService.save_excluded_clients(CostEstimationService.DEFAULT_EXCLUDED_CLIENTS)
-                    st.session_state["cost_excluded_clients"] = list(CostEstimationService.DEFAULT_EXCLUDED_CLIENTS)
-                    st.session_state["multiselect_excluded_cost_clients"] = list(CostEstimationService.DEFAULT_EXCLUDED_CLIENTS)
-                    st.toast("🔄 기본 제외 목록(['1on1', '내부업무'])으로 복원되었습니다.", icon="🔄")
-                    st.rerun()
+                st.button(
+                    "🔄 기본값 복원",
+                    key="btn_reset_excluded_clients",
+                    on_click=_on_reset_excluded_callback,
+                    use_container_width=True,
+                    help="기본 제외 목록 ['1on1', '내부업무']로 복원합니다."
+                )
         client_df = CostEstimationService.get_client_cost_summary(df_calc)
         if client_df.empty:
             st.info("조회 기준에 해당하는 고객사 작업 데이터가 없습니다.")
