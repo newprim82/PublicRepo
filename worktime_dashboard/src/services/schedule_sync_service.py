@@ -548,6 +548,16 @@ class ScheduleSyncService:
                 entry_id = str(r.get("entry_id") or "")
                 subj = str(r.get("subject") or "")
 
+                st_dt_obj = st_time.to_pydatetime() if hasattr(st_time, "to_pydatetime") else st_time
+                date_str_val = st_dt_obj.strftime("%Y-%m-%d") if hasattr(st_dt_obj, "strftime") else ""
+                month_str_val = st_dt_obj.strftime("%Y-%m") if hasattr(st_dt_obj, "strftime") else ""
+                week_str_val = f"{st_dt_obj.isocalendar()[0]}-{st_dt_obj.isocalendar()[1]}주" if hasattr(st_dt_obj, "isocalendar") else ""
+                try:
+                    from src.dashboard.common.ui_helpers import get_month_clamped_week_label
+                    week_label_val = get_month_clamped_week_label(st_dt_obj)
+                except Exception:
+                    week_label_val = f"{month_str_val} 주차"
+
                 if is_leave:
                     # 🏖️ 사용자 확정 원칙: 연차/휴가/반차는 업무량 산정에서 완전 제외(0h), 카드 표출 전용
                     row_dict = {
@@ -565,6 +575,10 @@ class ScheduleSyncService:
                         "actual_hours": 0.0,       # 🌟 업무량 산정 완전 제외 (0.0h)
                         "estimated_hours": 0.0,
                         "total_hours": 0.0,
+                        "date_str": date_str_val,
+                        "month_str": month_str_val,
+                        "week_label": week_label_val,
+                        "week_str": week_str_val,
                         # 🏖️ 당일(오늘) 휴가는 18:00 이전에는 실시간 부재 전용이므로 COMPLETED가 아닌 SCHEDULED 부여,
                         # 18:00 이후 또는 과거 날짜의 휴가는 COMPLETED 부여
                         "status": "SCHEDULED" if (st_dt.date() == now.date() and now.hour < 18) or st_dt > now else "COMPLETED",
@@ -642,6 +656,10 @@ class ScheduleSyncService:
                         "estimated_hours": dur_hours,
                         "total_hours": dur_hours,
                         "display_hours": dur_hours,  # 🌟 캘린더/카드 표시용
+                        "date_str": date_str_val,
+                        "month_str": month_str_val,
+                        "week_label": week_label_val,
+                        "week_str": week_str_val,
                         "status": status,
                         "is_outlook": True,
                         "is_leave": False,

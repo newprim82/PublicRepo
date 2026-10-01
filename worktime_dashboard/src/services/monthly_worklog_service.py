@@ -224,14 +224,17 @@ class MonthlyWorklogService:
             if str(t).replace(" ", "") == clean_team
         ]
         
-        # 팀 컬럼에서도 매칭 확인
-        mask = (df["month_str"] == month_str)
-        if team_workers:
-            mask = mask & (df["worker_name"].isin(team_workers) | (df["worker_team"].str.replace(" ", "") == clean_team))
-        else:
-            mask = mask & (df["worker_team"].str.replace(" ", "") == clean_team)
+        # 월 필터링: month_str 컬럼 및 start_time 기반 계산으로 이중 방어
+        st_series = pd.to_datetime(df["start_time"], errors="coerce")
+        calc_month_series = st_series.dt.strftime("%Y-%m")
+        month_mask = (df.get("month_str") == month_str) | (calc_month_series == month_str)
 
-        team_df = df[mask].copy()
+        if team_workers:
+            team_mask = (df["worker_name"].isin(team_workers)) | (df.get("worker_team", pd.Series("", index=df.index)).astype(str).str.replace(" ", "") == clean_team)
+        else:
+            team_mask = (df.get("worker_team", pd.Series("", index=df.index)).astype(str).str.replace(" ", "") == clean_team)
+
+        team_df = df[month_mask & team_mask].copy()
         if team_df.empty:
             return team_df
 
