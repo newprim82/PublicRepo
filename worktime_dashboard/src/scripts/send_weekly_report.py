@@ -12,6 +12,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from src.services.email_sender import EmailSender
+from src.services.email_schedule_service import EmailScheduleService
 
 def main():
     parser = argparse.ArgumentParser(description="업무 실적 Summary 자동 이메일 발송 배치 스크립트")
@@ -27,7 +28,11 @@ def main():
     print(f"[{report_title}] 업무 실적 Summary Email Sending ({dispatch_type})")
     print("==================================================")
     
-    recipients = args.recipients or os.getenv("REPORT_RECIPIENT_EMAILS", "ymmoon@sangsanginworld.co.kr")
+    # 📬 DB 및 설정에 등록된 정기 메일 발송 활성 수신자 목록 자동 로드
+    scheduled_recipients = EmailScheduleService.get_active_recipient_emails()
+    default_recipients_str = ", ".join(scheduled_recipients) if scheduled_recipients else "ymmoon@sangsanginworld.co.kr"
+
+    recipients = args.recipients or os.getenv("REPORT_RECIPIENT_EMAILS", "") or default_recipients_str
     sender = os.getenv("GMAIL_SENDER_EMAIL", "newprim82@gmail.com")
     pwd = os.getenv("GMAIL_APP_PASSWORD", "dlugbvfuhgdozkgr")
     

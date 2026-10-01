@@ -36,21 +36,17 @@ class AuthorizedRecipientService:
                 if clean:
                     recipients.add(clean)
 
-        # JSON 파일 로드
-        if AUTH_RECIPIENTS_FILE.exists():
-            try:
-                with open(AUTH_RECIPIENTS_FILE, "r", encoding="utf-8") as f:
-                    saved = json.load(f)
-                    if isinstance(saved, list):
-                        for em in saved:
-                            clean = str(em).lower().strip()
-                            if clean:
-                                recipients.add(clean)
-            except Exception:
-                pass
-        else:
-            # 기본 파일 생성
-            cls._save_to_file(recipients)
+        # 정기 메일 발송 대상(EmailScheduleService) 등록 수신자 자동 병합
+        try:
+            from .email_schedule_service import EmailScheduleService
+            sched_recipients = EmailScheduleService.get_all_recipients()
+            for sr in sched_recipients:
+                if sr.get("include_cost", True):
+                    em = str(sr.get("email", "")).lower().strip()
+                    if em:
+                        recipients.add(em)
+        except Exception:
+            pass
 
         return recipients
 

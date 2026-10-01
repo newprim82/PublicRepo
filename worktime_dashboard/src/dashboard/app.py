@@ -64,6 +64,7 @@ from src.dashboard.views.client_view import render_client_view
 from src.dashboard.views.duration_view import render_duration_view
 from src.dashboard.views.cost_estimation_view import render_cost_estimation_view
 from src.dashboard.views.holiday_management_view import render_holiday_management_view
+from src.dashboard.views.email_schedule_view import render_email_schedule_view
 
 # -------------------------------------------------------------
 # 1. 단 1회 백그라운드 10분 수집 데몬 기동
@@ -361,7 +362,8 @@ def render_main_content_frame(
         "✏️ 업무 시간 직접 수정 장표",
         "🕒 시간 수정 감사 이력",
         "⚙️ 직급별 시간당 단가 설정",
-        "📅 법정 및 임시 공휴일 관리"
+        "📅 법정 및 임시 공휴일 관리",
+        "📬 정기 메일 발송 대상 관리"
     ]
     if curr_page in admin_only_pages and not AuthManager.is_authenticated():
         st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
@@ -462,6 +464,8 @@ def render_main_content_frame(
         )
     elif curr_page == "📅 법정 및 임시 공휴일 관리":
         render_holiday_management_view()
+    elif curr_page == "📬 정기 메일 발송 대상 관리":
+        render_email_schedule_view()
 
 
 # -------------------------------------------------------------
@@ -867,7 +871,8 @@ def main():
         # 5. 🛠️ 시스템 관리 (로그인 시에만 노출)
         if is_auth:
             sys_mgmt_items = [
-                "📅 법정 및 임시 공휴일 관리"
+                "📅 법정 및 임시 공휴일 관리",
+                "📬 정기 메일 발송 대상 관리"
             ]
             is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
             with st.expander("🛠️ 시스템 관리", expanded=is_sys_active):
