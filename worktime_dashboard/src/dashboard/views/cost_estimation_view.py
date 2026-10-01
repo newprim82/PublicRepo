@@ -223,6 +223,35 @@ def render_cost_estimation_view(
     div[data-testid="stForm"] button[kind="primary"]:hover {
         background: linear-gradient(135deg, #0284c7 0%, #005073 100%) !important;
     }
+
+    /* 8. 직급별 단가 설정 number_input의 + - 버튼 바탕화면을 진한 회색조로 설정 */
+    div[data-testid="stForm"] div[data-testid="stNumberInput"] button,
+    div[data-testid="stForm"] button[data-testid="stNumberInputStepDown"],
+    div[data-testid="stForm"] button[data-testid="stNumberInputStepUp"],
+    div[data-testid="stNumberInput"] button {
+        background-color: #475569 !important; /* 진한 회색조 (Slate-600) */
+        color: #ffffff !important;
+        border-color: #334155 !important;
+        transition: background-color 0.15s ease !important;
+    }
+    div[data-testid="stForm"] div[data-testid="stNumberInput"] button:hover,
+    div[data-testid="stForm"] button[data-testid="stNumberInputStepDown"]:hover,
+    div[data-testid="stForm"] button[data-testid="stNumberInputStepUp"]:hover,
+    div[data-testid="stNumberInput"] button:hover {
+        background-color: #334155 !important; /* 호버 시 약간 더 짙은 회색조 */
+        color: #ffffff !important;
+    }
+    div[data-testid="stForm"] div[data-testid="stNumberInput"] button svg,
+    div[data-testid="stForm"] button[data-testid="stNumberInputStepDown"] svg,
+    div[data-testid="stForm"] button[data-testid="stNumberInputStepUp"] svg,
+    div[data-testid="stNumberInput"] button svg {
+        fill: #ffffff !important;
+        stroke: #ffffff !important;
+        color: #ffffff !important;
+    }
+    div[data-testid="stForm"] div[data-testid="stNumberInput"] div[data-baseweb="input"] > div:last-child {
+        background-color: #475569 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
