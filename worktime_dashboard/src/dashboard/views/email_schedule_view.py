@@ -325,7 +325,7 @@ def render_email_schedule_view():
             dt_str = str(item.get("created_at", "")).replace("T", " ")
             short_dt = dt_str[0:16] if len(dt_str) >= 16 else dt_str
             p_label = item.get("period_label", "")
-            rcpts = item.get("recipient_email", "")
+            rcpts = item.get("recipient_emails") or item.get("recipient_email") or ""
             rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
 
             email_rows = []

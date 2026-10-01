@@ -1111,7 +1111,7 @@ def show_email_report_dialog(selected_team: str):
             short_dt = dt_str[5:16] if len(dt_str) >= 16 else dt_str
 
             p_label = item.get("period_label", "")
-            rcpts = item.get("recipient_email", "")
+            rcpts = item.get("recipient_emails") or item.get("recipient_email") or ""
             # 📬 수신자 이메일 목록을 쉼표 기준으로 분리하여 1줄에 1개씩 + 태그 배지 부착
             rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
 
