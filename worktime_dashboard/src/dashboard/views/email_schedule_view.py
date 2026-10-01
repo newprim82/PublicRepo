@@ -78,13 +78,27 @@ def render_email_schedule_view():
         margin-top: 3px;
         font-weight: 600;
     }
-    .schedule-form-card {
-        background: #ffffff;
-        border: 1.5px solid #cbd5e1;
-        border-radius: 8px;
-        padding: 18px 22px;
-        margin-bottom: 22px;
-        box-shadow: 0 2px 8px rgba(0, 45, 66, 0.04);
+    /* 🏛️ 신규 수신자 등록 폼 카드 스타일링 */
+    div[data-testid="stForm"] {
+        background: #ffffff !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 20px 24px !important;
+        margin-bottom: 22px !important;
+        box-shadow: 0 2px 8px rgba(0, 45, 66, 0.04) !important;
+    }
+    div[data-testid="stForm"] label,
+    div[data-testid="stForm"] [data-testid="stWidgetLabel"] p,
+    div[data-testid="stForm"] label p {
+        color: #002d42 !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        letter-spacing: -0.2px !important;
+    }
+    div[data-testid="stForm"] [data-testid="stCheckbox"] label span {
+        color: #002d42 !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
     }
     .schedule-badge-active {
         background: #dcfce7;
@@ -163,8 +177,7 @@ def render_email_schedule_view():
     if not is_auth:
         st.info("💡 신규 수신자 등록 및 수정/삭제는 **시스템 관리자 로그인** 후 이용하실 수 있습니다.")
     else:
-        with st.container():
-            st.markdown('<div class="schedule-form-card">', unsafe_allow_html=True)
+        with st.form("form_schedule_recipient_add", clear_on_submit=False):
             col_f1, col_f2, col_f3 = st.columns([2.5, 1.5, 1.5])
             with col_f1:
                 input_email = st.text_input("수신 이메일 주소 *", placeholder="khkim@sangsanginworld.co.kr", key="sched_input_email")
@@ -177,22 +190,25 @@ def render_email_schedule_view():
             with col_sub1:
                 input_note = st.text_input("비고 / 전달 사유 (선택)", placeholder="정기 주간 업무 실적 및 예상 비용산정 리포트 공유", key="sched_input_note")
             with col_sub2:
+                st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
                 input_include_cost = st.checkbox("비용산정 포함", value=True, help="체크 시 예상 청구 금액 대시보드와 정산 엑셀(개인장표 포함)이 함께 발송됩니다.", key="sched_input_cost")
 
             col_btn, _ = st.columns([1.5, 3])
             with col_btn:
-                if st.button("➕ 정기 수신자 등록", type="primary", use_container_width=True, key="btn_submit_add_recipient"):
-                    if not input_email:
+                submit_btn = st.form_submit_button("➕ 정기 수신자 등록", type="primary", use_container_width=True)
+                if submit_btn:
+                    clean_email = (input_email or "").strip()
+                    if not clean_email:
                         st.warning("이메일 주소를 입력해주세요.")
                     else:
                         ok, msg = EmailScheduleService.add_recipient(
-                            email=input_email,
-                            name=input_name,
-                            department=input_dept,
+                            email=clean_email,
+                            name=(input_name or "").strip(),
+                            department=(input_dept or "").strip(),
                             schedule_cron="매주 월요일 08:00",
                             include_cost=input_include_cost,
                             is_active=True,
-                            note=input_note
+                            note=(input_note or "").strip()
                         )
                         if ok:
                             st.success(msg)
@@ -200,7 +216,6 @@ def render_email_schedule_view():
                             st.rerun()
                         else:
                             st.error(msg)
-            st.markdown('</div>', unsafe_allow_html=True)
 
     # 4. 등록된 정기 메일 발송 수신자 목록 테이블
     st.markdown("""
