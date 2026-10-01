@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.18 (Estimated Cost Billing & Direct Work Hours Adjustment)
-APP_VERSION = "v2.2.18"
+# WorkTime Dashboard v2.2.19 (Standalone Estimated Cost Billing Menu below Analysis)
+APP_VERSION = "v2.2.19"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -658,7 +658,7 @@ def main():
                 df = df_filtered_base.iloc[0:0]
 
 
-        # 3. 📊 작업 디테일 (세부 분석 화면 전환)
+        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
         detail_menu_items = [
             "📅 작업 캘린더 & 밀도 히트맵",
             "🔍 전체 작업 스마트 검색",
@@ -669,8 +669,6 @@ def main():
             "🏢 고객사별 공수 분포",
             "⏱️ 예정 vs 실제 소요시간"
         ]
-        if is_auth:
-            detail_menu_items.append("💰 예상 비용산정")
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
         with st.expander("📊 분석", expanded=is_detail_active):
             for d_item in detail_menu_items:
@@ -684,6 +682,20 @@ def main():
                     on_click=set_nav_page,
                     args=(d_item,)
                 )
+
+        # 4. 💰 예상 비용산정 (독립 대메뉴: 분석 아래쪽 배치, 로그인 시에만 노출)
+        if is_auth:
+            st.markdown('<div style="height: 6px;"></div>', unsafe_allow_html=True)
+            is_cost_active = (st.session_state.get("current_page") == "💰 예상 비용산정")
+            btn_cost_prefix = "▸ " if is_cost_active else ""
+            st.button(
+                f"{btn_cost_prefix}💰 예상 비용산정",
+                key="btn_nav_cost_estimation_main",
+                type="primary" if is_cost_active else "secondary",
+                use_container_width=True,
+                on_click=set_nav_page,
+                args=("💰 예상 비용산정",)
+            )
 
         # 4. 🤖 카카오톡 실시간 연동 (로그인 시에만 노출)
         if is_auth:
