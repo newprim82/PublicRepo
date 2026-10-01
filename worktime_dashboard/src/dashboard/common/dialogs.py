@@ -961,10 +961,10 @@ def show_email_report_dialog(selected_team: str):
     )
 
     # 🔒 비용산정 보안 검증: 사전 등록된 승인 수신자(화이트리스트) 여부 판별
-    is_cost_auth = AuthorizedRecipientService.is_all_authorized(mail_rcpt)
+    auth_list = AuthorizedRecipientService.get_authorized_in_list(mail_rcpt)
     unauth_list = AuthorizedRecipientService.get_unauthorized_recipients(mail_rcpt)
 
-    if is_cost_auth:
+    if auth_list and not unauth_list:
         st.markdown(
             """
             <div style="background: rgba(22, 163, 74, 0.15); border: 1.5px solid #16a34a; border-left: 5px solid #22c55e; padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: #dcfce7; margin-top: 4px; margin-bottom: 12px; line-height: 1.5;">
@@ -974,11 +974,22 @@ def show_email_report_dialog(selected_team: str):
             """,
             unsafe_allow_html=True
         )
+    elif auth_list and unauth_list:
+        st.markdown(
+            f"""
+            <div style="background: rgba(14, 165, 233, 0.15); border: 1.5px solid #0284c7; border-left: 5px solid #38bdf8; padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: #e0f2fe; margin-top: 4px; margin-bottom: 12px; line-height: 1.55;">
+                🔀 <b>[스마트 권한별 자동 분할 발송]</b> 수신자 권한에 맞춰 내용이 자동 분기되어 1번에 일괄 전송됩니다.<br>
+                • <b style="color: #38bdf8;">💰 비용산정 포함 대상 ({len(auth_list)}명):</b> <code>{', '.join(auth_list)}</code><br>
+                • <b style="color: #94a3b8;">📋 일반 실적만 발송 ({len(unauth_list)}명):</b> <code>{', '.join(unauth_list)}</code> (비용산정 내용 안전 제외)
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
         st.markdown(
             f"""
             <div style="background: rgba(234, 88, 12, 0.15); border: 1.5px solid #ea580c; border-left: 5px solid #f97316; padding: 10px 14px; border-radius: 6px; font-size: 12.5px; color: #ffedd5; margin-top: 4px; margin-bottom: 12px; line-height: 1.5;">
-                ⚠️ <b>[비용산정 제외 안내]</b> 등록되지 않은 수신자(<code>{', '.join(unauth_list)}</code>)가 포함되어 있습니다.<br>
+                📋 <b>[일반 실적 전용 발송]</b> 등록되지 않은 수신자(<code>{', '.join(unauth_list)}</code>)입니다.<br>
                 민감한 재무 정보 보호를 위해 <b>예상 비용산정 대시보드는 제외</b>되고, 일반 업무 실적 Summary만 발송됩니다.
             </div>
             """,

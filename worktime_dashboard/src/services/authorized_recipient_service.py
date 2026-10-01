@@ -117,3 +117,10 @@ class AuthorizedRecipientService:
         parsed = cls.parse_recipient_list(recipients)
         auth_set = cls._ensure_storage()
         return [em for em in parsed if em not in auth_set]
+
+    @classmethod
+    def get_authorized_in_list(cls, recipients: Union[str, List[str]]) -> List[str]:
+        """입력된 수신자 목록 중 승인된(비용산정 포함 대상) 수신자 목록 반환"""
+        parsed = cls.parse_recipient_list(recipients)
+        auth_set = cls._ensure_storage()
+        return [em for em in parsed if em in auth_set]
