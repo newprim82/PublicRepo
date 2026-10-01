@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.23 (Client billing menu separated into sidebar and in-page horizontal tab bar removed)
-APP_VERSION = "v2.2.32"
+# WorkTime Dashboard v2.3.0 (Overtime Premium 1.5x, Audit History Timeline, MoM Billing Trend)
+APP_VERSION = "v2.3.0"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -356,6 +356,7 @@ def render_main_content_frame(
         "💰 예상 비용산정 대시보드",
         "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
+        "🕒 시간 수정 감사 이력",
         "⚙️ 직급별 시간당 단가 설정"
     ]
     if curr_page in admin_only_pages and not AuthManager.is_authenticated():
@@ -441,6 +442,7 @@ def render_main_content_frame(
         "💰 예상 비용산정 대시보드",
         "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
+        "🕒 시간 수정 감사 이력",
         "⚙️ 직급별 시간당 단가 설정"
     ]:
         render_cost_estimation_view(
@@ -702,6 +704,7 @@ def main():
                 "💰 팀원별 예상 청구금액",
                 "🏢 고객사별 청구 금액",
                 "✏️ 업무 시간 직접 수정 장표",
+                "🕒 시간 수정 감사 이력",
                 "⚙️ 직급별 시간당 단가 설정"
             ]
             is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])

@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 
 from ...services.cost_estimation_service import CostEstimationService
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
+from ...auth.auth_manager import AuthManager
 from ..common.ui_helpers import get_job_title_badge, get_job_title_color, get_job_title_rank
 
 
@@ -270,6 +271,7 @@ def render_cost_estimation_view(
         "💰 예상 비용산정 대시보드": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
         "🏢 고객사별 청구 금액": ("🏢", "고객사별 프로젝트/지원 예상 청구 금액", "고객사 및 프로젝트별 투입 공수(h)와 총 청구 예상 금액을 집계 분석합니다."),
         "✏️ 업무 시간 직접 수정 장표": ("✏️", "업무 시간 직접 수정 장표", "아웃룩 '종일(9.0h)' 등록 작업 및 지원 공수를 직접 검토하고 영구 수정합니다."),
+        "🕒 시간 수정 감사 이력": ("🕒", "시간 수정 감사 이력 타임라인", "인정 공수를 수정한 모든 내역의 변경 전/후, 사유, 수정자를 투명하게 보존 및 감사 추적합니다."),
         "⚙️ 직급별 시간당 단가 설정": ("⚙️", "직급별 시간당 단가 설정", "사업본부 청구용 직급별 시간당 단가(원/h)를 설정하고 DB에 영구 저장합니다.")
     }
     icon, title_txt, desc_txt = page_titles.get(curr_page, ("💰", "프로젝트/현장지원 예상 비용산정", "기술본부 인력의 투입 공수 및 직급별 단가를 기준으로 예상 청구 금액을 산출합니다."))
@@ -278,7 +280,7 @@ def render_cost_estimation_view(
     col_t1, col_t2 = st.columns([7, 3])
     with col_t1:
         st.markdown(f"""
-        <div style="margin-bottom: 14px;">
+        <div style="margin-bottom: 10px;">
             <div class="cost-main-title">
                 <span>{icon}</span>
                 <span>{title_txt}</span>
@@ -302,27 +304,40 @@ def render_cost_estimation_view(
         </div>
         """, unsafe_allow_html=True)
 
+    # ⚖️ 근로기준법 제56조 준수 안내 바 (상시 1.5배 가산 자동 적용 명시)
+    st.markdown("""
+    <div style="background: #f0fdf4; border: 1.2px solid #86efac; border-left: 5px solid #16a34a; border-radius: 8px; padding: 8px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div style="font-size: 13px; font-weight: 700; color: #14532d;">
+            ⚖️ <b>근로기준법 제56조 준수:</b> 야간 근로(22:00~06:00) 및 주말·휴일 지원 공수에 대해 <b>1.5배 할증 가산(50% 가산)</b>이 상시 자동 적용되어 청구 금액에 반영됩니다.
+        </div>
+        <div style="font-size: 12px; font-weight: 800; color: #15803d; background: #dcfce7; padding: 3px 10px; border-radius: 4px; border: 1px solid #bbf7d0;">
+            상시 자동 적용 (배율: 1.5배)
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     # 3. 상단 4대 메트릭 화이트 펄스 카드
     tot_cost_str = f"₩ {kpis['total_cost']:,}"
     tot_hours_str = f"{kpis['total_billable_hours']:,.1f} h"
     adj_pct = (kpis['adjusted_count'] / max(1, kpis['total_tasks'])) * 100
+    regular_hours = max(0.0, kpis['total_billable_hours'] - kpis['total_overtime_hours'])
 
     st.markdown(f"""
     <div class="cost-kpi-row">
         <div class="cost-kpi-card-white top-navy">
-            <div class="cost-kpi-label-gray">💳 총 예상 청구금액</div>
+            <div class="cost-kpi-label-gray">💳 총 예상 청구금액 (1.5배 할증반영)</div>
             <div class="cost-kpi-val-bold" style="color: #005073;">{tot_cost_str}</div>
-            <div class="cost-kpi-sub-text" style="color: #0284c7;">총 {kpis['total_tasks']:,}건 작업 기준</div>
+            <div class="cost-kpi-sub-text" style="color: #0284c7;">기본 ₩{kpis['total_base_cost']:,} + 할증가산 ₩{kpis['total_overtime_premium']:,}</div>
         </div>
         <div class="cost-kpi-card-white top-blue">
             <div class="cost-kpi-label-gray">⏱️ 총 투입 인정 공수</div>
             <div class="cost-kpi-val-bold" style="color: #0284c7;">{tot_hours_str}</div>
-            <div class="cost-kpi-sub-text" style="color: #10b981;">휴가 0h 제외 실제 청구 공수</div>
+            <div class="cost-kpi-sub-text" style="color: #10b981;">일반 {regular_hours:,.1f}h | 야간·주말 {kpis['total_overtime_hours']:,.1f}h (1.5배)</div>
         </div>
         <div class="cost-kpi-card-white top-green">
             <div class="cost-kpi-label-gray">👥 투입 인력 / 평균 단가</div>
             <div class="cost-kpi-val-bold" style="color: #10b981;">{kpis['worker_count']}명</div>
-            <div class="cost-kpi-sub-text" style="color: #64748b;">가중평균 {kpis['avg_hourly_rate']:,}원/h</div>
+            <div class="cost-kpi-sub-text" style="color: #64748b;">가중평균 {kpis['avg_hourly_rate']:,}원/h (총 {kpis['total_tasks']:,}건)</div>
         </div>
         <div class="cost-kpi-card-white top-purple">
             <div class="cost-kpi-label-gray">✏️ 시간 보정(수정) 작업</div>
@@ -345,15 +360,25 @@ def render_cost_estimation_view(
             col_w1, col_w2 = st.columns([6, 4])
             with col_w1:
                 display_worker_df = worker_df.copy()
+                display_worker_df = display_worker_df[[
+                    "worker_name", "worker_team", "worker_title", "hourly_rate",
+                    "total_hours", "overtime_hours", "base_cost", "overtime_premium", "total_cost",
+                    "task_count", "adjusted_count"
+                ]]
                 display_worker_df.columns = [
-                    "팀원명", "소속팀", "직급", "시간당 단가(원)", "인정 공수(h)", "예상 청구금액(원)", "작업 건수", "보정 건수"
+                    "팀원명", "소속팀", "직급", "시간당 단가(원)",
+                    "총 인정공수(h)", "야간·주말(h)", "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)",
+                    "작업 건수", "보정 건수"
                 ]
 
                 st.dataframe(
                     display_worker_df.style.format({
                         "시간당 단가(원)": "{:,.0f}원",
-                        "인정 공수(h)": "{:,.1f}h",
-                        "예상 청구금액(원)": "₩ {:,.0f}",
+                        "총 인정공수(h)": "{:,.1f}h",
+                        "야간·주말(h)": "{:,.1f}h",
+                        "기본 금액(원)": "₩ {:,.0f}",
+                        "할증 가산액(원)": "+₩ {:,.0f}",
+                        "최종 청구금액(원)": "₩ {:,.0f}",
                         "작업 건수": "{:,}건",
                         "보정 건수": "{:,}건"
                     }),
@@ -416,14 +441,23 @@ def render_cost_estimation_view(
             col_t_tab1, col_t_tab2 = st.columns([6, 4])
             with col_t_tab1:
                 disp_title_df = title_df.copy()
-                disp_title_df.columns = ["직급", "단가(원/h)", "투입인원", "총 인정공수(h)", "예상 청구금액(원)", "작업건수", "금액 점유율(%)"]
+                disp_title_df = disp_title_df[[
+                    "worker_title", "hourly_rate", "worker_count", "total_hours", "overtime_hours",
+                    "base_cost", "overtime_premium", "total_cost", "cost_share_pct"
+                ]]
+                disp_title_df.columns = [
+                    "직급", "단가(원/h)", "투입인원", "총 인정공수(h)", "야간·주말(h)",
+                    "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "금액 점유율(%)"
+                ]
                 st.dataframe(
                     disp_title_df.style.format({
                         "단가(원/h)": "{:,.0f}원",
                         "투입인원": "{:,}명",
                         "총 인정공수(h)": "{:,.1f}h",
-                        "예상 청구금액(원)": "₩ {:,.0f}",
-                        "작업건수": "{:,}건",
+                        "야간·주말(h)": "{:,.1f}h",
+                        "기본 금액(원)": "₩ {:,.0f}",
+                        "할증 가산액(원)": "+₩ {:,.0f}",
+                        "최종 청구금액(원)": "₩ {:,.0f}",
                         "금액 점유율(%)": "{:.1f}%"
                     }),
                     use_container_width=True,
@@ -455,6 +489,177 @@ def render_cost_estimation_view(
                 )
                 st.plotly_chart(fig_t, use_container_width=True)
 
+        # -------------------------------------------------------------
+        # 📈 전월 대비 MoM 월별 청구 추이 및 증감 분석 (기능 5)
+        # -------------------------------------------------------------
+        st.markdown('<div class="cost-table-header-cisco" style="margin-top: 24px;"><span>📈</span><span>월별 청구 추이 및 전월 대비(MoM) 증감 분석</span></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cost-info-box-cisco">
+            💡 <b>월별 청구 추이 가이드:</b> 최근 12개월간의 월별 청구 금액 및 투입 공수 변화 추이를 확인하고, 전월 대비(MoM) 증감률(%)을 통해 지원 규모의 변동성을 파악합니다.
+        </div>
+        """, unsafe_allow_html=True)
+
+        trend_df = CostEstimationService.get_monthly_billing_trend(df_raw)
+        if trend_df.empty:
+            st.info("월별 청구 추이를 분석할 완료 작업 데이터가 충분하지 않습니다.")
+        else:
+            latest_row = trend_df.iloc[-1]
+            prev_row = trend_df.iloc[-2] if len(trend_df) >= 2 else None
+
+            latest_cost_str = f"₩ {int(latest_row['total_cost']):,}"
+            cost_mom_pct = latest_row.get("mom_cost_pct", 0.0)
+            cost_mom_diff = int(latest_row.get("mom_diff_cost", 0))
+
+            if pd.isna(cost_mom_pct) or prev_row is None:
+                cost_mom_desc = "전월 데이터 없음"
+                cost_mom_color = "#64748b"
+            elif cost_mom_diff >= 0:
+                cost_mom_desc = f"▲ +{cost_mom_pct:.1f}% (+₩{cost_mom_diff:,})"
+                cost_mom_color = "#10b981"
+            else:
+                cost_mom_desc = f"▼ {cost_mom_pct:.1f}% (-₩{abs(cost_mom_diff):,})"
+                cost_mom_color = "#ef4444"
+
+            latest_hours_str = f"{latest_row['total_hours']:,.1f} h"
+            hours_mom_pct = latest_row.get("mom_hours_pct", 0.0)
+            hours_mom_diff = float(latest_row.get("mom_diff_hours", 0.0))
+
+            if pd.isna(hours_mom_pct) or prev_row is None:
+                hours_mom_desc = "전월 데이터 없음"
+                hours_mom_color = "#64748b"
+            elif hours_mom_diff >= 0:
+                hours_mom_desc = f"▲ +{hours_mom_pct:.1f}% (+{hours_mom_diff:.1f}h)"
+                hours_mom_color = "#10b981"
+            else:
+                hours_mom_desc = f"▼ {hours_mom_pct:.1f}% ({hours_mom_diff:.1f}h)"
+                hours_mom_color = "#ef4444"
+
+            col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+            with col_m1:
+                st.markdown(f"""
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-top: 4px solid #005073; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+                    <div style="font-size: 11.5px; font-weight: 700; color: #64748b;">📅 {latest_row['year_month']} 청구 금액</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #005073; margin-top: 2px;">{latest_cost_str}</div>
+                    <div style="font-size: 11px; font-weight: 800; color: {cost_mom_color}; margin-top: 4px;">MoM {cost_mom_desc}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_m2:
+                st.markdown(f"""
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-top: 4px solid #0284c7; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+                    <div style="font-size: 11.5px; font-weight: 700; color: #64748b;">⏱️ {latest_row['year_month']} 투입 인정 공수</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #0284c7; margin-top: 2px;">{latest_hours_str}</div>
+                    <div style="font-size: 11px; font-weight: 800; color: {hours_mom_color}; margin-top: 4px;">MoM {hours_mom_desc}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_m3:
+                st.markdown(f"""
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-top: 4px solid #10b981; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+                    <div style="font-size: 11.5px; font-weight: 700; color: #64748b;">⚖️ 기본 vs 할증 가산액</div>
+                    <div style="font-size: 17px; font-weight: 900; color: #10b981; margin-top: 4px;">+₩ {int(latest_row['overtime_premium']):,}</div>
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 4px;">기본: ₩{int(latest_row['base_cost']):,} (야간/주말 {latest_row['overtime_hours']:.1f}h)</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_m4:
+                st.markdown(f"""
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-top: 4px solid #8b5cf6; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);">
+                    <div style="font-size: 11.5px; font-weight: 700; color: #64748b;">👥 {latest_row['year_month']} 투입 인원 / 건수</div>
+                    <div style="font-size: 20px; font-weight: 900; color: #8b5cf6; margin-top: 2px;">{int(latest_row['worker_count'])}명</div>
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 4px;">총 {int(latest_row['task_count']):,}건 완료 작업</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
+            # 복합 차트: 월별 청구액 막대 + 투입 공수 꺾은선
+            fig_mom = go.Figure()
+            fig_mom.add_trace(go.Bar(
+                x=trend_df["year_month"],
+                y=trend_df["base_cost"],
+                name="기본 청구액 (원)",
+                marker_color="#005073",
+                hovertemplate="%{x}<br>기본 금액: ₩%{y:,.0f}<extra></extra>"
+            ))
+            fig_mom.add_trace(go.Bar(
+                x=trend_df["year_month"],
+                y=trend_df["overtime_premium"],
+                name="야간/주말 할증 가산액 (원)",
+                marker_color="#10b981",
+                hovertemplate="%{x}<br>할증 가산: ₩%{y:,.0f}<extra></extra>"
+            ))
+            fig_mom.add_trace(go.Scatter(
+                x=trend_df["year_month"],
+                y=trend_df["total_hours"],
+                name="투입 공수 (h)",
+                mode="lines+markers+text",
+                text=trend_df["total_hours"].apply(lambda v: f"{v:.1f}h"),
+                textposition="top center",
+                textfont=dict(color="#0284c7", size=11, family="Pretendard, sans-serif"),
+                line=dict(color="#0284c7", width=3),
+                marker=dict(size=7, color="#0284c7"),
+                yaxis="y2",
+                hovertemplate="%{x}<br>투입 공수: %{y:.1f}h<extra></extra>"
+            ))
+
+            fig_mom.update_layout(
+                barmode="stack",
+                template="plotly_white",
+                paper_bgcolor="#ffffff",
+                plot_bgcolor="#ffffff",
+                font=dict(color="#000000", family="Pretendard, sans-serif"),
+                title=dict(text="📊 월별 청구 금액(막대) & 투입 공수(꺾은선) 추이", font=dict(size=14, color="#000000", family="Pretendard, sans-serif")),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11, color="#000000")),
+                xaxis=dict(title=dict(text="월 (YYYY-MM)", font=dict(color="#000000", size=12)), tickfont=dict(color="#000000", size=11), showgrid=False),
+                yaxis=dict(title=dict(text="청구 금액 (원)", font=dict(color="#000000", size=12)), tickfont=dict(color="#000000", size=11), showgrid=True, gridcolor="#e2e8f0"),
+                yaxis2=dict(title=dict(text="투입 공수 (h)", font=dict(color="#0284c7", size=12)), tickfont=dict(color="#0284c7", size=11), overlaying="y", side="right", showgrid=False),
+                height=340,
+                margin=dict(l=20, r=40, t=50, b=30)
+            )
+            st.plotly_chart(fig_mom, use_container_width=True)
+
+            # 월별 정산 내역 및 MoM 지표 테이블
+            disp_mom_df = trend_df.copy()
+            disp_mom_df = disp_mom_df.sort_values(by="year_month", ascending=False).reset_index(drop=True)
+            disp_mom_df["mom_cost_str"] = disp_mom_df.apply(
+                lambda r: f"+{r['mom_cost_pct']:.1f}%" if pd.notna(r.get("mom_cost_pct")) and r.get("mom_diff_cost", 0) >= 0 else (f"{r['mom_cost_pct']:.1f}%" if pd.notna(r.get("mom_cost_pct")) else "-"),
+                axis=1
+            )
+            disp_mom_df["mom_hours_str"] = disp_mom_df.apply(
+                lambda r: f"+{r['mom_hours_pct']:.1f}%" if pd.notna(r.get("mom_hours_pct")) and r.get("mom_diff_hours", 0) >= 0 else (f"{r['mom_hours_pct']:.1f}%" if pd.notna(r.get("mom_hours_pct")) else "-"),
+                axis=1
+            )
+
+            disp_mom_df = disp_mom_df[[
+                "year_month", "total_cost", "base_cost", "overtime_premium", "mom_cost_str",
+                "total_hours", "overtime_hours", "mom_hours_str", "worker_count", "task_count"
+            ]]
+            disp_mom_df.columns = [
+                "월(YYYY-MM)", "최종 청구금액(원)", "기본금액(원)", "할증가산액(원)", "MoM 금액증감(%)",
+                "총 인정공수(h)", "야간·주말(h)", "MoM 공수증감(%)", "투입인원", "작업건수"
+            ]
+
+            st.dataframe(
+                disp_mom_df.style.format({
+                    "최종 청구금액(원)": "₩ {:,.0f}",
+                    "기본금액(원)": "₩ {:,.0f}",
+                    "할증가산액(원)": "+₩ {:,.0f}",
+                    "총 인정공수(h)": "{:,.1f}h",
+                    "야간·주말(h)": "{:,.1f}h",
+                    "투입인원": "{:,}명",
+                    "작업건수": "{:,}건"
+                }),
+                use_container_width=True,
+                height=220
+            )
+
+            csv_mom_data = disp_mom_df.to_csv(index=False).encode("utf-8-sig")
+            st.download_button(
+                label="📥 월별 청구 추이 및 MoM 분석 CSV 다운로드",
+                data=csv_mom_data,
+                file_name=f"월별청구추이_MoM분석_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key="btn_dl_mom_trend_csv"
+            )
+
     # =========================================================
     # 탭 2: 고객사별 청구 금액
     # =========================================================
@@ -467,12 +672,22 @@ def render_cost_estimation_view(
             col_c1, col_c2 = st.columns([6, 4])
             with col_c1:
                 disp_client_df = client_df.copy()
-                disp_client_df.columns = ["고객사명", "투입 인원수", "총 인정 공수(h)", "예상 청구금액(원)", "작업 건수", "보정 건수"]
+                disp_client_df = disp_client_df[[
+                    "client_name", "worker_count", "total_hours", "overtime_hours",
+                    "base_cost", "overtime_premium", "total_cost", "task_count", "adjusted_count"
+                ]]
+                disp_client_df.columns = [
+                    "고객사명", "투입 인원수", "총 인정 공수(h)", "야간·주말(h)",
+                    "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "작업 건수", "보정 건수"
+                ]
                 st.dataframe(
                     disp_client_df.style.format({
                         "투입 인원수": "{:,}명",
                         "총 인정 공수(h)": "{:,.1f}h",
-                        "예상 청구금액(원)": "₩ {:,.0f}",
+                        "야간·주말(h)": "{:,.1f}h",
+                        "기본 금액(원)": "₩ {:,.0f}",
+                        "할증 가산액(원)": "+₩ {:,.0f}",
+                        "최종 청구금액(원)": "₩ {:,.0f}",
                         "작업 건수": "{:,}건",
                         "보정 건수": "{:,}건"
                     }),
@@ -659,7 +874,9 @@ def render_cost_estimation_view(
                 with col_save_btn:
                     if st.button("💾 수정한 시간 일괄 DB 영구 저장", type="primary", use_container_width=True, key="btn_save_adjusted_hours"):
                         records_to_save = []
+                        history_to_save = []
                         orig_map = dict(zip(edit_df["msg_hash"], zip(edit_df["인정공수(h)"], edit_df["비고"])))
+                        current_user_name = AuthManager.get_current_user() or "관리자"
 
                         for _, row in edited_data.iterrows():
                             mh = row["msg_hash"]
@@ -668,32 +885,185 @@ def render_cost_estimation_view(
                             orig_h, orig_note = orig_map.get(mh, (new_h, new_note))
 
                             if abs(new_h - orig_h) > 0.01 or new_note != orig_note:
+                                before_val = float(row["기존공수(h)"])
                                 records_to_save.append({
                                     "msg_hash": mh,
                                     "adjusted_hours": new_h,
-                                    "original_hours": float(row["기존공수(h)"]),
+                                    "original_hours": before_val,
                                     "note": new_note
+                                })
+                                # 🕒 감사 이력(Audit Log) 레코드 동시 생성
+                                history_to_save.append({
+                                    "msg_hash": mh,
+                                    "work_date": str(row["일자"]).split(" ")[0] if " " in str(row["일자"]) else str(row["일자"]),
+                                    "worker_name": str(row["작업자"]),
+                                    "client_name": str(row["고객사"]),
+                                    "task_description": str(row["작업내용"]),
+                                    "before_hours": before_val,
+                                    "after_hours": new_h,
+                                    "diff_hours": round(new_h - before_val, 2),
+                                    "note": new_note,
+                                    "adjusted_by": current_user_name
                                 })
 
                         if not records_to_save:
                             st.info("💡 변경된 시간이 없습니다. 테이블의 '인정공수' 숫자를 직접 수정한 후 눌러주세요.")
                         else:
-                            with st.spinner(f"총 {len(records_to_save)}건의 작업 시간을 DB에 영구 저장하는 중..."):
+                            with st.spinner(f"총 {len(records_to_save)}건의 작업 시간 및 감사 이력을 DB에 영구 저장하는 중..."):
                                 count = CostEstimationService.batch_update_work_log_hours(records_to_save)
-                                st.success(f"🎉 총 {count}건의 작업 인정 공수가 성공적으로 영구 저장되었습니다!")
-                                st.toast(f"✅ {count}건 시간 수정 완료! 통계가 자동 재계산됩니다.", icon="💾")
+                                if history_to_save:
+                                    CostEstimationService.save_adjust_history(history_to_save)
+                                st.success(f"🎉 총 {count}건의 작업 인정 공수 및 감사 이력이 성공적으로 영구 저장되었습니다!")
+                                st.toast(f"✅ {count}건 시간 수정 & 감사 로그 기록 완료! 통계가 자동 재계산됩니다.", icon="💾")
                                 st.cache_data.clear()
                                 st.rerun()
 
                 with col_save_info:
                     st.markdown("""
                     <div style="font-size: 12px; color: #64748b; line-height: 1.6; padding-top: 4px;">
-                        • 인정공수 셀을 더블클릭하거나 클릭 후 숫자를 직접 입력하세요. 수정 후 [💾 수정한 시간 일괄 DB 영구 저장] 버튼을 누르면 실시간 반영됩니다.
+                        • 인정공수 셀을 더블클릭하거나 클릭 후 숫자를 직접 입력하세요. 수정 후 [💾 수정한 시간 일괄 DB 영구 저장] 버튼을 누르면 실시간 반영 및 감사 로그에 기록됩니다.
                     </div>
                     """, unsafe_allow_html=True)
 
     # =========================================================
-    # 탭 4: 직급별 시간당 단가 설정
+    # 탭 4: 🕒 시간 수정 감사 이력 (Audit Trail Timeline)
+    # =========================================================
+    elif curr_page == "🕒 시간 수정 감사 이력":
+        st.markdown('<div class="cost-table-header-cisco"><span>🕒</span><span>인정 공수 시간 수정 감사 이력 타임라인 (Audit Trail)</span></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="cost-info-box-cisco">
+            💡 <b>감사 이력 가이드:</b> 인정 공수가 수정된 모든 작업 내역의 변경 전후 공수, 변동폭(±h), 수정 사유, 수정자 및 수정 일시를 영구 보존하며 투명하게 추적합니다.
+        </div>
+        """, unsafe_allow_html=True)
+
+        history_df = CostEstimationService.get_adjust_history(limit=500)
+
+        if history_df.empty:
+            st.info("기록된 시간 수정 감사 이력이 없습니다. (업무 시간 직접 수정 장표에서 시간을 수정한 내역이 자동으로 기록됩니다)")
+        else:
+            total_logs = len(history_df)
+            net_diff_hours = float(history_df["diff_hours"].sum()) if "diff_hours" in history_df.columns else 0.0
+            unique_workers = history_df["worker_name"].nunique() if "worker_name" in history_df.columns else 0
+
+            latest_ts_raw = history_df["created_at"].iloc[0] if "created_at" in history_df.columns and not history_df.empty else "-"
+            if latest_ts_raw != "-" and pd.notna(latest_ts_raw):
+                try:
+                    latest_ts = pd.to_datetime(latest_ts_raw).strftime("%Y-%m-%d %H:%M")
+                except Exception:
+                    latest_ts = str(latest_ts_raw)[:16]
+            else:
+                latest_ts = "-"
+
+            diff_color = "#10b981" if net_diff_hours >= 0 else "#ef4444"
+            diff_sign = "+" if net_diff_hours > 0 else ""
+
+            st.markdown(f"""
+            <div class="cost-kpi-row">
+                <div class="cost-kpi-card-white top-navy">
+                    <div class="cost-kpi-label-gray">📋 총 감사 이력 건수</div>
+                    <div class="cost-kpi-val-bold" style="color: #005073;">{total_logs:,}건</div>
+                    <div class="cost-kpi-sub-text" style="color: #0284c7;">누적 공수 수정 트랜잭션</div>
+                </div>
+                <div class="cost-kpi-card-white top-blue">
+                    <div class="cost-kpi-label-gray">⚖️ 순 누적 공수 변동폭</div>
+                    <div class="cost-kpi-val-bold" style="color: {diff_color};">{diff_sign}{net_diff_hours:,.1f} h</div>
+                    <div class="cost-kpi-sub-text" style="color: {diff_color};">수정 전후 인정 시간 순증감</div>
+                </div>
+                <div class="cost-kpi-card-white top-green">
+                    <div class="cost-kpi-label-gray">👤 수정 대상 작업자</div>
+                    <div class="cost-kpi-val-bold" style="color: #10b981;">{unique_workers}명</div>
+                    <div class="cost-kpi-sub-text" style="color: #64748b;">시간 보정 발생 인력</div>
+                </div>
+                <div class="cost-kpi-card-white top-purple">
+                    <div class="cost-kpi-label-gray">⏱️ 최근 수정 일시</div>
+                    <div class="cost-kpi-val-bold" style="color: #8b5cf6; font-size: 20px !important;">{latest_ts}</div>
+                    <div class="cost-kpi-sub-text" style="color: #8b5cf6;">최신 감사 로그 기록 시점</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            fc1, fc2, fc3 = st.columns([3, 3, 4])
+            with fc1:
+                hist_workers = ["전체"] + sorted(history_df["worker_name"].dropna().unique().tolist()) if "worker_name" in history_df.columns else ["전체"]
+                sel_hw = st.selectbox("👤 작업자 필터:", options=hist_workers, key="sb_hist_worker")
+            with fc2:
+                hist_clients = ["전체"] + sorted(history_df["client_name"].dropna().unique().tolist()) if "client_name" in history_df.columns else ["전체"]
+                sel_hc = st.selectbox("🏢 고객사 필터:", options=hist_clients, key="sb_hist_client")
+            with fc3:
+                search_hist = st.text_input("🔍 작업내용 / 수정사유 검색:", placeholder="검색어 입력...", key="txt_hist_search")
+
+            filt_df = history_df.copy()
+            if sel_hw != "전체" and "worker_name" in filt_df.columns:
+                filt_df = filt_df[filt_df["worker_name"] == sel_hw]
+            if sel_hc != "전체" and "client_name" in filt_df.columns:
+                filt_df = filt_df[filt_df["client_name"] == sel_hc]
+            if search_hist:
+                kw = search_hist.strip().lower()
+                m1 = filt_df["task_description"].astype(str).str.lower().str.contains(kw, na=False) if "task_description" in filt_df.columns else pd.Series(False, index=filt_df.index)
+                m2 = filt_df["note"].astype(str).str.lower().str.contains(kw, na=False) if "note" in filt_df.columns else pd.Series(False, index=filt_df.index)
+                filt_df = filt_df[m1 | m2]
+
+            st.caption(f"감사 로그 조회 결과: 총 **{len(filt_df)}**건 (최신순)")
+
+            if filt_df.empty:
+                st.info("검색/필터 조건에 일치하는 감사 이력이 없습니다.")
+            else:
+                disp_hist = filt_df.copy()
+                if "created_at" in disp_hist.columns:
+                    disp_hist["수정일시"] = pd.to_datetime(disp_hist["created_at"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M").fillna("-")
+                else:
+                    disp_hist["수정일시"] = "-"
+
+                disp_hist["작업일자"] = disp_hist.get("work_date", pd.Series("-", index=disp_hist.index)).fillna("-")
+                disp_hist["작업자"] = disp_hist.get("worker_name", pd.Series("-", index=disp_hist.index)).fillna("-")
+                disp_hist["고객사"] = disp_hist.get("client_name", pd.Series("-", index=disp_hist.index)).fillna("-")
+                disp_hist["작업내용"] = disp_hist.get("task_description", pd.Series("", index=disp_hist.index)).fillna("")
+                disp_hist["수정전(h)"] = pd.to_numeric(disp_hist.get("before_hours", 0.0), errors="coerce").fillna(0.0).round(1)
+                disp_hist["수정후(h)"] = pd.to_numeric(disp_hist.get("after_hours", 0.0), errors="coerce").fillna(0.0).round(1)
+                disp_hist["변동폭(h)"] = pd.to_numeric(disp_hist.get("diff_hours", 0.0), errors="coerce").fillna(0.0).round(1)
+                disp_hist["변동폭(표기)"] = disp_hist["변동폭(h)"].apply(lambda v: f"+{v:.1f}h" if v > 0 else (f"{v:.1f}h" if v < 0 else "0.0h"))
+                disp_hist["수정사유"] = disp_hist.get("note", pd.Series("", index=disp_hist.index)).fillna("")
+                disp_hist["수정자"] = disp_hist.get("adjusted_by", pd.Series("관리자", index=disp_hist.index)).fillna("관리자")
+
+                disp_cols = [
+                    "수정일시", "작업일자", "작업자", "고객사", "작업내용",
+                    "수정전(h)", "수정후(h)", "변동폭(표기)", "수정사유", "수정자"
+                ]
+                final_hist_disp = disp_hist[disp_cols].copy()
+
+                st.dataframe(
+                    final_hist_disp.style.format({
+                        "수정전(h)": "{:,.1f}h",
+                        "수정후(h)": "{:,.1f}h"
+                    }),
+                    column_config={
+                        "수정일시": st.column_config.TextColumn("수정일시", width="medium"),
+                        "작업일자": st.column_config.TextColumn("작업일자", width="small"),
+                        "작업자": st.column_config.TextColumn("작업자", width="small"),
+                        "고객사": st.column_config.TextColumn("고객사", width="medium"),
+                        "작업내용": st.column_config.TextColumn("작업내용", width="large"),
+                        "수정전(h)": st.column_config.NumberColumn("수정 전", format="%.1f h", width="small"),
+                        "수정후(h)": st.column_config.NumberColumn("수정 후", format="%.1f h", width="small"),
+                        "변동폭(표기)": st.column_config.TextColumn("변동폭", width="small"),
+                        "수정사유": st.column_config.TextColumn("수정 사유", width="medium"),
+                        "수정자": st.column_config.TextColumn("수정자", width="small")
+                    },
+                    use_container_width=True,
+                    height=420,
+                    hide_index=True
+                )
+
+                csv_hist = final_hist_disp.to_csv(index=False).encode("utf-8-sig")
+                st.download_button(
+                    label="📥 시간 수정 감사 이력 CSV 다운로드",
+                    data=csv_hist,
+                    file_name=f"시간수정_감사이력_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    key="btn_dl_audit_history_csv"
+                )
+
+    # =========================================================
+    # 탭 5: 직급별 시간당 단가 설정
     # =========================================================
     elif curr_page == "⚙️ 직급별 시간당 단가 설정":
         st.markdown('<div class="cost-table-header-cisco"><span>⚙️</span><span>직급별 시간당 지원 금액(단가) 설정</span></div>', unsafe_allow_html=True)

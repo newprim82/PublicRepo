@@ -137,6 +137,26 @@ class DatabaseManager:
         """)
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_awl_updated_at ON adjusted_work_logs(updated_at DESC)")
 
+        # 🕒 작업 시간 수정 감사 이력 (Audit History) 테이블 생성
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS adjust_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                msg_hash TEXT NOT NULL,
+                worker_name TEXT NOT NULL,
+                worker_title TEXT DEFAULT '',
+                client_name TEXT DEFAULT '',
+                task_description TEXT DEFAULT '',
+                before_hours REAL NOT NULL,
+                after_hours REAL NOT NULL,
+                diff_hours REAL NOT NULL,
+                note TEXT DEFAULT '',
+                adjusted_by TEXT DEFAULT '관리자',
+                created_at TEXT DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ah_created_at ON adjust_history(created_at DESC)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ah_msg_hash ON adjust_history(msg_hash)")
+
         try:
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA synchronous=NORMAL")
@@ -1165,6 +1185,83 @@ class DatabaseManager:
             print(f"[DB 오류] 다건 시간 보정 로컬 저장 실패: {e}")
 
         return saved_count
+
+    # -------------------------------------------------------------
+    # 🕒 예상 비용산정: 작업 시간 수정 감사 이력 (Audit History) 관리
+    # -------------------------------------------------------------
+    def save_adjust_history(self, history_records: List[Dict[str, Any]]) -> int:
+        """
+        작업 시간 수정 감사 이력 다건 저장 (Supabase 및 로컬 SQLite)
+        """
+        if not history_records:
+            return 0
+
+        # 1. Supabase 저장 시도
+        if self.use_supabase and self.supabase:
+            try:
+                self.supabase.table("worktime_adjust_history").insert(history_records).execute()
+            except Exception as e:
+                print(f"[DB] Supabase 감사 이력 저장 알림 (로컬 저장 유지): {e}")
+
+        # 2. 로컬 SQLite 저장
+        saved = 0
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            for r in history_records:
+                cursor.execute("""
+                    INSERT INTO adjust_history (
+                        msg_hash, worker_name, worker_title, client_name, task_description,
+                        before_hours, after_hours, diff_hours, note, adjusted_by, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+                """, (
+                    str(r.get("msg_hash", "")),
+                    str(r.get("worker_name", "")),
+                    str(r.get("worker_title", "")),
+                    str(r.get("client_name", "")),
+                    str(r.get("task_description", "")),
+                    float(r.get("before_hours", 0.0)),
+                    float(r.get("after_hours", 0.0)),
+                    float(r.get("diff_hours", 0.0)),
+                    str(r.get("note", "")),
+                    str(r.get("adjusted_by", "관리자"))
+                ))
+                saved += 1
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[DB 오류] 감사 이력 로컬 저장 실패: {e}")
+
+        return saved
+
+    def fetch_adjust_history(self, limit: int = 300) -> pd.DataFrame:
+        """
+        작업 시간 수정 감사 이력 조회 (최신순)
+        """
+        # 1. Supabase 시도
+        if self.use_supabase and self.supabase:
+            try:
+                res = self.supabase.table("worktime_adjust_history")\
+                    .select("*")\
+                    .order("created_at", desc=True)\
+                    .limit(limit)\
+                    .execute()
+                if res.data:
+                    df = pd.DataFrame(res.data)
+                    return df
+            except Exception:
+                pass
+
+        # 2. 로컬 SQLite 조회
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            sql = f"SELECT * FROM adjust_history ORDER BY id DESC LIMIT {int(limit)}"
+            df = pd.read_sql_query(sql, conn)
+            conn.close()
+            return df
+        except Exception as e:
+            print(f"[DB 오류] 감사 이력 로컬 조회 실패: {e}")
+            return pd.DataFrame()
 
 
 db_manager = DatabaseManager()
