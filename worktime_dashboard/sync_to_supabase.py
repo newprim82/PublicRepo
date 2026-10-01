@@ -116,6 +116,32 @@ def sync_local_to_supabase():
         except Exception as e:
             print(f"[Warning] Reward leaves sync error: {e}")
 
+    # 6. 팀 전월 엑셀 원장 발송 이력 동기화
+    try:
+        conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+        df_monthly_logs = pd.read_sql_query("SELECT * FROM team_monthly_worklog_dispatch_logs", conn)
+        conn.close()
+        if not df_monthly_logs.empty:
+            m_payloads = []
+            for _, r in df_monthly_logs.iterrows():
+                m_payloads.append({
+                    "team_name": r["team_name"],
+                    "target_month": r["target_month"],
+                    "recipient_email": r["recipient_email"],
+                    "sender_email": r["sender_email"],
+                    "dispatch_type": r["dispatch_type"],
+                    "total_records": int(r.get("total_records", 0)),
+                    "total_hours": float(r.get("total_hours", 0.0)),
+                    "excel_filename": r.get("excel_filename", ""),
+                    "status": r["status"],
+                    "error_message": r.get("error_message", ""),
+                    "created_at": str(r.get("created_at", ""))
+                })
+            db_manager.supabase.table("worktime_team_monthly_worklog_dispatch_logs").upsert(m_payloads).execute()
+            print(f"[SUCCESS] Synchronized {len(m_payloads)} monthly worklog dispatch logs to Supabase!")
+    except Exception as e_m:
+        print(f"[Warning] Monthly dispatch logs sync info: {e_m}")
+
     print("\n[SUCCESS] All data has been synchronized to Supabase Cloud DB!")
 
 if __name__ == "__main__":
