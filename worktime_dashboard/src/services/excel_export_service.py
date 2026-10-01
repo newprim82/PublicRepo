@@ -377,13 +377,13 @@ class ExcelExportService:
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         # =========================================================
-        # Sheet 1: 팀 전체 정산표
+        # Sheet 1: 요약표 (팀 전체 집계)
         # =========================================================
-        ws_all = wb.create_sheet(title="팀 전체 정산표")
+        ws_all = wb.create_sheet(title="요약표")
         ws_all.sheet_properties.tabColor = "002D42"
         ws_all.views.sheetView[0].showGridLines = True
 
-        ws_all["A1"] = f"📊 팀원별 투입 공수 및 예상 청구 금액 정산표 ({period_text})"
+        ws_all["A1"] = f"📊 팀원별 투입 공수 및 예상 청구 금액 요약표 ({period_text})"
         ws_all["A1"].font = font_title
         ws_all["A2"] = f"출력 일시: {now_str} | 대상 팀원: {len(worker_df):,}명 | 총 작업: {len(data):,}건"
         ws_all["A2"].font = font_subtitle
@@ -476,7 +476,7 @@ class ExcelExportService:
         curr_row += 2
         guide_cell = ws_all.cell(
             row=curr_row, column=1,
-            value="💡 엑셀 하단의 팀원별 탭을 클릭하시면 개인별 상세 지원 내역(고객사, 시간대, 근로기준법 할증 배율 등)을 직접 확인하실 수 있습니다."
+            value="💡 엑셀 하단의 팀원별 개인장표 탭을 클릭하시면 개인별 상세 지원 내역(고객사, 일시, 근로기준법 할증 배율 등)을 직접 확인하실 수 있습니다."
         )
         guide_cell.font = font_subtitle
 

@@ -507,36 +507,23 @@ def render_cost_estimation_view(
                     hide_index=True
                 )
 
-                col_btn_w1, col_btn_w2 = st.columns([1.6, 1])
-                with col_btn_w1:
-                    try:
-                        excel_worker_data = ExcelExportService.generate_cost_estimation_report(
-                            df_calc=df_calc,
-                            worker_df=worker_df,
-                            title_suffix=period_header_suffix.strip(" ()")
-                        )
-                        st.download_button(
-                            label="📥 정산 엑셀 다운로드 (개인별 상세 탭 포함)",
-                            data=excel_worker_data,
-                            file_name=f"팀원별_예상청구비용_{datetime.now().strftime('%Y%m%d')}.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            key="btn_dl_worker_cost_excel",
-                            type="primary",
-                            use_container_width=True
-                        )
-                    except Exception as e:
-                        st.error(f"엑셀 생성 오류: {e}")
-
-                with col_btn_w2:
-                    csv_data = display_worker_df.to_csv(index=False).encode("utf-8-sig")
+                try:
+                    excel_worker_data = ExcelExportService.generate_cost_estimation_report(
+                        df_calc=df_calc,
+                        worker_df=worker_df,
+                        title_suffix=period_header_suffix.strip(" ()")
+                    )
                     st.download_button(
-                        label="📄 요약 표 CSV 다운로드",
-                        data=csv_data,
-                        file_name=f"팀원별_예상청구비용_요약_{datetime.now().strftime('%Y%m%d')}.csv",
-                        mime="text/csv",
-                        key="btn_dl_worker_cost_csv",
+                        label="📥 팀원별 정산 엑셀 다운로드 (첫 탭: 요약표 / 나머지: 개인장표)",
+                        data=excel_worker_data,
+                        file_name=f"팀원별_예상청구비용_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="btn_dl_worker_cost_excel",
+                        type="primary",
                         use_container_width=True
                     )
+                except Exception as e:
+                    st.error(f"엑셀 생성 오류: {e}")
 
             with col_w2:
                 top_workers = worker_df.head(10).sort_values(by="total_cost", ascending=True)
