@@ -1004,9 +1004,25 @@ def show_email_report_dialog(selected_team: str):
                 dispatch_type="MANUAL_IMMEDIATE"
             )
             if success:
-                st.success(send_msg)
+                st.markdown(
+                    f"""
+                    <div style="background: rgba(22, 163, 74, 0.25); border: 1.5px solid #22c55e; border-radius: 8px; padding: 12px 16px; margin: 12px 0; color: #ffffff !important; font-size: 13.5px; font-weight: 600; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
+                        <span style="font-size: 18px; line-height: 1.2;">✅</span>
+                        <div style="color: #ffffff !important; word-break: break-all;">{send_msg.replace('✅ ', '')}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
             else:
-                st.error(send_msg)
+                st.markdown(
+                    f"""
+                    <div style="background: rgba(220, 38, 38, 0.25); border: 1.5px solid #ef4444; border-radius: 8px; padding: 12px 16px; margin: 12px 0; color: #ffffff !important; font-size: 13.5px; font-weight: 600; line-height: 1.5; display: flex; align-items: flex-start; gap: 10px;">
+                        <span style="font-size: 18px; line-height: 1.2;">❌</span>
+                        <div style="color: #ffffff !important; word-break: break-all;">{send_msg.replace('❌ ', '')}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
     # ==========================================
     # 📋 최근 메일 발송 이력 (최근 5회)
@@ -1059,17 +1075,19 @@ def show_email_report_dialog(selected_team: str):
 
             p_label = item.get("period_label", "")
             rcpts = item.get("recipient_emails", "")
-            rcpts_display = (rcpts[:30] + "...") if len(rcpts) > 33 else rcpts
+            # 보낸 모든 수신자 이메일을 생략 없이 온전히 노출
+            rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
+            rcpts_html = ", ".join([f"<span style='color: #f8fafc; font-weight: 600;'>{em}</span>" for em in rcpt_list]) if rcpt_list else "<span style='color: #94a3b8;'>-</span>"
 
             card_html = f"""
-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px;">
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;">
                     {badge_html}
-                    <span style="color: #cbd5e1; font-weight: 600;">{p_label}</span>
-                    <span style="color: #64748b;">|</span>
-                    <span style="color: #94a3b8; font-size: 11px;">수신: {rcpts_display}</span>
+                    <span style="color: #38bdf8; font-weight: 700;">{p_label}</span>
+                    <span style="color: #475569;">|</span>
+                    <span style="color: #94a3b8; font-size: 11.5px; word-break: break-all;">수신: {rcpts_html}</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px; white-space: nowrap;">
+                <div style="display: flex; align-items: center; gap: 10px; white-space: nowrap; flex-shrink: 0;">
                     <span style="color: #94a3b8; font-size: 11px;">{short_dt}</span>
                     {status_html}
                 </div>
