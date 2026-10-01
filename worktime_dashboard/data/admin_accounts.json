@@ -1,20 +1,20 @@
 {
   "newprim": {
     "username": "newprim",
-    "password": "newprim1",
+    "password": "pbkdf2:sha256:100000$4bb4d92ecc3ac8e56512bbd3661540db$f585d64a9294e62a77caff9abbf72ad60d4bbd40dd4a101445f85626957d9576",
     "name": "최고 관리자",
     "role": "SUPER_ADMIN",
     "note": "시스템 최고 관리자",
     "created_at": "2026-10-01 16:10:56",
-    "updated_at": "2026-10-01 16:10:56"
+    "updated_at": "2026-10-01 16:21:01"
   },
   "testadmin": {
     "username": "testadmin",
-    "password": "testpass123",
+    "password": "pbkdf2:sha256:100000$1865672943863775a664f907a8b36b62$7f330f192693dae5af27d9b9795b9ddf92019118a413d88927c12e2528d8a9c4",
     "name": "테스트관리자",
     "role": "ADMIN",
     "note": "테스트 계정",
     "created_at": "2026-10-01 16:10:58",
-    "updated_at": "2026-10-01 16:10:58"
+    "updated_at": "2026-10-01 16:21:01"
   }
 }

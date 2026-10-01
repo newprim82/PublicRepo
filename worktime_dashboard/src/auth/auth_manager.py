@@ -9,6 +9,8 @@ import json
 import time
 import sqlite3
 import secrets
+import hashlib
+import hmac
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 import streamlit as st
@@ -25,10 +27,75 @@ LOCAL_ACCOUNTS_FILE = DATA_DIR / "admin_accounts.json"
 SUPER_ADMIN_USERNAME = "newprim"
 DEFAULT_SUPER_ADMIN_PWD = "newprim1"
 
+# =========================================================
+# 🔒 단방향 솔트 해시 (PBKDF2-HMAC-SHA256) 보안 유틸리티
+# - 복호화 키 자체가 세상에 아예 존재하지 않는 단방향 해시
+# - 계정마다 무작위 16바이트 솔트(Salt)를 부여하여 100,000회 반복 해시
+# =========================================================
+PBKDF2_ALGO = "sha256"
+PBKDF2_ITERATIONS = 100_000
+SALT_BYTES = 16
+
+
+def hash_password(raw_password: str) -> str:
+    """
+    단방향 솔트 해시 생성 (PBKDF2-HMAC-SHA256)
+    포맷: pbkdf2:sha256:100000${salt_hex}${hash_hex}
+    """
+    salt = secrets.token_hex(SALT_BYTES)
+    hash_bytes = hashlib.pbkdf2_hmac(
+        PBKDF2_ALGO,
+        raw_password.encode("utf-8"),
+        salt.encode("utf-8"),
+        PBKDF2_ITERATIONS
+    )
+    return f"pbkdf2:{PBKDF2_ALGO}:{PBKDF2_ITERATIONS}${salt}${hash_bytes.hex()}"
+
+
+def is_hashed_password(val: str) -> bool:
+    """해당 문자열이 이미 PBKDF2 단방향 해시 포맷인지 확인"""
+    if not val or not isinstance(val, str):
+        return False
+    return val.startswith("pbkdf2:") and "$" in val
+
+
+def verify_password(plain_password: str, stored_hash: str) -> bool:
+    """
+    사용자가 입력한 평문 비밀번호와 DB에 저장된 해시값을 단방향 대조 검증
+    - 타이밍 공격(Timing Attack) 방지: hmac.compare_digest
+    - 이전 평문 데이터에 대한 하위 호환성 지원
+    """
+    if not stored_hash or not plain_password:
+        return False
+
+    # 1. 이전 평문 데이터 하위 호환성
+    if not is_hashed_password(stored_hash):
+        return hmac.compare_digest(plain_password.strip(), stored_hash.strip())
+
+    # 2. PBKDF2 단방향 솔트 해시 대조
+    try:
+        parts = stored_hash.split("$")
+        if len(parts) != 3:
+            return False
+        meta, salt, expected_hash = parts
+        _, algo, iter_str = meta.split(":")
+        iterations = int(iter_str)
+
+        computed_bytes = hashlib.pbkdf2_hmac(
+            algo,
+            plain_password.encode("utf-8"),
+            salt.encode("utf-8"),
+            iterations
+        )
+        return hmac.compare_digest(computed_bytes.hex(), expected_hash)
+    except Exception:
+        return False
+
+
 DEFAULT_ACCOUNTS = {
     "newprim": {
         "username": "newprim",
-        "password": DEFAULT_SUPER_ADMIN_PWD,
+        "password": hash_password(DEFAULT_SUPER_ADMIN_PWD),
         "name": "최고 관리자",
         "role": "SUPER_ADMIN",
         "note": "시스템 최고 관리자 (전체 권한)",
@@ -67,11 +134,11 @@ class AuthManager:
                     updated_at TEXT DEFAULT (datetime('now', 'localtime'))
                 )
             """)
-            # 기본 newprim 계정 보장
+            # 기본 newprim 계정 보장 (PBKDF2 단방향 솔트 해시)
             cur.execute("""
                 INSERT OR IGNORE INTO admin_accounts (username, password, name, role, note, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'), datetime('now', 'localtime'))
-            """, ("newprim", DEFAULT_SUPER_ADMIN_PWD, "최고 관리자", "SUPER_ADMIN", "시스템 최고 관리자"))
+            """, ("newprim", hash_password(DEFAULT_SUPER_ADMIN_PWD), "최고 관리자", "SUPER_ADMIN", "시스템 최고 관리자"))
             conn.commit()
             conn.close()
         except Exception:
@@ -178,8 +245,57 @@ class AuthManager:
         except Exception:
             pass
 
+        # 4. 평문 비밀번호 자동 단방향 솔트 해시 승격 마이그레이션
+        cls._migrate_plain_passwords(accounts_map)
+
         cls._cached_accounts = accounts_map
         return list(accounts_map.values())
+
+    @classmethod
+    def _migrate_plain_passwords(cls, accounts_map: Dict[str, Dict[str, Any]]):
+        """기존 평문으로 저장된 계정 비밀번호가 있으면 자동으로 PBKDF2 단방향 솔트 해시로 일괄 승격"""
+        migrated = False
+        from datetime import datetime
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        for un, acc in accounts_map.items():
+            pwd = acc.get("password", "")
+            if pwd and not is_hashed_password(pwd):
+                hashed_pwd = hash_password(pwd)
+                acc["password"] = hashed_pwd
+                acc["updated_at"] = now_str
+                migrated = True
+
+                # 1. SQLite 업데이트
+                try:
+                    conn = cls._get_db_conn()
+                    cur = conn.cursor()
+                    cur.execute(
+                        "UPDATE admin_accounts SET password = ?, updated_at = ? WHERE lower(username) = ?",
+                        (hashed_pwd, now_str, un.lower())
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception:
+                    pass
+
+                # 2. Supabase Cloud DB 업데이트
+                try:
+                    from ..database.supabase_client import db_manager
+                    if db_manager.use_supabase and db_manager.supabase:
+                        db_manager.supabase.table("worktime_admin_accounts").update({
+                            "password": hashed_pwd, "updated_at": now_str
+                        }).eq("username", acc["username"]).execute()
+                except Exception:
+                    pass
+
+        # 3. 로컬 JSON 업데이트
+        if migrated:
+            try:
+                with open(LOCAL_ACCOUNTS_FILE, "w", encoding="utf-8") as f:
+                    json.dump(accounts_map, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
 
     # =========================================================
     # 3. 계정 등록, 수정, 삭제 (Super Admin 전용 기능)
@@ -194,6 +310,7 @@ class AuthManager:
     ) -> Tuple[bool, str]:
         """
         신규 관리자(Admin) 계정 등록 (오직 Super Admin만 호출 가능)
+        - PBKDF2 단방향 솔트 해시를 적용하여 저장 (복호화 키 자체가 없음)
         """
         u = username.strip()
         p = password.strip()
@@ -212,6 +329,9 @@ class AuthManager:
         from datetime import datetime
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        # 🔒 비밀번호 단방향 솔트 해시 생성
+        hashed_pwd = hash_password(p)
+
         # 1. SQLite 저장
         cls._init_db()
         try:
@@ -220,7 +340,7 @@ class AuthManager:
             cur.execute("""
                 INSERT INTO admin_accounts (username, password, name, role, note, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (u, p, name.strip(), "ADMIN", note.strip(), now_str, now_str))
+            """, (u, hashed_pwd, name.strip(), "ADMIN", note.strip(), now_str, now_str))
             conn.commit()
             conn.close()
         except Exception as e:
@@ -230,7 +350,7 @@ class AuthManager:
         try:
             all_dict = {acc["username"].lower(): acc for acc in cls.get_all_accounts(force_reload=True)}
             all_dict[u.lower()] = {
-                "username": u, "password": p, "name": name.strip(),
+                "username": u, "password": hashed_pwd, "name": name.strip(),
                 "role": "ADMIN", "note": note.strip(), "created_at": now_str, "updated_at": now_str
             }
             with open(LOCAL_ACCOUNTS_FILE, "w", encoding="utf-8") as f:
@@ -243,18 +363,18 @@ class AuthManager:
             from ..database.supabase_client import db_manager
             if db_manager.use_supabase and db_manager.supabase:
                 db_manager.supabase.table("worktime_admin_accounts").upsert({
-                    "username": u, "password": p, "name": name.strip(),
+                    "username": u, "password": hashed_pwd, "name": name.strip(),
                     "role": "ADMIN", "note": note.strip(), "updated_at": now_str
                 }, on_conflict="username").execute()
         except Exception:
             pass
 
         cls._cached_accounts = None
-        return True, f"✅ 관리자 계정 [{u}]이 성공적으로 등록되었습니다!"
+        return True, f"✅ 관리자 계정 [{u}]이 안전하게 암호화되어 등록되었습니다!"
 
     @classmethod
     def update_account_password(cls, username: str, new_password: str) -> Tuple[bool, str]:
-        """비밀번호 변경"""
+        """비밀번호 변경 (PBKDF2 단방향 솔트 해시 적용)"""
         u = username.strip()
         p = new_password.strip()
         if len(p) < 4:
@@ -263,10 +383,13 @@ class AuthManager:
         from datetime import datetime
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+        # 🔒 비밀번호 단방향 솔트 해시 생성
+        hashed_pwd = hash_password(p)
+
         try:
             conn = cls._get_db_conn()
             cur = conn.cursor()
-            cur.execute("UPDATE admin_accounts SET password = ?, updated_at = ? WHERE username = ?", (p, now_str, u))
+            cur.execute("UPDATE admin_accounts SET password = ?, updated_at = ? WHERE lower(username) = ?", (hashed_pwd, now_str, u.lower()))
             conn.commit()
             conn.close()
         except Exception as e:
@@ -275,7 +398,7 @@ class AuthManager:
         try:
             all_dict = {acc["username"].lower(): acc for acc in cls.get_all_accounts(force_reload=True)}
             if u.lower() in all_dict:
-                all_dict[u.lower()]["password"] = p
+                all_dict[u.lower()]["password"] = hashed_pwd
                 all_dict[u.lower()]["updated_at"] = now_str
                 with open(LOCAL_ACCOUNTS_FILE, "w", encoding="utf-8") as f:
                     json.dump(all_dict, f, ensure_ascii=False, indent=2)
@@ -286,13 +409,13 @@ class AuthManager:
             from ..database.supabase_client import db_manager
             if db_manager.use_supabase and db_manager.supabase:
                 db_manager.supabase.table("worktime_admin_accounts").update({
-                    "password": p, "updated_at": now_str
+                    "password": hashed_pwd, "updated_at": now_str
                 }).eq("username", u).execute()
         except Exception:
             pass
 
         cls._cached_accounts = None
-        return True, f"✅ [{u}] 계정의 비밀번호가 성공적으로 변경되었습니다!"
+        return True, f"✅ [{u}] 계정의 비밀번호가 안전하게 암호화 변경되었습니다!"
 
     @classmethod
     def delete_account(cls, username: str) -> Tuple[bool, str]:
@@ -411,11 +534,15 @@ class AuthManager:
         accounts = cls.get_all_accounts(force_reload=True)
         matched_acc = None
         for acc in accounts:
-            if acc["username"].lower() == u.lower() and acc["password"] == p:
+            if acc["username"].lower() == u.lower() and verify_password(p, acc.get("password", "")):
                 matched_acc = acc
                 break
 
         if matched_acc:
+            # 🔒 만약 기존 저장 비밀번호가 평문이었다면 즉시 단방향 솔트 해시로 자동 승격 저장
+            if not is_hashed_password(matched_acc.get("password", "")):
+                cls.update_account_password(matched_acc["username"], p)
+
             now = time.time()
             token = secrets.token_hex(16)
             role = "SUPER_ADMIN" if matched_acc["username"].lower() == SUPER_ADMIN_USERNAME.lower() else "ADMIN"
