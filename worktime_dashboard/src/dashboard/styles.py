@@ -84,7 +84,7 @@ def apply_custom_styles():
         /* ⏳ 3. 화면 정중앙 '잠시만 기다려주세요' 전용 관제센터 펄스 카드 */
         .stApp[data-test-script-state="running"]::after,
         [data-testid="stAppViewContainer"][data-test-script-state="running"]::after {
-            content: "⏳ 잠시만 기다려주세요\\A\\A기술본부 관제 DB 최신 데이터를 안전하게 불러오고 있습니다...";
+            content: "⏳ 잠시만 기다려주세요\\A\\ADB 최신 데이터를 안전하게 불러오고 있습니다...";
             white-space: pre-wrap;
             position: fixed;
             top: 48%;
