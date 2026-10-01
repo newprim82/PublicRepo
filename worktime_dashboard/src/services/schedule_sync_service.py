@@ -670,4 +670,27 @@ class ScheduleSyncService:
         if title_mappings and "worker_name" in combined_df.columns:
             combined_df["worker_title"] = combined_df["worker_name"].map(title_mappings).fillna(combined_df.get("worker_title", ""))
 
+        # ⏱️ [시간 보정 오버라이드 영구 적용] 관리자가 수정한 작업 인정 공수를 최우선 적용
+        if not combined_df.empty and "msg_hash" in combined_df.columns:
+            try:
+                adj_map = db_manager.get_adjusted_hours_map()
+                if adj_map:
+                    if "is_time_adjusted" not in combined_df.columns:
+                        combined_df["is_time_adjusted"] = False
+                    if "original_hours" not in combined_df.columns:
+                        combined_df["original_hours"] = combined_df.get("actual_hours", 0.0)
+
+                    for mh, adj_h in adj_map.items():
+                        m = combined_df["msg_hash"] == mh
+                        if m.any():
+                            combined_df.loc[m, "is_time_adjusted"] = True
+                            combined_df.loc[m, "actual_hours"] = float(adj_h)
+                            combined_df.loc[m, "actual_minutes"] = int(float(adj_h) * 60)
+                            combined_df.loc[m, "estimated_hours"] = float(adj_h)
+                            combined_df.loc[m, "total_hours"] = float(adj_h)
+                            if "display_hours" in combined_df.columns:
+                                combined_df.loc[m, "display_hours"] = float(adj_h)
+            except Exception as e_adj:
+                print(f"[보정 시간 오버라이드 알림]: {e_adj}")
+
         return combined_df

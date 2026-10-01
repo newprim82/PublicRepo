@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.2.17 (Upcoming task card UI unified with live card: bottom badge position & full-text badge)
-APP_VERSION = "v2.2.17"
+# WorkTime Dashboard v2.2.18 (Estimated Cost Billing & Direct Work Hours Adjustment)
+APP_VERSION = "v2.2.18"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -62,6 +62,7 @@ from src.dashboard.views.team_view import render_team_view
 from src.dashboard.views.trend_view import render_trend_view
 from src.dashboard.views.client_view import render_client_view
 from src.dashboard.views.duration_view import render_duration_view
+from src.dashboard.views.cost_estimation_view import render_cost_estimation_view
 
 # -------------------------------------------------------------
 # 1. 단 1회 백그라운드 10분 수집 데몬 기동
@@ -114,7 +115,9 @@ def clear_all_web_caches():
         "src.dashboard.views.outlook_calendar_widget",
         "src.database.supabase_client",
         "src.services.team_service",
-        "src.services.excel_export_service"
+        "src.services.excel_export_service",
+        "src.services.cost_estimation_service",
+        "src.dashboard.views.cost_estimation_view"
     ]
     for mod_name in modules_to_reload:
         if mod_name in sys.modules:
@@ -347,7 +350,8 @@ def render_main_content_frame(
     # 🔒 관리자 전용 페이지 가드
     admin_only_pages = [
         "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
-        "📋 작업 기록 원장 & 엑셀"
+        "📋 작업 기록 원장 & 엑셀",
+        "💰 예상 비용산정"
     ]
     if curr_page in admin_only_pages and not AuthManager.is_authenticated():
         st.warning("🔒 관리자 로그인이 필요한 메뉴입니다. 아래에서 먼저 로그인해주세요.")
@@ -426,6 +430,16 @@ def render_main_content_frame(
         render_client_view(df)
     elif curr_page == "⏱️ 예정 vs 실제 소요시간":
         render_duration_view(df)
+    elif curr_page == "💰 예상 비용산정":
+        render_cost_estimation_view(
+            df=df,
+            df_raw=df_raw,
+            selected_team=selected_team,
+            team_mappings=team_mappings,
+            month_desc=month_desc,
+            worker_desc=worker_desc,
+            extra_chips_str=extra_chips_str
+        )
 
 
 # -------------------------------------------------------------
@@ -644,7 +658,7 @@ def main():
                 df = df_filtered_base.iloc[0:0]
 
 
-        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
+        # 3. 📊 작업 디테일 (세부 분석 화면 전환)
         detail_menu_items = [
             "📅 작업 캘린더 & 밀도 히트맵",
             "🔍 전체 작업 스마트 검색",
@@ -655,6 +669,8 @@ def main():
             "🏢 고객사별 공수 분포",
             "⏱️ 예정 vs 실제 소요시간"
         ]
+        if is_auth:
+            detail_menu_items.append("💰 예상 비용산정")
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
         with st.expander("📊 분석", expanded=is_detail_active):
             for d_item in detail_menu_items:

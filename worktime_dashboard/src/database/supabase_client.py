@@ -109,6 +109,36 @@ class DatabaseManager:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_os_worker ON outlook_schedules(worker_name)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_os_is_leave ON outlook_schedules(is_leave)")
 
+        # 💰 직급별 시간당 단가 테이블 생성
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS hourly_rates (
+                job_title TEXT PRIMARY KEY,
+                hourly_rate INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+        default_rates = [
+            ("수석", 80000),
+            ("차장", 70000),
+            ("과장", 60000),
+            ("대리", 50000),
+            ("사원", 35000),
+            ("기타", 50000)
+        ]
+        cursor.executemany("INSERT OR IGNORE INTO hourly_rates (job_title, hourly_rate) VALUES (?, ?)", default_rates)
+
+        # ⏱️ 작업 시간 보정(수정) 오버라이드 테이블 생성
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS adjusted_work_logs (
+                msg_hash TEXT PRIMARY KEY,
+                adjusted_hours REAL NOT NULL,
+                original_hours REAL DEFAULT 0.0,
+                note TEXT DEFAULT '',
+                updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+            )
+        """)
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_awl_updated_at ON adjusted_work_logs(updated_at DESC)")
+
         try:
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA synchronous=NORMAL")
@@ -845,6 +875,258 @@ class DatabaseManager:
                 df["duration_hours"] = pd.to_numeric(df["duration_hours"], errors="coerce").fillna(0.0)
 
         return df
+
+    # -------------------------------------------------------------
+    # 💰 예상 비용산정: 직급별 시간당 단가 (hourly_rates) 관리
+    # -------------------------------------------------------------
+    def get_hourly_rates(self) -> Dict[str, int]:
+        """
+        직급별 시간당 단가(원/h) 딕셔너리 반환
+        예: {'수석': 80000, '차장': 70000, '과장': 60000, '대리': 50000, '사원': 35000, '기타': 50000}
+        """
+        rates = {}
+        # 1. Supabase 시도
+        if self.use_supabase and self.supabase:
+            try:
+                res = self.supabase.table("worktime_hourly_rates").select("job_title, hourly_rate").execute()
+                if res.data:
+                    for r in res.data:
+                        t = str(r.get("job_title", "")).strip()
+                        val = int(r.get("hourly_rate", 0))
+                        if t:
+                            rates[t] = val
+                    if rates:
+                        return rates
+            except Exception:
+                pass
+
+        # 2. 로컬 SQLite 조회
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("SELECT job_title, hourly_rate FROM hourly_rates")
+            for t, val in cursor.fetchall():
+                t = str(t).strip()
+                if t:
+                    rates[t] = int(val)
+            conn.close()
+        except Exception as e:
+            print(f"[DB 오류] 직급별 단가 로컬 조회 실패: {e}")
+
+        # 기본 폴백값
+        default_fallback = {
+            "수석": 80000,
+            "차장": 70000,
+            "과장": 60000,
+            "대리": 50000,
+            "사원": 35000,
+            "기타": 50000
+        }
+        for k, v in default_fallback.items():
+            if k not in rates:
+                rates[k] = v
+        return rates
+
+    def save_hourly_rates(self, rates: Dict[str, int]) -> bool:
+        """
+        직급별 시간당 단가 저장 (Supabase 및 로컬 SQLite)
+        """
+        if not rates:
+            return False
+
+        # 1. Supabase 저장 시도
+        if self.use_supabase and self.supabase:
+            try:
+                payloads = [{"job_title": k.strip(), "hourly_rate": int(v)} for k, v in rates.items() if k.strip()]
+                self.supabase.table("worktime_hourly_rates").upsert(payloads).execute()
+            except Exception as e:
+                print(f"[DB 오류] 직급별 단가 Supabase 저장 알림: {e}")
+
+        # 2. 로컬 SQLite 저장
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            for k, v in rates.items():
+                k_clean = str(k).strip()
+                if not k_clean:
+                    continue
+                cursor.execute("""
+                    INSERT INTO hourly_rates (job_title, hourly_rate, updated_at)
+                    VALUES (?, ?, datetime('now', 'localtime'))
+                    ON CONFLICT(job_title) DO UPDATE SET
+                        hourly_rate=excluded.hourly_rate,
+                        updated_at=excluded.updated_at
+                """, (k_clean, int(v)))
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"[DB 오류] 직급별 단가 로컬 SQLite 저장 실패: {e}")
+            return False
+
+    # -------------------------------------------------------------
+    # ⏱️ 예상 비용산정: 작업 시간 보정(수정) 오버라이드 관리
+    # -------------------------------------------------------------
+    def get_adjusted_hours_map(self) -> Dict[str, float]:
+        """
+        작업 고유 키(msg_hash)별 보정 인정 시간(h) 매핑 반환
+        """
+        adj_map = {}
+        # 1. Supabase 시도
+        if self.use_supabase and self.supabase:
+            try:
+                res = self.supabase.table("worktime_adjusted_work_logs").select("msg_hash, adjusted_hours").execute()
+                if res.data:
+                    for r in res.data:
+                        h_key = str(r.get("msg_hash", "")).strip()
+                        val = float(r.get("adjusted_hours", 0.0))
+                        if h_key:
+                            adj_map[h_key] = val
+                    if adj_map:
+                        return adj_map
+            except Exception:
+                pass
+
+        # 2. 로컬 SQLite 조회
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("SELECT msg_hash, adjusted_hours FROM adjusted_work_logs")
+            for h_key, val in cursor.fetchall():
+                h_key = str(h_key).strip()
+                if h_key:
+                    adj_map[h_key] = float(val)
+            conn.close()
+        except Exception as e:
+            print(f"[DB 오류] 보정 시간 로컬 조회 실패: {e}")
+
+        return adj_map
+
+    def save_adjusted_work_log(
+        self,
+        msg_hash: str,
+        adjusted_hours: float,
+        original_hours: float = 0.0,
+        note: str = ""
+    ) -> bool:
+        """
+        단건 작업 시간 보정 저장 (Supabase 및 로컬 SQLite)
+        """
+        msg_hash = str(msg_hash).strip()
+        if not msg_hash:
+            return False
+
+        # 1. Supabase 저장
+        if self.use_supabase and self.supabase:
+            try:
+                self.supabase.table("worktime_adjusted_work_logs").upsert({
+                    "msg_hash": msg_hash,
+                    "adjusted_hours": float(adjusted_hours),
+                    "original_hours": float(original_hours),
+                    "note": str(note)
+                }).execute()
+            except Exception as e:
+                print(f"[DB 오류] 시간 보정 Supabase 저장 알림: {e}")
+
+        # 2. 로컬 SQLite 저장 및 원본 테이블 동기화
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO adjusted_work_logs (msg_hash, adjusted_hours, original_hours, note, updated_at)
+                VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
+                ON CONFLICT(msg_hash) DO UPDATE SET
+                    adjusted_hours=excluded.adjusted_hours,
+                    original_hours=excluded.original_hours,
+                    note=excluded.note,
+                    updated_at=excluded.updated_at
+            """, (msg_hash, float(adjusted_hours), float(original_hours), str(note)))
+
+            # 아웃룩 일정인 경우 outlook_schedules duration_hours도 동시 업데이트
+            if msg_hash.startswith("OUTLOOK_WORK_"):
+                entry_id = msg_hash.replace("OUTLOOK_WORK_", "")
+                cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (float(adjusted_hours), entry_id))
+            elif msg_hash.startswith("OUTLOOK_LEAVE_"):
+                entry_id = msg_hash.replace("OUTLOOK_LEAVE_", "")
+                cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (float(adjusted_hours), entry_id))
+            else:
+                # 카카오톡 work_logs인 경우 actual_minutes 동시 업데이트
+                cursor.execute("UPDATE work_logs SET actual_minutes=? WHERE msg_hash=?", (int(adjusted_hours * 60), msg_hash))
+
+            conn.commit()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"[DB 오류] 시간 보정 로컬 저장 실패: {e}")
+            return False
+
+    def batch_save_adjusted_work_logs(self, records: List[Dict[str, Any]]) -> int:
+        """
+        다건 작업 시간 일괄 보정 저장 (장표에서 다건 수정 시 호출)
+        records: [{"msg_hash": str, "adjusted_hours": float, "original_hours": float, "note": str}, ...]
+        """
+        if not records:
+            return 0
+
+        # 1. Supabase 저장 시도
+        if self.use_supabase and self.supabase:
+            try:
+                payloads = []
+                for r in records:
+                    mh = str(r.get("msg_hash", "")).strip()
+                    if mh:
+                        payloads.append({
+                            "msg_hash": mh,
+                            "adjusted_hours": float(r.get("adjusted_hours", 0.0)),
+                            "original_hours": float(r.get("original_hours", 0.0)),
+                            "note": str(r.get("note", ""))
+                        })
+                if payloads:
+                    self.supabase.table("worktime_adjusted_work_logs").upsert(payloads).execute()
+            except Exception as e:
+                print(f"[DB 오류] 다건 시간 보정 Supabase 저장 알림: {e}")
+
+        # 2. 로컬 SQLite 일괄 트랜잭션 저장
+        saved_count = 0
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            for r in records:
+                mh = str(r.get("msg_hash", "")).strip()
+                if not mh:
+                    continue
+                adj_h = float(r.get("adjusted_hours", 0.0))
+                orig_h = float(r.get("original_hours", 0.0))
+                note = str(r.get("note", ""))
+
+                cursor.execute("""
+                    INSERT INTO adjusted_work_logs (msg_hash, adjusted_hours, original_hours, note, updated_at)
+                    VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
+                    ON CONFLICT(msg_hash) DO UPDATE SET
+                        adjusted_hours=excluded.adjusted_hours,
+                        original_hours=excluded.original_hours,
+                        note=excluded.note,
+                        updated_at=excluded.updated_at
+                """, (mh, adj_h, orig_h, note))
+
+                # 동기화
+                if mh.startswith("OUTLOOK_WORK_"):
+                    entry_id = mh.replace("OUTLOOK_WORK_", "")
+                    cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (adj_h, entry_id))
+                elif mh.startswith("OUTLOOK_LEAVE_"):
+                    entry_id = mh.replace("OUTLOOK_LEAVE_", "")
+                    cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (adj_h, entry_id))
+                else:
+                    cursor.execute("UPDATE work_logs SET actual_minutes=? WHERE msg_hash=?", (int(adj_h * 60), mh))
+
+                saved_count += 1
+
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[DB 오류] 다건 시간 보정 로컬 저장 실패: {e}")
+
+        return saved_count
 
 
 db_manager = DatabaseManager()
