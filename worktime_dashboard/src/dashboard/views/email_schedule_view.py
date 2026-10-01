@@ -9,10 +9,12 @@ try:
     from src.services.email_schedule_service import EmailScheduleService
     from src.auth.auth_manager import AuthManager
     from src.services.email_sender import EmailSender
+    from src.services.authorized_recipient_service import AuthorizedRecipientService
 except ImportError:
     from ...services.email_schedule_service import EmailScheduleService
     from ...auth.auth_manager import AuthManager
     from ...services.email_sender import EmailSender
+    from ...services.authorized_recipient_service import AuthorizedRecipientService
 
 
 def render_email_schedule_view():
@@ -313,6 +315,8 @@ def render_email_schedule_view():
         </div>
         """, unsafe_allow_html=True)
     else:
+        auth_set = set(m.lower().strip() for m in AuthorizedRecipientService.get_authorized_recipients())
+
         for item in sched_logs:
             d_type = item.get("dispatch_type", "AUTO_WEEKLY")
             badge_text = "⏳ 주간 정기 자동" if d_type == "AUTO_WEEKLY" else "📅 월간 정기 자동"
@@ -321,9 +325,8 @@ def render_email_schedule_view():
             dt_str = str(item.get("created_at", "")).replace("T", " ")
             short_dt = dt_str[0:16] if len(dt_str) >= 16 else dt_str
             p_label = item.get("period_label", "")
+            rcpts = item.get("recipient_email", "")
             rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
-            from src.services.authorized_recipient_service import AuthorizedRecipientService
-            auth_set = set(m.lower().strip() for m in AuthorizedRecipientService.get_authorized_recipients())
 
             email_rows = []
             for em_entry in rcpt_list:

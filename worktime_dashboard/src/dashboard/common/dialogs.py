@@ -1097,6 +1097,8 @@ def show_email_report_dialog(selected_team: str):
             "AUTO_MONTHLY": ('<span style="background:#7c3aed; color:#ffffff; padding:2px 7px; border-radius:4px; font-size:10.5px; font-weight:800;">📅 월간 자동</span>', "월간 자동 발송")
         }
 
+        auth_set = set(m.lower().strip() for m in AuthorizedRecipientService.get_authorized_recipients())
+
         for item in recent_logs:
             d_type = item.get("dispatch_type", "MANUAL_IMMEDIATE")
             badge_html, _ = type_badge_map.get(
@@ -1109,10 +1111,9 @@ def show_email_report_dialog(selected_team: str):
             short_dt = dt_str[5:16] if len(dt_str) >= 16 else dt_str
 
             p_label = item.get("period_label", "")
+            rcpts = item.get("recipient_email", "")
             # 📬 수신자 이메일 목록을 쉼표 기준으로 분리하여 1줄에 1개씩 + 태그 배지 부착
             rcpt_list = [em.strip() for em in str(rcpts).split(",") if em.strip()]
-            from src.services.authorized_recipient_service import AuthorizedRecipientService
-            auth_set = set(m.lower().strip() for m in AuthorizedRecipientService.get_authorized_recipients())
 
             email_rows = []
             for em_entry in rcpt_list:
