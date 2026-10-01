@@ -270,7 +270,7 @@ def render_cost_estimation_view(
         "💰 팀원별 예상 청구금액": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
         "💰 예상 비용산정": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
         "💰 예상 비용산정 대시보드": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
-        "🏢 고객사별 청구 금액": ("🏢", "고객사별 프로젝트/지원 예상 청구 금액", "고객사 및 프로젝트별 투입 공수(h)와 총 청구 예상 금액을 집계 분석합니다."),
+        "🏢 고객사별 청구 금액": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
         "✏️ 업무 시간 직접 수정 장표": ("✏️", "업무 시간 직접 수정 장표", "아웃룩 '종일(9.0h)' 등록 작업 및 지원 공수를 직접 검토하고 영구 수정합니다."),
         "🕒 시간 수정 감사 이력": ("🕒", "시간 수정 감사 이력 타임라인", "인정 공수를 수정한 모든 내역의 변경 전/후, 사유, 수정자를 투명하게 보존 및 감사 추적합니다."),
         "⚙️ 직급별 시간당 단가 설정": ("⚙️", "직급별 시간당 단가 설정", "사업본부 청구용 직급별 시간당 단가(원/h)를 설정하고 DB에 영구 저장합니다.")
@@ -360,7 +360,7 @@ def render_cost_estimation_view(
     # =========================================================
     # 1. 👤 팀원별 예상 청구금액
     # =========================================================
-    if curr_page in ["💰 팀원별 예상 청구금액", "💰 예상 비용산정", "💰 예상 비용산정 대시보드"]:
+    if curr_page in ["💰 팀원별 예상 청구금액", "💰 예상 비용산정", "💰 예상 비용산정 대시보드", "🏢 고객사별 청구 금액"]:
         st.markdown('<div class="cost-table-header-cisco"><span>👤</span><span>팀원별 투입 공수 및 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
 
         worker_df = CostEstimationService.get_worker_cost_summary(df_calc)
@@ -500,6 +500,77 @@ def render_cost_estimation_view(
                     margin=dict(l=10, r=10, t=35, b=10)
                 )
                 st.plotly_chart(fig_t, use_container_width=True)
+
+        # -------------------------------------------------------------
+        # 🏢 고객사/프로젝트별 예상 청구 금액 정산표 (직급별 점유율 바로 아래 배치)
+        # -------------------------------------------------------------
+        st.markdown('<div class="cost-table-header-cisco" style="margin-top: 24px;"><span>🏢</span><span>고객사/프로젝트별 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
+        client_df = CostEstimationService.get_client_cost_summary(df_calc)
+        if client_df.empty:
+            st.info("조회 기준에 해당하는 고객사 작업 데이터가 없습니다.")
+        else:
+            col_c1, col_c2 = st.columns([6, 4])
+            with col_c1:
+                disp_client_df = client_df.copy()
+                disp_client_df = disp_client_df[[
+                    "client_name", "worker_count", "total_hours", "overtime_hours",
+                    "base_cost", "overtime_premium", "total_cost", "task_count", "adjusted_count"
+                ]]
+                disp_client_df.columns = [
+                    "고객사명", "투입 인원수", "총 인정 공수(h)", "야간·주말(h)",
+                    "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "작업 건수", "보정 건수"
+                ]
+                st.dataframe(
+                    disp_client_df.style.format({
+                        "투입 인원수": "{:,}명",
+                        "총 인정 공수(h)": "{:,.1f}h",
+                        "야간·주말(h)": "{:,.1f}h",
+                        "기본 금액(원)": "₩ {:,.0f}",
+                        "할증 가산액(원)": "+₩ {:,.0f}",
+                        "최종 청구금액(원)": "₩ {:,.0f}",
+                        "작업 건수": "{:,}건",
+                        "보정 건수": "{:,}건"
+                    }),
+                    use_container_width=True,
+                    height=380,
+                    hide_index=True
+                )
+
+                csv_c_data = disp_client_df.to_csv(index=False).encode("utf-8-sig")
+                st.download_button(
+                    label="📥 고객사별 정산표 CSV 다운로드",
+                    data=csv_c_data,
+                    file_name=f"고객사별_예상청구비용_{datetime.now().strftime('%Y%m%d')}.csv",
+                    mime="text/csv",
+                    key="btn_dl_client_cost_csv"
+                )
+
+            with col_c2:
+                top_clients = client_df.head(8)
+                fig_c = px.pie(
+                    top_clients,
+                    names="client_name",
+                    values="total_cost",
+                    title="🏆 주요 고객사 청구 금액 점유율",
+                    hole=0.45,
+                    color_discrete_sequence=["#005073", "#0284c7", "#0ea5e9", "#14b8a6", "#10b981", "#f59e0b", "#8b5cf6", "#64748b"]
+                )
+                fig_c.update_traces(
+                    textposition='inside',
+                    textinfo='percent+label',
+                    textfont=dict(size=11, color="#ffffff", family="Pretendard, sans-serif")
+                )
+                fig_c.update_layout(
+                    template="plotly_white",
+                    paper_bgcolor="#ffffff",
+                    plot_bgcolor="#ffffff",
+                    font=dict(color="#000000", family="Pretendard, sans-serif"),
+                    title=dict(font=dict(size=14, color="#000000", family="Pretendard, sans-serif")),
+                    legend=dict(font=dict(color="#000000", size=11, family="Pretendard, sans-serif")),
+                    height=380,
+                    margin=dict(l=10, r=10, t=40, b=20)
+                )
+                st.plotly_chart(fig_c, use_container_width=True)
 
         # -------------------------------------------------------------
         # 📈 전월 대비 MoM 월별 청구 추이 및 증감 분석 (기능 5)
@@ -687,79 +758,7 @@ def render_cost_estimation_view(
             )
 
     # =========================================================
-    # 탭 2: 고객사별 청구 금액
-    # =========================================================
-    elif curr_page == "🏢 고객사별 청구 금액":
-        st.markdown('<div class="cost-table-header-cisco"><span>🏢</span><span>고객사/프로젝트별 예상 청구 금액 정산표</span></div>', unsafe_allow_html=True)
-        client_df = CostEstimationService.get_client_cost_summary(df_calc)
-        if client_df.empty:
-            st.info("조회 기준에 해당하는 고객사 작업 데이터가 없습니다.")
-        else:
-            col_c1, col_c2 = st.columns([6, 4])
-            with col_c1:
-                disp_client_df = client_df.copy()
-                disp_client_df = disp_client_df[[
-                    "client_name", "worker_count", "total_hours", "overtime_hours",
-                    "base_cost", "overtime_premium", "total_cost", "task_count", "adjusted_count"
-                ]]
-                disp_client_df.columns = [
-                    "고객사명", "투입 인원수", "총 인정 공수(h)", "야간·주말(h)",
-                    "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "작업 건수", "보정 건수"
-                ]
-                st.dataframe(
-                    disp_client_df.style.format({
-                        "투입 인원수": "{:,}명",
-                        "총 인정 공수(h)": "{:,.1f}h",
-                        "야간·주말(h)": "{:,.1f}h",
-                        "기본 금액(원)": "₩ {:,.0f}",
-                        "할증 가산액(원)": "+₩ {:,.0f}",
-                        "최종 청구금액(원)": "₩ {:,.0f}",
-                        "작업 건수": "{:,}건",
-                        "보정 건수": "{:,}건"
-                    }),
-                    use_container_width=True,
-                    height=380,
-                    hide_index=True
-                )
-
-                csv_c_data = disp_client_df.to_csv(index=False).encode("utf-8-sig")
-                st.download_button(
-                    label="📥 고객사별 정산표 CSV 다운로드",
-                    data=csv_c_data,
-                    file_name=f"고객사별_예상청구비용_{datetime.now().strftime('%Y%m%d')}.csv",
-                    mime="text/csv",
-                    key="btn_dl_client_cost_csv"
-                )
-
-            with col_c2:
-                top_clients = client_df.head(8)
-                fig_c = px.pie(
-                    top_clients,
-                    names="client_name",
-                    values="total_cost",
-                    title="🏆 주요 고객사 청구 금액 점유율",
-                    hole=0.45,
-                    color_discrete_sequence=["#005073", "#0284c7", "#0ea5e9", "#14b8a6", "#10b981", "#f59e0b", "#8b5cf6", "#64748b"]
-                )
-                fig_c.update_traces(
-                    textposition='inside',
-                    textinfo='percent+label',
-                    textfont=dict(size=11, color="#ffffff", family="Pretendard, sans-serif")
-                )
-                fig_c.update_layout(
-                    template="plotly_white",
-                    paper_bgcolor="#ffffff",
-                    plot_bgcolor="#ffffff",
-                    font=dict(color="#000000", family="Pretendard, sans-serif"),
-                    title=dict(font=dict(size=14, color="#000000", family="Pretendard, sans-serif")),
-                    legend=dict(font=dict(color="#000000", size=11, family="Pretendard, sans-serif")),
-                    height=380,
-                    margin=dict(l=10, r=10, t=40, b=20)
-                )
-                st.plotly_chart(fig_c, use_container_width=True)
-
-    # =========================================================
-    # 탭 3: 업무 시간 직접 수정 장표 (크리티컬 기능)
+    # 탭 2: 업무 시간 직접 수정 장표 (크리티컬 기능)
     # =========================================================
     elif curr_page == "✏️ 업무 시간 직접 수정 장표":
         st.markdown('<div class="cost-table-header-cisco"><span>✏️</span><span>업무 시간 직접 수정 장표 (DB 영구 보존 오버라이드)</span></div>', unsafe_allow_html=True)
