@@ -333,6 +333,16 @@ def render_cost_estimation_view(
     </div>
     """, unsafe_allow_html=True)
 
+    # 🎓 비용 산정 정책 안내 (교육 및 휴가 청구 제외)
+    st.markdown("""
+    <div style="background: #f8fafc; border: 1.2px solid #cbd5e1; border-left: 5px solid #0284c7; border-radius: 8px; padding: 9px 14px; margin-bottom: 16px; font-size: 12.5px; color: #334155; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div>
+            <span>💡 <b>비용 산정 정책:</b> 구분이 <b>[교육]</b>(사내/수강 교육)이거나 <b>[휴가]</b>인 항목은 외부 고객사 청구 대상이 아니므로 <b>예상 비용 산정 대상에서 자동 제외(0.0h / 0원)</b>됩니다.</span>
+        </div>
+        <span style="background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">교육·휴가 청구 제외</span>
+    </div>
+    """, unsafe_allow_html=True)
+
     # =========================================================
     # 📅 보고서 조회 주기 선택 (월간 전체 종합 vs 각 주차별 상세 드릴다운)
     # =========================================================

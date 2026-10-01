@@ -32,10 +32,15 @@ class CostEstimationService:
 
         df_calc = df.copy()
 
-        # 🛡️ 이미 완료(COMPLETED)된 작업만 예상 비용 산정 및 시간 수정 대상으로 포함 (진행 중 PENDING/SCHEDULED 제외)
+        # 🛡️ 1. 이미 완료(COMPLETED)된 작업만 예상 비용 산정 및 시간 수정 대상으로 포함 (진행 중 PENDING/SCHEDULED 제외)
         if "status" in df_calc.columns:
             comp_mask = df_calc["status"].astype(str).str.upper().isin(["COMPLETED", "완료"])
             df_calc = df_calc[comp_mask].copy()
+
+        # 🎓 2. 구분(log_type) 자체가 '교육'인 항목은 비용 산정 대상에서 원천 제외 (사내/수강 교육으로 고객사 비용 청구 불가)
+        if "log_type" in df_calc.columns:
+            edu_mask = df_calc["log_type"].astype(str).str.strip() == "교육"
+            df_calc = df_calc[~edu_mask].copy()
 
         #完了 작업이 0건이거나 빈 데이터프레임일 때 조기 반환 (TypeError 방지)
         if df_calc.empty:
@@ -78,12 +83,12 @@ class CostEstimationService:
         ).fillna(default_rate).astype(int)
 
         # 청구 인정 공수(billable_hours) 산정
-        # 휴가/연차는 청구 금액 0원 (공수 0.0h)
+        # 휴가/연차 및 교육은 청구 금액 0원 (공수 0.0h)
         is_leave_mask = pd.Series(False, index=df_calc.index)
         if "is_leave" in df_calc.columns:
             is_leave_mask = is_leave_mask | df_calc["is_leave"].fillna(False).astype(bool)
         if "log_type" in df_calc.columns:
-            is_leave_mask = is_leave_mask | (df_calc["log_type"] == "휴가")
+            is_leave_mask = is_leave_mask | (df_calc["log_type"].astype(str).str.strip().isin(["휴가", "교육"]))
 
         # 기본 공수 확보
         if "actual_hours" in df_calc.columns:
