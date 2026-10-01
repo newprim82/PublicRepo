@@ -305,14 +305,23 @@ def render_cost_estimation_view(
         </div>
         """, unsafe_allow_html=True)
 
-    # ⚖️ 근로기준법 제56조 준수 안내 바 (상시 1.5배 가산 자동 적용 명시)
+    # ⚖️ 근로기준법 제56조 준수 안내 바 (상시 1.5배 가산 자동 적용 명시 & 국가법령정보센터 조문 링크)
     st.markdown("""
-    <div style="background: #f0fdf4; border: 1.2px solid #86efac; border-left: 5px solid #16a34a; border-radius: 8px; padding: 8px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
-        <div style="font-size: 13px; font-weight: 700; color: #14532d;">
-            ⚖️ <b>근로기준법 제56조 준수:</b> 야간 근로(22:00~06:00) 및 주말·휴일 지원 공수에 대해 <b>1.5배 할증 가산(50% 가산)</b>이 상시 자동 적용되어 청구 금액에 반영됩니다.
+    <div style="background: #f0fdf4; border: 1.2px solid #86efac; border-left: 5px solid #16a34a; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+        <div>
+            <div style="font-size: 13px; font-weight: 700; color: #14532d; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span>⚖️ <b>근로기준법 제56조 준수:</b> 야간 근로(22:00~06:00) 및 주말·휴일 지원 공수에 대해 <b>1.5배 할증 가산(50% 가산)</b>이 상시 자동 적용되어 청구 금액에 반영됩니다.</span>
+            </div>
+            <div style="margin-top: 5px; font-size: 12px; font-weight: 600; color: #166534; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span>📖 관련 법령:</span>
+                <a href="https://www.law.go.kr/LSW//lsLinkCommonInfo.do?lsJoLnkSeq=1025590551&chrClsCd=010202&ancYnChk=" target="_blank" rel="noopener noreferrer" style="color: #0284c7; font-weight: 800; text-decoration: underline;">[국가법령정보센터 | 조문정보]</a>
+                <span style="color: #64748b; font-size: 11.5px;">(클릭 시 근로기준법 제56조 조문 새 창 열기 ↗)</span>
+            </div>
         </div>
-        <div style="font-size: 12px; font-weight: 800; color: #15803d; background: #dcfce7; padding: 3px 10px; border-radius: 4px; border: 1px solid #bbf7d0;">
-            상시 자동 적용 (배율: 1.5배)
+        <div>
+            <div style="font-size: 12px; font-weight: 800; color: #15803d; background: #dcfce7; padding: 4px 12px; border-radius: 4px; border: 1px solid #bbf7d0; white-space: nowrap;">
+                상시 자동 적용 (배율: 1.5배)
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
