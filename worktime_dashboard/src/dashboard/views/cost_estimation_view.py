@@ -431,8 +431,38 @@ def render_cost_estimation_view(
     else:
         df_active = df_scope.copy()
 
+    # -------------------------------------------------------------
+    # 📅 보고서 조회 기준 기간 산출 (월간/주간 드릴다운 및 실제 데이터 일자 범위 반영)
+    # -------------------------------------------------------------
+    date_range_str = ""
+    if "start_time" in df_active.columns and not df_active["start_time"].dropna().empty:
+        valid_st = pd.to_datetime(df_active["start_time"], errors="coerce").dropna()
+        if not valid_st.empty:
+            min_d = valid_st.min().strftime("%Y.%m.%d")
+            max_d = valid_st.max().strftime("%Y.%m.%d")
+            date_range_str = f"{min_d} ~ {max_d}" if min_d != max_d else min_d
+
+    if sel_period != "🗓️ 월간 전체 종합":
+        target_week = sel_period.replace("📌 ", "").strip()
+        current_report_period = target_week
+        period_header_suffix = f" ({target_week})"
+    else:
+        clean_month = str(month_desc).strip() if month_desc else ""
+        if clean_month and clean_month != "전체 기간":
+            if "~" in clean_month or (date_range_str and date_range_str in clean_month):
+                current_report_period = clean_month
+            elif date_range_str:
+                current_report_period = f"{clean_month} ({date_range_str})"
+            else:
+                current_report_period = clean_month
+        elif date_range_str:
+            current_report_period = date_range_str
+        else:
+            current_report_period = "전체 기간"
+        
+        period_header_suffix = f" ({current_report_period})" if current_report_period != "전체 기간" else (f" ({date_range_str})" if date_range_str else "")
+
     # 1. 계산된 예상 비용 데이터프레임 도출 (선택된 주기 df_active 기준)
-    period_header_suffix = f" ({target_week})" if sel_period != "🗓️ 월간 전체 종합" else ""
     df_calc = CostEstimationService.calculate_costs(df_active)
     kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
 
@@ -508,15 +538,18 @@ def render_cost_estimation_view(
                 )
 
                 try:
+                    safe_slug = re.sub(r'[\\/*?:"<>| ~()]', '_', current_report_period).strip('_')
+                    safe_slug = re.sub(r'_+', '_', safe_slug)[:25]
+                    file_name_suffix = f"_{safe_slug}" if safe_slug else ""
                     excel_worker_data = ExcelExportService.generate_cost_estimation_report(
                         df_calc=df_calc,
                         worker_df=worker_df,
-                        title_suffix=period_header_suffix.strip(" ()")
+                        title_suffix=current_report_period
                     )
                     st.download_button(
                         label="📥 팀원별 정산 엑셀 다운로드 (첫 탭: 요약표 / 나머지: 개인장표)",
                         data=excel_worker_data,
-                        file_name=f"팀원별_예상청구비용_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                        file_name=f"팀원별_예상청구비용{file_name_suffix}_{datetime.now().strftime('%Y%m%d')}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         key="btn_dl_worker_cost_excel",
                         type="primary",

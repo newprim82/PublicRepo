@@ -373,7 +373,20 @@ class ExcelExportService:
         align_left = Alignment(horizontal="left", vertical="center")
         align_right = Alignment(horizontal="right", vertical="center")
 
-        period_text = title_suffix if title_suffix else "전체 기간"
+        # 기간 텍스트 결정: 전달받은 title_suffix 우선, 미전달/전체 기간 시 데이터 일자 범위 자동 산출
+        if not title_suffix or title_suffix == "전체 기간":
+            if "start_time" in data.columns and not data["start_time"].dropna().empty:
+                valid_st = pd.to_datetime(data["start_time"], errors="coerce").dropna()
+                if not valid_st.empty:
+                    min_d = valid_st.min().strftime("%Y.%m.%d")
+                    max_d = valid_st.max().strftime("%Y.%m.%d")
+                    period_text = f"{min_d} ~ {max_d}" if min_d != max_d else min_d
+                else:
+                    period_text = "전체 기간"
+            else:
+                period_text = "전체 기간"
+        else:
+            period_text = title_suffix
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         # =========================================================
