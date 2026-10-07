@@ -27,9 +27,9 @@ def apply_custom_styles():
         st.markdown(f"<style>\n{css_content}\n</style>", unsafe_allow_html=True)
 
 
-def render_top_floating_header(initial_ms: int, page_tag: str):
+def render_header_banner(initial_ms: int, page_tag: str):
     """
-    🏛️ Frame 2: 실시간 NTP 시계 & 기술본부 관제센터 고정 헤더
+    🏛️ Frame 2: 실시간 NTP 시계 & 기술본부 관제센터 고정 헤더 배너
     """
     components.html(f"""
     <!DOCTYPE html>
@@ -154,3 +154,8 @@ def render_top_floating_header(initial_ms: int, page_tag: str):
     </body>
     </html>
     """, height=56)
+
+
+# 하위 호환 별칭
+render_top_floating_header = render_header_banner
+
