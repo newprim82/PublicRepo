@@ -5,7 +5,21 @@ def apply_custom_styles():
     """전역 Cisco ACI Enterprise 테마 및 Pretendard 폰트 CSS 주입"""
     # 커스텀 CSS
     st.markdown("""
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
     <style>
+        :root {
+            color-scheme: light !important;
+        }
+        /* 🚫 다크모드 원천 차단: OS 및 모바일 브라우저의 다크모드 설정을 무시하고 라이트 테마로 100% 강제 고정 */
+        @media (prefers-color-scheme: dark) {
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"] {
+                color-scheme: light !important;
+                background-color: #f4f6f9 !important;
+                color: #0f172a !important;
+            }
+        }
+
         /* 🔤 토스(Toss) 표준 프리미엄 웹 폰트: Pretendard (프리텐다드) */
         @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 
@@ -187,15 +201,21 @@ def apply_custom_styles():
             opacity: 0 !important;
             pointer-events: none !important;
         }
+        /* 🖥️ 모바일 전용 뷰 완전 배제: 모바일 접속 시에도 PC 데스크톱 화면 비율(1350px) 강제 유지 */
+        html, body, .stApp, [data-testid="stAppViewContainer"] {
+            min-width: 1350px !important;
+            overflow-x: auto !important;
+        }
         .block-container {
             padding-top: 1.15rem !important;
             padding-bottom: 2rem !important;
             padding-left: 2rem !important;
             padding-right: 2rem !important;
             max-width: 100% !important;
+            min-width: 1320px !important;
         }
 
-        /* 📐 FHD(1920x1080) 기준 양방향 자동 비례 스케일링 엔진 (4K/QHD 확대 & 갤럭시 탭 축소) */
+        /* 📐 FHD(1920x1080) 기준 양방향 자동 비례 스케일링 엔진 (4K/QHD 확대 & 태블릿 최적화) */
         /* 1) 4K UHD 초고해상도 (2800px 이상): 135% 확대 */
         @media screen and (min-width: 2800px) {
             .block-container {
@@ -256,24 +276,13 @@ def apply_custom_styles():
             }
         }
 
-        /* 7) 스마트폰 / 초소형 화면 (< 800px): 64% 축소 및 여백 극대화 */
-        @media screen and (max-width: 799px) {
-            .block-container {
-                zoom: 0.64;
-                padding-left: 0.3rem !important;
-                padding-right: 0.3rem !important;
-            }
-            [data-testid="column"] {
-                min-width: 0 !important;
-            }
-        }
-
         /* 🚀 상단 헤더 컴포넌트 iframe 깜빡임(화이트 플래시) 100% 원천 방지 */
         iframe[title*="components.v1.html"],
         div[data-testid="stCustomComponentV1"] iframe {
             background-color: transparent !important;
             border: none !important;
-            color-scheme: dark !important;
+            color-scheme: light !important;
+        }
         }
         div[data-testid="stCustomComponentV1"] {
             background: transparent !important;
@@ -1502,6 +1511,18 @@ def apply_custom_styles():
         }
 
     </style>
+    <script>
+        // 🖥️ 모바일 전용 뷰 완전 배제: 스마트폰 접속 시에도 PC 데스크톱 화면 비율(1350px) 강제 유지
+        (function() {
+            var meta = document.querySelector('meta[name="viewport"]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = 'viewport';
+                document.head.appendChild(meta);
+            }
+            meta.content = 'width=1350, initial-scale=0.28, maximum-scale=3.0, user-scalable=yes';
+        })();
+    </script>
     """, unsafe_allow_html=True)
 
 
