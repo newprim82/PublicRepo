@@ -179,7 +179,9 @@ class ScheduleSyncService:
 
         # 1. 휴가/연차/반차 추출 (B안 정책: 종료 시각 이전에는 상단 실시간 부재 현황, 종료 후에는 오늘 완료된 작업으로 즉시 이동)
         leave_records = []
-        leave_rows = today_out[today_out["is_leave"] == True]
+        leave_kws = ["연차", "반차", "오전반차", "오후반차", "휴가", "공가", "보상휴가", "병가", "병원", "진료", "건강검진", "외출", "조퇴"]
+        leave_mask = (today_out["is_leave"] == True) | today_out["subject"].astype(str).apply(lambda s: any(kw in s for kw in leave_kws))
+        leave_rows = today_out[leave_mask]
 
         # 🛡️ 동일 작업자 중복/겹침 휴가 일정 사전 통합 (예: '[김시우] 병원 진료' vs '[김시우] 오전 반차 (병원 진료)')
         deduped_leave_items = []
@@ -309,8 +311,8 @@ class ScheduleSyncService:
         else:
             final_comp_df = pd.DataFrame()
 
-        # 3. 비-휴가 일반 작업 일정 처리
-        work_rows = today_out[today_out["is_leave"] == False]
+        # 3. 비-휴가 일반 작업 일정 처리 (휴가 일정 원천 배제)
+        work_rows = today_out[~leave_mask]
 
         for _, r in work_rows.iterrows():
             w_name = r["worker_name"]
@@ -586,9 +588,14 @@ class ScheduleSyncService:
                 if st_dt.date() > now.date():
                     continue
 
-                is_leave = bool(r.get("is_leave", False))
+                subj_str = str(r.get("subject", ""))
+                leave_kws = ["연차", "반차", "오전반차", "오후반차", "휴가", "공가", "보상휴가", "병가", "병원", "진료", "건강검진", "외출", "조퇴"]
+                has_leave_kw = any(kw in subj_str for kw in leave_kws)
+                is_leave = bool(r.get("is_leave", False)) or has_leave_kw
                 is_all_day = bool(r.get("is_all_day", False))
-                l_type = r.get("leave_type") or "연차"
+                l_type = r.get("leave_type")
+                if not l_type or str(l_type).strip() == "" or l_type == "기타":
+                    l_type = "반차" if any(kw in subj_str for kw in ["반차", "오전반차", "오후반차", "병원", "진료", "외출", "조퇴"]) else "연차"
 
                 if not is_leave and is_all_day:
                     st_dt = st_dt.replace(hour=9, minute=0, second=0, microsecond=0)
@@ -634,6 +641,7 @@ class ScheduleSyncService:
                 except Exception:
                     week_label_val = f"{month_str_val} 주차"
 
+                if is_leave:
                     # 🏖️ 당일(오늘) 휴가는 종료 전(종일연차는 18:00 전)에는 실시간 부재(SCHEDULED),
                     # 반차/휴가 종료 시각 이후 또는 과거 날짜의 휴가는 COMPLETED 부여
                     is_leave_ended_comb = False
@@ -664,6 +672,7 @@ class ScheduleSyncService:
                         "actual_hours": 0.0,       # 🌟 업무량 산정 완전 제외 (0.0h)
                         "estimated_hours": 0.0,
                         "total_hours": 0.0,
+                        "display_hours": dur_hours,
                         "date_str": date_str_val,
                         "month_str": month_str_val,
                         "week_label": week_label_val,
@@ -757,6 +766,12 @@ class ScheduleSyncService:
 
         if outlook_converted_rows:
             out_df_converted = pd.DataFrame(outlook_converted_rows)
+            # 🛡️ 동일 작업자 동일 날짜/시간대 휴가 중복 방어 (상세 일정 유지)
+            if "is_leave" in out_df_converted.columns and out_df_converted["is_leave"].any():
+                l_mask = out_df_converted["is_leave"] == True
+                out_leaves = out_df_converted[l_mask].drop_duplicates(subset=["worker_name", "date_str", "start_time"], keep="last")
+                out_others = out_df_converted[~l_mask]
+                out_df_converted = pd.concat([out_others, out_leaves], ignore_index=True)
             combined_df = pd.concat([kakao_df, out_df_converted], ignore_index=True)
         else:
             combined_df = kakao_df.copy()

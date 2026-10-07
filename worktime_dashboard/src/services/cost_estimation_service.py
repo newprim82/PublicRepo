@@ -235,6 +235,11 @@ class CostEstimationService:
             is_leave_mask = is_leave_mask | df_calc["is_leave"].fillna(False).astype(bool)
         if "log_type" in df_calc.columns:
             is_leave_mask = is_leave_mask | (df_calc["log_type"].astype(str).str.strip().isin(["휴가", "교육"]))
+        leave_kws = ["연차", "반차", "오전반차", "오후반차", "휴가", "공가", "병가", "외출", "조퇴", "병원진료", "건강검진"]
+        if "task_description" in df_calc.columns:
+            is_leave_mask = is_leave_mask | df_calc["task_description"].astype(str).apply(lambda s: any(kw in s for kw in leave_kws))
+        if "client_name" in df_calc.columns:
+            is_leave_mask = is_leave_mask | df_calc["client_name"].astype(str).str.contains("휴가|연차|반차", regex=True)
 
         # 기본 공수 확보
         if "actual_hours" in df_calc.columns:
@@ -257,6 +262,11 @@ class CostEstimationService:
         df_calc["is_time_adjusted"] = False
         if "original_hours" not in df_calc.columns:
             df_calc["original_hours"] = df_calc["billable_hours"]
+        
+        # 🏖️ 휴가/연차/반차 항목은 청구 기준이 아니므로 기존공수 및 인정공수 모두 0.0h 강제
+        df_calc.loc[is_leave_mask, "original_hours"] = 0.0
+        df_calc.loc[is_leave_mask, "billable_hours"] = 0.0
+
         if "note" not in df_calc.columns:
             df_calc["note"] = ""
 

@@ -255,6 +255,12 @@ def parse_outlook_subject_to_client_and_task(subject: str, location: str = "") -
         tag = re.search(r"\[([^\]]+)\]", raw_subj)
         return "기타", tag.group(1) if tag else raw_subj
 
+    # 휴가/연차/반차/부재 예외 처리 (고객사가 '오전' 등으로 잘못 쪼개지는 현상 원천 차단)
+    leave_kws = ["연차", "반차", "오전반차", "오후반차", "휴가", "공가", "병가", "보상휴가", "병원", "진료", "건강검진", "외출", "조퇴"]
+    if any(k in cleaned for k in leave_kws):
+        l_name = "반차" if any(k in cleaned for k in ["반차", "오전반차", "오후반차", "병원", "진료", "외출", "조퇴"]) else "연차"
+        return f"🏖️ {l_name}", cleaned
+
     # 사내/회의 예외 처리
     if any(k in cleaned for k in ["기술 미팅", "업무회의", "팀별 회의", "본부 회의", "주간 회의"]):
         return "내부업무", cleaned
