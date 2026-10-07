@@ -5,16 +5,28 @@ def apply_custom_styles():
     """전역 Cisco ACI Enterprise 테마 및 Pretendard 폰트 CSS 주입"""
     # 커스텀 CSS
     st.markdown("""
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
+    <meta name="color-scheme" content="only light">
+    <meta name="supported-color-schemes" content="only light">
+    <meta name="theme-color" content="#f4f6f9">
     <style>
         :root {
-            color-scheme: light !important;
+            color-scheme: only light !important;
+            forced-color-adjust: none !important;
+            --background-color: #f4f6f9 !important;
+            --secondary-background-color: #ffffff !important;
+            --text-color: #0f172a !important;
         }
-        /* 🚫 다크모드 원천 차단: OS 및 모바일 브라우저의 다크모드 설정을 무시하고 라이트 테마로 100% 강제 고정 */
+        /* 🚫 다크모드 원천 차단: 삼성 인터넷/크롬의 강제 다크모드 반전 방어 및 라이트 테마 100% 고정 */
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"], div[data-testid="stVerticalBlock"] {
+            color-scheme: only light !important;
+            forced-color-adjust: none !important;
+            background-color: #f4f6f9 !important;
+            color: #0f172a !important;
+        }
         @media (prefers-color-scheme: dark) {
-            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"] {
-                color-scheme: light !important;
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"], div[data-testid="stVerticalBlock"] {
+                color-scheme: only light !important;
+                forced-color-adjust: none !important;
                 background-color: #f4f6f9 !important;
                 color: #0f172a !important;
             }
@@ -149,6 +161,8 @@ def apply_custom_styles():
         /* 🚀 좌측 사이드바 열기 버튼 (stExpandSidebarButton: >>) */
         [data-testid="stExpandSidebarButton"] {
             display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             visibility: visible !important;
             opacity: 1 !important;
             pointer-events: auto !important;
@@ -161,10 +175,23 @@ def apply_custom_styles():
             border: 1.5px solid #00b4d8 !important;
             border-radius: 6px !important;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+            width: 36px !important;
+            height: 36px !important;
+            overflow: hidden !important;
+        }
+        [data-testid="stExpandSidebarButton"] span {
+            font-size: 0 !important;
+            display: none !important;
+        }
+        [data-testid="stExpandSidebarButton"]::after {
+            content: "≫";
+            font-size: 16px;
+            font-weight: 900;
+            color: #00b4d8;
+            line-height: 1;
         }
         [data-testid="stExpandSidebarButton"] svg {
-            fill: #00b4d8 !important;
-            color: #00b4d8 !important;
+            display: none !important;
         }
 
         /* 🚀 좌측 사이드바 닫기 버튼 (stSidebarCollapseButton: <<) */
@@ -201,18 +228,34 @@ def apply_custom_styles():
             opacity: 0 !important;
             pointer-events: none !important;
         }
-        /* 🖥️ 모바일 전용 뷰 완전 배제: 모바일 접속 시에도 PC 데스크톱 화면 비율(1350px) 강제 유지 */
-        html, body, .stApp, [data-testid="stAppViewContainer"] {
-            min-width: 1350px !important;
-            overflow-x: auto !important;
-        }
+        /* 🖥️ 모바일 전용 뷰 완전 배제: 스마트폰에서도 PC 데스크톱 1350px 레이아웃 비율을 화면 폭(100vw)에 쏙 맞춤 */
         .block-container {
             padding-top: 1.15rem !important;
             padding-bottom: 2rem !important;
             padding-left: 2rem !important;
             padding-right: 2rem !important;
             max-width: 100% !important;
-            min-width: 1320px !important;
+        }
+
+        /* 📱 스마트폰 및 소형 화면 (< 1024px): 1350px PC 데스크톱 화면 전체를 화면 폭에 1:1 완벽 축소 피팅 */
+        @media screen and (max-width: 1023px) {
+            html, body, .stApp, [data-testid="stAppViewContainer"] {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                overflow-x: hidden !important;
+            }
+            .block-container {
+                width: 1350px !important;
+                max-width: 1350px !important;
+                min-width: 1350px !important;
+                zoom: calc(100vw / 1350) !important;
+                padding-left: 0.6rem !important;
+                padding-right: 0.6rem !important;
+                transform-origin: top left !important;
+            }
+            [data-testid="column"] {
+                min-width: 0 !important;
+            }
         }
 
         /* 📐 FHD(1920x1080) 기준 양방향 자동 비례 스케일링 엔진 (4K/QHD 확대 & 태블릿 최적화) */
@@ -1510,17 +1553,34 @@ def apply_custom_styles():
             font-weight: 700 !important;
         }
 
-    </style>
     <script>
-        // 🖥️ 모바일 전용 뷰 완전 배제: 스마트폰 접속 시에도 PC 데스크톱 화면 비율(1350px) 강제 유지
         (function() {
-            var meta = document.querySelector('meta[name="viewport"]');
-            if (!meta) {
-                meta = document.createElement('meta');
-                meta.name = 'viewport';
-                document.head.appendChild(meta);
+            // 🚫 1. Streamlit 자체 다크모드 로컬 설정 강제 무력화 (Light 테마 100% 고정)
+            try {
+                localStorage.setItem("stActiveTheme", JSON.stringify({base: "light"}));
+            } catch(e) {}
+
+            // 📱 2. 스마트폰 화면 폭에 맞추어 1350px PC 데스크톱 화면을 1:1 완벽 비율로 쏙 축소 피팅
+            function autoFitDesktopMobile() {
+                var baseW = 1350;
+                var sw = window.innerWidth || document.documentElement.clientWidth || screen.width;
+                if (sw < baseW) {
+                    var scale = (sw / baseW);
+                    var container = document.querySelector('.block-container');
+                    if (container) {
+                        container.style.zoom = scale;
+                        container.style.width = baseW + 'px';
+                        container.style.minWidth = baseW + 'px';
+                        container.style.maxWidth = baseW + 'px';
+                    }
+                }
             }
-            meta.content = 'width=1350, initial-scale=0.28, maximum-scale=3.0, user-scalable=yes';
+            window.addEventListener('resize', autoFitDesktopMobile);
+            window.addEventListener('orientationchange', function() {
+                setTimeout(autoFitDesktopMobile, 200);
+            });
+            autoFitDesktopMobile();
+            setInterval(autoFitDesktopMobile, 800);
         })();
     </script>
     """, unsafe_allow_html=True)
