@@ -11,6 +11,9 @@ from datetime import datetime
 
 from .email_report_service import EmailReportService
 from .authorized_recipient_service import AuthorizedRecipientService
+from ..common.logger import get_logger
+
+logger = get_logger("email_sender")
 
 def get_secret(key: str, default: str = "") -> str:
     """Streamlit secrets 또는 OS 환경변수에서 안전하게 설정값을 가져옵니다."""
@@ -20,8 +23,8 @@ def get_secret(key: str, default: str = "") -> str:
             val = str(st.secrets[key]).strip()
             if val:
                 return val
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Streamlit secrets 접근 불가(%s): 환경변수 조회로 전환", e)
     val = os.getenv(key, "").strip()
     return val if val else default
 
@@ -198,6 +201,7 @@ class EmailSender:
 
         except smtplib.SMTPAuthenticationError as e:
             err_msg = f"❌ Gmail 인증 실패: 구글 앱 비밀번호를 확인해주세요. ({e})"
+            logger.error("Gmail 인증 실패: %s", e)
             try:
                 from .email_dispatch_service import EmailDispatchService
                 EmailDispatchService.record_dispatch(
@@ -210,11 +214,12 @@ class EmailSender:
                     status="FAILED",
                     error_message=err_msg
                 )
-            except Exception:
-                pass
+            except Exception as ex_rec:
+                logger.warning("실패 이력 DB 기록 실패: %s", ex_rec)
             return False, err_msg
         except Exception as e:
             err_msg = f"❌ 이메일 발송 실패: {str(e)}"
+            logger.error("이메일 발송 중 예외 발생: %s", e, exc_info=True)
             try:
                 from .email_dispatch_service import EmailDispatchService
                 EmailDispatchService.record_dispatch(
@@ -227,6 +232,6 @@ class EmailSender:
                     status="FAILED",
                     error_message=err_msg
                 )
-            except Exception:
-                pass
+            except Exception as ex_rec:
+                logger.warning("실패 이력 DB 기록 실패: %s", ex_rec)
             return False, err_msg

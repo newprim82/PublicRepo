@@ -12,6 +12,9 @@ from src.services.team_service import TeamService
 from src.services.client_normalizer import parse_outlook_subject_to_client_and_task
 from src.dashboard.common.ui_helpers import get_current_kst_time
 from src.parser.reply_matcher import check_is_night_work
+from src.common.logger import get_logger
+
+logger = get_logger("schedule_sync")
 
 class ScheduleSyncService:
     """
@@ -155,7 +158,8 @@ class ScheduleSyncService:
                     import src.database.supabase_client as sc
                     importlib.reload(sc)
                     outlook_df = sc.db_manager.fetch_outlook_schedules(today_str, today_str)
-            except Exception:
+            except Exception as e:
+                logger.warning("오늘 아웃룩 일정 조회 중 예외 발생: %s", e)
                 outlook_df = pd.DataFrame()
 
         if outlook_df.empty or "start_time" not in outlook_df.columns:
