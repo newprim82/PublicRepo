@@ -77,75 +77,12 @@ def apply_custom_styles():
             color: #0f172a !important;
         }
 
-        /* ⏳ 1. Streamlit Stale 엘리먼트 칙칙한 회색 페이드아웃 방지 (세련된 글래스 블러로 대체) */
+        /* 🚀 메뉴 전환 시 화면 페이드아웃/블러 완전 제거: 100% 선명도 및 즉시 전환 보장 */
         div[data-stale="true"],
         .stale-element {
-            opacity: 0.85 !important;
-            filter: blur(1.2px) !important;
-            transition: opacity 0.2s ease, filter 0.2s ease !important;
-        }
-
-        /* ⏳ 2. 스크립트 실행 중(running) 전체 화면 반투명 딤드 오버레이 */
-        .stApp[data-test-script-state="running"]::before,
-        [data-testid="stAppViewContainer"][data-test-script-state="running"]::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            z-index: 999980;
-            pointer-events: all;
-            opacity: 0;
-            animation: agyFadeIn 0.2s ease forwards;
-            animation-delay: 0.15s;
-        }
-
-        /* ⏳ 3. 화면 정중앙 '잠시만 기다려주세요' 전용 관제센터 펄스 카드 */
-        .stApp[data-test-script-state="running"]::after,
-        [data-testid="stAppViewContainer"][data-test-script-state="running"]::after {
-            content: "⏳ 잠시만 기다려주세요\\A\\ADB 최신 데이터를 안전하게 불러오고 있습니다...";
-            white-space: pre-wrap;
-            position: fixed;
-            top: 48%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #001e2d 0%, #00364d 100%);
-            color: #ffffff;
-            border: 1.8px solid #00b4d8;
-            border-radius: 12px;
-            padding: 24px 38px;
-            font-family: 'Pretendard', sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            text-align: center;
-            line-height: 1.6;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(0, 180, 216, 0.35);
-            z-index: 999999;
-            pointer-events: none;
-            letter-spacing: -0.3px;
-            opacity: 0;
-            animation: agyCardPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            animation-delay: 0.15s;
-        }
-
-        @keyframes agyFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes agyCardPop {
-            from {
-                opacity: 0;
-                transform: translate(-50%, -46%) scale(0.96);
-            }
-            to {
-                opacity: 1;
-                transform: translate(-50%, -50%) scale(1);
-            }
+            opacity: 1 !important;
+            filter: none !important;
+            transition: none !important;
         }
 
         /* 🚀 타이틀 + 기준시각 & 우측 Deploy/점세개 최적화 */

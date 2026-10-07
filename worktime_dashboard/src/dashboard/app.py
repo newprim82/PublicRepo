@@ -139,7 +139,7 @@ if st.session_state.get("_applied_app_version") != APP_VERSION:
 # 3. 데이터 로딩 (멀티데이 분할 원본 중복제거, 정규화, 야간/주말 보장)
 # -------------------------------------------------------------
 # -------------------------------------------------------------
-@st.cache_data(ttl=30, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_data() -> pd.DataFrame:
     df = db_manager.fetch_all_work_logs()
     
@@ -495,8 +495,7 @@ def render_main_content_frame(
 def main():
     from src.parser.reply_matcher import WorkLogMatcher
 
-    with st.spinner("⏳ 잠시만 기다려주세요... DB에서 최신 작업 데이터를 불러오는 중입니다."):
-        df_raw = load_data()
+    df_raw = load_data()
     team_mappings = TeamService.get_team_mappings()
     all_workers_list = sorted(df_raw["worker_name"].dropna().unique()) if not df_raw.empty else []
 
