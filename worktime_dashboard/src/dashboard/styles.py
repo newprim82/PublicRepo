@@ -195,6 +195,79 @@ def apply_custom_styles():
             max-width: 100% !important;
         }
 
+        /* 📐 FHD(1920x1080) 기준 양방향 자동 비례 스케일링 엔진 (4K/QHD 확대 & 갤럭시 탭 축소) */
+        /* 1) 4K UHD 초고해상도 (2800px 이상): 135% 확대 */
+        @media screen and (min-width: 2800px) {
+            .block-container {
+                zoom: 1.35;
+                padding-left: 2.5rem !important;
+                padding-right: 2.5rem !important;
+            }
+        }
+
+        /* 2) QHD 고해상도 (2100px ~ 2799px): 115% 확대 */
+        @media screen and (min-width: 2100px) and (max-width: 2799px) {
+            .block-container {
+                zoom: 1.15;
+                padding-left: 2.2rem !important;
+                padding-right: 2.2rem !important;
+            }
+        }
+
+        /* 3) FHD 표준 기준점 (1600px ~ 2099px) [사용자 표준 화면]: 100% 원본 1:1 보존 */
+        @media screen and (min-width: 1600px) and (max-width: 2099px) {
+            .block-container {
+                zoom: 1.0;
+                padding-left: 2rem !important;
+                padding-right: 2rem !important;
+            }
+        }
+
+        /* 4) 일반 노트북 / 소형 데스크톱 창 (1360px ~ 1599px): 90% 축소 */
+        @media screen and (min-width: 1360px) and (max-width: 1599px) {
+            .block-container {
+                zoom: 0.90;
+                padding-left: 1.2rem !important;
+                padding-right: 1.2rem !important;
+            }
+        }
+
+        /* 5) 갤럭시 탭 가로 / 콤팩트 화면 (1024px ~ 1359px): 82% 축소 및 5열 유지 */
+        @media screen and (min-width: 1024px) and (max-width: 1359px) {
+            .block-container {
+                zoom: 0.82;
+                padding-left: 0.8rem !important;
+                padding-right: 0.8rem !important;
+            }
+            [data-testid="column"] {
+                min-width: 0 !important;
+            }
+        }
+
+        /* 6) 갤럭시 탭 세로 (800px ~ 1023px): 72% 축소 및 5열 유지 */
+        @media screen and (min-width: 800px) and (max-width: 1023px) {
+            .block-container {
+                zoom: 0.72;
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            [data-testid="column"] {
+                min-width: 0 !important;
+            }
+        }
+
+        /* 7) 스마트폰 / 초소형 화면 (< 800px): 64% 축소 및 여백 극대화 */
+        @media screen and (max-width: 799px) {
+            .block-container {
+                zoom: 0.64;
+                padding-left: 0.3rem !important;
+                padding-right: 0.3rem !important;
+            }
+            [data-testid="column"] {
+                min-width: 0 !important;
+            }
+        }
+
         /* 🚀 상단 헤더 컴포넌트 iframe 깜빡임(화이트 플래시) 100% 원천 방지 */
         iframe[title*="components.v1.html"],
         div[data-testid="stCustomComponentV1"] iframe {
