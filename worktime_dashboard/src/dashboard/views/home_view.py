@@ -335,8 +335,6 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
                     if (diffSec < 0) return;
 
                     var elapsedMins = Math.floor(diffSec / 60);
-                    var secRem = diffSec % 60;
-                    var secStr = secRem < 10 ? '0' + secRem : secRem;
                     var elapsedHours = (elapsedMins / 60.0).toFixed(1);
                     var isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
 
@@ -344,8 +342,8 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
                     if (timeSpan) {
                         var overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
                         var timeHtml = isSingle
-                            ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag
-                            : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag;
+                            ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
+                            : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
                         if (timeSpan.innerHTML !== timeHtml) {
                             timeSpan.innerHTML = timeHtml;
                             timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
