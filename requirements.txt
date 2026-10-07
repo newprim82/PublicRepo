@@ -4,6 +4,7 @@ streamlit-autorefresh>=1.0.1
 plotly>=5.19.0
 pandas>=2.2.0
 openpyxl>=3.1.2
+xlsxwriter>=3.2.0
 
 # Configuration & Utilities
 python-dotenv>=1.0.1

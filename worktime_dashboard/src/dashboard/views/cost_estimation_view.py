@@ -1004,31 +1004,46 @@ def render_cost_estimation_view(
             safe_team_name = str(selected_team).replace(" ", "_") if selected_team and selected_team != "전체 팀" else "전체_기술본부"
             file_date_str = datetime.now().strftime("%Y%m%d")
 
-            excel_mom_data = CostEstimationService.generate_mom_excel_report(trend_df, selected_team)
+            excel_mom_data = None
+            try:
+                excel_mom_data = CostEstimationService.generate_mom_excel_report(trend_df, selected_team)
+            except Exception:
+                excel_mom_data = None
+
             csv_mom_data = disp_mom_df.to_csv(index=False).encode("utf-8-sig")
 
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            col_dl1, col_dl2 = st.columns([1.2, 0.8])
-            with col_dl1:
+            if excel_mom_data:
+                col_dl1, col_dl2 = st.columns([1.2, 0.8])
+                with col_dl1:
+                    st.download_button(
+                        label="📊 월별 청구 추이 및 MoM 분석 엑셀 보고서 다운로드 (그래프·표·요약 포함)",
+                        data=excel_mom_data,
+                        file_name=f"월별청구추이_MoM분석_{safe_team_name}_{file_date_str}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="btn_dl_mom_trend_excel",
+                        type="primary",
+                        use_container_width=True
+                    )
+                with col_dl2:
+                    st.download_button(
+                        label="📥 순수 데이터 CSV 다운로드",
+                        data=csv_mom_data,
+                        file_name=f"월별청구추이_MoM분석_{safe_team_name}_{file_date_str}.csv",
+                        mime="text/csv",
+                        key="btn_dl_mom_trend_csv",
+                        use_container_width=True
+                    )
+                st.caption("💡 **엑셀 보고서(.xlsx)**를 다운로드하시면 상단 4대 핵심 요약 카드, 월별 청구액 & 투입공수 복합 그래프, 서식이 적용된 정산 테이블이 한 시트에 모두 포함되어 열립니다.")
+            else:
                 st.download_button(
-                    label="📊 월별 청구 추이 및 MoM 분석 엑셀 보고서 다운로드 (그래프·표·요약 포함)",
-                    data=excel_mom_data,
-                    file_name=f"월별청구추이_MoM분석_{safe_team_name}_{file_date_str}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="btn_dl_mom_trend_excel",
-                    type="primary",
-                    use_container_width=True
-                )
-            with col_dl2:
-                st.download_button(
-                    label="📥 순수 데이터 CSV 다운로드",
+                    label="📥 월별 청구 추이 및 MoM 분석 CSV 다운로드",
                     data=csv_mom_data,
                     file_name=f"월별청구추이_MoM분석_{safe_team_name}_{file_date_str}.csv",
                     mime="text/csv",
-                    key="btn_dl_mom_trend_csv",
-                    use_container_width=True
+                    key="btn_dl_mom_trend_csv"
                 )
-            st.caption("💡 **엑셀 보고서(.xlsx)**를 다운로드하시면 상단 4대 핵심 요약 카드, 월별 청구액 & 투입공수 복합 그래프, 서식이 적용된 정산 테이블이 한 시트에 모두 포함되어 열립니다.")
+
 
     # =========================================================
     # 탭 2: 업무 시간 직접 수정 장표 (크리티컬 기능)
