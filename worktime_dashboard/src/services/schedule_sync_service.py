@@ -234,11 +234,13 @@ class ScheduleSyncService:
             w_title = team_info.get(w_name, {}).get("title", "")
             w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
 
-            # 🌟 [B안: 종료 즉시 퇴장 정책]
-            # - 종일 연차: 퇴근 시간(18:00)까지 상단 부재 현황판 유지
-            # - 반차(오전/오후): 해당 반차의 종료 시각(ed_dt)이 지나면 즉시 상단에서 퇴장하고 하단 오늘 완료된 작업으로 이동
+            # 🌟 [B안: 종료 즉시 퇴장 정책 & 연차/반차 완료 일정 표출]
+            # - 종일 연차: 퇴근 시간(18:00)까지 상단 부재 현황판 유지 + 오늘 완료된 작업(하단)에도 연차 카드로 표출
+            # - 반차(오전/오후): 반차 진행 중에는 상단 부재 현황판에 표출, 종료 시각(ed_dt) 경과 후 상단에서 퇴장하고 하단 완료 일정에 표출
             is_all_day = bool(r.get("is_all_day") == True)
-            if is_all_day or ("연차" in str(l_type) and "반차" not in str(l_type) and "반일" not in str(l_type)):
+            is_full_leave = is_all_day or ("연차" in str(l_type) and "반차" not in str(l_type) and "반일" not in str(l_type))
+
+            if is_full_leave:
                 leave_end_cutoff = ed_dt.replace(hour=18, minute=0, second=0, microsecond=0) if (pd.notna(ed_dt) and ed_dt.hour < 18) else ed_dt
             else:
                 leave_end_cutoff = ed_dt
@@ -259,8 +261,11 @@ class ScheduleSyncService:
                     "progress_pct": 100,  # 무조건 100%
                     "color_tag": r.get("color_tag", "#ec4899")
                 })
-            else:
-                # 1-B. 반차/휴가 종료 시각 이후 또는 퇴근 시간(18:00 이후): 오늘 완료된 작업 섹션으로 즉시 이동 (업무량 산정은 0h 제외)
+
+            # 1-B. 하단 오늘 완료된 작업 섹션:
+            # - 반차: 종료 시각(ed_dt) 이후 완료 일정에 표출
+            # - 연차: 사용자 요청(연차도 완료 일정에 표시)에 따라 당일 완료 일정에 항상 표출 (업무량 산정은 0h 제외)
+            if is_leave_ended or is_full_leave:
                 auto_completed_rows.append({
                     "msg_hash": f"OUTLOOK_LEAVE_{r.get('entry_id', '')}",
                     "log_type": "휴가",
