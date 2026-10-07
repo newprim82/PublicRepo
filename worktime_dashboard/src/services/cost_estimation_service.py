@@ -518,6 +518,115 @@ class CostEstimationService:
         return monthly
 
     @classmethod
+    def _create_mom_chart_image(cls, trend_df: pd.DataFrame) -> Optional[bytes]:
+        """
+        웹 대시보드 Plotly 그래프와 100% 동일한 모던 고화질(DPI 200) 차트 이미지 생성
+        - 기본 청구액(다크 틸) + 할증 가산액(에메랄드 그린) 누적 막대
+        - 투입 공수(스카이 블루) 보조 Y축 꺾은선 + 데이터 레이블
+        """
+        try:
+            import io
+            import matplotlib
+            matplotlib.use('Agg')
+            import matplotlib.pyplot as plt
+            import matplotlib.font_manager as fm
+            import numpy as np
+
+            # 한글 폰트 안전 감지
+            font_names = [f.name for f in fm.fontManager.ttflist]
+            chosen_font = "DejaVu Sans"
+            for candidate in ["Malgun Gothic", "NanumGothic", "AppleGothic", "Noto Sans CJK KR"]:
+                if candidate in font_names:
+                    chosen_font = candidate
+                    break
+
+            plt.rcParams['font.family'] = chosen_font
+            plt.rcParams['axes.unicode_minus'] = False
+
+            sorted_df = trend_df.sort_values(by="year_month", ascending=True).reset_index(drop=True)
+            x_labels = sorted_df["year_month"].astype(str).tolist()
+            x = np.arange(len(x_labels))
+            base_cost = sorted_df["base_cost"].astype(float)
+            overtime_premium = sorted_df["overtime_premium"].astype(float)
+            total_hours = sorted_df["total_hours"].astype(float)
+
+            fig, ax1 = plt.subplots(figsize=(10.5, 4.0), dpi=200, facecolor='#ffffff')
+            ax1.set_facecolor('#ffffff')
+
+            bar_width = 0.52
+            ax1.bar(x, base_cost, bar_width, label='기본 청구액 (원)', color='#005073', zorder=2)
+            ax1.bar(x, overtime_premium, bar_width, bottom=base_cost, label='야간/주말 할증 가산액 (원)', color='#10b981', zorder=2)
+
+            ax1.set_xlabel('월 (YYYY-MM)', fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
+            ax1.set_ylabel('청구 금액 (원)', fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
+            ax1.set_xticks(x)
+            ax1.set_xticklabels(x_labels, fontsize=8.5, color='#475569')
+
+            max_cost = (base_cost + overtime_premium).max() if len(sorted_df) > 0 else 10000000
+            ax1.set_ylim(0, max_cost * 1.15)
+            def currency_fmt(x_val, _):
+                if x_val >= 1e8:
+                    return f"{x_val/1e8:.1f}억"
+                elif x_val >= 1e6:
+                    return f"{int(x_val/1e6)}M"
+                elif x_val == 0:
+                    return "0"
+                return f"{int(x_val):,}"
+            ax1.yaxis.set_major_formatter(plt.FuncFormatter(currency_fmt))
+            ax1.tick_params(axis='y', colors='#475569', labelsize=8.5)
+            ax1.grid(axis='y', linestyle='--', linewidth=0.8, color='#e2e8f0', zorder=1)
+
+            ax1.spines['top'].set_visible(False)
+            ax1.spines['right'].set_visible(False)
+            ax1.spines['left'].set_color('#cbd5e1')
+            ax1.spines['bottom'].set_color('#cbd5e1')
+
+            ax2 = ax1.twinx()
+            ax2.set_facecolor('none')
+            ax2.plot(x, total_hours, color='#0284c7', linewidth=2.6, marker='o', markersize=6.5,
+                     markerfacecolor='#0284c7', markeredgecolor='#ffffff', markeredgewidth=1.2,
+                     label='투입 공수 (h)', zorder=4)
+
+            max_hours = total_hours.max() if len(sorted_df) > 0 else 100
+            ax2.set_ylim(0, max_hours * 1.25)
+            ax2.set_ylabel('투입 공수 (h)', fontsize=9.5, fontweight='bold', color='#0284c7', labelpad=8)
+            ax2.tick_params(axis='y', colors='#0284c7', labelsize=8.5)
+            ax2.spines['top'].set_visible(False)
+            ax2.spines['left'].set_visible(False)
+            ax2.spines['right'].set_color('#cbd5e1')
+            ax2.spines['bottom'].set_visible(False)
+
+            for i_pt, h_val in enumerate(total_hours):
+                ax2.annotate(
+                    f"{h_val:.1f}h",
+                    xy=(x[i_pt], h_val),
+                    xytext=(0, 7),
+                    textcoords='offset points',
+                    ha='center',
+                    va='bottom',
+                    fontsize=8.5,
+                    fontweight='bold',
+                    color='#0284c7',
+                    bbox=dict(boxstyle='round,pad=0.2', facecolor='#ffffff', edgecolor='none', alpha=0.85)
+                )
+
+            plt.title('월별 청구 금액(막대) & 투입 공수(꺾은선) 추이', fontsize=12, fontweight='bold', color='#005073', pad=18, loc='left')
+
+            lines, labels = ax1.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax1.legend(lines + lines2, labels + labels2, loc='upper right', bbox_to_anchor=(1.0, 1.15),
+                       ncol=3, frameon=True, facecolor='#ffffff', edgecolor='#e2e8f0', fontsize=8.5)
+
+            plt.tight_layout()
+
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor='#ffffff')
+            plt.close(fig)
+            return buf.getvalue()
+        except Exception:
+            return None
+
+    @classmethod
     def generate_mom_excel_report(
         cls,
         trend_df: pd.DataFrame,
@@ -526,12 +635,12 @@ class CostEstimationService:
         """
         월별 청구 추이 및 MoM 분석 완성형 엑셀 보고서 생성 (.xlsx)
         - 상단 대시보드 타이틀 및 4대 핵심 KPI 요약 카드
-        - 네이티브 엑셀 누적 막대 + 꺾은선(보조축) 복합 차트 (월별 청구금액 & 투입공수)
+        - 화면과 100% 동일한 고해상도(DPI 200) 그래프 이미지 시트 삽입 (흐림/조악함 제로)
         - 시각화 스타일링된 월별 정산 내역 및 MoM 지표 데이터 테이블 (숫자 포맷, 테두리, 하이라이트)
-        - openpyxl 기본 엔진 사용으로 Cloud/Local 환경 무관 100% 안정 실행 보장
         """
         import io
         import openpyxl
+        from openpyxl.drawing.image import Image as OpenpyxlImage
         from openpyxl.chart import BarChart, LineChart, Reference
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
@@ -626,7 +735,20 @@ class CostEstimationService:
             ws.row_dimensions[5].height = 22
             ws.row_dimensions[6].height = 18
 
-        # 3. 데이터 테이블 영역 (행 26)
+        # 3. 고화질 그래프 이미지 삽입 (A8 위치, 웹 화면 캡처급 퀄리티)
+        chart_inserted = False
+        chart_bytes = cls._create_mom_chart_image(trend_df)
+        if chart_bytes:
+            try:
+                chart_img = OpenpyxlImage(io.BytesIO(chart_bytes))
+                chart_img.width = 840
+                chart_img.height = 320
+                ws.add_image(chart_img, 'A8')
+                chart_inserted = True
+            except Exception:
+                chart_inserted = False
+
+        # 4. 데이터 테이블 영역 (행 26)
         table_start_row = 26
         headers = [
             "월(YYYY-MM)", "최종 청구금액(원)", "기본금액(원)", "할증가산액(원)", "MoM 금액증감(%)",
@@ -644,7 +766,7 @@ class CostEstimationService:
             cell.border = border_card
         ws.row_dimensions[table_start_row].height = 24
 
-        sorted_df = trend_df.sort_values(by="year_month", ascending=True).reset_index(drop=True)
+        sorted_df = trend_df.sort_values(by="year_month", ascending=False).reset_index(drop=True)
         num_rows = len(sorted_df)
 
         for r_idx, (_, row) in enumerate(sorted_df.iterrows()):
@@ -708,8 +830,8 @@ class CostEstimationService:
             col_letter = get_column_letter(i)
             ws.column_dimensions[col_letter].width = w
 
-        # 4. 차트 생성 (행 8)
-        if num_rows > 0:
+        # 만약 고화질 이미지 삽입이 실패했을 때만 openpyxl 네이티브 차트로 안전 폴백
+        if not chart_inserted and num_rows > 0:
             chart1 = BarChart()
             chart1.type = "col"
             chart1.grouping = "stacked"
