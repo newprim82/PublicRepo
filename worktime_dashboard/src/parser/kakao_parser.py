@@ -241,10 +241,13 @@ class KakaoMessageParser:
     )
 
     START_PATTERNS = [
-        # 1. 5개 필드 표준 패턴 (구분 / 작업자 / 고객사 / 작업내용 / 예정시간)
+        # 1. 6개 필드 패턴 (세부 사이트 포함: 구분 / 작업자 / 고객사 / 세부사이트 / 작업내용 / 예정시간)
+        re.compile(r'^(?:\[(?P<b_type>[^\]]+)\]\s*)?(?P<type>[^/\n\r]+?)\s*/\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<sub_site>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
+        re.compile(r'^\[(?P<type>[^\]]+)\]\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<sub_site>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
+        # 2. 5개 필드 표준 패턴 (구분 / 작업자 / 고객사 / 작업내용 / 예정시간)
         re.compile(r'^(?:\[(?P<b_type>[^\]]+)\]\s*)?(?P<type>[^/\n\r]+?)\s*/\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
         re.compile(r'^\[(?P<type>[^\]]+)\]\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+?)\s*/\s*(?P<est>[^\n\r]+)$', re.MULTILINE),
-        # 2. 4개 필드 패턴 (예정시간 생략 형태: 구분 / 작업자 / 고객사 / 작업내용)
+        # 3. 4개 필드 패턴 (예정시간 생략 형태: 구분 / 작업자 / 고객사 / 작업내용)
         re.compile(r'^(?:\[(?P<b_type>[^\]]+)\]\s*)?(?P<type>[^/\n\r]+?)\s*/\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+)$', re.MULTILINE),
         re.compile(r'^\[(?P<type>[^\]]+)\]\s*(?P<name>[^/\n\r]+?)\s*/\s*(?P<client>[^/\n\r]+?)\s*/\s*(?P<task>[^/\n\r]+)$', re.MULTILINE),
     ]
@@ -393,14 +396,57 @@ class KakaoMessageParser:
                 break
                     
         if not match:
-            return []
-            
-        group_dict = match.groupdict()
-        log_type = (group_dict.get("b_type") or group_dict.get("type", "작업")).strip()
-        raw_name_field = group_dict.get("name", "").strip()
-        client_name = normalize_client_name(group_dict.get("client", "").strip())
-        task_desc = group_dict.get("task", "").strip()
-        est_str = (group_dict.get("est") or "").strip()
+            # 정규식 미매칭 시 슬래시 기반 fallback 토크나이저
+            match_found = False
+            for line in target_text.splitlines():
+                if "/" not in line:
+                    continue
+                parts = [p.strip() for p in line.split("/") if p.strip()]
+                if len(parts) >= 6:
+                    log_type = parts[0]
+                    if log_type.startswith("[") and log_type.endswith("]"):
+                        log_type = log_type[1:-1].strip()
+                    raw_name_field = parts[1]
+                    client_name = normalize_client_name(parts[2])
+                    sub_site = parts[3]
+                    task_desc = " / ".join(parts[4:-1])
+                    if sub_site:
+                        task_desc = f"[{sub_site}] {task_desc}"
+                    est_str = parts[-1]
+                    match_found = True
+                    break
+                elif len(parts) == 5:
+                    log_type = parts[0]
+                    if log_type.startswith("[") and log_type.endswith("]"):
+                        log_type = log_type[1:-1].strip()
+                    raw_name_field = parts[1]
+                    client_name = normalize_client_name(parts[2])
+                    task_desc = parts[3]
+                    est_str = parts[4]
+                    match_found = True
+                    break
+                elif len(parts) == 4:
+                    log_type = parts[0]
+                    if log_type.startswith("[") and log_type.endswith("]"):
+                        log_type = log_type[1:-1].strip()
+                    raw_name_field = parts[1]
+                    client_name = normalize_client_name(parts[2])
+                    task_desc = parts[3]
+                    est_str = ""
+                    match_found = True
+                    break
+            if not match_found:
+                return []
+        else:
+            group_dict = match.groupdict()
+            log_type = (group_dict.get("b_type") or group_dict.get("type", "작업")).strip()
+            raw_name_field = group_dict.get("name", "").strip()
+            client_name = normalize_client_name(group_dict.get("client", "").strip())
+            sub_site = (group_dict.get("sub_site") or "").strip()
+            task_desc = group_dict.get("task", "").strip()
+            if sub_site:
+                task_desc = f"[{sub_site}] {task_desc}"
+            est_str = (group_dict.get("est") or "").strip()
         
         is_direct_completed = bool(est_str and (any(k in est_str for k in ["완료", "완려", "완뇨", "완룡", "소요", "종료", "마무리", "끝"]) or re.search(_END_KEYWORD_PAT, est_str)))
         direct_actual_minutes = parse_duration_to_minutes(est_str) if is_direct_completed else 0
