@@ -5,10 +5,10 @@ def apply_custom_styles():
     """전역 Cisco ACI Enterprise 테마 및 Pretendard 폰트 CSS 주입"""
     # 커스텀 CSS
     st.markdown("""
-    <meta name="color-scheme" content="only light">
-    <meta name="supported-color-schemes" content="only light">
-    <meta name="theme-color" content="#f4f6f9">
     <style>
+        /* 🔤 토스(Toss) 표준 프리미엄 웹 폰트: Pretendard (프리텐다드) - CSS 표준상 반드시 맨 첫 줄에 위치해야 정상 로드됨 */
+        @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
         :root {
             color-scheme: only light !important;
             forced-color-adjust: none !important;
@@ -32,12 +32,9 @@ def apply_custom_styles():
             }
         }
 
-        /* 🔤 토스(Toss) 표준 프리미엄 웹 폰트: Pretendard (프리텐다드) */
-        @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
-
         /* 1. 사이트 전체 기본 본문 -> Pretendard (최고의 화면 가독성 & 선명도) */
         html, body, .stApp, .stApp *:not([data-testid*="Icon"]):not([data-testid*="icon"]):not(span[translate="no"]):not(svg) {
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Segoe UI", sans-serif;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Segoe UI", sans-serif !important;
             letter-spacing: -0.2px;
         }
 
