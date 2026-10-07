@@ -24,3 +24,6 @@ data/.session_cache.json
 *.cache
 collector_status.json
 scratch/
+*.log
+data/*.log
+

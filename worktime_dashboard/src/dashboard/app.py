@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.5.0 (Sidebar Hover Flyout Submenus with 250ms Grace Period & Direct Access)
-APP_VERSION = "v2.5.0"
+# WorkTime Dashboard v2.5.1 (Instant Page Switching with Cached Data Filtering & Non-Data Lazy Evaluation)
+APP_VERSION = "v2.5.1"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -323,6 +323,79 @@ def load_data() -> pd.DataFrame:
 
 
 
+NON_DATA_PAGES = {
+    "🔐 시스템 로그인",
+    "📅 법정 및 임시 공휴일 관리",
+    "📬 정기 메일 발송 대상 관리",
+    "📑 팀 전월 엑셀 원장 정기 발송",
+    "👥 시스템 관리자 계정 관리",
+    "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
+}
+
+@st.cache_data(show_spinner=False)
+def get_cached_filtered_data(
+    _df_raw: pd.DataFrame,
+    selected_team: str,
+    team_workers: tuple,
+    selected_workers: tuple,
+    selected_clients: tuple,
+    selected_types: tuple,
+    title_mode: str,
+    selected_titles: tuple,
+    night_only: bool,
+    weekend_only: bool,
+    selected_months: tuple,
+    title_mappings_tuple: tuple
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """⚡ 필터링된 데이터프레임 고속 캐싱 (메뉴 전환 시 0ms 즉시 반환)"""
+    if _df_raw is None or _df_raw.empty:
+        empty_df = pd.DataFrame()
+        return empty_df, empty_df
+
+    df = _df_raw.copy()
+
+    # 최신 직급 매핑 동기화
+    if title_mappings_tuple:
+        title_map = dict(title_mappings_tuple)
+        df["worker_title"] = df["worker_name"].map(title_map).fillna(df.get("worker_title", ""))
+
+    # 🚀 월 필터 적용 전 베이스셋 (팀, 담당자, 고객사, 작업구분, 직급, 야간/주말 필터 적용)
+    df_filtered_base = df
+    if selected_team != "전체 팀":
+        df_filtered_base = df_filtered_base[df_filtered_base["worker_name"].isin(team_workers)]
+
+    if selected_workers:
+        df_filtered_base = df_filtered_base[df_filtered_base["worker_name"].isin(selected_workers)]
+    else:
+        df_filtered_base = df_filtered_base.iloc[0:0]
+
+    if selected_clients:
+        df_filtered_base = df_filtered_base[df_filtered_base["client_name"].isin(selected_clients)]
+    else:
+        df_filtered_base = df_filtered_base.iloc[0:0]
+
+    if selected_types:
+        df_filtered_base = df_filtered_base[df_filtered_base["log_type"].isin(selected_types)]
+    else:
+        df_filtered_base = df_filtered_base.iloc[0:0]
+
+    # 직급 필터링 적용
+    if title_mode != "전체 직급":
+        df_filtered_base = df_filtered_base[df_filtered_base["worker_title"].isin(selected_titles)]
+
+    if night_only:
+        df_filtered_base = df_filtered_base[df_filtered_base["is_night_work"] == True]
+    if weekend_only:
+        df_filtered_base = df_filtered_base[df_filtered_base["is_weekend_work"] == True]
+
+    # 최종 선택된 월 필터링
+    if selected_months:
+        df_final = df_filtered_base[df_filtered_base["month_str"].isin(selected_months)]
+    else:
+        df_final = df_filtered_base.iloc[0:0]
+
+    return df_final, df_filtered_base
+
 # -------------------------------------------------------------
 # 4. 상단 대제목 헤더 & 하단 메인 본문 독립 프레임 (3분할 아키텍처)
 # -------------------------------------------------------------
@@ -339,7 +412,6 @@ def render_top_header_frame():
     render_header_banner(initial_ms, page_tag)
 
 
-@st.fragment
 def render_main_content_frame(
     curr_page: str,
     df: pd.DataFrame,
@@ -579,7 +651,8 @@ def main():
                     )
 
         # 2. 🔍 조회 기준
-        with st.expander("🔍 조회 기준", expanded=True):
+        is_current_non_data = st.session_state.get("current_page", "") in NON_DATA_PAGES
+        with st.expander("🔍 조회 기준", expanded=not is_current_non_data):
             st.markdown('<span class="sb-filter-card-marker" style="display:none;"></span>', unsafe_allow_html=True)
             # (1) 대상 월 선택
             available_months = sorted(df_raw["month_str"].dropna().unique(), reverse=True)
@@ -684,47 +757,28 @@ def main():
                 night_only = st.checkbox("🌙 야간 작업만 보기 (22시~06시, 1h 이상)", key="sb_filter_night_only")
                 weekend_only = st.checkbox("🏖️ 주말 작업만 보기", key="sb_filter_weekend_only")
 
-            # 필터 적용
-            df = df_raw.copy()
-            
-            # 최신 직급 매핑 동기화
-            title_map = TeamService.get_title_mappings()
-            df["worker_title"] = df["worker_name"].map(title_map).fillna(df.get("worker_title", ""))
-            
-            # 🚀 월 필터 적용 전 베이스셋 (팀, 담당자, 고객사, 작업구분, 직급, 야간/주말 필터 적용)
-            df_filtered_base = df.copy()
-            if selected_team != "전체 팀":
-                df_filtered_base = df_filtered_base[df_filtered_base["worker_name"].isin(team_available_workers)]
-
-            if selected_workers:
-                df_filtered_base = df_filtered_base[df_filtered_base["worker_name"].isin(selected_workers)]
+            # 필터 적용 (캐시화 및 Lazy Evaluation 적용)
+            if is_current_non_data:
+                # ⚡ 관리자 설정 페이지는 무거운 필터링 연산 완전 우회 (0.05초 즉시 로딩)
+                df = pd.DataFrame()
+                df_filtered_base = pd.DataFrame()
             else:
-                df_filtered_base = df_filtered_base.iloc[0:0]
-
-            if selected_clients:
-                df_filtered_base = df_filtered_base[df_filtered_base["client_name"].isin(selected_clients)]
-            else:
-                df_filtered_base = df_filtered_base.iloc[0:0]
-
-            if selected_types:
-                df_filtered_base = df_filtered_base[df_filtered_base["log_type"].isin(selected_types)]
-            else:
-                df_filtered_base = df_filtered_base.iloc[0:0]
-
-            # 직급 필터링 적용
-            if title_mode != "전체 직급":
-                df_filtered_base = df_filtered_base[df_filtered_base["worker_title"].isin(selected_titles)]
-
-            if night_only:
-                df_filtered_base = df_filtered_base[df_filtered_base["is_night_work"] == True]
-            if weekend_only:
-                df_filtered_base = df_filtered_base[df_filtered_base["is_weekend_work"] == True]
-
-            # 최종 선택된 월 필터링
-            if selected_months:
-                df = df_filtered_base[df_filtered_base["month_str"].isin(selected_months)]
-            else:
-                df = df_filtered_base.iloc[0:0]
+                # ⚡ 일반 분석 페이지: 캐시된 필터링 함수 호출 (메뉴 전환 시 0ms 즉시 반환)
+                title_mappings_tuple = tuple(sorted(TeamService.get_title_mappings().items()))
+                df, df_filtered_base = get_cached_filtered_data(
+                    _df_raw=df_raw,
+                    selected_team=selected_team,
+                    team_workers=tuple(team_available_workers),
+                    selected_workers=tuple(selected_workers),
+                    selected_clients=tuple(selected_clients),
+                    selected_types=tuple(selected_types),
+                    title_mode=title_mode,
+                    selected_titles=tuple(selected_titles),
+                    night_only=night_only,
+                    weekend_only=weekend_only,
+                    selected_months=tuple(selected_months),
+                    title_mappings_tuple=title_mappings_tuple
+                )
 
 
         # 3. 📊 분석
