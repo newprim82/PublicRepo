@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timezone, timedelta
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...services.reward_leave_service import RewardLeaveService
 from ...analytics.stats_service import StatsService
@@ -251,8 +252,9 @@ def render_leave_section(leave_records: list, selected_team: str):
             _render_single_team_leave_cards(leave_records, title_mappings)
 
 
+@st.fragment(run_every=timedelta(seconds=10))
 def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave_records: list = None):
-    """⏳ 진행 중인 작업 섹션 전용 단일 1분 자동 갱신 프래그먼트 (다중 타이머 통합)"""
+    """⏳ 진행 중인 작업 섹션 전용 단일 10초 자동 갱신 프래그먼트 + 1초 JS 라이브 타이머"""
     badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 &nbsp;|&nbsp; <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">O</span> 양쪽 연동 )</span>'
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>⏳ 실시간 진행 중인 작업</span>{badge_legend_html}<span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
@@ -260,6 +262,119 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
         return
 
     st.markdown(LIVE_PROGRESS_ANIMATION_AND_TIMER, unsafe_allow_html=True)
+
+    # ⏱️ 1초 단위 클라이언트 자바스크립트 라이브 타이머 컴포넌트 (iframe 기반 100% 실행 보장)
+    components.html("""
+    <script>
+    (function() {
+        function parseLocalDate(str) {
+            if (!str) return null;
+            var p = str.split(/[-T:\\s]/);
+            if (p.length >= 5) {
+                return new Date(
+                    parseInt(p[0], 10),
+                    parseInt(p[1], 10) - 1,
+                    parseInt(p[2], 10),
+                    parseInt(p[3], 10),
+                    parseInt(p[4], 10),
+                    parseInt(p[5] || 0, 10)
+                );
+            }
+            return new Date(str);
+        }
+
+        function tickCards() {
+            try {
+                var pDoc = (window.parent && window.parent.document) ? window.parent.document : document;
+                if (!pDoc) return;
+                var cards = pDoc.querySelectorAll('.live-task-card:not(.upcoming-card)');
+                if (!cards || cards.length === 0) return;
+
+                var now = new Date();
+                cards.forEach(function(card) {
+                    var startStr = card.getAttribute('data-start');
+                    var estHours = parseFloat(card.getAttribute('data-est') || 0);
+                    var isSingle = card.getAttribute('data-single-view') === 'true';
+                    if (!startStr) return;
+
+                    var startDate = parseLocalDate(startStr);
+                    if (!startDate || isNaN(startDate.getTime())) return;
+
+                    var diffSec = Math.floor((now - startDate) / 1000);
+                    if (diffSec < 0) return;
+
+                    var elapsedMins = Math.floor(diffSec / 60);
+                    var elapsedHours = (elapsedMins / 60.0).toFixed(1);
+                    var isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
+
+                    var timeSpan = card.querySelector('.live-elapsed-time');
+                    if (timeSpan) {
+                        var overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
+                        var timeHtml = isSingle
+                            ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
+                            : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
+                        if (timeSpan.innerHTML !== timeHtml) {
+                            timeSpan.innerHTML = timeHtml;
+                            timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
+                        }
+                    }
+
+                    if (estHours > 0) {
+                        var rawPct = Math.round(((elapsedMins / 60.0) / estHours) * 100);
+                        var barWidth = Math.min(100, Math.max(5, rawPct));
+
+                        var fillBar = card.querySelector('.live-progress-fill');
+                        if (fillBar) {
+                            fillBar.style.width = barWidth + '%';
+                        }
+
+                        var pctBadge = card.querySelector('.live-pct-badge');
+                        if (pctBadge) {
+                            var pctText = rawPct + '%';
+                            if (pctBadge.textContent !== pctText) {
+                                pctBadge.textContent = pctText;
+                            }
+                        }
+                    }
+                });
+
+                var upCards = pDoc.querySelectorAll('.live-task-card.upcoming-card');
+                if (upCards && upCards.length > 0) {
+                    upCards.forEach(function(card) {
+                        var startStr = card.getAttribute('data-start');
+                        var isSingle = card.getAttribute('data-single-view') === 'true';
+                        if (!startStr) return;
+                        var startDate = parseLocalDate(startStr);
+                        if (!startDate || isNaN(startDate.getTime())) return;
+
+                        var diffSec = Math.floor((startDate - now) / 1000);
+                        var timeSpan = card.querySelector('.live-elapsed-time');
+                        if (!timeSpan) return;
+
+                        var txt = '';
+                        if (diffSec > 3600) {
+                            var hLeft = Math.floor(diffSec / 3600);
+                            var mLeft = Math.floor((diffSec % 3600) / 60);
+                            txt = isSingle ? '⏱️ <b>' + hLeft + '시간 ' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + hLeft + '시간 ' + mLeft + '분 후 시작';
+                        } else if (diffSec > 0) {
+                            var mLeft = Math.max(1, Math.floor(diffSec / 60));
+                            txt = isSingle ? '⏱️ <b>' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + mLeft + '분 후 시작';
+                        } else {
+                            txt = isSingle ? '⏱️ <b>시작 대기</b> (미보고)' : '⏱️ 시작 대기';
+                        }
+                        if (timeSpan.innerHTML !== txt) {
+                            timeSpan.innerHTML = txt;
+                        }
+                    });
+                }
+            } catch(e) {}
+        }
+
+        setInterval(tickCards, 1000);
+        setTimeout(tickCards, 200);
+    })();
+    </script>
+    """, height=0, width=0)
 
     if selected_team == "전체 팀":
         base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]

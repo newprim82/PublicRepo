@@ -1749,150 +1749,6 @@ def apply_custom_styles():
             font-weight: 700 !important;
         }
         </style>
-
-    <script>
-        (function() {
-            // 🚫 1. Streamlit 자체 다크모드 로컬 설정 강제 무력화 (Light 테마 100% 고정)
-            try {
-                localStorage.setItem("stActiveTheme", JSON.stringify({base: "light"}));
-            } catch(e) {}
-
-            // 📱 2. 스마트폰 화면 폭에 맞추어 1350px PC 데스크톱 화면을 1:1 완벽 비율로 쏙 축소 피팅
-            function autoFitDesktopMobile() {
-                var baseW = 1350;
-                var sw = window.innerWidth || document.documentElement.clientWidth || screen.width;
-                if (sw < baseW) {
-                    var scale = (sw / baseW);
-                    var container = document.querySelector('.block-container');
-                    if (container) {
-                        container.style.zoom = scale;
-                        container.style.width = baseW + 'px';
-                        container.style.minWidth = baseW + 'px';
-                        container.style.maxWidth = baseW + 'px';
-                    }
-                }
-            }
-            window.addEventListener('resize', autoFitDesktopMobile);
-            window.addEventListener('orientationchange', function() {
-                setTimeout(autoFitDesktopMobile, 200);
-            });
-            autoFitDesktopMobile();
-            setInterval(autoFitDesktopMobile, 800);
-
-            // ⏱️ 3. 실시간 진행 중인 작업 카드 라이브 타이머 (새로고침 없이 1초마다 실시간 갱신)
-            function parseLocalDate(str) {
-                if (!str) return null;
-                var p = str.split(/[-T:\\s]/);
-                if (p.length >= 5) {
-                    return new Date(
-                        parseInt(p[0], 10),
-                        parseInt(p[1], 10) - 1,
-                        parseInt(p[2], 10),
-                        parseInt(p[3], 10),
-                        parseInt(p[4], 10),
-                        parseInt(p[5] || 0, 10)
-                    );
-                }
-                return new Date(str);
-            }
-
-            function updateLiveTaskCards() {
-                var doc = document;
-                try {
-                    if (window.parent && window.parent.document) {
-                        doc = window.parent.document;
-                    }
-                } catch(e) {}
-
-                var cards = doc.querySelectorAll('.live-task-card:not(.upcoming-card)');
-                if (!cards || cards.length === 0) return;
-
-                var now = new Date();
-                cards.forEach(function(card) {
-                    var startStr = card.getAttribute('data-start');
-                    var estHours = parseFloat(card.getAttribute('data-est') || 0);
-                    var isSingle = card.getAttribute('data-single-view') === 'true';
-                    if (!startStr) return;
-
-                    var startDate = parseLocalDate(startStr);
-                    if (!startDate || isNaN(startDate.getTime())) return;
-
-                    var diffSec = Math.floor((now - startDate) / 1000);
-                    if (diffSec < 0) return;
-
-                    var elapsedMins = Math.floor(diffSec / 60);
-                    var elapsedHours = (elapsedMins / 60.0).toFixed(1);
-                    var isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
-
-                    // 1) 하단 경과 시간 텍스트 갱신 (A안 형식: 경과 시간 실시간 누적)
-                    var timeSpan = card.querySelector('.live-elapsed-time');
-                    if (timeSpan) {
-                        var overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
-                        var timeHtml = isSingle
-                            ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
-                            : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
-                        if (timeSpan.innerHTML !== timeHtml) {
-                            timeSpan.innerHTML = timeHtml;
-                            timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
-                        }
-                    }
-
-                    // 2) 프로그레스 바 & 진행률 배지 실시간 갱신
-                    if (estHours > 0) {
-                        var rawPct = Math.round(((elapsedMins / 60.0) / estHours) * 100);
-                        var barWidth = Math.min(100, Math.max(5, rawPct));
-
-                        var fillBar = card.querySelector('.live-progress-fill');
-                        if (fillBar) {
-                            fillBar.style.width = barWidth + '%';
-                        }
-
-                        var pctBadge = card.querySelector('.live-pct-badge');
-                        if (pctBadge) {
-                            var pctText = rawPct + '%';
-                            if (pctBadge.textContent !== pctText) {
-                                pctBadge.textContent = pctText;
-                            }
-                        }
-                    }
-                });
-
-                // 3) 오늘 예정 일정(Upcoming) 카운트다운 라이브 갱신 (시간이 줄어드는 카운트다운)
-                var upCards = doc.querySelectorAll('.live-task-card.upcoming-card');
-                if (upCards && upCards.length > 0) {
-                    upCards.forEach(function(card) {
-                        var startStr = card.getAttribute('data-start');
-                        var isSingle = card.getAttribute('data-single-view') === 'true';
-                        if (!startStr) return;
-                        var startDate = parseLocalDate(startStr);
-                        if (!startDate || isNaN(startDate.getTime())) return;
-
-                        var diffSec = Math.floor((startDate - now) / 1000);
-                        var timeSpan = card.querySelector('.live-elapsed-time');
-                        if (!timeSpan) return;
-
-                        var txt = '';
-                        if (diffSec > 3600) {
-                            var hLeft = Math.floor(diffSec / 3600);
-                            var mLeft = Math.floor((diffSec % 3600) / 60);
-                            txt = isSingle ? '⏱️ <b>' + hLeft + '시간 ' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + hLeft + '시간 ' + mLeft + '분 후 시작';
-                        } else if (diffSec > 0) {
-                            var mLeft = Math.max(1, Math.floor(diffSec / 60));
-                            txt = isSingle ? '⏱️ <b>' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + mLeft + '분 후 시작';
-                        } else {
-                            txt = isSingle ? '⏱️ <b>시작 대기</b> (미보고)' : '⏱️ 시작 대기';
-                        }
-                        if (timeSpan.innerHTML !== txt) {
-                            timeSpan.innerHTML = txt;
-                        }
-                    });
-                }
-            }
-
-            setInterval(updateLiveTaskCards, 1000);
-            setTimeout(updateLiveTaskCards, 300);
-        })();
-    </script>
     """, unsafe_allow_html=True)
 
 
@@ -2021,6 +1877,103 @@ def render_header_banner(initial_ms: int, page_tag: str):
                 if (el) {{
                     el.innerText = p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ':' + p.second;
                 }}
+
+                // ⏱️ 부모 윈도우의 실시간 진행 중인 작업 카드 1초 라이브 갱신 (A안: 경과 시간 실시간 누적)
+                try {{
+                    let pDoc = (window.parent && window.parent.document) ? window.parent.document : null;
+                    if (pDoc) {{
+                        let cards = pDoc.querySelectorAll('.live-task-card:not(.upcoming-card)');
+                        if (cards && cards.length > 0) {{
+                            cards.forEach(function(card) {{
+                                let startStr = card.getAttribute('data-start');
+                                let estHours = parseFloat(card.getAttribute('data-est') || 0);
+                                let isSingle = card.getAttribute('data-single-view') === 'true';
+                                if (!startStr) return;
+
+                                let pParts = startStr.split(/[-T:\\s]/);
+                                if (pParts.length < 5) return;
+                                let startDate = new Date(
+                                    parseInt(pParts[0], 10),
+                                    parseInt(pParts[1], 10) - 1,
+                                    parseInt(pParts[2], 10),
+                                    parseInt(pParts[3], 10),
+                                    parseInt(pParts[4], 10),
+                                    parseInt(pParts[5] || 0, 10)
+                                );
+                                if (isNaN(startDate.getTime())) return;
+
+                                let diffSec = Math.floor((current - startDate) / 1000);
+                                if (diffSec < 0) return;
+
+                                let elapsedMins = Math.floor(diffSec / 60);
+                                let elapsedHours = (elapsedMins / 60.0).toFixed(1);
+                                let isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
+
+                                let timeSpan = card.querySelector('.live-elapsed-time');
+                                if (timeSpan) {{
+                                    let overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
+                                    let timeHtml = isSingle
+                                        ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
+                                        : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
+                                    if (timeSpan.innerHTML !== timeHtml) {{
+                                        timeSpan.innerHTML = timeHtml;
+                                        timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
+                                    }}
+                                }}
+
+                                if (estHours > 0) {{
+                                    let rawPct = Math.round(((elapsedMins / 60.0) / estHours) * 100);
+                                    let barWidth = Math.min(100, Math.max(5, rawPct));
+
+                                    let fillBar = card.querySelector('.live-progress-fill');
+                                    if (fillBar) {{
+                                        fillBar.style.width = barWidth + '%';
+                                    }}
+
+                                    let pctBadge = card.querySelector('.live-pct-badge');
+                                    if (pctBadge) {{
+                                        let pctText = rawPct + '%';
+                                        if (pctBadge.textContent !== pctText) {{
+                                            pctBadge.textContent = pctText;
+                                        }}
+                                    }}
+                                }}
+                            }});
+                        }}
+
+                        let upCards = pDoc.querySelectorAll('.live-task-card.upcoming-card');
+                        if (upCards && upCards.length > 0) {{
+                            upCards.forEach(function(card) {{
+                                let startStr = card.getAttribute('data-start');
+                                let isSingle = card.getAttribute('data-single-view') === 'true';
+                                if (!startStr) return;
+                                let pParts = startStr.split(/[-T:\\s]/);
+                                if (pParts.length < 5) return;
+                                let startDate = new Date(parseInt(pParts[0], 10), parseInt(pParts[1], 10) - 1, parseInt(pParts[2], 10), parseInt(pParts[3], 10), parseInt(pParts[4], 10), parseInt(pParts[5] || 0, 10));
+                                if (isNaN(startDate.getTime())) return;
+
+                                let diffSec = Math.floor((startDate - current) / 1000);
+                                let timeSpan = card.querySelector('.live-elapsed-time');
+                                if (!timeSpan) return;
+
+                                let txt = '';
+                                if (diffSec > 3600) {{
+                                    let hLeft = Math.floor(diffSec / 3600);
+                                    let mLeft = Math.floor((diffSec % 3600) / 60);
+                                    txt = isSingle ? '⏱️ <b>' + hLeft + '시간 ' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + hLeft + '시간 ' + mLeft + '분 후 시작';
+                                }} else if (diffSec > 0) {{
+                                    let mLeft = Math.max(1, Math.floor(diffSec / 60));
+                                    txt = isSingle ? '⏱️ <b>' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + mLeft + '분 후 시작';
+                                }} else {{
+                                    txt = isSingle ? '⏱️ <b>시작 대기</b> (미보고)' : '⏱️ 시작 대기';
+                                }}
+                                if (timeSpan.innerHTML !== txt) {{
+                                    timeSpan.innerHTML = txt;
+                                }}
+                            }});
+                        }}
+                    }}
+                }} catch(eP) {{}}
             }}
             setInterval(tickBoraClock, 1000);
             tickBoraClock();
