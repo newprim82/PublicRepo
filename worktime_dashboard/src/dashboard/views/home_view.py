@@ -254,7 +254,13 @@ def render_leave_section(leave_records: list, selected_team: str):
 
 def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave_records: list = None):
     """⏳ 진행 중인 작업 섹션 (화면 깜빡임 없는 순수 1초 클라이언트 JS 라이브 타이머)"""
-    badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 &nbsp;|&nbsp; <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">O</span> 양쪽 연동 )</span>'
+    badge_legend_html = (
+        '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( '
+        '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4.5px; border-radius: 3px; display: inline-block; vertical-align: middle; white-space: nowrap; line-height: 1.2;">💬 카톡</span> &nbsp;|&nbsp; '
+        '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4.5px; border-radius: 3px; display: inline-block; vertical-align: middle; white-space: nowrap; line-height: 1.2;">📅 아웃룩</span> &nbsp;|&nbsp; '
+        '<span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 800; padding: 1px 4.5px; border-radius: 3px; display: inline-block; vertical-align: middle; margin-right: 2px; white-space: nowrap; line-height: 1.2;">💬 카톡</span>'
+        '<span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 800; padding: 1px 4.5px; border-radius: 3px; display: inline-block; vertical-align: middle; white-space: nowrap; line-height: 1.2;">📅 아웃룩</span> 양쪽 연동 )</span>'
+    )
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>⏳ 실시간 진행 중인 작업</span>{badge_legend_html}<span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
         render_empty_dashed_box("현재 실시간으로 진행 중인 미완료 작업이 없습니다.")
