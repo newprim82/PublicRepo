@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.3.0 (Overtime Premium 1.5x, Audit History Timeline, MoM Billing Trend)
-APP_VERSION = "v2.3.0"
+# WorkTime Dashboard v2.3.1 (Sub-site 6-field Parsing A-Plan & Auto Cache Invalidation)
+APP_VERSION = "v2.3.1"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
