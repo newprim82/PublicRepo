@@ -526,8 +526,8 @@ def main():
         </div>
         """, unsafe_allow_html=True)
 
-        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (위아래 간격, on_click 콜백으로 0.1초 즉시 전환)
-        st.markdown('<div style="height: 14px;"></div><span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
+        # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (on_click 콜백으로 0.1초 즉시 전환)
+        st.markdown('<span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
         is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
         st.button(
             "🏠 실시간 분석 대시보드",
@@ -537,7 +537,7 @@ def main():
             on_click=set_nav_page,
             args=("🏠 실시간 분석 대시보드",)
         )
-        st.markdown('<div style="height: 20px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
 
         is_auth = AuthManager.is_authenticated()
 

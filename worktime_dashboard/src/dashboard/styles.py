@@ -992,13 +992,14 @@ def apply_custom_styles():
         }
         [data-testid="stSidebar"] .block-container,
         [data-testid="stSidebarUserContent"] {
-            padding-top: 0.4rem !important;
+            padding-top: 0.15rem !important;
             padding-left: 0.5rem !important;
             padding-right: 0.5rem !important;
         }
         [data-testid="stSidebarHeader"] {
-            padding-top: 0.4rem !important;
-            padding-bottom: 0.1rem !important;
+            padding-top: 0.15rem !important;
+            padding-bottom: 0rem !important;
+            min-height: 0px !important;
         }
         /* 사이드바 내부 엘리먼트 초밀착 (APIC 트리 간격) */
         [data-testid="stSidebar"] [data-testid="stVerticalBlock"],
@@ -1168,8 +1169,66 @@ def apply_custom_styles():
             border-radius: 0px !important;
             box-shadow: none !important;
         }
+        /* ◆ 사이드바 브랜드 헤더 (로고 마크 + 브랜드명) */
+        [data-testid="stSidebar"] .element-container:has(.sb-brand),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sb-brand) {
+            margin-top: 0px !important;
+            margin-bottom: 14px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+        }
+        [data-testid="stSidebar"] .sb-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 2px 6px 0px 6px;
+            margin: 0 !important;
+        }
+        [data-testid="stSidebar"] .sb-brand-mark {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #00b4d8 0%, #0284c7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 900;
+            color: #002d42 !important;
+            box-shadow: 0 0 12px rgba(0, 180, 216, 0.35);
+        }
+        [data-testid="stSidebar"] .sb-brand-title {
+            font-size: 14.5px;
+            font-weight: 800;
+            color: #ffffff !important;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+        }
+        [data-testid="stSidebar"] .sb-brand-sub {
+            font-size: 9px;
+            font-weight: 700;
+            color: #5a8a9e !important;
+            letter-spacing: 1.1px;
+            margin-top: 2px;
+            line-height: 1.1;
+        }
+
         /* 🏠 홈 버튼: 하위 메뉴 활성 표시와 동일한 시안 좌측 바 방식으로 통일 (빨간 선 제거) */
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button {
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) {
+            display: none !important;
+            height: 0px !important;
+            margin: 0px !important;
+            padding: 0px !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] {
+            margin-top: 0px !important;
+            margin-bottom: 12px !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button {
             background: rgba(0, 180, 216, 0.06) !important;
             background-color: rgba(0, 180, 216, 0.06) !important;
             color: #e2e8f0 !important;
@@ -1184,58 +1243,25 @@ def apply_custom_styles():
             text-align: center !important;
             transform: none !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button[kind="primary"] {
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button[kind="primary"],
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button[kind="primary"] {
             background: linear-gradient(90deg, rgba(0, 180, 216, 0.22) 0%, rgba(0, 180, 216, 0.08) 100%) !important;
             background-color: rgba(0, 180, 216, 0.18) !important;
             border: 1px solid rgba(0, 180, 216, 0.45) !important;
             border-left: 3px solid #00b4d8 !important;
             box-shadow: 0 0 12px rgba(0, 180, 216, 0.15) !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button * {
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button *,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button * {
             color: #ffffff !important;
             justify-content: center !important;
             text-align: center !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button:hover {
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button:hover,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button:hover {
             background-color: rgba(0, 180, 216, 0.16) !important;
             border-left: 3px solid #00b4d8 !important;
             transform: none !important;
-        }
-
-        /* ◆ 사이드바 브랜드 헤더 (로고 마크 + 브랜드명) */
-        [data-testid="stSidebar"] .sb-brand {
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            padding: 6px 8px 4px 8px;
-        }
-        [data-testid="stSidebar"] .sb-brand-mark {
-            width: 34px;
-            height: 34px;
-            min-width: 34px;
-            border-radius: 9px;
-            background: linear-gradient(135deg, #00b4d8 0%, #0284c7 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: 900;
-            color: #002d42 !important;
-            box-shadow: 0 0 14px rgba(0, 180, 216, 0.35);
-        }
-        [data-testid="stSidebar"] .sb-brand-title {
-            font-size: 15px;
-            font-weight: 800;
-            color: #ffffff !important;
-            letter-spacing: -0.3px;
-            line-height: 1.2;
-        }
-        [data-testid="stSidebar"] .sb-brand-sub {
-            font-size: 9.5px;
-            font-weight: 700;
-            color: #5a8a9e !important;
-            letter-spacing: 1.2px;
-            margin-top: 2px;
         }
 
         /* 🗂️ 조회 기준 필터 카드 (반투명 네이비 카드 1장으로 묶음) */
