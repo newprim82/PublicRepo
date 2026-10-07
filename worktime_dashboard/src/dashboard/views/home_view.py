@@ -161,20 +161,69 @@ def _render_kanban_pending_cards(t_pend: pd.DataFrame, title_mappings: dict):
             print(f"[칸반 카드 렌더링 예외]: {e_card}")
 
 
+def _render_single_team_leave_cards(leave_records: list, title_mappings: dict):
+    """🏢 단일 팀 휴가자 카드 렌더링 (4열 그리드, 아래 진행/예정과 100% 동일한 너비 및 정렬)"""
+    sorted_leaves = sorted(
+        leave_records,
+        key=lambda r: get_job_title_rank(title_mappings.get(r.get("worker_name", "")) or r.get("worker_title", ""))
+    )
+    l_cols = st.columns(4)
+    for idx, r in enumerate(sorted_leaves):
+        with l_cols[idx % 4]:
+            try:
+                card_html = get_leave_card_html(r, is_single_view=True)
+                st.markdown(card_html, unsafe_allow_html=True)
+            except Exception as e_card:
+                print(f"[단일팀 휴가 카드 렌더링 예외]: {e_card}")
+
+
+def render_leave_section(leave_records: list, selected_team: str):
+    """🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (진행 중 / 오늘 예정 섹션과 완벽 일치하는 규격 및 컨테이너)"""
+    if not leave_records:
+        return
+
+    st.markdown(
+        f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #a855f7; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">"""
+        f"""<span>🏖️ 오늘 휴가 / 연차 / 반차 현황</span>"""
+        f"""<span style="background: #f3e8ff; color: #7e22ce; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(leave_records)}명 부재</span></div>""",
+        unsafe_allow_html=True
+    )
+
+    title_mappings = TeamService.get_title_mappings()
+
+    if selected_team == "전체 팀":
+        base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
+        teams_to_render = list(base_teams)
+        target_cols_count = len(teams_to_render)
+        l_cols = st.columns(target_cols_count)
+        sorted_leaves = sorted(
+            leave_records,
+            key=lambda r: get_job_title_rank(title_mappings.get(r.get("worker_name", "")) or r.get("worker_title", ""))
+        )
+        for idx, r in enumerate(sorted_leaves):
+            with l_cols[idx % target_cols_count]:
+                try:
+                    card_html = get_leave_card_html(r, is_single_view=False)
+                    st.markdown(card_html, unsafe_allow_html=True)
+                except Exception as e_card:
+                    print(f"[전체팀 휴가 카드 렌더링 예외]: {e_card}")
+    else:
+        theme = get_team_theme(selected_team)
+        with st.container(border=True):
+            st.markdown(
+                f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid #a855f7; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);">"""
+                f"""<div style="display: flex; align-items: center; gap: 9px;">"""
+                f"""<span style="font-size: 18px;">{theme['icon']}</span>"""
+                f"""<span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span>"""
+                f"""<span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div>"""
+                f"""<span style="background-color: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🏖️ {len(leave_records)}명 부재</span></div>""",
+                unsafe_allow_html=True
+            )
+            _render_single_team_leave_cards(leave_records, title_mappings)
+
+
 def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave_records: list = None):
     """⏳ 진행 중인 작업 섹션 전용 단일 1분 자동 갱신 프래그먼트 (다중 타이머 통합)"""
-    # 🏖️ 오늘 휴가 / 연차 / 반차 현황 카드 섹션 (무조건 100%)
-    if leave_records:
-        st.markdown(f"""<div style="font-size: 15px; font-weight: 800; color: #581c87; border-left: 4px solid #a855f7; padding-left: 9px; margin-bottom: 10px; margin-top: 4px; display: flex; align-items: center; gap: 8px;">🏖️ 오늘 휴가 / 연차 / 반차 현황 <span style="background: #f3e8ff; color: #7e22ce; border-radius: 12px; padding: 2px 8px; font-size: 11.5px; font-weight: 800;">{len(leave_records)}명 부재</span></div>""", unsafe_allow_html=True)
-        # 🏛️ 일반 진행/완료 카드와 가로폭(width) 및 크기를 100% 동일하게 맞추기 위해 전체 팀(5열) / 단일 팀(4열) 고정 그리드 사용
-        target_cols_count = 5 if selected_team == "전체 팀" else 4
-        l_cols = st.columns(target_cols_count)
-        for l_idx, l_rec in enumerate(leave_records):
-            with l_cols[l_idx % target_cols_count]:
-                l_html = get_leave_card_html(l_rec, is_single_view=(selected_team != "전체 팀"))
-                st.markdown(l_html, unsafe_allow_html=True)
-        st.markdown("<div style='margin-bottom: 14px;'></div>", unsafe_allow_html=True)
-
     badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 &nbsp;|&nbsp; <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">O</span> 양쪽 연동 )</span>'
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>⏳ 실시간 진행 중인 작업</span>{badge_legend_html}<span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
@@ -340,8 +389,13 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     with st.container(border=True):
         st.markdown('<span class="live-board-main-container" style="display:none;"></span>', unsafe_allow_html=True)
 
-        # 4. 실시간 진행 중(PENDING) 작업 섹션 (단일 통합 1분 자동 갱신 + 휴가 100% 카드 포함)
-        render_live_pending_section(pend_df, selected_team, leave_records=leave_records)
+        # 0. 🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (휴가자가 있을 때만 표출, 진행 중/예정 섹션과 동일한 간격 및 구분선)
+        if leave_records:
+            render_leave_section(leave_records, selected_team)
+            st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
+
+        # 4. 실시간 진행 중(PENDING) 작업 섹션 (단일 통합 1분 자동 갱신)
+        render_live_pending_section(pend_df, selected_team)
         st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 5. 📅 오늘 예정 일정(SCHEDULED) 섹션 (3단 라이브 관제의 중간 섹션)
