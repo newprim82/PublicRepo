@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.4.4 (High-Res Web-Identical Chart Image Embedded MoM Excel Report)
-APP_VERSION = "v2.4.4"
+# WorkTime Dashboard v2.4.5 (Embedded NanumGothic Font for 100% Crisp Korean Text in Excel Charts)
+APP_VERSION = "v2.4.5"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()

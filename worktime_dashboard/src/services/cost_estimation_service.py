@@ -523,24 +523,40 @@ class CostEstimationService:
         웹 대시보드 Plotly 그래프와 100% 동일한 모던 고화질(DPI 200) 차트 이미지 생성
         - 기본 청구액(다크 틸) + 할증 가산액(에메랄드 그린) 누적 막대
         - 투입 공수(스카이 블루) 보조 Y축 꺾은선 + 데이터 레이블
+        - 내장 한글 NanumGothic.ttf 폰트 직접 로드로 리눅스/클라우드 글자 깨짐(tofu) 영구 방지
         """
         try:
             import io
+            from pathlib import Path
             import matplotlib
             matplotlib.use('Agg')
             import matplotlib.pyplot as plt
             import matplotlib.font_manager as fm
             import numpy as np
 
-            # 한글 폰트 안전 감지
-            font_names = [f.name for f in fm.fontManager.ttflist]
-            chosen_font = "DejaVu Sans"
-            for candidate in ["Malgun Gothic", "NanumGothic", "AppleGothic", "Noto Sans CJK KR"]:
-                if candidate in font_names:
-                    chosen_font = candidate
-                    break
+            # 1. 내장 한글 폰트 로드 (프로젝트 내장 NanumGothic.ttf 최우선)
+            current_file = Path(__file__).resolve()
+            src_dir = current_file.parent.parent
+            embedded_font = src_dir / "dashboard" / "assets" / "fonts" / "NanumGothic.ttf"
 
-            plt.rcParams['font.family'] = chosen_font
+            font_prop = None
+            if embedded_font.exists():
+                try:
+                    fe = fm.FontEntry(fname=str(embedded_font), name='NanumGothicApp')
+                    fm.fontManager.ttflist.insert(0, fe)
+                    plt.rcParams['font.family'] = fe.name
+                    font_prop = fm.FontProperties(fname=str(embedded_font))
+                except Exception:
+                    font_prop = None
+
+            if not font_prop:
+                font_names = [f.name for f in fm.fontManager.ttflist]
+                for candidate in ["NanumGothic", "Malgun Gothic", "AppleGothic", "Noto Sans CJK KR"]:
+                    if candidate in font_names:
+                        plt.rcParams['font.family'] = candidate
+                        font_prop = fm.FontProperties(family=candidate)
+                        break
+
             plt.rcParams['axes.unicode_minus'] = False
 
             sorted_df = trend_df.sort_values(by="year_month", ascending=True).reset_index(drop=True)
@@ -557,10 +573,18 @@ class CostEstimationService:
             ax1.bar(x, base_cost, bar_width, label='기본 청구액 (원)', color='#005073', zorder=2)
             ax1.bar(x, overtime_premium, bar_width, bottom=base_cost, label='야간/주말 할증 가산액 (원)', color='#10b981', zorder=2)
 
-            ax1.set_xlabel('월 (YYYY-MM)', fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
-            ax1.set_ylabel('청구 금액 (원)', fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
+            if font_prop:
+                ax1.set_xlabel('월 (YYYY-MM)', fontproperties=font_prop, fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
+                ax1.set_ylabel('청구 금액 (원)', fontproperties=font_prop, fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
+            else:
+                ax1.set_xlabel('월 (YYYY-MM)', fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
+                ax1.set_ylabel('청구 금액 (원)', fontsize=9.5, fontweight='bold', color='#334155', labelpad=8)
+
             ax1.set_xticks(x)
-            ax1.set_xticklabels(x_labels, fontsize=8.5, color='#475569')
+            if font_prop:
+                ax1.set_xticklabels(x_labels, fontproperties=font_prop, fontsize=8.5, color='#475569')
+            else:
+                ax1.set_xticklabels(x_labels, fontsize=8.5, color='#475569')
 
             max_cost = (base_cost + overtime_premium).max() if len(sorted_df) > 0 else 10000000
             ax1.set_ylim(0, max_cost * 1.15)
@@ -574,6 +598,9 @@ class CostEstimationService:
                 return f"{int(x_val):,}"
             ax1.yaxis.set_major_formatter(plt.FuncFormatter(currency_fmt))
             ax1.tick_params(axis='y', colors='#475569', labelsize=8.5)
+            if font_prop:
+                for t in ax1.get_yticklabels():
+                    t.set_fontproperties(font_prop)
             ax1.grid(axis='y', linestyle='--', linewidth=0.8, color='#e2e8f0', zorder=1)
 
             ax1.spines['top'].set_visible(False)
@@ -589,8 +616,14 @@ class CostEstimationService:
 
             max_hours = total_hours.max() if len(sorted_df) > 0 else 100
             ax2.set_ylim(0, max_hours * 1.25)
-            ax2.set_ylabel('투입 공수 (h)', fontsize=9.5, fontweight='bold', color='#0284c7', labelpad=8)
+            if font_prop:
+                ax2.set_ylabel('투입 공수 (h)', fontproperties=font_prop, fontsize=9.5, fontweight='bold', color='#0284c7', labelpad=8)
+            else:
+                ax2.set_ylabel('투입 공수 (h)', fontsize=9.5, fontweight='bold', color='#0284c7', labelpad=8)
             ax2.tick_params(axis='y', colors='#0284c7', labelsize=8.5)
+            if font_prop:
+                for t in ax2.get_yticklabels():
+                    t.set_fontproperties(font_prop)
             ax2.spines['top'].set_visible(False)
             ax2.spines['left'].set_visible(False)
             ax2.spines['right'].set_color('#cbd5e1')
@@ -606,16 +639,20 @@ class CostEstimationService:
                     va='bottom',
                     fontsize=8.5,
                     fontweight='bold',
+                    fontproperties=font_prop,
                     color='#0284c7',
                     bbox=dict(boxstyle='round,pad=0.2', facecolor='#ffffff', edgecolor='none', alpha=0.85)
                 )
 
-            plt.title('월별 청구 금액(막대) & 투입 공수(꺾은선) 추이', fontsize=12, fontweight='bold', color='#005073', pad=18, loc='left')
+            if font_prop:
+                plt.title('월별 청구 금액(막대) & 투입 공수(꺾은선) 추이', fontproperties=font_prop, fontsize=12, fontweight='bold', color='#005073', pad=18, loc='left')
+            else:
+                plt.title('월별 청구 금액(막대) & 투입 공수(꺾은선) 추이', fontsize=12, fontweight='bold', color='#005073', pad=18, loc='left')
 
             lines, labels = ax1.get_legend_handles_labels()
             lines2, labels2 = ax2.get_legend_handles_labels()
             ax1.legend(lines + lines2, labels + labels2, loc='upper right', bbox_to_anchor=(1.0, 1.15),
-                       ncol=3, frameon=True, facecolor='#ffffff', edgecolor='#e2e8f0', fontsize=8.5)
+                       ncol=3, frameon=True, facecolor='#ffffff', edgecolor='#e2e8f0', fontsize=8.5, prop=font_prop)
 
             plt.tight_layout()
 
