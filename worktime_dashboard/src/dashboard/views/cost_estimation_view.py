@@ -1086,12 +1086,29 @@ def render_cost_estimation_view(
                 source_series = mh_series.apply(lambda x: "📅 아웃룩" if str(x).startswith("OUTLOOK_") else "💬 카카오톡")
 
                 # 4) 공수 및 비고 (결측치 및 컬럼 부재 안전 처리)
+                # 🏖️ 사용자 확정 원칙: 연차/반차/휴가 카테고리는 무조건 공수 0.0h 강제 (비과금)
+                leave_keywords_guard = ["연차", "반차", "오전반차", "오후반차", "휴가", "공가", "병가", "외출", "조퇴"]
+                is_leave_row = pd.Series(False, index=df_edit_src.index)
+                if "is_leave" in df_edit_src.columns:
+                    is_leave_row = is_leave_row | df_edit_src["is_leave"].fillna(False).astype(bool)
+                if "log_type" in df_edit_src.columns:
+                    is_leave_row = is_leave_row | df_edit_src["log_type"].astype(str).str.contains("휴가", na=False)
+                is_leave_row = is_leave_row | client_series.apply(lambda s: any(k in s for k in leave_keywords_guard))
+                is_leave_row = is_leave_row | desc_series.apply(lambda s: any(k in s for k in leave_keywords_guard))
+
+                # 고객사명 '연차' -> '🏖️ 연차', '반차' -> '🏖️ 반차' 보정
+                client_series = client_series.apply(lambda c: f"🏖️ {c}" if c in ["연차", "반차", "휴가", "공가", "병가"] else c)
+
                 if "original_hours" in df_edit_src.columns:
                     orig_h_series = pd.to_numeric(df_edit_src["original_hours"], errors="coerce").fillna(df_edit_src["billable_hours"]).round(1)
                 else:
                     orig_h_series = pd.to_numeric(df_edit_src["billable_hours"], errors="coerce").fillna(0.0).round(1)
 
                 adj_h_series = pd.to_numeric(df_edit_src["billable_hours"], errors="coerce").fillna(0.0).round(1)
+
+                # 연차/반차/휴가 항목 기존공수 및 인정공수 0.0h 강제
+                orig_h_series = orig_h_series.mask(is_leave_row, 0.0)
+                adj_h_series = adj_h_series.mask(is_leave_row, 0.0)
 
                 if "note" in df_edit_src.columns:
                     note_series = df_edit_src["note"].fillna("").astype(str)
