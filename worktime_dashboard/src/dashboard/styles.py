@@ -1907,8 +1907,6 @@ def render_header_banner(initial_ms: int, page_tag: str):
                                 if (diffSec < 0) return;
 
                                 let elapsedMins = Math.floor(diffSec / 60);
-                                let secRem = diffSec % 60;
-                                let secStr = secRem < 10 ? '0' + secRem : secRem;
                                 let elapsedHours = (elapsedMins / 60.0).toFixed(1);
                                 let isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
 
@@ -1916,8 +1914,8 @@ def render_header_banner(initial_ms: int, page_tag: str):
                                 if (timeSpan) {{
                                     let overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
                                     let timeHtml = isSingle
-                                        ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag
-                                        : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag;
+                                        ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
+                                        : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
                                     if (timeSpan.innerHTML !== timeHtml) {{
                                         timeSpan.innerHTML = timeHtml;
                                         timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
