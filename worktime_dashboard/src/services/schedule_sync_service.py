@@ -235,6 +235,44 @@ class ScheduleSyncService:
                     "is_weekend_work": False
                 })
 
+        # 🛡️ 동일 작업자 중복/겹침 휴가 일정 지능적 통합 (예: '[김시우] 병원 진료' vs '[김시우] 오전 반차 (병원 진료)' 중복 등록 방어)
+        if leave_records:
+            deduped_leave_records = []
+            for lr in leave_records:
+                w_name = lr.get("worker_name")
+                st_time_val = lr.get("start_time")
+                ed_time_val = lr.get("end_time")
+                st_dt = st_time_val.to_pydatetime() if (pd.notna(st_time_val) and hasattr(st_time_val, "to_pydatetime")) else st_time_val
+                ed_dt = ed_time_val.to_pydatetime() if (pd.notna(ed_time_val) and hasattr(ed_time_val, "to_pydatetime")) else ed_time_val
+
+                is_merged = False
+                for idx, existing in enumerate(deduped_leave_records):
+                    if existing.get("worker_name") == w_name:
+                        ex_st_val = existing.get("start_time")
+                        ex_ed_val = existing.get("end_time")
+                        ex_st_dt = ex_st_val.to_pydatetime() if (pd.notna(ex_st_val) and hasattr(ex_st_val, "to_pydatetime")) else ex_st_val
+                        ex_ed_dt = ex_ed_val.to_pydatetime() if (pd.notna(ex_ed_val) and hasattr(ex_ed_val, "to_pydatetime")) else ex_ed_val
+
+                        overlap = False
+                        if st_dt and ed_dt and ex_st_dt and ex_ed_dt:
+                            overlap = max(st_dt, ex_st_dt) < min(ed_dt, ex_ed_dt)
+                        else:
+                            overlap = True
+
+                        if overlap:
+                            subj_new = str(lr.get("subject", ""))
+                            subj_ex = str(existing.get("subject", ""))
+                            has_explicit_new = any(k in subj_new for k in ["연차", "반차", "휴가", "공가", "오전반차", "오후반차"])
+                            has_explicit_ex = any(k in subj_ex for k in ["연차", "반차", "휴가", "공가", "오전반차", "오후반차"])
+                            if (has_explicit_new and not has_explicit_ex) or (has_explicit_new == has_explicit_ex and len(subj_new) > len(subj_ex)):
+                                deduped_leave_records[idx] = lr
+                            is_merged = True
+                            break
+
+                if not is_merged:
+                    deduped_leave_records.append(lr)
+            leave_records = deduped_leave_records
+
         # 2. 순수 카카오톡 작업 목록 추출 (아웃룩 일정과 자기 자신 매칭 원천 방지)
         # 전달받은 데이터프레임 중 is_outlook이 아닌 순수 카카오톡 보고 작업만 분리
         if not kakao_pend_df.empty:

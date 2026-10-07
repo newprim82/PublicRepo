@@ -179,6 +179,21 @@ def _render_single_team_leave_cards(leave_records: list, title_mappings: dict):
 
 def render_leave_section(leave_records: list, selected_team: str):
     """🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (진행 중 / 오늘 예정 섹션과 완벽 일치하는 규격 및 컨테이너)"""
+    # 🛡️ 동일 작업자 중복 휴가 카드 제거 (이중 안전망)
+    if leave_records:
+        seen_worker_leave = {}
+        filtered_leaves = []
+        for lr in leave_records:
+            w = lr.get("worker_name", "")
+            if w in seen_worker_leave:
+                prev_idx = seen_worker_leave[w]
+                if len(str(lr.get("subject", ""))) > len(str(filtered_leaves[prev_idx].get("subject", ""))):
+                    filtered_leaves[prev_idx] = lr
+            else:
+                seen_worker_leave[w] = len(filtered_leaves)
+                filtered_leaves.append(lr)
+        leave_records = filtered_leaves
+
     leave_cnt = len(leave_records) if leave_records else 0
     cnt_str = f"{leave_cnt}명 부재" if leave_cnt > 0 else "0명"
     cnt_bg = "#f3e8ff" if leave_cnt > 0 else "#f1f5f9"
