@@ -992,13 +992,14 @@ def apply_custom_styles():
         }
         [data-testid="stSidebar"] .block-container,
         [data-testid="stSidebarUserContent"] {
-            padding-top: 0.15rem !important;
+            padding-top: 0rem !important;
             padding-left: 0.5rem !important;
             padding-right: 0.5rem !important;
         }
         [data-testid="stSidebarHeader"] {
-            padding-top: 0.15rem !important;
+            padding-top: 0rem !important;
             padding-bottom: 0rem !important;
+            height: auto !important;
             min-height: 0px !important;
         }
         /* 사이드바 내부 엘리먼트 초밀착 (APIC 트리 간격) */
@@ -1170,10 +1171,17 @@ def apply_custom_styles():
             box-shadow: none !important;
         }
         /* ◆ 사이드바 브랜드 헤더 (로고 마크 + 브랜드명) */
+        [data-testid="stSidebar"] .sb-brand-wrapper {
+            padding: 0px 4px 20px 4px !important;
+            margin-bottom: 6px !important;
+            display: block !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sb-brand-wrapper),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sb-brand-wrapper),
         [data-testid="stSidebar"] .element-container:has(.sb-brand),
         [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sb-brand) {
             margin-top: 0px !important;
-            margin-bottom: 14px !important;
+            margin-bottom: 18px !important;
             padding-top: 0px !important;
             padding-bottom: 0px !important;
         }
@@ -1181,7 +1189,7 @@ def apply_custom_styles():
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 2px 6px 0px 6px;
+            padding: 0px !important;
             margin: 0 !important;
         }
         [data-testid="stSidebar"] .sb-brand-mark {
@@ -1224,8 +1232,8 @@ def apply_custom_styles():
         }
         [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container,
         [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] {
-            margin-top: 0px !important;
-            margin-bottom: 12px !important;
+            margin-top: 6px !important;
+            margin-bottom: 14px !important;
         }
         [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button,
         [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button {

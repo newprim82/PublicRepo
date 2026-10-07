@@ -517,11 +517,13 @@ def main():
     with st.sidebar:
         # 🏛️ APIC 스타일 사이드바 헤더: 시안 로고 마크 + 브랜드명 (버전 표기 제거)
         st.markdown("""
-        <div class="sb-brand">
-            <div class="sb-brand-mark">◆</div>
-            <div>
-                <div class="sb-brand-title">기술본부 관제센터</div>
-                <div class="sb-brand-sub">FIELD SUPPORT PORTAL</div>
+        <div class="sb-brand-wrapper" style="padding: 0px 4px 20px 4px; margin-bottom: 4px; display: block;">
+            <div class="sb-brand" style="display: flex; align-items: center; gap: 10px;">
+                <div class="sb-brand-mark">◆</div>
+                <div>
+                    <div class="sb-brand-title">기술본부 관제센터</div>
+                    <div class="sb-brand-sub">FIELD SUPPORT PORTAL</div>
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
