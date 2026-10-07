@@ -35,6 +35,13 @@ from ..common.ui_helpers import (
 from .outlook_calendar_widget import render_outlook_calendar_widget
 from ...services.schedule_sync_service import ScheduleSyncService
 
+def render_empty_dashed_box(message: str, padding: str = "18px", font_size: str = "12.5px", margin_bottom: str = "8px"):
+    """오늘 예정 일정 아래 점선 박스와 100% 동일한 통일된 빈 상태(Empty State) UI 렌더링"""
+    st.markdown(
+        f"<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: {padding}; text-align: center; color: #94a3b8; font-size: {font_size}; font-weight: 600; margin-bottom: {margin_bottom};'>{message}</div>",
+        unsafe_allow_html=True
+    )
+
 def _render_single_team_pending_cards(pend_df: pd.DataFrame, title_mappings: dict):
     """🏢 단일 팀 진행 중인 작업 카드 렌더링"""
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
@@ -105,7 +112,7 @@ def render_upcoming_schedule_section(sched_df: pd.DataFrame, selected_team: str)
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #6366f1; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>📅 오늘 예정 일정</span><span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 5px; border-radius: 3px; vertical-align: middle;">{badge_txt}</span> 연동 )</span><span style="background: #e0e7ff; color: #4338ca; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(sched_df)}건</span></div>""", unsafe_allow_html=True)
 
     if sched_df.empty:
-        st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 18px; text-align: center; color: #94a3b8; font-size: 12.5px; font-weight: 600; margin-bottom: 8px;'>오늘 추가로 예정된 일정이 없습니다.</div>", unsafe_allow_html=True)
+        render_empty_dashed_box("오늘 추가로 예정된 일정이 없습니다.")
         return
 
     if selected_team == "전체 팀":
@@ -208,7 +215,7 @@ def render_leave_section(leave_records: list, selected_team: str):
 
     if not leave_records:
         team_msg = f"오늘 [{selected_team}]에 등록된 휴가 / 연차 / 반차 부재 인원이 없습니다." if selected_team != "전체 팀" else "오늘 등록된 휴가 / 연차 / 반차 부재 인원이 없습니다."
-        st.info(team_msg)
+        render_empty_dashed_box(team_msg)
         return
 
     title_mappings = TeamService.get_title_mappings()
@@ -249,7 +256,7 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
     badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 &nbsp;|&nbsp; <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">O</span> 양쪽 연동 )</span>'
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>⏳ 실시간 진행 중인 작업</span>{badge_legend_html}<span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
-        st.success("🎉 현재 진행 중인 미완료 작업이 없습니다. 오늘 모든 작업이 성공적으로 완료되었습니다!")
+        render_empty_dashed_box("현재 실시간으로 진행 중인 미완료 작업이 없습니다.")
         return
 
     st.markdown(LIVE_PROGRESS_ANIMATION_AND_TIMER, unsafe_allow_html=True)
@@ -305,7 +312,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 
     # 1. 오늘 날짜 데이터 필터링
     if df_raw.empty or "start_time" not in df_raw.columns:
-        st.info("현재 등록된 작업 로그 데이터가 없습니다.")
+        render_empty_dashed_box("현재 등록된 작업 로그 데이터가 없습니다.")
         return
 
     today_df = df_raw[df_raw["start_time"].dt.date == today_date].copy() if not df_raw.empty else pd.DataFrame()
@@ -441,7 +448,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                         show_stale_pending_tasks_dialog(df_raw)
 
     if today_df.empty and pend_df.empty and sched_df.empty and comp_df.empty:
-        st.info(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 작업 보고 또는 일정이 아직 없습니다.")
+        render_empty_dashed_box(f"☕ 오늘({today_date.strftime('%Y-%m-%d')}) [{selected_team}]에 등록된 작업 보고 또는 일정이 아직 없습니다.")
         return
 
     # 4, 5 & 6. 🏛️ LIVE 관제 중 하위 전체 내용을 하나로 묶는 대형 통합 네모 컨테이너
@@ -463,7 +470,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         # 6. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)
         st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #10b981; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">✅ 오늘 완료된 작업 <span style="background: #ede9fe; color: #5b21b6; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(comp_df)}건</span></div>""", unsafe_allow_html=True)
         if comp_df.empty:
-            st.info("오늘 완료 보고된 작업이 아직 없습니다.")
+            render_empty_dashed_box("오늘 완료 보고된 작업이 아직 없습니다.")
         else:
             if selected_team == "전체 팀":
                 # 🏛️ 전체 팀 기준: 5개 팀 세로 열 (칸반 보드) 레이아웃
