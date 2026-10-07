@@ -179,15 +179,22 @@ def _render_single_team_leave_cards(leave_records: list, title_mappings: dict):
 
 def render_leave_section(leave_records: list, selected_team: str):
     """🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (진행 중 / 오늘 예정 섹션과 완벽 일치하는 규격 및 컨테이너)"""
-    if not leave_records:
-        return
+    leave_cnt = len(leave_records) if leave_records else 0
+    cnt_str = f"{leave_cnt}명 부재" if leave_cnt > 0 else "0명"
+    cnt_bg = "#f3e8ff" if leave_cnt > 0 else "#f1f5f9"
+    cnt_color = "#7e22ce" if leave_cnt > 0 else "#64748b"
 
     st.markdown(
         f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #a855f7; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">"""
         f"""<span>🏖️ 오늘 휴가 / 연차 / 반차 현황</span>"""
-        f"""<span style="background: #f3e8ff; color: #7e22ce; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(leave_records)}명 부재</span></div>""",
+        f"""<span style="background: {cnt_bg}; color: {cnt_color}; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{cnt_str}</span></div>""",
         unsafe_allow_html=True
     )
+
+    if not leave_records:
+        team_msg = f"오늘 [{selected_team}]에 등록된 휴가 / 연차 / 반차 부재 인원이 없습니다." if selected_team != "전체 팀" else "오늘 등록된 휴가 / 연차 / 반차 부재 인원이 없습니다."
+        st.info(team_msg)
+        return
 
     title_mappings = TeamService.get_title_mappings()
 
@@ -426,10 +433,9 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     with st.container(border=True):
         st.markdown('<span class="live-board-main-container" style="display:none;"></span>', unsafe_allow_html=True)
 
-        # 0. 🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (휴가자가 있을 때만 표출, 진행 중/예정 섹션과 동일한 간격 및 구분선)
-        if leave_records:
-            render_leave_section(leave_records, selected_team)
-            st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
+        # 0. 🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (휴가자가 없을 때도 상시 표출, 진행 중/예정 섹션과 동일한 간격 및 구분선)
+        render_leave_section(leave_records, selected_team)
+        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 4. 실시간 진행 중(PENDING) 작업 섹션 (단일 통합 1분 자동 갱신)
         render_live_pending_section(pend_df, selected_team)
