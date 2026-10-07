@@ -177,15 +177,53 @@ class ScheduleSyncService:
         auto_completed_rows = []
         team_info = TeamService.get_team_members_info()
 
-        # 1. 휴가/연차/반차 추출 (실시간 배너 및 오늘 완료된 작업에 100% 표출)
+        # 1. 휴가/연차/반차 추출 (B안 정책: 종료 시각 이전에는 상단 실시간 부재 현황, 종료 후에는 오늘 완료된 작업으로 즉시 이동)
         leave_records = []
         leave_rows = today_out[today_out["is_leave"] == True]
+
+        # 🛡️ 동일 작업자 중복/겹침 휴가 일정 사전 통합 (예: '[김시우] 병원 진료' vs '[김시우] 오전 반차 (병원 진료)')
+        deduped_leave_items = []
         for _, r in leave_rows.iterrows():
             w_name = r["worker_name"]
             st_time = r["start_time"]
             ed_time = r["end_time"]
             st_dt = st_time.to_pydatetime() if hasattr(st_time, "to_pydatetime") else st_time
             ed_dt = ed_time.to_pydatetime() if hasattr(ed_time, "to_pydatetime") else ed_time
+            if hasattr(st_dt, "tzinfo") and st_dt.tzinfo is not None:
+                st_dt = st_dt.replace(tzinfo=None)
+            if hasattr(ed_dt, "tzinfo") and ed_dt.tzinfo is not None:
+                ed_dt = ed_dt.replace(tzinfo=None)
+
+            is_merged = False
+            for idx, existing in enumerate(deduped_leave_items):
+                if existing["worker_name"] == w_name:
+                    ex_st_dt = existing["st_dt"]
+                    ex_ed_dt = existing["ed_dt"]
+                    overlap = False
+                    if st_dt and ed_dt and ex_st_dt and ex_ed_dt:
+                        overlap = max(st_dt, ex_st_dt) < min(ed_dt, ex_ed_dt)
+                    else:
+                        overlap = True
+                    if overlap:
+                        subj_new = str(r.get("subject", ""))
+                        subj_ex = str(existing["r"].get("subject", ""))
+                        has_explicit_new = any(k in subj_new for k in ["연차", "반차", "휴가", "공가", "오전반차", "오후반차"])
+                        has_explicit_ex = any(k in subj_ex for k in ["연차", "반차", "휴가", "공가", "오전반차", "오후반차"])
+                        if (has_explicit_new and not has_explicit_ex) or (has_explicit_new == has_explicit_ex and len(subj_new) > len(subj_ex)):
+                            deduped_leave_items[idx] = {"r": r, "worker_name": w_name, "st_dt": st_dt, "ed_dt": ed_dt}
+                        is_merged = True
+                        break
+            if not is_merged:
+                deduped_leave_items.append({"r": r, "worker_name": w_name, "st_dt": st_dt, "ed_dt": ed_dt})
+
+        for item in deduped_leave_items:
+            r = item["r"]
+            w_name = item["worker_name"]
+            st_time = r["start_time"]
+            ed_time = r["end_time"]
+            st_dt = item["st_dt"]
+            ed_dt = item["ed_dt"]
+
             l_type = r.get("leave_type") or "연차"
             if "반차" in str(l_type) or "반일" in str(l_type):
                 dur_hours = 4.5
@@ -196,8 +234,19 @@ class ScheduleSyncService:
             w_title = team_info.get(w_name, {}).get("title", "")
             w_team = r.get("worker_team") or team_info.get(w_name, {}).get("team", "미배정")
 
-            # 1-A. 근무 시간(18:00 이전)에만 실시간 진행 섹션 상단 부재 현황에 표출
-            if now.hour < 18:
+            # 🌟 [B안: 종료 즉시 퇴장 정책]
+            # - 종일 연차: 퇴근 시간(18:00)까지 상단 부재 현황판 유지
+            # - 반차(오전/오후): 해당 반차의 종료 시각(ed_dt)이 지나면 즉시 상단에서 퇴장하고 하단 오늘 완료된 작업으로 이동
+            is_all_day = bool(r.get("is_all_day") == True)
+            if is_all_day or ("연차" in str(l_type) and "반차" not in str(l_type) and "반일" not in str(l_type)):
+                leave_end_cutoff = ed_dt.replace(hour=18, minute=0, second=0, microsecond=0) if (pd.notna(ed_dt) and ed_dt.hour < 18) else ed_dt
+            else:
+                leave_end_cutoff = ed_dt
+
+            is_leave_ended = (pd.notna(leave_end_cutoff) and now >= leave_end_cutoff) or (now.hour >= 18)
+
+            if not is_leave_ended:
+                # 1-A. 휴가/반차 진행 중: 상단 실시간 부재 현황판에 표출
                 leave_records.append({
                     "worker_name": w_name,
                     "worker_title": w_title,
@@ -211,7 +260,7 @@ class ScheduleSyncService:
                     "color_tag": r.get("color_tag", "#ec4899")
                 })
             else:
-                # 1-B. 퇴근 시간(18:00 이후): 실시간 상단에서는 숨겨지고 오늘 완료된 작업 섹션으로 이동 표출 (업무량 산정은 0h 제외)
+                # 1-B. 반차/휴가 종료 시각 이후 또는 퇴근 시간(18:00 이후): 오늘 완료된 작업 섹션으로 즉시 이동 (업무량 산정은 0h 제외)
                 auto_completed_rows.append({
                     "msg_hash": f"OUTLOOK_LEAVE_{r.get('entry_id', '')}",
                     "log_type": "휴가",
@@ -234,44 +283,6 @@ class ScheduleSyncService:
                     "is_night_work": False,
                     "is_weekend_work": False
                 })
-
-        # 🛡️ 동일 작업자 중복/겹침 휴가 일정 지능적 통합 (예: '[김시우] 병원 진료' vs '[김시우] 오전 반차 (병원 진료)' 중복 등록 방어)
-        if leave_records:
-            deduped_leave_records = []
-            for lr in leave_records:
-                w_name = lr.get("worker_name")
-                st_time_val = lr.get("start_time")
-                ed_time_val = lr.get("end_time")
-                st_dt = st_time_val.to_pydatetime() if (pd.notna(st_time_val) and hasattr(st_time_val, "to_pydatetime")) else st_time_val
-                ed_dt = ed_time_val.to_pydatetime() if (pd.notna(ed_time_val) and hasattr(ed_time_val, "to_pydatetime")) else ed_time_val
-
-                is_merged = False
-                for idx, existing in enumerate(deduped_leave_records):
-                    if existing.get("worker_name") == w_name:
-                        ex_st_val = existing.get("start_time")
-                        ex_ed_val = existing.get("end_time")
-                        ex_st_dt = ex_st_val.to_pydatetime() if (pd.notna(ex_st_val) and hasattr(ex_st_val, "to_pydatetime")) else ex_st_val
-                        ex_ed_dt = ex_ed_val.to_pydatetime() if (pd.notna(ex_ed_val) and hasattr(ex_ed_val, "to_pydatetime")) else ex_ed_val
-
-                        overlap = False
-                        if st_dt and ed_dt and ex_st_dt and ex_ed_dt:
-                            overlap = max(st_dt, ex_st_dt) < min(ed_dt, ex_ed_dt)
-                        else:
-                            overlap = True
-
-                        if overlap:
-                            subj_new = str(lr.get("subject", ""))
-                            subj_ex = str(existing.get("subject", ""))
-                            has_explicit_new = any(k in subj_new for k in ["연차", "반차", "휴가", "공가", "오전반차", "오후반차"])
-                            has_explicit_ex = any(k in subj_ex for k in ["연차", "반차", "휴가", "공가", "오전반차", "오후반차"])
-                            if (has_explicit_new and not has_explicit_ex) or (has_explicit_new == has_explicit_ex and len(subj_new) > len(subj_ex)):
-                                deduped_leave_records[idx] = lr
-                            is_merged = True
-                            break
-
-                if not is_merged:
-                    deduped_leave_records.append(lr)
-            leave_records = deduped_leave_records
 
         # 2. 순수 카카오톡 작업 목록 추출 (아웃룩 일정과 자기 자신 매칭 원천 방지)
         # 전달받은 데이터프레임 중 is_outlook이 아닌 순수 카카오톡 보고 작업만 분리
@@ -618,8 +629,21 @@ class ScheduleSyncService:
                 except Exception:
                     week_label_val = f"{month_str_val} 주차"
 
-                if is_leave:
-                    # 🏖️ 사용자 확정 원칙: 연차/휴가/반차는 업무량 산정에서 완전 제외(0h), 카드 표출 전용
+                    # 🏖️ 당일(오늘) 휴가는 종료 전(종일연차는 18:00 전)에는 실시간 부재(SCHEDULED),
+                    # 반차/휴가 종료 시각 이후 또는 과거 날짜의 휴가는 COMPLETED 부여
+                    is_leave_ended_comb = False
+                    if st_dt.date() == now.date():
+                        is_all_day_l = bool(r.get("is_all_day") == True)
+                        if is_all_day_l or ("연차" in str(l_type) and "반차" not in str(l_type) and "반일" not in str(l_type)):
+                            cutoff_l = ed_dt.replace(hour=18, minute=0, second=0, microsecond=0) if (pd.notna(ed_dt) and ed_dt.hour < 18) else ed_dt
+                        else:
+                            cutoff_l = ed_dt
+                        is_leave_ended_comb = (pd.notna(cutoff_l) and now >= cutoff_l) or (now.hour >= 18)
+                    elif st_dt > now:
+                        is_leave_ended_comb = False
+                    else:
+                        is_leave_ended_comb = True
+
                     row_dict = {
                         "msg_hash": f"OUTLOOK_LEAVE_{entry_id}",
                         "log_type": "휴가",
@@ -639,9 +663,7 @@ class ScheduleSyncService:
                         "month_str": month_str_val,
                         "week_label": week_label_val,
                         "week_str": week_str_val,
-                        # 🏖️ 당일(오늘) 휴가는 18:00 이전에는 실시간 부재 전용이므로 COMPLETED가 아닌 SCHEDULED 부여,
-                        # 18:00 이후 또는 과거 날짜의 휴가는 COMPLETED 부여
-                        "status": "SCHEDULED" if (st_dt.date() == now.date() and now.hour < 18) or st_dt > now else "COMPLETED",
+                        "status": "COMPLETED" if is_leave_ended_comb else "SCHEDULED",
                         "is_outlook": True,
                         "is_leave": True,
                         "is_night_work": False,
