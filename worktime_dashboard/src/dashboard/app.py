@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.4.6 (Unified Live Task Section Header Legend Badges with Card Tags)
-APP_VERSION = "v2.4.6"
+# WorkTime Dashboard v2.5.0 (Sidebar Hover Flyout Submenus with 250ms Grace Period & Direct Access)
+APP_VERSION = "v2.5.0"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -543,10 +543,30 @@ def main():
 
         is_auth = AuthManager.is_authenticated()
 
-        # 1. 📂 메인 메뉴 (로그인 시에만 노출, on_click 콜백 즉시 전환)
+        # 1. 📂 관리 (로그인 시 노출: 마우스 호버 시 우측 플라이아웃 서브메뉴 표출)
         if is_auth:
             is_admin_active = (st.session_state.get("current_page") in ["⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)", "📋 작업 기록 원장 & 엑셀"])
-            with st.expander("⚙ 관리", expanded=is_admin_active):
+            admin_act_cls = "is-current-active" if is_admin_active else ""
+            st.markdown(f"""
+            <div class="sb-flyout-trigger {admin_act_cls}" data-menu="admin">
+                <div class="trigger-title">
+                    <span>⚙️ 관리</span>
+                </div>
+                <div class="trigger-meta">
+                    {"<span class='trigger-dot'></span>" if is_admin_active else ""}
+                    <span class="trigger-arrow">›</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.container():
+                st.markdown("""
+                <div class="sb-flyout-panel-marker" data-menu="admin">
+                    <div class="sb-flyout-header">
+                        <span class="sb-flyout-header-title">⚙ 관리 메뉴</span>
+                        <span class="sb-flyout-header-tag">ADMIN</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 main_menu_items = [
                     "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                     "📋 작업 기록 원장 & 엑셀"
@@ -712,7 +732,7 @@ def main():
                 df = df_filtered_base.iloc[0:0]
 
 
-        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환)
+        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환: 마우스 호버 시 우측 플라이아웃 서브메뉴 표출)
         detail_menu_items = [
             "📅 작업 캘린더 & 밀도 히트맵",
             "🔍 전체 작업 스마트 검색",
@@ -724,7 +744,27 @@ def main():
             "⏱️ 예정 vs 실제 소요시간"
         ]
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
-        with st.expander("📊 분석", expanded=is_detail_active):
+        detail_act_cls = "is-current-active" if is_detail_active else ""
+        st.markdown(f"""
+        <div class="sb-flyout-trigger {detail_act_cls}" data-menu="detail">
+            <div class="trigger-title">
+                <span>📊 분석</span>
+            </div>
+            <div class="trigger-meta">
+                {"<span class='trigger-dot'></span>" if is_detail_active else ""}
+                <span class="trigger-arrow">›</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        with st.container():
+            st.markdown("""
+            <div class="sb-flyout-panel-marker" data-menu="detail">
+                <div class="sb-flyout-header">
+                    <span class="sb-flyout-header-title">📊 분석 대시보드</span>
+                    <span class="sb-flyout-header-tag">ANALYTICS</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             for d_item in detail_menu_items:
                 is_active = (st.session_state["current_page"] == d_item)
                 btn_prefix = "▸ " if is_active else "  "
@@ -737,7 +777,7 @@ def main():
                     args=(d_item,)
                 )
 
-        # 4. 💰 예상 비용산정 (접이식 대메뉴: 분석 아래쪽 배치, 로그인 시에만 노출)
+        # 4. 💰 예상 비용산정 (마우스 호버 시 우측 플라이아웃 서브메뉴 표출, 로그인 시에만 노출)
         if is_auth:
             cost_menu_items = [
                 "💰 팀원별 예상 청구금액",
@@ -746,7 +786,27 @@ def main():
                 "⚙️ 직급별 시간당 단가 설정"
             ]
             is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
-            with st.expander("💰 예상 비용산정", expanded=is_cost_active):
+            cost_act_cls = "is-current-active" if is_cost_active else ""
+            st.markdown(f"""
+            <div class="sb-flyout-trigger {cost_act_cls}" data-menu="cost">
+                <div class="trigger-title">
+                    <span>💰 예상 비용산정</span>
+                </div>
+                <div class="trigger-meta">
+                    {"<span class='trigger-dot'></span>" if is_cost_active else ""}
+                    <span class="trigger-arrow">›</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.container():
+                st.markdown("""
+                <div class="sb-flyout-panel-marker" data-menu="cost">
+                    <div class="sb-flyout-header">
+                        <span class="sb-flyout-header-title">💰 예상 비용산정</span>
+                        <span class="sb-flyout-header-tag">BILLING</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 for c_item in cost_menu_items:
                     is_active = (
                         st.session_state["current_page"] == c_item or 
@@ -895,7 +955,7 @@ def main():
                         except Exception as e:
                             st.error(f"파일 처리 중 오류: {e}")
 
-        # 5. 🛠️ 시스템 관리 (Super Admin: newprim 로그인 시에만 노출)
+        # 5. 🛠️ 시스템 관리 (Super Admin: newprim 로그인 시에만 노출, 마우스 호버 플라이아웃)
         if is_auth and AuthManager.is_super_admin():
             sys_mgmt_items = [
                 "📅 법정 및 임시 공휴일 관리",
@@ -904,7 +964,27 @@ def main():
                 "👥 시스템 관리자 계정 관리"
             ]
             is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
-            with st.expander("🛠️ 시스템 관리", expanded=is_sys_active):
+            sys_act_cls = "is-current-active" if is_sys_active else ""
+            st.markdown(f"""
+            <div class="sb-flyout-trigger {sys_act_cls}" data-menu="sys">
+                <div class="trigger-title">
+                    <span>🛠️ 시스템 관리</span>
+                </div>
+                <div class="trigger-meta">
+                    {"<span class='trigger-dot'></span>" if is_sys_active else ""}
+                    <span class="trigger-arrow">›</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            with st.container():
+                st.markdown("""
+                <div class="sb-flyout-panel-marker" data-menu="sys">
+                    <div class="sb-flyout-header">
+                        <span class="sb-flyout-header-title">🛠️ 시스템 관리</span>
+                        <span class="sb-flyout-header-tag">SYSTEM</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
                 for s_item in sys_mgmt_items:
                     is_active = (st.session_state.get("current_page") == s_item)
                     btn_prefix = "▸ " if is_active else "  "
@@ -916,7 +996,7 @@ def main():
                         on_click=set_nav_page,
                         args=(s_item,)
                     )
-                st.markdown("<div style='height: 4px; border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 0 6px 0;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='height: 4px; border-top: 1px solid rgba(255,255,255,0.08); margin: 6px 0 4px 0;'></div>", unsafe_allow_html=True)
                 if st.button("🔄 실시간 데이터 새로고침", key="btn_sys_refresh_full", use_container_width=True):
                     clear_all_web_caches()
                     st.toast("🔄 실시간 데이터가 새로고침되었습니다!", icon="✅")
@@ -964,6 +1044,150 @@ def main():
                 AuthManager.logout()
                 st.toast("👋 로그아웃되었습니다. 일반 조회 모드로 전환됩니다.", icon="ℹ️")
                 st.rerun()
+
+        # 🚀 사이드바 호버 플라이아웃 자바스크립트 컨트롤러 주입 (0.25초 닫힘 지연, 대각선 이동 안정화)
+        st.components.v1.html("""
+        <!DOCTYPE html>
+        <html>
+        <head><title>sb-flyout-js</title></head>
+        <body style="margin:0;padding:0;overflow:hidden;">
+        <script>
+        (function() {
+            const DELAY_MS = 250;
+            let closeTimers = {};
+
+            function setupFlyouts() {
+                try {
+                    const doc = window.parent.document;
+                    if (!doc) return;
+
+                    const sidebar = doc.querySelector('section[data-testid="stSidebar"]');
+                    if (!sidebar) return;
+
+                    const triggers = doc.querySelectorAll('.sb-flyout-trigger');
+                    if (!triggers || triggers.length === 0) return;
+
+                    triggers.forEach(trigger => {
+                        const menuId = trigger.getAttribute('data-menu');
+                        if (!menuId) return;
+
+                        const marker = doc.querySelector('.sb-flyout-panel-marker[data-menu="' + menuId + '"]');
+                        if (!marker) return;
+
+                        let panel = marker.parentElement;
+                        while (panel && panel !== sidebar) {
+                            const tid = panel.getAttribute('data-testid');
+                            if (tid === 'stVerticalBlock' || tid === 'stVerticalBlockBorderWrapper') {
+                                break;
+                            }
+                            panel = panel.parentElement;
+                        }
+
+                        if (!panel || panel === sidebar) return;
+
+                        panel.classList.add('sb-flyout-panel-container');
+                        panel.setAttribute('data-flyout-menu', menuId);
+
+                        if (trigger._boundMarker === marker) return;
+                        trigger._boundMarker = marker;
+
+                        function positionPanel() {
+                            const triggerRect = trigger.getBoundingClientRect();
+                            const sbRect = sidebar.getBoundingClientRect();
+                            const panelHeight = panel.offsetHeight || 220;
+
+                            const leftPos = sbRect.right + 2;
+                            let topPos = triggerRect.top;
+                            const maxTop = (window.parent.innerHeight || 800) - panelHeight - 16;
+                            if (topPos > maxTop) {
+                                topPos = Math.max(16, maxTop);
+                            }
+                            if (topPos < 16) topPos = 16;
+
+                            panel.style.left = leftPos + 'px';
+                            panel.style.top = topPos + 'px';
+                        }
+
+                        function open() {
+                            if (closeTimers[menuId]) {
+                                clearTimeout(closeTimers[menuId]);
+                                delete closeTimers[menuId];
+                            }
+
+                            triggers.forEach(t => {
+                                const otherId = t.getAttribute('data-menu');
+                                if (otherId !== menuId) {
+                                    t.classList.remove('sb-trigger-active');
+                                    const otherMarker = doc.querySelector('.sb-flyout-panel-marker[data-menu="' + otherId + '"]');
+                                    if (otherMarker) {
+                                        let p = otherMarker.parentElement;
+                                        while (p && p !== sidebar) {
+                                            if (p.classList && p.classList.contains('sb-flyout-panel-container')) {
+                                                p.classList.remove('sb-flyout-open');
+                                                break;
+                                            }
+                                            p = p.parentElement;
+                                        }
+                                    }
+                                }
+                            });
+
+                            positionPanel();
+                            trigger.classList.add('sb-trigger-active');
+                            panel.classList.add('sb-flyout-open');
+                        }
+
+                        function close() {
+                            if (closeTimers[menuId]) clearTimeout(closeTimers[menuId]);
+                            closeTimers[menuId] = setTimeout(() => {
+                                trigger.classList.remove('sb-trigger-active');
+                                panel.classList.remove('sb-flyout-open');
+                                delete closeTimers[menuId];
+                            }, DELAY_MS);
+                        }
+
+                        trigger.onmouseenter = open;
+                        trigger.onmouseleave = close;
+                        panel.onmouseenter = open;
+                        panel.onmouseleave = close;
+
+                        trigger.onclick = function(e) {
+                            if (panel.classList.contains('sb-flyout-open')) {
+                                close();
+                            } else {
+                                open();
+                            }
+                        };
+
+                        const buttons = panel.querySelectorAll('button');
+                        buttons.forEach(btn => {
+                            btn.addEventListener('click', () => {
+                                panel.classList.remove('sb-flyout-open');
+                                trigger.classList.remove('sb-trigger-active');
+                            });
+                        });
+                    });
+                } catch (e) {
+                    console.error('sb-flyout error:', e);
+                }
+            }
+
+            setupFlyouts();
+
+            if (!window.parent.__sbFlyoutObserver) {
+                window.parent.__sbFlyoutObserver = new MutationObserver(() => {
+                    setupFlyouts();
+                });
+                const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
+                if (sidebar) {
+                    window.parent.__sbFlyoutObserver.observe(sidebar, { childList: true, subtree: true });
+                }
+            }
+        })();
+        </script>
+        </body>
+        </html>
+        """, height=0)
 
     # 데이터가 없을 때 안내 화면
     if df_raw.empty:
