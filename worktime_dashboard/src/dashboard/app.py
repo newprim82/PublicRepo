@@ -511,6 +511,16 @@ def main():
         if st.session_state.get("current_page") != target_page:
             st.session_state["current_page"] = target_page
 
+    def _render_flyout_trigger(menu_id: str, title: str, is_active: bool):
+        act_cls = " is-current-active" if is_active else ""
+        dot_html = "<span class='trigger-dot'></span>" if is_active else ""
+        html = f'<div class="sb-flyout-trigger{act_cls}" data-menu="{menu_id}"><div class="trigger-title"><span>{title}</span></div><div class="trigger-meta">{dot_html}<span class="trigger-arrow">›</span></div></div>'
+        st.markdown(html, unsafe_allow_html=True)
+
+    def _render_flyout_panel_header(menu_id: str, title: str, tag: str):
+        html = f'<div class="sb-flyout-panel-marker" data-menu="{menu_id}"><div class="sb-flyout-header"><span class="sb-flyout-header-title">{title}</span><span class="sb-flyout-header-tag">{tag}</span></div></div>'
+        st.markdown(html, unsafe_allow_html=True)
+
     # ==========================================
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
@@ -546,27 +556,9 @@ def main():
         # 1. 📂 관리 (로그인 시 노출: 마우스 호버 시 우측 플라이아웃 서브메뉴 표출)
         if is_auth:
             is_admin_active = (st.session_state.get("current_page") in ["⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)", "📋 작업 기록 원장 & 엑셀"])
-            admin_act_cls = "is-current-active" if is_admin_active else ""
-            st.markdown(f"""
-            <div class="sb-flyout-trigger {admin_act_cls}" data-menu="admin">
-                <div class="trigger-title">
-                    <span>⚙️ 관리</span>
-                </div>
-                <div class="trigger-meta">
-                    {"<span class='trigger-dot'></span>" if is_admin_active else ""}
-                    <span class="trigger-arrow">›</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            _render_flyout_trigger("admin", "⚙️ 관리", is_admin_active)
             with st.container():
-                st.markdown("""
-                <div class="sb-flyout-panel-marker" data-menu="admin">
-                    <div class="sb-flyout-header">
-                        <span class="sb-flyout-header-title">⚙ 관리 메뉴</span>
-                        <span class="sb-flyout-header-tag">ADMIN</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                _render_flyout_panel_header("admin", "⚙ 관리 메뉴", "ADMIN")
                 main_menu_items = [
                     "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                     "📋 작업 기록 원장 & 엑셀"
@@ -744,27 +736,9 @@ def main():
             "⏱️ 예정 vs 실제 소요시간"
         ]
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
-        detail_act_cls = "is-current-active" if is_detail_active else ""
-        st.markdown(f"""
-        <div class="sb-flyout-trigger {detail_act_cls}" data-menu="detail">
-            <div class="trigger-title">
-                <span>📊 분석</span>
-            </div>
-            <div class="trigger-meta">
-                {"<span class='trigger-dot'></span>" if is_detail_active else ""}
-                <span class="trigger-arrow">›</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        _render_flyout_trigger("detail", "📊 분석", is_detail_active)
         with st.container():
-            st.markdown("""
-            <div class="sb-flyout-panel-marker" data-menu="detail">
-                <div class="sb-flyout-header">
-                    <span class="sb-flyout-header-title">📊 분석 대시보드</span>
-                    <span class="sb-flyout-header-tag">ANALYTICS</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            _render_flyout_panel_header("detail", "📊 분석 대시보드", "ANALYTICS")
             for d_item in detail_menu_items:
                 is_active = (st.session_state["current_page"] == d_item)
                 btn_prefix = "▸ " if is_active else "  "
@@ -786,27 +760,9 @@ def main():
                 "⚙️ 직급별 시간당 단가 설정"
             ]
             is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
-            cost_act_cls = "is-current-active" if is_cost_active else ""
-            st.markdown(f"""
-            <div class="sb-flyout-trigger {cost_act_cls}" data-menu="cost">
-                <div class="trigger-title">
-                    <span>💰 예상 비용산정</span>
-                </div>
-                <div class="trigger-meta">
-                    {"<span class='trigger-dot'></span>" if is_cost_active else ""}
-                    <span class="trigger-arrow">›</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            _render_flyout_trigger("cost", "💰 예상 비용산정", is_cost_active)
             with st.container():
-                st.markdown("""
-                <div class="sb-flyout-panel-marker" data-menu="cost">
-                    <div class="sb-flyout-header">
-                        <span class="sb-flyout-header-title">💰 예상 비용산정</span>
-                        <span class="sb-flyout-header-tag">BILLING</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                _render_flyout_panel_header("cost", "💰 예상 비용산정", "BILLING")
                 for c_item in cost_menu_items:
                     is_active = (
                         st.session_state["current_page"] == c_item or 
@@ -964,27 +920,9 @@ def main():
                 "👥 시스템 관리자 계정 관리"
             ]
             is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
-            sys_act_cls = "is-current-active" if is_sys_active else ""
-            st.markdown(f"""
-            <div class="sb-flyout-trigger {sys_act_cls}" data-menu="sys">
-                <div class="trigger-title">
-                    <span>🛠️ 시스템 관리</span>
-                </div>
-                <div class="trigger-meta">
-                    {"<span class='trigger-dot'></span>" if is_sys_active else ""}
-                    <span class="trigger-arrow">›</span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            _render_flyout_trigger("sys", "🛠️ 시스템 관리", is_sys_active)
             with st.container():
-                st.markdown("""
-                <div class="sb-flyout-panel-marker" data-menu="sys">
-                    <div class="sb-flyout-header">
-                        <span class="sb-flyout-header-title">🛠️ 시스템 관리</span>
-                        <span class="sb-flyout-header-tag">SYSTEM</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                _render_flyout_panel_header("sys", "🛠️ 시스템 관리", "SYSTEM")
                 for s_item in sys_mgmt_items:
                     is_active = (st.session_state.get("current_page") == s_item)
                     btn_prefix = "▸ " if is_active else "  "
@@ -1046,6 +984,7 @@ def main():
                 st.rerun()
 
         # 🚀 사이드바 호버 플라이아웃 자바스크립트 컨트롤러 주입 (0.25초 닫힘 지연, 대각선 이동 안정화)
+        st.markdown('<div class="sb-flyout-js-marker" style="display:none;"></div>', unsafe_allow_html=True)
         st.components.v1.html("""
         <!DOCTYPE html>
         <html>
@@ -1124,6 +1063,8 @@ def main():
                                         while (p && p !== sidebar) {
                                             if (p.classList && p.classList.contains('sb-flyout-panel-container')) {
                                                 p.classList.remove('sb-flyout-open');
+                                                p.style.left = '';
+                                                p.style.top = '';
                                                 break;
                                             }
                                             p = p.parentElement;
@@ -1142,6 +1083,8 @@ def main():
                             closeTimers[menuId] = setTimeout(() => {
                                 trigger.classList.remove('sb-trigger-active');
                                 panel.classList.remove('sb-flyout-open');
+                                panel.style.left = '';
+                                panel.style.top = '';
                                 delete closeTimers[menuId];
                             }, DELAY_MS);
                         }
@@ -1163,6 +1106,8 @@ def main():
                         buttons.forEach(btn => {
                             btn.addEventListener('click', () => {
                                 panel.classList.remove('sb-flyout-open');
+                                panel.style.left = '';
+                                panel.style.top = '';
                                 trigger.classList.remove('sb-trigger-active');
                             });
                         });

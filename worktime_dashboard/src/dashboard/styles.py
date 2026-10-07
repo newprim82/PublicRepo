@@ -1381,24 +1381,37 @@ def apply_custom_styles():
         /* 🚀 사이드바 호버 플라이아웃 서브메뉴 (Sidebar Hover Flyout Submenus) */
         /* ========================================================================= */
         /* 1) 대메뉴 호버 트리거 바 */
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sb-flyout-trigger),
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"]:has(.sb-flyout-trigger) {
+            width: 100% !important;
+            margin-top: 3px !important;
+            margin-bottom: 3px !important;
+            padding: 0 !important;
+        }
+
         .sb-flyout-trigger {
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            background: rgba(0, 180, 216, 0.05) !important;
-            border: 1px solid rgba(0, 180, 216, 0.18) !important;
-            border-left: 3px solid rgba(0, 180, 216, 0.30) !important;
+            width: 100% !important;
+            height: 40px !important;
+            min-height: 40px !important;
+            flex-shrink: 0 !important;
+            background: rgba(0, 180, 216, 0.06) !important;
+            border: 1px solid rgba(0, 180, 216, 0.22) !important;
+            border-left: 3px solid rgba(0, 180, 216, 0.35) !important;
             border-radius: 6px !important;
-            padding: 8px 12px !important;
-            margin: 4px 0 !important;
+            padding: 0 12px !important;
+            margin: 0 !important;
             cursor: pointer !important;
             user-select: none !important;
             transition: all 0.15s ease !important;
             box-sizing: border-box !important;
+            white-space: nowrap !important;
         }
         .sb-flyout-trigger:hover,
         .sb-flyout-trigger.sb-trigger-active {
-            background: rgba(0, 180, 216, 0.16) !important;
+            background: rgba(0, 180, 216, 0.18) !important;
             border-color: #00b4d8 !important;
             border-left: 3px solid #00b4d8 !important;
             box-shadow: 0 0 12px rgba(0, 180, 216, 0.25) !important;
@@ -1406,7 +1419,7 @@ def apply_custom_styles():
         .sb-flyout-trigger.is-current-active {
             background: linear-gradient(90deg, rgba(0, 180, 216, 0.22) 0%, rgba(0, 180, 216, 0.06) 100%) !important;
             border-left: 3px solid #00e5ff !important;
-            border-color: rgba(0, 180, 216, 0.35) !important;
+            border-color: rgba(0, 180, 216, 0.40) !important;
         }
         .sb-flyout-trigger .trigger-title {
             font-size: 13px !important;
@@ -1416,14 +1429,18 @@ def apply_custom_styles():
             align-items: center !important;
             gap: 8px !important;
             letter-spacing: -0.2px !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
         }
         .sb-flyout-trigger .trigger-title span {
             color: #ffffff !important;
+            white-space: nowrap !important;
         }
         .sb-flyout-trigger .trigger-meta {
             display: flex !important;
             align-items: center !important;
             gap: 6px !important;
+            flex-shrink: 0 !important;
         }
         .sb-flyout-trigger .trigger-dot {
             display: inline-block !important;
@@ -1432,6 +1449,7 @@ def apply_custom_styles():
             background-color: #00e5ff !important;
             border-radius: 50% !important;
             box-shadow: 0 0 6px #00e5ff !important;
+            flex-shrink: 0 !important;
         }
         .sb-flyout-trigger .trigger-arrow {
             font-size: 15px !important;
@@ -1439,6 +1457,7 @@ def apply_custom_styles():
             color: #00b4d8 !important;
             transition: transform 0.15s ease !important;
             line-height: 1 !important;
+            flex-shrink: 0 !important;
         }
         .sb-flyout-trigger:hover .trigger-arrow,
         .sb-flyout-trigger.sb-trigger-active .trigger-arrow {
@@ -1450,7 +1469,7 @@ def apply_custom_styles():
         .sb-flyout-panel-container {
             position: fixed !important;
             left: -9999px !important;
-            top: 0 !important;
+            top: -9999px !important;
             opacity: 0 !important;
             visibility: hidden !important;
             pointer-events: none !important;
@@ -1560,14 +1579,19 @@ def apply_custom_styles():
         /* 🚀 플라이아웃 JS 컨트롤러 iframe 무간섭 처리 */
         iframe[title="sb-flyout-js"],
         div[data-testid="stCustomComponentV1"]:has(iframe[title="sb-flyout-js"]),
-        div[data-testid="stElementContainer"]:has(iframe[title="sb-flyout-js"]) {
+        div[data-testid="stElementContainer"]:has(iframe[title="sb-flyout-js"]),
+        [data-testid="stSidebar"] div[data-testid="stElementContainer"]:has(.sb-flyout-js-marker),
+        [data-testid="stSidebar"] div[data-testid="stElementContainer"]:has(.sb-flyout-js-marker) + div[data-testid="stElementContainer"] {
             height: 0px !important;
             min-height: 0px !important;
+            max-height: 0px !important;
             margin: 0px !important;
             padding: 0px !important;
             border: none !important;
             overflow: hidden !important;
             position: absolute !important;
+            top: -9999px !important;
+            left: -9999px !important;
             opacity: 0 !important;
             pointer-events: none !important;
         }
