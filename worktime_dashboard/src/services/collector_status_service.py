@@ -115,3 +115,47 @@ class CollectorStatusService:
             "updated_at": get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
         }
 
+    @classmethod
+    def get_monitoring_status(cls, stale_threshold_minutes: int = 30) -> Dict[str, Any]:
+        """
+        수집기 상태 및 N분 이상 지연 여부를 종합 판정하여 관제용 지표 반환
+        """
+        raw = cls.get_status()
+        now_kst = get_current_kst_time()
+        updated_str = raw.get("updated_at", "")
+        
+        elapsed_minutes = 999
+        if updated_str:
+            try:
+                u_dt = datetime.strptime(updated_str[:19], "%Y-%m-%d %H:%M:%S" if len(updated_str) >= 19 else "%Y-%m-%d %H:%M")
+                elapsed_minutes = max(0, int((now_kst - u_dt).total_seconds() / 60))
+            except Exception:
+                pass
+
+        is_stale = elapsed_minutes >= stale_threshold_minutes
+        is_healthy = raw.get("is_healthy", False)
+
+        if not is_healthy:
+            level = "DANGER"
+            badge_color = "#ef4444"
+            status_text = "수집기 오프라인 / 대화방 미열림"
+        elif is_stale:
+            level = "WARNING"
+            badge_color = "#f59e0b"
+            status_text = f"수집 지연 ({elapsed_minutes}분 경과)"
+        else:
+            level = "OK"
+            badge_color = "#10b981"
+            status_text = f"정상 가동 ({elapsed_minutes}분 전 수집)"
+
+        return {
+            "level": level,
+            "badge_color": badge_color,
+            "status_text": status_text,
+            "elapsed_minutes": elapsed_minutes,
+            "is_stale": is_stale,
+            "is_healthy": is_healthy,
+            "message": raw.get("message", ""),
+            "updated_at": updated_str
+        }
+

@@ -787,6 +787,15 @@ def main():
             ]
             is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
             with st.expander("🛠️ 시스템 관리", expanded=is_sys_active):
+                # 📡 수집기 실시간 가동 상태 미니 관제 카드
+                from src.services.collector_status_service import CollectorStatusService
+                c_stat = CollectorStatusService.get_monitoring_status(stale_threshold_minutes=30)
+                st.markdown(f"""
+                <div style="background: rgba(0, 30, 45, 0.6); border: 1px solid {c_stat['badge_color']}; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 11px; font-weight: 700; color: #e2e8f0;">📡 카톡 수집기</span>
+                    <span style="font-size: 10.5px; font-weight: 800; color: {c_stat['badge_color']};">{c_stat['status_text']}</span>
+                </div>
+                """, unsafe_allow_html=True)
                 for s_item in sys_mgmt_items:
                     is_active = (st.session_state.get("current_page") == s_item)
                     btn_prefix = "▸ " if is_active else "  "
