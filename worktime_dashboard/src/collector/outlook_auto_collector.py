@@ -160,10 +160,10 @@ def extract_outlook_schedules_with_meta(months_ahead: int = 2) -> Tuple[List[Out
                     is_leave = False
                     leave_type = ""
                     sched_type = "작업"
-                    for lk in ["연차", "반차", "오전반차", "오후반차", "휴가", "공가", "보상휴가"]:
+                    for lk in ["연차", "반차", "오전반차", "오후반차", "휴가", "공가", "보상휴가", "병가", "병원", "진료", "건강검진", "외출", "조퇴"]:
                         if lk in subject:
                             is_leave = True
-                            leave_type = lk
+                            leave_type = "반차" if lk in ["반차", "오전반차", "오후반차", "병원", "진료", "외출", "조퇴"] else ("연차" if lk in ["연차", "휴가", "공가", "보상휴가", "병가", "건강검진"] else lk)
                             sched_type = "휴가"
                             break
 

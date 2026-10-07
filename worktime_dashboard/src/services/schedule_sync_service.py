@@ -295,6 +295,28 @@ class ScheduleSyncService:
             # 🏢 아웃룩 제목에서 [작업자] 제거 후 고객사명과 작업 내용을 스마트 분리 파싱
             parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(r["subject"], r.get("location", ""))
 
+            # 🛡️ 1. 휴가/개인용무 키워드 방어 (작업이 아니므로 실시간 진행/예정 작업 승격 배제)
+            non_work_keywords = ["병원", "진료", "건강검진", "휴가", "연차", "반차", "공가", "병가", "외출", "조퇴", "개인용무", "개인사정"]
+            subj_raw = str(r.get("subject", "")).strip()
+            if any(kw in subj_raw for kw in non_work_keywords) or any(kw in str(parsed_client) for kw in non_work_keywords):
+                continue
+
+            # 🛡️ 2. 해당 작업자가 동일 시간대에 이미 휴가(leave_records)로 등록되어 있는 경우
+            # (휴가 중인 시간대에 등록된 아웃룩 일정은 실시간 진행/예정 작업 승격 원천 차단)
+            is_worker_on_leave = False
+            for l_rec in leave_records:
+                if l_rec.get("worker_name") == w_name:
+                    l_st = l_rec.get("start_time")
+                    l_ed = l_rec.get("end_time")
+                    l_st_dt = l_st.to_pydatetime() if (pd.notna(l_st) and hasattr(l_st, "to_pydatetime")) else l_st
+                    l_ed_dt = l_ed.to_pydatetime() if (pd.notna(l_ed) and hasattr(l_ed, "to_pydatetime")) else l_ed
+                    # 시간대 겹침 확인
+                    if max(st_dt, l_st_dt) < min(ed_dt, l_ed_dt):
+                        is_worker_on_leave = True
+                        break
+            if is_worker_on_leave:
+                continue
+
             # 🛡️ 동일 작업자가 카카오톡으로 이미 '동일 작업'을 보고했는지 지능적으로 판정 (양쪽 모두 등록 시 has_both=True)
             is_dup = False
             if not final_pend_df.empty:

@@ -337,6 +337,43 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         if leave_records:
             leave_records = [l for l in leave_records if is_same_team(l.get("worker_team", ""), selected_team)]
 
+    # 🏖️ 실시간 진행 중(pend_df) 작업에서 휴가자/개인용무 원천 배제 (이중 안전망)
+    if not pend_df.empty:
+        if "is_leave" in pend_df.columns:
+            pend_df = pend_df[pend_df["is_leave"] != True]
+        if "log_type" in pend_df.columns:
+            pend_df = pend_df[pend_df["log_type"] != "휴가"]
+        if "client_name" in pend_df.columns:
+            pend_df = pend_df[~pend_df["client_name"].astype(str).str.contains("휴가|연차|반차|병원|진료", regex=True)]
+
+        # 현재 휴가(leave_records) 중인 작업자의 휴가 시간대 작업 배제
+        if leave_records and not pend_df.empty:
+            leave_worker_map = {}
+            for lr in leave_records:
+                wn = lr.get("worker_name")
+                if wn:
+                    leave_worker_map.setdefault(wn, []).append((lr.get("start_time"), lr.get("end_time")))
+
+            def _is_active_during_leave(row):
+                wn = row.get("worker_name")
+                if wn not in leave_worker_map:
+                    return False
+                r_st = row.get("start_time")
+                if pd.isna(r_st):
+                    return False
+                r_ed = row.get("end_time") or (r_st + timedelta(hours=row.get("estimated_hours", 1.0)) if pd.notna(r_st) else None)
+                r_st_dt = r_st.to_pydatetime() if hasattr(r_st, "to_pydatetime") else r_st
+                r_ed_dt = r_ed.to_pydatetime() if (pd.notna(r_ed) and hasattr(r_ed, "to_pydatetime")) else r_st_dt + timedelta(hours=1)
+                for l_st, l_ed in leave_worker_map[wn]:
+                    l_st_dt = l_st.to_pydatetime() if (pd.notna(l_st) and hasattr(l_st, "to_pydatetime")) else l_st
+                    l_ed_dt = l_ed.to_pydatetime() if (pd.notna(l_ed) and hasattr(l_ed, "to_pydatetime")) else l_ed
+                    if max(r_st_dt, l_st_dt) < min(r_ed_dt, l_ed_dt):
+                        return True
+                return False
+
+            mask_on_leave = pend_df.apply(_is_active_during_leave, axis=1)
+            pend_df = pend_df[~mask_on_leave].copy()
+
     # 🏖️ 사용자 확정 원칙: 근무 시간대(18:00 이전)에는 휴가 카드가 완료된 작업에 조기 표출되지 않도록 필터링
     # (18:00 퇴근 시점이 지나 실시간 상단 부재 영역에서 내려간 뒤에만 완료된 작업으로 정상 전환 표출)
     if kst_now.hour < 18 and not comp_df.empty:
