@@ -252,9 +252,8 @@ def render_leave_section(leave_records: list, selected_team: str):
             _render_single_team_leave_cards(leave_records, title_mappings)
 
 
-@st.fragment(run_every=timedelta(seconds=10))
 def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave_records: list = None):
-    """⏳ 진행 중인 작업 섹션 전용 단일 10초 자동 갱신 프래그먼트 + 1초 JS 라이브 타이머"""
+    """⏳ 진행 중인 작업 섹션 (화면 깜빡임 없는 순수 1초 클라이언트 JS 라이브 타이머)"""
     badge_legend_html = '<span style="font-size: 12px; font-weight: 600; color: #64748b; margin-left: 2px;">( <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">K</span> 카카오톡 &nbsp;|&nbsp; <span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 4.5px; border-radius: 3px; vertical-align: middle;">O</span> 아웃룩 &nbsp;|&nbsp; <span style="background-color: #FEE500; color: #371d1e; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">K</span><span style="background-color: #0284c7; color: #ffffff; font-size: 9.5px; font-weight: 900; padding: 1px 3.5px; border-radius: 3px; vertical-align: middle;">O</span> 양쪽 연동 )</span>'
     st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #00b4d8; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span>⏳ 실시간 진행 중인 작업</span>{badge_legend_html}<span style="background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(pend_df)}건</span></div>""", unsafe_allow_html=True)
     if pend_df.empty:
@@ -263,22 +262,54 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
 
     st.markdown(LIVE_PROGRESS_ANIMATION_AND_TIMER, unsafe_allow_html=True)
 
-    # ⏱️ 1초 단위 클라이언트 자바스크립트 라이브 타이머 컴포넌트 (iframe 기반 100% 실행 보장)
+    if selected_team == "전체 팀":
+        base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
+        teams_to_render = list(base_teams)
+        for extra_t in pend_df["worker_team"].unique():
+            if extra_t and not any(is_same_team(extra_t, bt) for bt in teams_to_render):
+                teams_to_render.append(extra_t)
+
+        title_mappings = TeamService.get_title_mappings()
+        team_cols = st.columns(len(teams_to_render))
+
+        for c_idx, t_name in enumerate(teams_to_render):
+            with team_cols[c_idx]:
+                theme = get_team_theme(t_name)
+                t_pend = pend_df[pend_df["worker_team"].apply(lambda t: is_same_team(t, t_name))]
+                cnt_str = f"🟢 {len(t_pend)}건 진행" if len(t_pend) > 0 else "0건"
+                cnt_bg = "#d1e7dd" if len(t_pend) > 0 else "#f1f5f9"
+                cnt_color = "#0f5132" if len(t_pend) > 0 else "#64748b"
+                cnt_border = "#a3cfbb" if len(t_pend) > 0 else "#cbd5e1"
+
+                st.markdown(f"""<div style="background: {theme['bg_gradient']}; border: 1.5px solid {theme['border']}; border-top: 4px solid {theme['primary']}; border-radius: 8px; padding: 10px 8px; margin-bottom: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 5px;"><span style="font-size: 17px;">{theme['icon']}</span><span style="font-size: 15px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{t_name}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 800;">{theme['tag']}</span></div><div><span style="background-color: {cnt_bg}; color: {cnt_color}; border: 1px solid {cnt_border}; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">{cnt_str}</span></div></div>""", unsafe_allow_html=True)
+
+                if t_pend.empty:
+                    st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 26px 8px; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 10px;'>진행 작업 없음</div>", unsafe_allow_html=True)
+                else:
+                    _render_kanban_pending_cards(t_pend, title_mappings)
+    else:
+        title_mappings = TeamService.get_title_mappings()
+        theme = get_team_theme(selected_team)
+        with st.container(border=True):
+            st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(pend_df)}건 진행 중</span></div>""", unsafe_allow_html=True)
+            _render_single_team_pending_cards(pend_df, title_mappings)
+
+    # ⏱️ 1초 단위 클라이언트 자바스크립트 라이브 타이머 (카드 렌더링 완료 후 실행되어 100% 매칭)
     components.html("""
     <script>
     (function() {
         function parseLocalDate(str) {
             if (!str) return null;
-            var p = str.split(/[-T:\\s]/);
-            if (p.length >= 5) {
-                return new Date(
-                    parseInt(p[0], 10),
-                    parseInt(p[1], 10) - 1,
-                    parseInt(p[2], 10),
-                    parseInt(p[3], 10),
-                    parseInt(p[4], 10),
-                    parseInt(p[5] || 0, 10)
-                );
+            var clean = str.replace('T', ' ').replace(/-/g, ' ').replace(/:/g, ' ');
+            var parts = clean.split(' ').filter(function(x) { return x.length > 0; });
+            if (parts.length >= 5) {
+                var y = parseInt(parts[0], 10);
+                var m = parseInt(parts[1], 10) - 1;
+                var d = parseInt(parts[2], 10);
+                var h = parseInt(parts[3], 10);
+                var min = parseInt(parts[4], 10);
+                var sec = parts.length >= 6 ? parseInt(parts[5], 10) : 0;
+                return new Date(y, m, d, h, min, sec);
             }
             return new Date(str);
         }
@@ -304,6 +335,8 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
                     if (diffSec < 0) return;
 
                     var elapsedMins = Math.floor(diffSec / 60);
+                    var secRem = diffSec % 60;
+                    var secStr = secRem < 10 ? '0' + secRem : secRem;
                     var elapsedHours = (elapsedMins / 60.0).toFixed(1);
                     var isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
 
@@ -311,8 +344,8 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
                     if (timeSpan) {
                         var overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
                         var timeHtml = isSingle
-                            ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
-                            : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
+                            ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag
+                            : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag;
                         if (timeSpan.innerHTML !== timeHtml) {
                             timeSpan.innerHTML = timeHtml;
                             timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
@@ -371,42 +404,10 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
         }
 
         setInterval(tickCards, 1000);
-        setTimeout(tickCards, 200);
+        setTimeout(tickCards, 150);
     })();
     </script>
     """, height=0, width=0)
-
-    if selected_team == "전체 팀":
-        base_teams = ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
-        teams_to_render = list(base_teams)
-        for extra_t in pend_df["worker_team"].unique():
-            if extra_t and not any(is_same_team(extra_t, bt) for bt in teams_to_render):
-                teams_to_render.append(extra_t)
-
-        title_mappings = TeamService.get_title_mappings()
-        team_cols = st.columns(len(teams_to_render))
-
-        for c_idx, t_name in enumerate(teams_to_render):
-            with team_cols[c_idx]:
-                theme = get_team_theme(t_name)
-                t_pend = pend_df[pend_df["worker_team"].apply(lambda t: is_same_team(t, t_name))]
-                cnt_str = f"🟢 {len(t_pend)}건 진행" if len(t_pend) > 0 else "0건"
-                cnt_bg = "#d1e7dd" if len(t_pend) > 0 else "#f1f5f9"
-                cnt_color = "#0f5132" if len(t_pend) > 0 else "#64748b"
-                cnt_border = "#a3cfbb" if len(t_pend) > 0 else "#cbd5e1"
-
-                st.markdown(f"""<div style="background: {theme['bg_gradient']}; border: 1.5px solid {theme['border']}; border-top: 4px solid {theme['primary']}; border-radius: 8px; padding: 10px 8px; margin-bottom: 12px; text-align: center; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);"><div style="display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 5px;"><span style="font-size: 17px;">{theme['icon']}</span><span style="font-size: 15px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{t_name}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 800;">{theme['tag']}</span></div><div><span style="background-color: {cnt_bg}; color: {cnt_color}; border: 1px solid {cnt_border}; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 800;">{cnt_str}</span></div></div>""", unsafe_allow_html=True)
-
-                if t_pend.empty:
-                    st.markdown("<div style='background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 26px 8px; text-align: center; color: #94a3b8; font-size: 12px; font-weight: 600; margin-bottom: 10px;'>진행 작업 없음</div>", unsafe_allow_html=True)
-                else:
-                    _render_kanban_pending_cards(t_pend, title_mappings)
-    else:
-        title_mappings = TeamService.get_title_mappings()
-        theme = get_team_theme(selected_team)
-        with st.container(border=True):
-            st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(pend_df)}건 진행 중</span></div>""", unsafe_allow_html=True)
-            _render_single_team_pending_cards(pend_df, title_mappings)
 
 
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):

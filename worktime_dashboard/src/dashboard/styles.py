@@ -1890,7 +1890,8 @@ def render_header_banner(initial_ms: int, page_tag: str):
                                 let isSingle = card.getAttribute('data-single-view') === 'true';
                                 if (!startStr) return;
 
-                                let pParts = startStr.split(/[-T:\\s]/);
+                                let clean = startStr.replace('T', ' ').replace(/-/g, ' ').replace(/:/g, ' ');
+                                let pParts = clean.split(' ').filter(function(x) {{ return x.length > 0; }});
                                 if (pParts.length < 5) return;
                                 let startDate = new Date(
                                     parseInt(pParts[0], 10),
@@ -1906,6 +1907,8 @@ def render_header_banner(initial_ms: int, page_tag: str):
                                 if (diffSec < 0) return;
 
                                 let elapsedMins = Math.floor(diffSec / 60);
+                                let secRem = diffSec % 60;
+                                let secStr = secRem < 10 ? '0' + secRem : secRem;
                                 let elapsedHours = (elapsedMins / 60.0).toFixed(1);
                                 let isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
 
@@ -1913,8 +1916,8 @@ def render_header_banner(initial_ms: int, page_tag: str):
                                 if (timeSpan) {{
                                     let overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
                                     let timeHtml = isSingle
-                                        ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
-                                        : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
+                                        ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag
+                                        : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분 ' + secStr + '초)' + overtimeTag;
                                     if (timeSpan.innerHTML !== timeHtml) {{
                                         timeSpan.innerHTML = timeHtml;
                                         timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
@@ -1947,7 +1950,8 @@ def render_header_banner(initial_ms: int, page_tag: str):
                                 let startStr = card.getAttribute('data-start');
                                 let isSingle = card.getAttribute('data-single-view') === 'true';
                                 if (!startStr) return;
-                                let pParts = startStr.split(/[-T:\\s]/);
+                                let clean = startStr.replace('T', ' ').replace(/-/g, ' ').replace(/:/g, ' ');
+                                let pParts = clean.split(' ').filter(function(x) {{ return x.length > 0; }});
                                 if (pParts.length < 5) return;
                                 let startDate = new Date(parseInt(pParts[0], 10), parseInt(pParts[1], 10) - 1, parseInt(pParts[2], 10), parseInt(pParts[3], 10), parseInt(pParts[4], 10), parseInt(pParts[5] || 0, 10));
                                 if (isNaN(startDate.getTime())) return;
