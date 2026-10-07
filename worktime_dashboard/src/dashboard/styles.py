@@ -967,14 +967,20 @@ def apply_custom_styles():
         .badge-purple { background-color: #ede9fe !important; color: #5b21b6 !important; border: 1px solid #c4b5fd !important; }
         .badge-amber { background-color: #fef3c7 !important; color: #d97706 !important; border: 1px solid #fde68a !important; }
         .badge-red { background-color: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; }
-        /* 🏛️ Cisco APIC 트리 메뉴 사이드바 스타일링 */
-        [data-testid="stSidebar"],
-        [data-testid="stSidebar"] > div,
-        [data-testid="stSidebarUserContent"],
-        [data-testid="stSidebarContent"],
-        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+        /* 🏛️ Cisco APIC 트리 메뉴 사이드바 스타일링 (배경·테두리는 바깥 1곳에만 → 우측 이중 세로선 방지) */
+        [data-testid="stSidebar"] {
             background-color: #002d42 !important;
             border-right: 1px solid #003852 !important;
+        }
+        [data-testid="stSidebar"] > div,
+        [data-testid="stSidebarContent"],
+        [data-testid="stSidebarUserContent"] {
+            background-color: #002d42 !important;
+            border-right: none !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+            background-color: transparent !important;
+            border-right: none !important;
         }
         [data-testid="stSidebar"] * {
             color: #bdcddc !important;
@@ -1162,24 +1168,179 @@ def apply_custom_styles():
             border-radius: 0px !important;
             box-shadow: none !important;
         }
-        /* 🏠 홈 버튼 빨간색 배경 & 중앙 정렬 (APIC 스타일 메인 네비게이션) */
+        /* 🏠 홈 버튼: 하위 메뉴 활성 표시와 동일한 시안 좌측 바 방식으로 통일 (빨간 선 제거) */
         [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button {
-            background-color: #b91c1c !important;
-            color: #ffffff !important;
+            background: rgba(0, 180, 216, 0.06) !important;
+            background-color: rgba(0, 180, 216, 0.06) !important;
+            color: #e2e8f0 !important;
             font-weight: 700 !important;
-            border-left: 3px solid #ef4444 !important;
-            border-radius: 4px !important;
-            padding: 7px 12px !important;
+            border: 1px solid rgba(0, 180, 216, 0.22) !important;
+            border-left: 3px solid rgba(0, 180, 216, 0.35) !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            height: 40px !important;
+            box-shadow: none !important;
             justify-content: center !important;
             text-align: center !important;
+            transform: none !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button[kind="primary"] {
+            background: linear-gradient(90deg, rgba(0, 180, 216, 0.22) 0%, rgba(0, 180, 216, 0.08) 100%) !important;
+            background-color: rgba(0, 180, 216, 0.18) !important;
+            border: 1px solid rgba(0, 180, 216, 0.45) !important;
+            border-left: 3px solid #00b4d8 !important;
+            box-shadow: 0 0 12px rgba(0, 180, 216, 0.15) !important;
         }
         [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button * {
+            color: #ffffff !important;
             justify-content: center !important;
             text-align: center !important;
         }
         [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button:hover {
-            background-color: #991b1b !important;
-            border-left: 3px solid #f87171 !important;
+            background-color: rgba(0, 180, 216, 0.16) !important;
+            border-left: 3px solid #00b4d8 !important;
+            transform: none !important;
+        }
+
+        /* ◆ 사이드바 브랜드 헤더 (로고 마크 + 브랜드명) */
+        [data-testid="stSidebar"] .sb-brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 6px 8px 4px 8px;
+        }
+        [data-testid="stSidebar"] .sb-brand-mark {
+            width: 34px;
+            height: 34px;
+            min-width: 34px;
+            border-radius: 9px;
+            background: linear-gradient(135deg, #00b4d8 0%, #0284c7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 900;
+            color: #002d42 !important;
+            box-shadow: 0 0 14px rgba(0, 180, 216, 0.35);
+        }
+        [data-testid="stSidebar"] .sb-brand-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #ffffff !important;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+        }
+        [data-testid="stSidebar"] .sb-brand-sub {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #5a8a9e !important;
+            letter-spacing: 1.2px;
+            margin-top: 2px;
+        }
+
+        /* 🗂️ 조회 기준 필터 카드 (반투명 네이비 카드 1장으로 묶음) */
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"]:has(.sb-filter-card-marker) {
+            background: rgba(0, 58, 85, 0.45) !important;
+            border: 1px solid rgba(0, 180, 216, 0.18) !important;
+            border-radius: 10px !important;
+            padding: 10px 10px 6px 10px !important;
+            margin: 8px 2px 10px 2px !important;
+        }
+        /* 필터 라벨: 짧고 작은 회색 라벨 */
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] label {
+            font-size: 11.5px !important;
+            font-weight: 700 !important;
+            color: #7fa6b8 !important;
+            letter-spacing: 0.2px !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stSelectbox"],
+        [data-testid="stSidebar"] [data-testid="stMultiSelect"] {
+            margin-bottom: 6px !important;
+        }
+        /* 셀렉트박스: 검은색 → 네이비 + 얇은 시안 테두리, 포커스 시 시안 글로우 */
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {
+            background-color: #003a55 !important;
+            border: 1px solid rgba(0, 180, 216, 0.30) !important;
+            border-radius: 7px !important;
+            min-height: 36px !important;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child * {
+            background-color: transparent !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child:hover {
+            border-color: rgba(0, 180, 216, 0.60) !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child:focus-within {
+            border-color: #00b4d8 !important;
+            box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.22) !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] span[data-baseweb="tag"] {
+            background-color: rgba(0, 180, 216, 0.22) !important;
+        }
+        /* 카드 안쪽 '상세 필터' 접이식: 밑줄 제거, 시안 텍스트 */
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] details summary,
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] [data-testid="stExpander"] summary {
+            border-bottom: none !important;
+            padding: 6px 2px 4px 2px !important;
+            text-transform: none !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] details summary *,
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] [data-testid="stExpander"] summary * {
+            color: #38bdf8 !important;
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+        }
+
+        /* 👤 하단 사용자 카드 (사이드바 맨 아래로 밀착) */
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:has(> .element-container .sb-user-card),
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .sb-user-card) {
+            min-height: calc(100vh - 5.5rem) !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sb-user-card) {
+            margin-top: auto !important;
+            padding-top: 18px !important;
+        }
+        [data-testid="stSidebar"] .sb-user-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 11px;
+            margin-bottom: 6px;
+            background: rgba(0, 58, 85, 0.55);
+            border: 1px solid rgba(0, 180, 216, 0.18);
+            border-radius: 10px;
+        }
+        [data-testid="stSidebar"] .sb-user-avatar {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 50%;
+            background: rgba(0, 180, 216, 0.18);
+            border: 1px solid rgba(0, 180, 216, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            color: #00b4d8 !important;
+        }
+        [data-testid="stSidebar"] .sb-user-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: #ffffff !important;
+            line-height: 1.25;
+        }
+        [data-testid="stSidebar"] .sb-user-role {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #7fa6b8 !important;
+            margin-top: 1px;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sb-user-card) + .element-container button {
+            border-radius: 8px !important;
+            height: 38px !important;
         }
 
         /* 🏛️ Cisco ACI 표준 테이블 스타일링 */

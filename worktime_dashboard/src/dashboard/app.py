@@ -515,16 +515,19 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        # 🏛️ APIC 스타일 사이드바 헤더 (버전 표기 제거)
+        # 🏛️ APIC 스타일 사이드바 헤더: 시안 로고 마크 + 브랜드명 (버전 표기 제거)
         st.markdown("""
-        <div style="padding: 12px 10px 10px 10px; margin-bottom: 4px;">
-            <div style="font-size: 15px; font-weight: 800; color: #00b4d8; letter-spacing: -0.3px;">기술본부 관제센터</div>
-            <div style="font-size: 10px; color: #5a8a9e; margin-top: 2px; letter-spacing: 0.5px;">FIELD SUPPORT PORTAL</div>
+        <div class="sb-brand">
+            <div class="sb-brand-mark">◆</div>
+            <div>
+                <div class="sb-brand-title">기술본부 관제센터</div>
+                <div class="sb-brand-sub">FIELD SUPPORT PORTAL</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
         # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (위아래 간격, on_click 콜백으로 0.1초 즉시 전환)
-        st.markdown('<div style="height: 25px;"></div><span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 14px;"></div><span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
         is_main_active = (st.session_state.get("current_page") == "🏠 실시간 분석 대시보드")
         st.button(
             "🏠 실시간 분석 대시보드",
@@ -560,10 +563,11 @@ def main():
 
         # 2. 🔍 조회 기준
         with st.expander("🔍 조회 기준", expanded=True):
+            st.markdown('<span class="sb-filter-card-marker" style="display:none;"></span>', unsafe_allow_html=True)
             # (1) 대상 월 선택
             available_months = sorted(df_raw["month_str"].dropna().unique(), reverse=True)
             month_mode = st.selectbox(
-                "📅 대상 기간:",
+                "대상 기간",
                 ["특정 월 선택 (기본)", "전체 기간", "다중 월 선택"],
                 index=0,
                 key="sb_filter_month_mode"
@@ -611,7 +615,7 @@ def main():
             all_teams_filter = get_all_teams_safe()
             team_filter_options = ["전체 팀"] + all_teams_filter
             default_team_idx = team_filter_options.index("기술 1팀") if "기술 1팀" in team_filter_options else 0
-            selected_team = st.selectbox("🏢 소속 팀:", options=team_filter_options, index=default_team_idx, key="sb_filter_team")
+            selected_team = st.selectbox("소속 팀", options=team_filter_options, index=default_team_idx, key="sb_filter_team")
 
             # 선택된 팀에 소속된 팀원 목록 필터링
             if selected_team == "전체 팀":
@@ -623,7 +627,7 @@ def main():
 
             # (3) 사용자(팀원) 선택
             worker_target_type = st.selectbox(
-                "👤 담당 팀원:",
+                "담당 팀원",
                 [f"{selected_team} 전체 인원 (기본)", "특정 팀원 직접 선택"],
                 index=0,
                 key="sb_filter_worker_target_type"
@@ -644,19 +648,19 @@ def main():
                 )
 
             # (4) 추가 상세 필터 (접이식 아코디언으로 정돈)
-            with st.expander("🎯 추가 상세 필터 (고객사 / 작업구분 / 직급 / 야간·주말)", expanded=False):
+            with st.expander("＋ 상세 필터", expanded=False):
                 # 고객사 선택
                 available_clients = sorted(df_raw["client_name"].dropna().unique())
-                client_mode = st.radio("🏢 고객사 범위:", ["전체 고객사", "특정 고객사 선택"], horizontal=True, key="sb_filter_client_mode")
+                client_mode = st.radio("고객사 범위", ["전체 고객사", "특정 고객사 선택"], horizontal=True, key="sb_filter_client_mode")
                 selected_clients = available_clients if client_mode == "전체 고객사" else st.multiselect("고객사 선택:", options=available_clients, default=available_clients, label_visibility="collapsed", key="sb_filter_clients")
 
                 # 작업구분 필터
                 available_types = sorted(df_raw["log_type"].dropna().unique())
-                type_mode = st.radio("🏷️ 작업 구분:", ["전체 구분", "특정 구분 선택"], horizontal=True, key="sb_filter_type_mode")
+                type_mode = st.radio("작업 구분", ["전체 구분", "특정 구분 선택"], horizontal=True, key="sb_filter_type_mode")
                 selected_types = available_types if type_mode == "전체 구분" else st.multiselect("작업 구분 선택:", options=available_types, default=available_types, label_visibility="collapsed", key="sb_filter_types")
 
                 # 👔 직급 필터 (사원 / 대리 / 과장 / 수석)
-                title_mode = st.radio("👔 직급 범위:", ["전체 직급", "특정 직급 선택"], horizontal=True, key="sb_filter_title_mode")
+                title_mode = st.radio("직급 범위", ["전체 직급", "특정 직급 선택"], horizontal=True, key="sb_filter_title_mode")
                 selected_titles = ["사원", "대리", "과장", "수석"] if title_mode == "전체 직급" else st.multiselect("직급 선택:", options=["사원", "대리", "과장", "수석"], default=["사원", "대리", "과장", "수석"], label_visibility="collapsed", key="sb_filter_titles")
 
                 # 야간/주말 필터
@@ -920,12 +924,21 @@ def main():
                     st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
                     st.rerun()
 
-        # 6. 🔑 사이드바 최하단 독립 로그인 / 로그아웃 버튼 (실시간 대시보드 스타일)
-        st.markdown('<div style="height: 25px;"></div><div style="border-top: 1px solid rgba(255,255,255,0.08); margin-bottom: 12px;"></div>', unsafe_allow_html=True)
+        # 6. 👤 사이드바 최하단 사용자 상태 카드 및 로그인/로그아웃 버튼
+        st.markdown('<div style="height: 18px;"></div><div style="border-top: 1px solid rgba(0, 180, 216, 0.18); margin-bottom: 12px;"></div>', unsafe_allow_html=True)
         if not is_auth:
+            st.markdown("""
+            <div class="sb-user-card">
+                <div class="sb-user-avatar">👤</div>
+                <div>
+                    <div class="sb-user-name">게스트 모드</div>
+                    <div class="sb-user-role">일반 관제 조회 권한</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
             is_login_active = (st.session_state.get("current_page") == "🔐 시스템 로그인")
             st.button(
-                "🔑 Login",
+                "🔑 관리자 로그인",
                 key="btn_sidebar_standalone_login",
                 type="primary" if is_login_active else "secondary",
                 use_container_width=True,
@@ -935,7 +948,17 @@ def main():
         else:
             current_admin = AuthManager.get_current_user() or "newprim"
             role_label = "Super Admin" if AuthManager.is_super_admin() else "Admin"
-            if st.button(f"🚪 Logout ({current_admin} · {role_label})", key="btn_sidebar_standalone_logout", use_container_width=True):
+            avatar_char = current_admin[0].upper() if current_admin else "A"
+            st.markdown(f"""
+            <div class="sb-user-card">
+                <div class="sb-user-avatar">{avatar_char}</div>
+                <div>
+                    <div class="sb-user-name">{current_admin}</div>
+                    <div class="sb-user-role">{role_label} 권한</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🚪 로그아웃", key="btn_sidebar_standalone_logout", use_container_width=True):
                 AuthManager.logout()
                 st.toast("👋 로그아웃되었습니다. 일반 조회 모드로 전환됩니다.", icon="ℹ️")
                 st.rerun()
