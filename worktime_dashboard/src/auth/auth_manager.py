@@ -106,6 +106,11 @@ DEFAULT_ACCOUNTS = {
 
 class AuthManager:
     _cached_accounts: Optional[Dict[str, Dict[str, Any]]] = None
+    
+    # 🔒 무차별 대입 공격(Brute Force) 방어 설정 (5회 실패 시 3분 잠금)
+    _failed_attempts: Dict[str, Dict[str, Any]] = {}
+    MAX_FAILED_ATTEMPTS = 5
+    LOCKOUT_DURATION_SECONDS = 180
 
     # =========================================================
     # 1. 로컬 SQLite & JSON 저장소 초기화
@@ -522,13 +527,58 @@ class AuthManager:
         return cls.get_current_role() == "SUPER_ADMIN"
 
     # =========================================================
-    # 5. 로그인 및 로그아웃
+    # 5. 로그인 및 로그아웃 (Brute Force 무차별 대입 방어)
     # =========================================================
     @classmethod
-    def login(cls, username: str, password: str) -> bool:
-        """사용자 로그인 처리 및 24시간 세션 토큰 발급"""
+    def is_account_locked(cls, username: str) -> Tuple[bool, int]:
+        """계정 일시 잠금 여부 및 남은 잠금 시간(초) 반환"""
+        u = username.strip().lower()
+        now = time.time()
+        record = cls._failed_attempts.get(u)
+        if not record:
+            return False, 0
+        
+        lock_until = record.get("lock_until", 0)
+        if lock_until > now:
+            return True, int(lock_until - now)
+        elif lock_until > 0 and now >= lock_until:
+            cls._failed_attempts.pop(u, None)
+            return False, 0
+        return False, 0
+
+    @classmethod
+    def record_failed_attempt(cls, username: str) -> Tuple[int, int]:
+        """로그인 실패 횟수 기록 (5회 도달 시 3분 잠금), (현재 실패횟수, 남은 시도 가능 횟수) 반환"""
+        u = username.strip().lower()
+        now = time.time()
+        record = cls._failed_attempts.setdefault(u, {"count": 0, "lock_until": 0})
+        record["count"] += 1
+        record["last_attempt"] = now
+        
+        if record["count"] >= cls.MAX_FAILED_ATTEMPTS:
+            record["lock_until"] = now + cls.LOCKOUT_DURATION_SECONDS
+            return record["count"], 0
+        
+        return record["count"], cls.MAX_FAILED_ATTEMPTS - record["count"]
+
+    @classmethod
+    def reset_failed_attempts(cls, username: str):
+        """로그인 성공 시 실패 기록 초기화"""
+        u = username.strip().lower()
+        cls._failed_attempts.pop(u, None)
+
+    @classmethod
+    def login_with_status(cls, username: str, password: str) -> Tuple[bool, str]:
+        """사용자 로그인 처리 및 상태 메시지 반환 (무차별 대입 방어 적용)"""
         u = username.strip()
         p = password.strip()
+        if not u or not p:
+            return False, "아이디와 비밀번호를 모두 입력해주세요."
+
+        # 1. 계정 잠금 상태 검사
+        is_locked, rem_sec = cls.is_account_locked(u)
+        if is_locked:
+            return False, f"⛔ 로그인 {cls.MAX_FAILED_ATTEMPTS}회 연속 실패로 계정이 일시 잠금되었습니다. ({rem_sec}초 후 다시 시도)"
 
         # 전체 계정 목록 로드
         accounts = cls.get_all_accounts(force_reload=True)
@@ -539,6 +589,8 @@ class AuthManager:
                 break
 
         if matched_acc:
+            cls.reset_failed_attempts(u)
+
             # 🔒 만약 기존 저장 비밀번호가 평문이었다면 즉시 단방향 솔트 해시로 자동 승격 저장
             if not is_hashed_password(matched_acc.get("password", "")):
                 cls.update_account_password(matched_acc["username"], p)
@@ -566,9 +618,19 @@ class AuthManager:
 
             # 3. 브라우저 쿼리 파라미터에 세션 토큰 저장
             st.query_params["session_token"] = token
-            return True
+            return True, "🎉 로그인 성공! 모든 관리자 권한이 활성화되었습니다."
 
-        return False
+        # 실패 시 카운트 증가
+        count, rem = cls.record_failed_attempt(u)
+        if rem <= 0:
+            return False, f"⛔ 비밀번호를 {cls.MAX_FAILED_ATTEMPTS}회 연속 잘못 입력하여 계정이 {cls.LOCKOUT_DURATION_SECONDS // 60}분간 잠금되었습니다."
+        return False, f"⚠️ 아이디 또는 비밀번호가 올바르지 않습니다. (남은 시도: {rem}회)"
+
+    @classmethod
+    def login(cls, username: str, password: str) -> bool:
+        """하위 호환성을 위한 bool 반환 login 메서드"""
+        success, _ = cls.login_with_status(username, password)
+        return success
 
     @classmethod
     def logout(cls):

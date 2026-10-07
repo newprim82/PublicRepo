@@ -107,12 +107,13 @@ def render_login_page():
             submit = st.form_submit_button("🔓 로그인 (Login)", type="primary", use_container_width=True)
             
             if submit:
-                if AuthManager.login(u_input, p_input):
-                    st.toast("🎉 로그인 성공! 모든 관리자 권한이 활성화되었습니다.", icon="✅")
+                success, msg = AuthManager.login_with_status(u_input, p_input)
+                if success:
+                    st.toast(msg, icon="✅")
                     st.session_state["current_page"] = "🏠 실시간 분석 대시보드"
                     st.rerun()
                 else:
-                    st.error("⚠️ 아이디 또는 비밀번호가 올바르지 않습니다.")
+                    st.error(msg)
 
         # 🛡️ 비밀번호 단방향 암호화 보존 방식 명시 박스
         st.markdown("""
