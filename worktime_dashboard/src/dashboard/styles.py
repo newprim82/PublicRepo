@@ -1748,6 +1748,7 @@ def apply_custom_styles():
             color: #000000 !important;
             font-weight: 700 !important;
         }
+        </style>
 
     <script>
         (function() {
@@ -1777,6 +1778,119 @@ def apply_custom_styles():
             });
             autoFitDesktopMobile();
             setInterval(autoFitDesktopMobile, 800);
+
+            // ⏱️ 3. 실시간 진행 중인 작업 카드 라이브 타이머 (새로고침 없이 1초마다 실시간 갱신)
+            function parseLocalDate(str) {
+                if (!str) return null;
+                var p = str.split(/[-T:\\s]/);
+                if (p.length >= 5) {
+                    return new Date(
+                        parseInt(p[0], 10),
+                        parseInt(p[1], 10) - 1,
+                        parseInt(p[2], 10),
+                        parseInt(p[3], 10),
+                        parseInt(p[4], 10),
+                        parseInt(p[5] || 0, 10)
+                    );
+                }
+                return new Date(str);
+            }
+
+            function updateLiveTaskCards() {
+                var doc = document;
+                try {
+                    if (window.parent && window.parent.document) {
+                        doc = window.parent.document;
+                    }
+                } catch(e) {}
+
+                var cards = doc.querySelectorAll('.live-task-card:not(.upcoming-card)');
+                if (!cards || cards.length === 0) return;
+
+                var now = new Date();
+                cards.forEach(function(card) {
+                    var startStr = card.getAttribute('data-start');
+                    var estHours = parseFloat(card.getAttribute('data-est') || 0);
+                    var isSingle = card.getAttribute('data-single-view') === 'true';
+                    if (!startStr) return;
+
+                    var startDate = parseLocalDate(startStr);
+                    if (!startDate || isNaN(startDate.getTime())) return;
+
+                    var diffSec = Math.floor((now - startDate) / 1000);
+                    if (diffSec < 0) return;
+
+                    var elapsedMins = Math.floor(diffSec / 60);
+                    var elapsedHours = (elapsedMins / 60.0).toFixed(1);
+                    var isOvertime = estHours > 0 && ((elapsedMins / 60.0) > estHours);
+
+                    // 1) 하단 경과 시간 텍스트 갱신 (A안 형식: 경과 시간 실시간 누적)
+                    var timeSpan = card.querySelector('.live-elapsed-time');
+                    if (timeSpan) {
+                        var overtimeTag = isOvertime ? (isSingle ? ' ⚠️ 초과' : ' ⚠️') : '';
+                        var timeHtml = isSingle
+                            ? '⏱️ 경과: <b>' + elapsedHours + 'h</b> (' + elapsedMins + '분)' + overtimeTag
+                            : '⏱️ 경과 ' + elapsedHours + 'h (' + elapsedMins + '분)' + overtimeTag;
+                        if (timeSpan.innerHTML !== timeHtml) {
+                            timeSpan.innerHTML = timeHtml;
+                            timeSpan.style.color = isOvertime ? '#dc2626' : '#0f5132';
+                        }
+                    }
+
+                    // 2) 프로그레스 바 & 진행률 배지 실시간 갱신
+                    if (estHours > 0) {
+                        var rawPct = Math.round(((elapsedMins / 60.0) / estHours) * 100);
+                        var barWidth = Math.min(100, Math.max(5, rawPct));
+
+                        var fillBar = card.querySelector('.live-progress-fill');
+                        if (fillBar) {
+                            fillBar.style.width = barWidth + '%';
+                        }
+
+                        var pctBadge = card.querySelector('.live-pct-badge');
+                        if (pctBadge) {
+                            var pctText = rawPct + '%';
+                            if (pctBadge.textContent !== pctText) {
+                                pctBadge.textContent = pctText;
+                            }
+                        }
+                    }
+                });
+
+                // 3) 오늘 예정 일정(Upcoming) 카운트다운 라이브 갱신 (시간이 줄어드는 카운트다운)
+                var upCards = doc.querySelectorAll('.live-task-card.upcoming-card');
+                if (upCards && upCards.length > 0) {
+                    upCards.forEach(function(card) {
+                        var startStr = card.getAttribute('data-start');
+                        var isSingle = card.getAttribute('data-single-view') === 'true';
+                        if (!startStr) return;
+                        var startDate = parseLocalDate(startStr);
+                        if (!startDate || isNaN(startDate.getTime())) return;
+
+                        var diffSec = Math.floor((startDate - now) / 1000);
+                        var timeSpan = card.querySelector('.live-elapsed-time');
+                        if (!timeSpan) return;
+
+                        var txt = '';
+                        if (diffSec > 3600) {
+                            var hLeft = Math.floor(diffSec / 3600);
+                            var mLeft = Math.floor((diffSec % 3600) / 60);
+                            txt = isSingle ? '⏱️ <b>' + hLeft + '시간 ' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + hLeft + '시간 ' + mLeft + '분 후 시작';
+                        } else if (diffSec > 0) {
+                            var mLeft = Math.max(1, Math.floor(diffSec / 60));
+                            txt = isSingle ? '⏱️ <b>' + mLeft + '분 후 시작</b> (대기)' : '⏱️ ' + mLeft + '분 후 시작';
+                        } else {
+                            txt = isSingle ? '⏱️ <b>시작 대기</b> (미보고)' : '⏱️ 시작 대기';
+                        }
+                        if (timeSpan.innerHTML !== txt) {
+                            timeSpan.innerHTML = txt;
+                        }
+                    });
+                }
+            }
+
+            setInterval(updateLiveTaskCards, 1000);
+            setTimeout(updateLiveTaskCards, 300);
         })();
     </script>
     """, unsafe_allow_html=True)
