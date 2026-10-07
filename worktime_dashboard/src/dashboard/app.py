@@ -553,11 +553,11 @@ def main():
 
         is_auth = AuthManager.is_authenticated()
 
-        # 1. 📂 관리 (로그인 시 노출: 마우스 호버 시 우측 플라이아웃 서브메뉴 표출)
+        # 1. 📂 관리 (로그인 시 노출: 마우스 호버 시 자동 펼침)
         if is_auth:
             is_admin_active = (st.session_state.get("current_page") in ["⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)", "📋 작업 기록 원장 & 엑셀"])
-            _render_flyout_trigger("admin", "⚙️ 관리", is_admin_active)
-            with st.container():
+            with st.container(border=True):
+                _render_flyout_trigger("admin", "⚙️ 관리", is_admin_active)
                 _render_flyout_panel_header("admin", "⚙ 관리 메뉴", "ADMIN")
                 main_menu_items = [
                     "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
@@ -736,8 +736,8 @@ def main():
             "⏱️ 예정 vs 실제 소요시간"
         ]
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
-        _render_flyout_trigger("detail", "📊 분석", is_detail_active)
-        with st.container():
+        with st.container(border=True):
+            _render_flyout_trigger("detail", "📊 분석", is_detail_active)
             _render_flyout_panel_header("detail", "📊 분석 대시보드", "ANALYTICS")
             for d_item in detail_menu_items:
                 is_active = (st.session_state["current_page"] == d_item)
@@ -751,7 +751,7 @@ def main():
                     args=(d_item,)
                 )
 
-        # 4. 💰 예상 비용산정 (마우스 호버 시 우측 플라이아웃 서브메뉴 표출, 로그인 시에만 노출)
+        # 4. 💰 예상 비용산정 (마우스 호버 시 자동 펼침, 로그인 시에만 노출)
         if is_auth:
             cost_menu_items = [
                 "💰 팀원별 예상 청구금액",
@@ -760,8 +760,8 @@ def main():
                 "⚙️ 직급별 시간당 단가 설정"
             ]
             is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
-            _render_flyout_trigger("cost", "💰 예상 비용산정", is_cost_active)
-            with st.container():
+            with st.container(border=True):
+                _render_flyout_trigger("cost", "💰 예상 비용산정", is_cost_active)
                 _render_flyout_panel_header("cost", "💰 예상 비용산정", "BILLING")
                 for c_item in cost_menu_items:
                     is_active = (
@@ -778,7 +778,40 @@ def main():
                         args=(c_item,)
                     )
 
-        # 4. 🤖 카카오톡 실시간 연동 (로그인 시에만 노출)
+        # 5. 🛠️ 시스템 관리 (Super Admin: newprim 로그인 시에만 노출, 마우스 호버 자동 펼침)
+        if is_auth and AuthManager.is_super_admin():
+            sys_mgmt_items = [
+                "📅 법정 및 임시 공휴일 관리",
+                "📬 정기 메일 발송 대상 관리",
+                "📑 팀 전월 엑셀 원장 정기 발송",
+                "👥 시스템 관리자 계정 관리"
+            ]
+            is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
+            with st.container(border=True):
+                _render_flyout_trigger("sys", "🛠️ 시스템 관리", is_sys_active)
+                _render_flyout_panel_header("sys", "🛠️ 시스템 관리", "SYSTEM")
+                for s_item in sys_mgmt_items:
+                    is_active = (st.session_state.get("current_page") == s_item)
+                    btn_prefix = "▸ " if is_active else "  "
+                    st.button(
+                        f"{btn_prefix}{s_item}",
+                        key=f"nav_sys_{s_item}",
+                        use_container_width=True,
+                        type="primary" if is_active else "secondary",
+                        on_click=set_nav_page,
+                        args=(s_item,)
+                    )
+                st.markdown("<div style='height: 4px; border-top: 1px solid rgba(255,255,255,0.08); margin: 6px 0 4px 0;'></div>", unsafe_allow_html=True)
+                if st.button("🔄 실시간 데이터 새로고침", key="btn_sys_refresh_full", use_container_width=True):
+                    clear_all_web_caches()
+                    st.toast("🔄 실시간 데이터가 새로고침되었습니다!", icon="✅")
+                    st.rerun()
+                if st.button("🧹 웹 캐시 전체 초기화", key="btn_sys_clear_cache_full", use_container_width=True):
+                    clear_all_web_caches()
+                    st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
+                    st.rerun()
+
+        # 6. 🤖 카카오톡 실시간 연동 (시스템 관리 아래 배치, 로그인 시 노출)
         if is_auth:
             with st.expander("🔄 연동", expanded=False):
                 countdown = get_collector_countdown_info()
@@ -869,7 +902,7 @@ def main():
                                     "💡 **데이터 동기화 방법**:\n"
                                     "1. 카카오톡이 켜져 있는 로컬 PC에서 **`update_and_run.bat`** (또는 `setup_and_run.bat`)을 실행해두시면 10분마다 자동으로 최신 대화가 클라우드 DB로 전송됩니다.\n"
                                     "2. 전송된 데이터는 아래 **`🔄 실시간 Cloud DB 새로고침`** 버튼을 누르시면 즉시 반영됩니다!"
-                                )
+                                    )
                             else:
                                 st.toast("⚠️ 카카오톡 대화방 창을 찾을 수 없습니다.", icon="❌")
                                 st.error("⚠️ '🚩✨[기술본부] 업무공유방' 창을 찾을 수 없습니다.\n\n💡 **PC 카카오톡에서 해당 대화방 창을 열어둔 상태**에서 다시 눌러주세요!")
@@ -911,39 +944,6 @@ def main():
                         except Exception as e:
                             st.error(f"파일 처리 중 오류: {e}")
 
-        # 5. 🛠️ 시스템 관리 (Super Admin: newprim 로그인 시에만 노출, 마우스 호버 플라이아웃)
-        if is_auth and AuthManager.is_super_admin():
-            sys_mgmt_items = [
-                "📅 법정 및 임시 공휴일 관리",
-                "📬 정기 메일 발송 대상 관리",
-                "📑 팀 전월 엑셀 원장 정기 발송",
-                "👥 시스템 관리자 계정 관리"
-            ]
-            is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
-            _render_flyout_trigger("sys", "🛠️ 시스템 관리", is_sys_active)
-            with st.container():
-                _render_flyout_panel_header("sys", "🛠️ 시스템 관리", "SYSTEM")
-                for s_item in sys_mgmt_items:
-                    is_active = (st.session_state.get("current_page") == s_item)
-                    btn_prefix = "▸ " if is_active else "  "
-                    st.button(
-                        f"{btn_prefix}{s_item}",
-                        key=f"nav_sys_{s_item}",
-                        use_container_width=True,
-                        type="primary" if is_active else "secondary",
-                        on_click=set_nav_page,
-                        args=(s_item,)
-                    )
-                st.markdown("<div style='height: 4px; border-top: 1px solid rgba(255,255,255,0.08); margin: 6px 0 4px 0;'></div>", unsafe_allow_html=True)
-                if st.button("🔄 실시간 데이터 새로고침", key="btn_sys_refresh_full", use_container_width=True):
-                    clear_all_web_caches()
-                    st.toast("🔄 실시간 데이터가 새로고침되었습니다!", icon="✅")
-                    st.rerun()
-                if st.button("🧹 웹 캐시 전체 초기화", key="btn_sys_clear_cache_full", use_container_width=True):
-                    clear_all_web_caches()
-                    st.toast("🧹 웹 캐시가 초기화되었습니다. 최신 DB 데이터를 다시 불러옵니다!", icon="✅")
-                    st.rerun()
-
         # 6. 👤 사이드바 최하단 사용자 상태 카드 및 로그인/로그아웃 버튼
         st.markdown('<div style="height: 18px;"></div><div style="border-top: 1px solid rgba(0, 180, 216, 0.18); margin-bottom: 12px;"></div>', unsafe_allow_html=True)
         if not is_auth:
@@ -983,156 +983,7 @@ def main():
                 st.toast("👋 로그아웃되었습니다. 일반 조회 모드로 전환됩니다.", icon="ℹ️")
                 st.rerun()
 
-        # 🚀 사이드바 호버 플라이아웃 자바스크립트 컨트롤러 주입 (0.25초 닫힘 지연, 대각선 이동 안정화)
-        st.markdown('<div class="sb-flyout-js-marker" style="display:none;"></div>', unsafe_allow_html=True)
-        st.components.v1.html("""
-        <!DOCTYPE html>
-        <html>
-        <head><title>sb-flyout-js</title></head>
-        <body style="margin:0;padding:0;overflow:hidden;">
-        <script>
-        (function() {
-            const DELAY_MS = 250;
-            let closeTimers = {};
 
-            function setupFlyouts() {
-                try {
-                    const doc = window.parent.document;
-                    if (!doc) return;
-
-                    const sidebar = doc.querySelector('section[data-testid="stSidebar"]');
-                    if (!sidebar) return;
-
-                    const triggers = doc.querySelectorAll('.sb-flyout-trigger');
-                    if (!triggers || triggers.length === 0) return;
-
-                    triggers.forEach(trigger => {
-                        const menuId = trigger.getAttribute('data-menu');
-                        if (!menuId) return;
-
-                        const marker = doc.querySelector('.sb-flyout-panel-marker[data-menu="' + menuId + '"]');
-                        if (!marker) return;
-
-                        let panel = marker.parentElement;
-                        while (panel && panel !== sidebar) {
-                            const tid = panel.getAttribute('data-testid');
-                            if (tid === 'stVerticalBlock' || tid === 'stVerticalBlockBorderWrapper') {
-                                break;
-                            }
-                            panel = panel.parentElement;
-                        }
-
-                        if (!panel || panel === sidebar) return;
-
-                        panel.classList.add('sb-flyout-panel-container');
-                        panel.setAttribute('data-flyout-menu', menuId);
-
-                        if (trigger._boundMarker === marker) return;
-                        trigger._boundMarker = marker;
-
-                        function positionPanel() {
-                            const triggerRect = trigger.getBoundingClientRect();
-                            const sbRect = sidebar.getBoundingClientRect();
-                            const panelHeight = panel.offsetHeight || 220;
-
-                            const leftPos = sbRect.right + 2;
-                            let topPos = triggerRect.top;
-                            const maxTop = (window.parent.innerHeight || 800) - panelHeight - 16;
-                            if (topPos > maxTop) {
-                                topPos = Math.max(16, maxTop);
-                            }
-                            if (topPos < 16) topPos = 16;
-
-                            panel.style.left = leftPos + 'px';
-                            panel.style.top = topPos + 'px';
-                        }
-
-                        function open() {
-                            if (closeTimers[menuId]) {
-                                clearTimeout(closeTimers[menuId]);
-                                delete closeTimers[menuId];
-                            }
-
-                            triggers.forEach(t => {
-                                const otherId = t.getAttribute('data-menu');
-                                if (otherId !== menuId) {
-                                    t.classList.remove('sb-trigger-active');
-                                    const otherMarker = doc.querySelector('.sb-flyout-panel-marker[data-menu="' + otherId + '"]');
-                                    if (otherMarker) {
-                                        let p = otherMarker.parentElement;
-                                        while (p && p !== sidebar) {
-                                            if (p.classList && p.classList.contains('sb-flyout-panel-container')) {
-                                                p.classList.remove('sb-flyout-open');
-                                                p.style.left = '';
-                                                p.style.top = '';
-                                                break;
-                                            }
-                                            p = p.parentElement;
-                                        }
-                                    }
-                                }
-                            });
-
-                            positionPanel();
-                            trigger.classList.add('sb-trigger-active');
-                            panel.classList.add('sb-flyout-open');
-                        }
-
-                        function close() {
-                            if (closeTimers[menuId]) clearTimeout(closeTimers[menuId]);
-                            closeTimers[menuId] = setTimeout(() => {
-                                trigger.classList.remove('sb-trigger-active');
-                                panel.classList.remove('sb-flyout-open');
-                                panel.style.left = '';
-                                panel.style.top = '';
-                                delete closeTimers[menuId];
-                            }, DELAY_MS);
-                        }
-
-                        trigger.onmouseenter = open;
-                        trigger.onmouseleave = close;
-                        panel.onmouseenter = open;
-                        panel.onmouseleave = close;
-
-                        trigger.onclick = function(e) {
-                            if (panel.classList.contains('sb-flyout-open')) {
-                                close();
-                            } else {
-                                open();
-                            }
-                        };
-
-                        const buttons = panel.querySelectorAll('button');
-                        buttons.forEach(btn => {
-                            btn.addEventListener('click', () => {
-                                panel.classList.remove('sb-flyout-open');
-                                panel.style.left = '';
-                                panel.style.top = '';
-                                trigger.classList.remove('sb-trigger-active');
-                            });
-                        });
-                    });
-                } catch (e) {
-                    console.error('sb-flyout error:', e);
-                }
-            }
-
-            setupFlyouts();
-
-            if (!window.parent.__sbFlyoutObserver) {
-                window.parent.__sbFlyoutObserver = new MutationObserver(() => {
-                    setupFlyouts();
-                });
-                const sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
-                if (sidebar) {
-                    window.parent.__sbFlyoutObserver.observe(sidebar, { childList: true, subtree: true });
-                }
-            }
-        })();
-        </script>
-        </body>
-        </html>
-        """, height=0)
 
     # 데이터가 없을 때 안내 화면
     if df_raw.empty:

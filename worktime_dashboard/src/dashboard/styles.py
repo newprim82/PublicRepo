@@ -1378,17 +1378,28 @@ def apply_custom_styles():
         }
 
         /* ========================================================================= */
-        /* 🚀 사이드바 호버 플라이아웃 서브메뉴 (Sidebar Hover Flyout Submenus) */
+        /* 🚀 사이드바 호버 네비게이션 드롭다운 (Sidebar Hover Submenus - 100% Pure CSS) */
         /* ========================================================================= */
-        /* 1) 대메뉴 호버 트리거 바 */
-        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sb-flyout-trigger),
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"]:has(.sb-flyout-trigger) {
-            width: 100% !important;
-            margin-top: 3px !important;
-            margin-bottom: 3px !important;
+        /* 부모 컨테이너 카드: 평상시 테두리/배경 없이 트리거만 깔끔하게 노출 */
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger) {
+            background: transparent !important;
+            border: 1px solid transparent !important;
+            border-radius: 8px !important;
             padding: 0 !important;
+            margin: 2px 0 4px 0 !important;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-sizing: border-box !important;
         }
 
+        /* 🚀 마우스 호버 시: 부모 컨테이너가 입체 카드로 부드럽게 확장 */
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger):hover {
+            background: rgba(0, 34, 51, 0.85) !important;
+            border: 1px solid rgba(0, 180, 216, 0.40) !important;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(0, 180, 216, 0.20) !important;
+            padding: 0 0 4px 0 !important;
+        }
+
+        /* 트리거 바 */
         .sb-flyout-trigger {
             display: flex !important;
             align-items: center !important;
@@ -1409,13 +1420,21 @@ def apply_custom_styles():
             box-sizing: border-box !important;
             white-space: nowrap !important;
         }
-        .sb-flyout-trigger:hover,
-        .sb-flyout-trigger.sb-trigger-active {
+
+        /* 부모 호버 시 트리거 바 하이라이트 */
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger):hover .sb-flyout-trigger {
             background: rgba(0, 180, 216, 0.18) !important;
             border-color: #00b4d8 !important;
             border-left: 3px solid #00b4d8 !important;
-            box-shadow: 0 0 12px rgba(0, 180, 216, 0.25) !important;
+            box-shadow: 0 0 10px rgba(0, 180, 216, 0.25) !important;
         }
+
+        /* 부모 호버 시 화살표 회전 (› -> 아래 방향 ▼) */
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger):hover .trigger-arrow {
+            transform: rotate(90deg) !important;
+            color: #00e5ff !important;
+        }
+
         .sb-flyout-trigger.is-current-active {
             background: linear-gradient(90deg, rgba(0, 180, 216, 0.22) 0%, rgba(0, 180, 216, 0.06) 100%) !important;
             border-left: 3px solid #00e5ff !important;
@@ -1455,82 +1474,65 @@ def apply_custom_styles():
             font-size: 15px !important;
             font-weight: 900 !important;
             color: #00b4d8 !important;
-            transition: transform 0.15s ease !important;
+            transition: transform 0.2s ease !important;
             line-height: 1 !important;
             flex-shrink: 0 !important;
         }
-        .sb-flyout-trigger:hover .trigger-arrow,
-        .sb-flyout-trigger.sb-trigger-active .trigger-arrow {
-            transform: translateX(3px) !important;
-            color: #00e5ff !important;
-        }
 
-        /* 2) 플라이아웃 서브메뉴 플로팅 패널 (Streamlit normal flow 완전 탈출) */
-        .sb-flyout-panel-container {
-            position: fixed !important;
-            left: -9999px !important;
-            top: -9999px !important;
+        /* 🚀 핵심: 평상시 하위 요소들 완전 숨김 (트리거 제외) */
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger) div[data-testid="stElementContainer"]:not(:has(.sb-flyout-trigger)) {
+            display: none !important;
             opacity: 0 !important;
-            visibility: hidden !important;
             pointer-events: none !important;
-            z-index: 9999999 !important;
-            background: #002233 !important;
-            background-color: #002233 !important;
-            border: 1px solid #00b4d8 !important;
-            border-radius: 8px !important;
-            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 20px rgba(0, 180, 216, 0.3) !important;
-            padding: 8px 10px 10px 10px !important;
-            min-width: 260px !important;
-            max-width: 320px !important;
-            transition: opacity 0.15s ease-out, transform 0.15s ease-out !important;
-            transform: translateX(6px) !important;
-            backdrop-filter: blur(12px) !important;
-        }
-        /* 대각선 이동 시 마우스 이탈 방지 투명 브릿지 */
-        .sb-flyout-panel-container::before {
-            content: '' !important;
-            position: absolute !important;
-            left: -24px !important;
-            top: 0 !important;
-            bottom: 0 !important;
-            width: 24px !important;
-            background: transparent !important;
-            pointer-events: auto !important;
-        }
-        .sb-flyout-panel-container.sb-flyout-open {
-            opacity: 1 !important;
-            visibility: visible !important;
-            pointer-events: auto !important;
-            transform: translateX(0) !important;
         }
 
-        /* 3) 패널 내부 헤더 */
+        /* 🚀 핵심: 마우스 호버 시 하위 버튼들 즉각 표출 (0.25초 부드러운 전환) */
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger):hover div[data-testid="stElementContainer"]:not(:has(.sb-flyout-trigger)) {
+            display: block !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            animation: sbSlideDown 0.18s ease-out !important;
+        }
+
+        @keyframes sbSlideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 하위 서브메뉴 헤더 스타일 */
         .sb-flyout-header {
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
-            padding: 4px 6px 8px 6px !important;
-            margin-bottom: 6px !important;
-            border-bottom: 1px solid rgba(0, 180, 216, 0.22) !important;
+            padding: 6px 10px 4px 10px !important;
+            margin-top: 4px !important;
+            margin-bottom: 2px !important;
+            border-bottom: 1px solid rgba(0, 180, 216, 0.15) !important;
         }
         .sb-flyout-header-title {
-            font-size: 12px !important;
+            font-size: 11px !important;
             font-weight: 800 !important;
             color: #00b4d8 !important;
             letter-spacing: -0.2px !important;
         }
         .sb-flyout-header-tag {
-            font-size: 9px !important;
+            font-size: 8.5px !important;
             font-weight: 800 !important;
             color: #5a8a9e !important;
-            background: rgba(0, 180, 216, 0.12) !important;
-            padding: 2px 6px !important;
-            border-radius: 4px !important;
+            background: rgba(0, 180, 216, 0.10) !important;
+            padding: 1px 5px !important;
+            border-radius: 3px !important;
             letter-spacing: 0.5px !important;
         }
 
-        /* 4) 패널 내부 Streamlit 버튼 정밀 스타일링 (좌측 정렬 + 하이라이트) */
-        .sb-flyout-panel-container .stButton > button {
+        /* 하위 버튼들 정밀 스타일링 */
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger) .stButton > button {
             display: flex !important;
             justify-content: flex-start !important;
             align-items: center !important;
@@ -1538,62 +1540,41 @@ def apply_custom_styles():
             border-radius: 5px !important;
             font-size: 12.5px !important;
             font-weight: 600 !important;
-            background: rgba(0, 30, 48, 0.6) !important;
-            border: 1px solid rgba(0, 180, 216, 0.14) !important;
+            background: rgba(0, 25, 40, 0.5) !important;
+            border: 1px solid rgba(0, 180, 216, 0.12) !important;
             border-left: 3px solid transparent !important;
             color: #cbd5e1 !important;
             transition: all 0.12s ease !important;
-            padding: 6px 10px !important;
+            padding: 6px 12px !important;
             min-height: 32px !important;
             width: 100% !important;
             margin: 2px 0 !important;
             box-shadow: none !important;
         }
-        .sb-flyout-panel-container .stButton > button:hover {
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger) .stButton > button:hover {
             background: rgba(0, 180, 216, 0.22) !important;
             border-color: #00b4d8 !important;
             border-left: 3px solid #00b4d8 !important;
             color: #ffffff !important;
-            box-shadow: 0 2px 8px rgba(0, 180, 216, 0.3) !important;
-            transform: translateX(2px) !important;
+            box-shadow: 0 2px 8px rgba(0, 180, 216, 0.25) !important;
+            transform: translateX(3px) !important;
         }
-        .sb-flyout-panel-container .stButton > button[kind="primary"] {
-            background: linear-gradient(90deg, rgba(0, 180, 216, 0.32) 0%, rgba(0, 180, 216, 0.12) 100%) !important;
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger) .stButton > button[kind="primary"] {
+            background: linear-gradient(90deg, rgba(0, 180, 216, 0.28) 0%, rgba(0, 180, 216, 0.10) 100%) !important;
             border-color: #00e5ff !important;
             border-left: 3px solid #00e5ff !important;
             color: #ffffff !important;
             font-weight: 800 !important;
-            box-shadow: 0 0 10px rgba(0, 180, 216, 0.2) !important;
         }
-        .sb-flyout-panel-container .stButton > button * {
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger) .stButton > button * {
             color: inherit !important;
             text-align: left !important;
             justify-content: flex-start !important;
         }
-        .sb-flyout-panel-container .stButton > button [data-testid="stMarkdownContainer"] p {
+        [data-testid="stSidebar"] div[data-testid="stVerticalBlockBorderWrapper"]:has(.sb-flyout-trigger) .stButton > button [data-testid="stMarkdownContainer"] p {
             margin: 0 !important;
             padding: 0 !important;
             text-align: left !important;
-        }
-
-        /* 🚀 플라이아웃 JS 컨트롤러 iframe 무간섭 처리 */
-        iframe[title="sb-flyout-js"],
-        div[data-testid="stCustomComponentV1"]:has(iframe[title="sb-flyout-js"]),
-        div[data-testid="stElementContainer"]:has(iframe[title="sb-flyout-js"]),
-        [data-testid="stSidebar"] div[data-testid="stElementContainer"]:has(.sb-flyout-js-marker),
-        [data-testid="stSidebar"] div[data-testid="stElementContainer"]:has(.sb-flyout-js-marker) + div[data-testid="stElementContainer"] {
-            height: 0px !important;
-            min-height: 0px !important;
-            max-height: 0px !important;
-            margin: 0px !important;
-            padding: 0px !important;
-            border: none !important;
-            overflow: hidden !important;
-            position: absolute !important;
-            top: -9999px !important;
-            left: -9999px !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
         }
 
         /* 🏛️ Cisco ACI 표준 테이블 스타일링 */
