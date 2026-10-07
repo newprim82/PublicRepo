@@ -518,6 +518,280 @@ class CostEstimationService:
         return monthly
 
     @classmethod
+    def generate_mom_excel_report(
+        cls,
+        trend_df: pd.DataFrame,
+        team_name: str = "전체 팀"
+    ) -> bytes:
+        """
+        월별 청구 추이 및 MoM 분석 완성형 엑셀 보고서 생성 (.xlsx)
+        - 상단 대시보드 타이틀 및 4대 핵심 KPI 요약 카드
+        - 네이티브 엑셀 누적 막대 + 꺾은선(보조축) 복합 차트 (월별 청구금액 & 투입공수)
+        - 시각화 스타일링된 월별 정산 내역 및 MoM 지표 데이터 테이블 (숫자 포맷, 테두리, 하이라이트)
+        """
+        import io
+        import xlsxwriter
+        from datetime import datetime
+
+        output = io.BytesIO()
+        wb = xlsxwriter.Workbook(output, {'in_memory': True})
+        ws = wb.add_worksheet('MoM_청구추이분석')
+
+        # 눈금선 표시 활성화
+        ws.hide_gridlines(False)
+
+        # ---------------------------------------------------------
+        # 1. 엑셀 스타일 서식 정의 (Cisco & 현대적 대시보드 테마)
+        # ---------------------------------------------------------
+        fmt_title = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 15, 'bold': True,
+            'font_color': '#005073', 'valign': 'vcenter'
+        })
+        fmt_subtitle = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9,
+            'font_color': '#64748b', 'valign': 'vcenter'
+        })
+
+        # KPI 카드 스타일
+        fmt_kpi_label = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'bold': True,
+            'font_color': '#475569', 'bg_color': '#f1f5f9',
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#cbd5e1'
+        })
+        fmt_kpi_val = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 13.5, 'bold': True,
+            'font_color': '#005073', 'bg_color': '#ffffff',
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#cbd5e1'
+        })
+        fmt_kpi_val_hours = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 13.5, 'bold': True,
+            'font_color': '#0284c7', 'bg_color': '#ffffff',
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#cbd5e1'
+        })
+        fmt_kpi_val_premium = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 13.5, 'bold': True,
+            'font_color': '#10b981', 'bg_color': '#ffffff',
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#cbd5e1'
+        })
+        fmt_kpi_val_workers = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 13.5, 'bold': True,
+            'font_color': '#8b5cf6', 'bg_color': '#ffffff',
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#cbd5e1'
+        })
+        fmt_kpi_sub = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 8.5, 'bold': True,
+            'font_color': '#64748b', 'bg_color': '#ffffff',
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#cbd5e1'
+        })
+
+        # 테이블 헤더 스타일
+        fmt_th = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9.5, 'bold': True,
+            'bg_color': '#005073', 'font_color': '#ffffff',
+            'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#334155'
+        })
+
+        # 데이터 셀 스타일
+        fmt_td_center = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'align': 'center', 'valign': 'vcenter',
+            'border': 1, 'border_color': '#e2e8f0'
+        })
+        fmt_td_currency = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'align': 'right', 'valign': 'vcenter',
+            'num_format': '₩ #,##0', 'border': 1, 'border_color': '#e2e8f0'
+        })
+        fmt_td_currency_bold = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'bold': True, 'align': 'right', 'valign': 'vcenter',
+            'num_format': '₩ #,##0', 'border': 1, 'border_color': '#e2e8f0', 'font_color': '#005073'
+        })
+        fmt_td_premium = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'align': 'right', 'valign': 'vcenter',
+            'num_format': '+₩ #,##0', 'border': 1, 'border_color': '#e2e8f0', 'font_color': '#10b981'
+        })
+        fmt_td_hours = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'align': 'right', 'valign': 'vcenter',
+            'num_format': '#,##0.0 "h"', 'border': 1, 'border_color': '#e2e8f0'
+        })
+        fmt_td_hours_bold = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'bold': True, 'align': 'right', 'valign': 'vcenter',
+            'num_format': '#,##0.0 "h"', 'border': 1, 'border_color': '#e2e8f0', 'font_color': '#0284c7'
+        })
+        fmt_td_count = wb.add_format({
+            'font_name': '맑은 고딕', 'font_size': 9, 'align': 'center', 'valign': 'vcenter',
+            'num_format': '#,##0', 'border': 1, 'border_color': '#e2e8f0'
+        })
+
+        # ---------------------------------------------------------
+        # 2. 타이틀 & 서브타이틀
+        # ---------------------------------------------------------
+        display_team = team_name if team_name and team_name != "전체 팀" else "전체 기술본부"
+        ws.merge_range('A1:J1', f'[{display_team}] 월별 청구 추이 및 전월 대비(MoM) 증감 분석 보고서', fmt_title)
+        ws.set_row(0, 26)
+        ws.merge_range('A2:J2', f'생성일시: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | 기준: LGU+ time.bora.net NTP 타임서버 동기화', fmt_subtitle)
+        ws.set_row(1, 16)
+
+        # ---------------------------------------------------------
+        # 3. 상단 4대 핵심 KPI 카드 (행 4 ~ 6)
+        # ---------------------------------------------------------
+        if not trend_df.empty:
+            latest = trend_df.iloc[-1]
+            prev = trend_df.iloc[-2] if len(trend_df) >= 2 else None
+
+            c_pct = latest.get("mom_cost_pct", 0.0)
+            c_diff = int(latest.get("mom_diff_cost", 0))
+            c_sub = "전월 데이터 없음" if prev is None or pd.isna(c_pct) else (f"MoM ▲ +{c_pct:.1f}% (+₩{c_diff:,})" if c_diff >= 0 else f"MoM ▼ {c_pct:.1f}% (-₩{abs(c_diff):,})")
+
+            h_pct = latest.get("mom_hours_pct", 0.0)
+            h_diff = float(latest.get("mom_diff_hours", 0.0))
+            h_sub = "전월 데이터 없음" if prev is None or pd.isna(h_pct) else (f"MoM ▲ +{h_pct:.1f}% (+{h_diff:.1f}h)" if h_diff >= 0 else f"MoM ▼ {h_pct:.1f}% ({h_diff:.1f}h)")
+
+            # 카드 1: 당월 청구 금액
+            ws.merge_range('A4:B4', f"{latest['year_month']} 청구 금액", fmt_kpi_label)
+            ws.merge_range('A5:B5', f"₩ {int(latest['total_cost']):,}", fmt_kpi_val)
+            ws.merge_range('A6:B6', c_sub, fmt_kpi_sub)
+
+            # 카드 2: 당월 투입 인정 공수
+            ws.merge_range('C4:D4', f"{latest['year_month']} 투입 인정 공수", fmt_kpi_label)
+            ws.merge_range('C5:D5', f"{latest['total_hours']:.1f} h", fmt_kpi_val_hours)
+            ws.merge_range('C6:D6', h_sub, fmt_kpi_sub)
+
+            # 카드 3: 기본 vs 할증 가산액
+            ws.merge_range('E4:G4', "기본 vs 할증 가산액", fmt_kpi_label)
+            ws.merge_range('E5:G5', f"+₩ {int(latest['overtime_premium']):,}", fmt_kpi_val_premium)
+            ws.merge_range('E6:G6', f"기본: ₩{int(latest['base_cost']):,} (야간/주말 {latest['overtime_hours']:.1f}h)", fmt_kpi_sub)
+
+            # 카드 4: 투입 인원 / 완료 건수
+            ws.merge_range('H4:J4', f"{latest['year_month']} 투입 인원 / 건수", fmt_kpi_label)
+            ws.merge_range('H5:J5', f"{int(latest['worker_count'])}명", fmt_kpi_val_workers)
+            ws.merge_range('H6:J6', f"총 {int(latest['task_count']):,}건 완료 작업", fmt_kpi_sub)
+
+            ws.set_row(3, 18)
+            ws.set_row(4, 22)
+            ws.set_row(5, 18)
+
+        # ---------------------------------------------------------
+        # 4. 데이터 테이블 영역 (행 26부터 시작)
+        # ---------------------------------------------------------
+        table_start_row = 26
+        headers = [
+            "월(YYYY-MM)", "최종 청구금액(원)", "기본금액(원)", "할증가산액(원)", "MoM 금액증감(%)",
+            "총 인정공수(h)", "야간·주말(h)", "MoM 공수증감(%)", "투입인원", "작업건수"
+        ]
+        for col_idx, h in enumerate(headers):
+            ws.write(table_start_row, col_idx, h, fmt_th)
+        ws.set_row(table_start_row, 24)
+
+        # 웹 화면과 동일하게 최신순(내림차순) 정렬하여 테이블 출력
+        table_df = trend_df.sort_values(by="year_month", ascending=False).reset_index(drop=True)
+        num_rows = len(table_df)
+
+        for r_idx, (_, row) in enumerate(table_df.iterrows()):
+            curr_r = table_start_row + 1 + r_idx
+            ws.write(curr_r, 0, str(row['year_month']), fmt_td_center)
+            ws.write(curr_r, 1, int(row['total_cost']), fmt_td_currency_bold)
+            ws.write(curr_r, 2, int(row['base_cost']), fmt_td_currency)
+            ws.write(curr_r, 3, int(row['overtime_premium']), fmt_td_premium)
+
+            c_pct = row.get("mom_cost_pct")
+            c_diff = row.get("mom_diff_cost", 0)
+            c_txt = "-" if pd.isna(c_pct) else (f"+{c_pct:.1f}%" if c_diff >= 0 else f"{c_pct:.1f}%")
+            ws.write(curr_r, 4, c_txt, fmt_td_center)
+
+            ws.write(curr_r, 5, float(row['total_hours']), fmt_td_hours_bold)
+            ws.write(curr_r, 6, float(row['overtime_hours']), fmt_td_hours)
+
+            h_pct = row.get("mom_hours_pct")
+            h_diff = row.get("mom_diff_hours", 0)
+            h_txt = "-" if pd.isna(h_pct) else (f"+{h_pct:.1f}%" if h_diff >= 0 else f"{h_pct:.1f}%")
+            ws.write(curr_r, 7, h_txt, fmt_td_center)
+
+            ws.write(curr_r, 8, int(row['worker_count']), fmt_td_count)
+            ws.write(curr_r, 9, int(row['task_count']), fmt_td_count)
+            ws.set_row(curr_r, 20)
+
+        # 컬럼 너비 설정
+        col_widths = [14, 18, 16, 16, 15, 15, 14, 15, 12, 12]
+        for i, w in enumerate(col_widths):
+            ws.set_column(i, i, w)
+
+        # ---------------------------------------------------------
+        # 5. 네이티브 엑셀 복합 차트 (행 8~24 영역)
+        # ---------------------------------------------------------
+        if num_rows > 0:
+            col_chart = wb.add_chart({'type': 'column', 'subtype': 'stacked'})
+
+            # 기본 청구액 시리즈 (C열: index 2)
+            col_chart.add_series({
+                'name': ['MoM_청구추이분석', table_start_row, 2],
+                'categories': ['MoM_청구추이분석', table_start_row + 1, 0, table_start_row + num_rows, 0],
+                'values': ['MoM_청구추이분석', table_start_row + 1, 2, table_start_row + num_rows, 2],
+                'fill': {'color': '#005073'},
+            })
+
+            # 할증 가산액 시리즈 (D열: index 3)
+            col_chart.add_series({
+                'name': ['MoM_청구추이분석', table_start_row, 3],
+                'categories': ['MoM_청구추이분석', table_start_row + 1, 0, table_start_row + num_rows, 0],
+                'values': ['MoM_청구추이분석', table_start_row + 1, 3, table_start_row + num_rows, 3],
+                'fill': {'color': '#10b981'},
+            })
+
+            # 투입 공수 꺾은선 시리즈 (F열: index 5, 보조축)
+            line_chart = wb.add_chart({'type': 'line'})
+            line_chart.add_series({
+                'name': ['MoM_청구추이분석', table_start_row, 5],
+                'categories': ['MoM_청구추이분석', table_start_row + 1, 0, table_start_row + num_rows, 0],
+                'values': ['MoM_청구추이분석', table_start_row + 1, 5, table_start_row + num_rows, 5],
+                'line': {'color': '#0284c7', 'width': 2.75},
+                'marker': {'type': 'circle', 'size': 6, 'fill': {'color': '#0284c7'}},
+                'data_labels': {'value': True, 'position': 'above', 'font': {'name': '맑은 고딕', 'size': 9, 'color': '#0284c7'}},
+                'y2_axis': True,
+            })
+
+            col_chart.combine(line_chart)
+            col_chart.set_title({
+                'name': '월별 청구 금액(막대) & 투입 공수(꺾은선) 추이',
+                'name_font': {'name': '맑은 고딕', 'size': 11.5, 'bold': True, 'color': '#005073'}
+            })
+            # 테이블이 최신순(2026-10 -> 2026-06)이므로 reverse=True로 시간순(과거->최신) 표시
+            col_chart.set_x_axis({
+                'name': '월 (YYYY-MM)',
+                'name_font': {'name': '맑은 고딕', 'size': 9},
+                'num_font': {'name': '맑은 고딕', 'size': 9},
+                'reverse': True,
+                'major_gridlines': {'visible': False}
+            })
+            col_chart.set_y_axis({
+                'name': '청구 금액 (원)',
+                'name_font': {'name': '맑은 고딕', 'size': 9},
+                'num_font': {'name': '맑은 고딕', 'size': 9},
+                'major_gridlines': {'visible': True, 'line': {'color': '#e2e8f0', 'dash_type': 'dash'}}
+            })
+            col_chart.set_y2_axis({
+                'name': '투입 공수 (h)',
+                'name_font': {'name': '맑은 고딕', 'size': 9, 'color': '#0284c7'},
+                'num_font': {'name': '맑은 고딕', 'size': 9, 'color': '#0284c7'},
+                'major_gridlines': {'visible': False}
+            })
+            col_chart.set_legend({
+                'position': 'top',
+                'font': {'name': '맑은 고딕', 'size': 9}
+            })
+            col_chart.set_size({'width': 860, 'height': 330})
+
+            ws.insert_chart('A8', col_chart)
+
+        wb.close()
+        return output.getvalue()
+
+    @classmethod
     def update_work_log_hours(
         cls,
         msg_hash: str,
