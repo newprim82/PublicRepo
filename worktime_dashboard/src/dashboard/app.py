@@ -511,16 +511,6 @@ def main():
         if st.session_state.get("current_page") != target_page:
             st.session_state["current_page"] = target_page
 
-    def _render_flyout_trigger(menu_id: str, title: str, is_active: bool):
-        act_cls = " is-current-active" if is_active else ""
-        dot_html = "<span class='trigger-dot'></span>" if is_active else ""
-        html = f'<div class="sb-flyout-trigger{act_cls}" data-menu="{menu_id}"><div class="trigger-title"><span>{title}</span></div><div class="trigger-meta">{dot_html}<span class="trigger-arrow">›</span></div></div>'
-        st.markdown(html, unsafe_allow_html=True)
-
-    def _render_flyout_panel_header(menu_id: str, title: str, tag: str):
-        html = f'<div class="sb-flyout-panel-marker" data-menu="{menu_id}"><div class="sb-flyout-header"><span class="sb-flyout-header-title">{title}</span><span class="sb-flyout-header-tag">{tag}</span></div></div>'
-        st.markdown(html, unsafe_allow_html=True)
-
     # ==========================================
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
@@ -553,12 +543,10 @@ def main():
 
         is_auth = AuthManager.is_authenticated()
 
-        # 1. 📂 관리 (로그인 시 노출: 마우스 호버 시 자동 펼침)
+        # 1. ⚙️ 관리 (로그인 시 노출)
         if is_auth:
             is_admin_active = (st.session_state.get("current_page") in ["⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)", "📋 작업 기록 원장 & 엑셀"])
-            with st.container(border=True):
-                _render_flyout_trigger("admin", "⚙️ 관리", is_admin_active)
-                _render_flyout_panel_header("admin", "⚙ 관리 메뉴", "ADMIN")
+            with st.expander("⚙ 관리", expanded=is_admin_active):
                 main_menu_items = [
                     "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
                     "📋 작업 기록 원장 & 엑셀"
@@ -724,7 +712,7 @@ def main():
                 df = df_filtered_base.iloc[0:0]
 
 
-        # 3. 📊 작업 디테일 (7대 세부 분석 화면 전환: 마우스 호버 시 우측 플라이아웃 서브메뉴 표출)
+        # 3. 📊 분석
         detail_menu_items = [
             "📅 작업 캘린더 & 밀도 히트맵",
             "🔍 전체 작업 스마트 검색",
@@ -736,9 +724,7 @@ def main():
             "⏱️ 예정 vs 실제 소요시간"
         ]
         is_detail_active = (st.session_state.get("current_page") in detail_menu_items)
-        with st.container(border=True):
-            _render_flyout_trigger("detail", "📊 분석", is_detail_active)
-            _render_flyout_panel_header("detail", "📊 분석 대시보드", "ANALYTICS")
+        with st.expander("📊 분석", expanded=is_detail_active):
             for d_item in detail_menu_items:
                 is_active = (st.session_state["current_page"] == d_item)
                 btn_prefix = "▸ " if is_active else "  "
@@ -751,7 +737,7 @@ def main():
                     args=(d_item,)
                 )
 
-        # 4. 💰 예상 비용산정 (마우스 호버 시 자동 펼침, 로그인 시에만 노출)
+        # 4. 💰 예상 비용산정 (로그인 시에만 노출)
         if is_auth:
             cost_menu_items = [
                 "💰 팀원별 예상 청구금액",
@@ -760,9 +746,7 @@ def main():
                 "⚙️ 직급별 시간당 단가 설정"
             ]
             is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
-            with st.container(border=True):
-                _render_flyout_trigger("cost", "💰 예상 비용산정", is_cost_active)
-                _render_flyout_panel_header("cost", "💰 예상 비용산정", "BILLING")
+            with st.expander("💰 예상 비용산정", expanded=is_cost_active):
                 for c_item in cost_menu_items:
                     is_active = (
                         st.session_state["current_page"] == c_item or 
@@ -778,7 +762,7 @@ def main():
                         args=(c_item,)
                     )
 
-        # 5. 🛠️ 시스템 관리 (Super Admin: newprim 로그인 시에만 노출, 마우스 호버 자동 펼침)
+        # 5. 🛠️ 시스템 관리 (Super Admin: newprim 로그인 시에만 노출)
         if is_auth and AuthManager.is_super_admin():
             sys_mgmt_items = [
                 "📅 법정 및 임시 공휴일 관리",
@@ -787,9 +771,7 @@ def main():
                 "👥 시스템 관리자 계정 관리"
             ]
             is_sys_active = (st.session_state.get("current_page") in sys_mgmt_items)
-            with st.container(border=True):
-                _render_flyout_trigger("sys", "🛠️ 시스템 관리", is_sys_active)
-                _render_flyout_panel_header("sys", "🛠️ 시스템 관리", "SYSTEM")
+            with st.expander("🛠️ 시스템 관리", expanded=is_sys_active):
                 for s_item in sys_mgmt_items:
                     is_active = (st.session_state.get("current_page") == s_item)
                     btn_prefix = "▸ " if is_active else "  "
