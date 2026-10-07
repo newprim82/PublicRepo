@@ -1,0 +1,4 @@
+﻿id,dispatch_type,recipient_emails,sender_email,selected_team,period_label,subject,status,error_message,created_at
+2,MANUAL_IMMEDIATE,ymmoon@sangsanginworld.co.kr,newprim82@gmail.com,기술 1팀,기술 1팀 - 2026-09 월간 전체,[Supabase 연동 검증] Executive Summary 보고서,SUCCESS,,2026-09-07T13:20:37
+1,MANUAL_IMMEDIATE,khkim@sangsanginworld.co.kr,newprim82@gmail.com,기술 1팀,기술 1팀 - 2026-09 월간 전체,📊 [경영진 보고용 Summary] 기술 1팀 - 2026-09 월간 전체,SUCCESS,,2026-09-07T13:20:34
+3,MANUAL_IMMEDIATE,khkim@sangsanginworld.co.kr,newprim82@gmail.com,기술 1팀,기술 1팀 - 2026-09 월간 전체,📊 [경영진 보고용 Summary] 기술 1팀 - 2026-09 월간 전체,SUCCESS,,2026-09-07T13:26:12

@@ -1,0 +1,49 @@
+Line   31 -   35: def get_current_kst_time() -> datetime:
+Line   35 -   74: def get_bora_ntp_timestamp() -> float:
+Line   74 -   92: def get_all_teams_safe() -> list:
+Line   92 - 1051: def init_single_collector_daemon():
+Line 1051 - 1173: def load_data() -> pd.DataFrame:
+Line 1173 - 1190: def clear_all_web_caches():
+Line 1190 - 1207: def format_raw_chat_display(row) -> str:
+Line 1207 - 1215: def strip_tz(df):
+Line 1215 - 1276: def inject_dialog_title_style():
+Line 1276 - 1277: @st.dialog("🔍 세부 작업 내역 및 카카오톡 원본 분석", width="large")
+Line 1277 - 1446: def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default_week_name: str = None):
+Line 1446 - 1447: @st.dialog("⏱️ 총 지원 시간 세부 작업 내역", width="large")
+Line 1447 - 1512: def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
+Line 1512 - 1513: @st.dialog("📋 총 작업 건수 세부 내역 (완료 / 진행 중)", width="large")
+Line 1513 - 1588: def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
+Line 1588 - 1589: @st.dialog("👥 투입 인원 및 팀원별 공수 상세", width="large")
+Line 1589 - 1612: def show_kpi_workers_dialog(df_data: pd.DataFrame):
+Line 1612 - 1613: @st.dialog("🌙 야간 / 주말 긴급 작업 세부 내역", width="large")
+Line 1613 - 1689: def show_kpi_urgent_dialog(df_data: pd.DataFrame):
+Line 1689 - 1690: @st.dialog("⚠️ 예정 시간 초과 작업 세부 내역 및 카카오톡 원본 확인", width="large")
+Line 1690 - 1768: def show_kpi_overdue_dialog(df_data: pd.DataFrame):
+Line 1768 - 1769: @st.dialog("👤 팀원 전체 작업 상세 내역", width="large")
+Line 1769 - 1825: def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
+Line 1825 - 1826: @st.dialog("🔍 작업 구분별 세부 내역", width="large")
+Line 1826 - 1890: def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: pd.DataFrame):
+Line 1890 - 1909: def get_job_title_badge(title: str) -> str:
+Line 1909 - 1926: def get_job_title_color(title: str) -> str:
+Line 1926 - 1943: def get_job_title_bar_style(title: str):
+Line 1943 - 1995: def get_job_title_rank(title: str) -> int:
+Line 1995 - 2040: def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bool = False) -> str:
+Line 2040 - 2100: def get_team_theme(team_name: str) -> dict:
+Line 2100 - 2351: def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
+Line 2351 - 2352: @st.dialog("🏢 팀별 세부 작업 원장 및 카카오톡 원본", width="large")
+Line 2352 - 2442: def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
+Line 2442 - 2443: @st.dialog("📆 주차별 세부 지원 내역 및 카카오톡 원본", width="large")
+Line 2443 - 2530: def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
+Line 2530 - 2531: @st.dialog("📅 일자별 세부 작업 내역", width="large")
+Line 2531 - 2605: def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
+Line 2605 - 2766: def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFrame, target_months: list, selected_months: list, month_desc: str):
+Line 2766 - 2936: def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataFrame, chart_orientation: str, selected_view: str):
+Line 2936 - 3080: def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.DataFrame):
+Line 3080 - 3278: def render_calendar_and_heatmap_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str = "전체 팀"):
+Line 3278 - 3560: def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
+Line 3560 - 3561: @st.dialog("📧 Executive Summary 메일 발송", width="medium")
+Line 3561 - 3616: def show_email_report_dialog(selected_team: str):
+Line 3616 - 4489: def render_executive_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
+Line 4489 - 4563: def render_login_page():
+Line 4563 - 4881: def render_team_management_page(all_workers_list, team_mappings):
+Line 4881 - 6308: def main():

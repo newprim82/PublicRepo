@@ -1,0 +1,242 @@
+[
+  {
+    "worker_name": "홍대표",
+    "team_name": "PI팀",
+    "job_title": "",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "박창수",
+    "team_name": "기술 2팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "서원재",
+    "team_name": "기술 2팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "양성민",
+    "team_name": "기술 2팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "이준섭",
+    "team_name": "기술 2팀",
+    "job_title": "대리",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "정혜성",
+    "team_name": "기술 2팀",
+    "job_title": "대리",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "하태준",
+    "team_name": "기술 2팀",
+    "job_title": "대리",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "송기정",
+    "team_name": "기술 2팀",
+    "job_title": "사원",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "정어진",
+    "team_name": "기술 2팀",
+    "job_title": "사원",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "황순길",
+    "team_name": "기술 3팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "강길성",
+    "team_name": "기술 3팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김선명",
+    "team_name": "기술 3팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "황경선",
+    "team_name": "기술 3팀",
+    "job_title": "과장",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "이원재",
+    "team_name": "기술 3팀",
+    "job_title": "대리",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "최지성",
+    "team_name": "기술 3팀",
+    "job_title": "대리",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "강성민",
+    "team_name": "기술 3팀",
+    "job_title": "사원",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "문영민",
+    "team_name": "기술 1팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김형일",
+    "team_name": "기술 1팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김경현",
+    "team_name": "기술 1팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "홍정표",
+    "team_name": "기술 1팀",
+    "job_title": "과장",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "전종필",
+    "team_name": "기술 1팀",
+    "job_title": "대리",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김시우",
+    "team_name": "기술 1팀",
+    "job_title": "사원",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "양금희",
+    "team_name": "기술 1팀",
+    "job_title": "사원",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "이동우",
+    "team_name": "기술 1팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "최용필",
+    "team_name": "PI팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "강종오",
+    "team_name": "PI팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김수환",
+    "team_name": "PI팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "전경송",
+    "team_name": "PI팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "차지웅",
+    "team_name": "PI팀",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김성중",
+    "team_name": "PI팀",
+    "job_title": "과장",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "전영우",
+    "team_name": "PI팀",
+    "job_title": "과장",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김상욱",
+    "team_name": "PI팀",
+    "job_title": "대리",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "이명노",
+    "team_name": "상상인",
+    "job_title": "",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "이명진",
+    "team_name": "기술본부",
+    "job_title": "수석",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "김태현",
+    "team_name": "기술본부",
+    "job_title": "사원",
+    "updated_at": "2026-09-02T07:39:02.32696+00:00"
+  },
+  {
+    "worker_name": "신은현",
+    "team_name": "기술본부",
+    "job_title": "사원",
+    "updated_at": "2026-09-02T07:39:13.218529+00:00"
+  },
+  {
+    "worker_name": "하종진",
+    "team_name": "기술본부",
+    "job_title": "사원",
+    "updated_at": "2026-09-02T07:39:25.260688+00:00"
+  },
+  {
+    "worker_name": "이건주",
+    "team_name": "기술본부",
+    "job_title": "사원",
+    "updated_at": "2026-09-02T07:40:05.490309+00:00"
+  },
+  {
+    "worker_name": "최현섭",
+    "team_name": "기술본부",
+    "job_title": "사원",
+    "updated_at": "2026-09-01T07:59:26.958695+00:00"
+  },
+  {
+    "worker_name": "SYS_STATUS_COLLECTOR",
+    "team_name": "LOGIN_REQUIRED_OR_WINDOW_CLOSE",
+    "job_title": "2026-09-08 20:59|'[기술본부] 업무공유방' 대화방 창이 PC 화면에 열려있지",
+    "updated_at": "2026-09-07T02:04:15.006056+00:00"
+  }
+]

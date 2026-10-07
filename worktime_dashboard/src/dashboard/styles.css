@@ -1,0 +1,1680 @@
+        /* 🔤 토스(Toss) 표준 프리미엄 웹 폰트: Pretendard (프리텐다드) - CSS 표준상 반드시 맨 첫 줄에 위치해야 정상 로드됨 */
+        @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
+        :root {
+            color-scheme: only light !important;
+            forced-color-adjust: none !important;
+            --background-color: #f4f6f9 !important;
+            --secondary-background-color: #ffffff !important;
+            --text-color: #0f172a !important;
+        }
+        /* 🚫 다크모드 원천 차단: 본문 메인 영역 라이트 테마 100% 고정 (사이드바 고유 네이비 테마 보존) */
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stMain"] {
+            color-scheme: only light !important;
+            forced-color-adjust: none !important;
+            background-color: #f4f6f9 !important;
+            color: #0f172a !important;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stMain"] {
+                color-scheme: only light !important;
+                forced-color-adjust: none !important;
+                background-color: #f4f6f9 !important;
+                color: #0f172a !important;
+            }
+        }
+
+        /* 1. 사이트 전체 기본 본문 -> Pretendard (최고의 화면 가독성 & 선명도) */
+        html, body, .stApp, .stApp *:not([data-testid*="Icon"]):not([data-testid*="icon"]):not(span[translate="no"]):not(svg) {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Segoe UI", sans-serif !important;
+            letter-spacing: -0.2px;
+        }
+
+        /* 2. 모든 제목, 대형 KPI 수치 숫자, 타이틀 -> Pretendard 800 (ExtraBold) */
+        h1, h2, h3, h4, h5, h6, 
+        .kpi-value, 
+        .kpi-value *,
+        .kpi-title, 
+        .main-title-text, 
+        .main-title-text *,
+        .sidebar-section-header,
+        .filter-badge b,
+        .alert-blink-badge,
+        [data-testid="stMetricValue"],
+        [data-testid="stMetricValue"] * {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Segoe UI", sans-serif !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.4px;
+        }
+
+        /* 🚀 Streamlit 머티리얼 아이콘 폰트 (Material Symbols / Icons) 100% 온전하게 보존 */
+        span[translate="no"],
+        [data-testid*="Icon"],
+        [data-testid*="icon"],
+        [data-testid="stExpanderToggleIcon"],
+        .material-symbols-rounded,
+        .material-symbols-outlined,
+        .material-icons {
+            font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons", sans-serif !important;
+            font-weight: normal !important;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+        /* 🏛️ Cisco ACI Enterprise 관제 포털 테마 (Light & Deep Cyan-Navy Hybrid) */
+        html, body, [data-testid="stAppViewContainer"], .stApp {
+            background-color: #f4f6f9 !important;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Pretendard, sans-serif !important;
+            color: #0f172a !important;
+        }
+
+        /* 🚀 메뉴 전환 시 화면 페이드아웃/블러 완전 제거: 100% 선명도 및 즉시 전환 보장 */
+        div[data-stale="true"],
+        .stale-element {
+            opacity: 1 !important;
+            filter: none !important;
+            transition: none !important;
+        }
+
+        /* 🚀 타이틀 + 기준시각 & 우측 Deploy/점세개 최적화 */
+        header[data-testid="stHeader"] {
+            background: transparent !important;
+            height: 0px !important;
+            z-index: 100 !important;
+        }
+
+        /* 🚀 좌측 사이드바 열기 버튼 (stExpandSidebarButton: >>) */
+        [data-testid="stExpandSidebarButton"] {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            position: fixed !important;
+            top: 1.15rem !important;
+            left: 1.2rem !important;
+            z-index: 999999 !important;
+            background-color: #001e2d !important;
+            color: #00b4d8 !important;
+            border: 1.5px solid #00b4d8 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+            width: 36px !important;
+            height: 36px !important;
+            overflow: hidden !important;
+        }
+        [data-testid="stExpandSidebarButton"] span {
+            font-size: 0 !important;
+            display: none !important;
+        }
+        [data-testid="stExpandSidebarButton"]::after {
+            content: "≫";
+            font-size: 16px;
+            font-weight: 900;
+            color: #00b4d8;
+            line-height: 1;
+        }
+        [data-testid="stExpandSidebarButton"] svg {
+            display: none !important;
+        }
+
+        /* 🚀 좌측 사이드바 닫기 버튼 (stSidebarCollapseButton: <<) */
+        [data-testid="stSidebarCollapseButton"] {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        [data-testid="stSidebarCollapseButton"] button {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            color: #00b4d8 !important;
+            background: rgba(0, 180, 216, 0.12) !important;
+            border: 1.5px solid #00b4d8 !important;
+            border-radius: 6px !important;
+        }
+        [data-testid="stSidebarCollapseButton"] svg,
+        [data-testid="stSidebarCollapseButton"] span {
+            fill: #00b4d8 !important;
+            color: #00b4d8 !important;
+        }
+
+        /* 🚀 우측 불필요한 Streamlit 툴바만 정밀 숨김 */
+        [data-testid="stAppDeployButton"],
+        [data-testid="stMainMenuButton"],
+        [data-testid="stToolbarActions"],
+        [data-testid="stToolbarActionButton"],
+        .stDeployButton,
+        #MainMenu {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+        /* 🖥️ 모바일 전용 뷰 완전 배제: 스마트폰에서도 PC 데스크톱 1350px 레이아웃 비율을 화면 폭(100vw)에 쏙 맞춤 */
+        .block-container {
+            padding-top: 1.15rem !important;
+            padding-bottom: 2rem !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+            max-width: 100% !important;
+        }
+
+        /* 📱 스마트폰 및 소형 화면 (< 1024px): 1350px PC 데스크톱 화면 전체를 화면 폭에 1:1 완벽 축소 피팅 */
+        @media screen and (max-width: 1023px) {
+            html, body, .stApp, [data-testid="stAppViewContainer"] {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                overflow-x: hidden !important;
+            }
+            .block-container {
+                width: 1350px !important;
+                max-width: 1350px !important;
+                min-width: 1350px !important;
+                zoom: calc(100vw / 1350) !important;
+                padding-left: 0.6rem !important;
+                padding-right: 0.6rem !important;
+                transform-origin: top left !important;
+            }
+            [data-testid="column"] {
+                min-width: 0 !important;
+            }
+        }
+
+        /* 📐 FHD(1920x1080) 기준 양방향 자동 비례 스케일링 엔진 (4K/QHD 확대 & 태블릿 최적화) */
+        /* 1) 4K UHD 초고해상도 (2800px 이상): 135% 확대 */
+        @media screen and (min-width: 2800px) {
+            .block-container {
+                zoom: 1.35;
+                padding-left: 2.5rem !important;
+                padding-right: 2.5rem !important;
+            }
+        }
+
+        /* 2) QHD 고해상도 (2100px ~ 2799px): 115% 확대 */
+        @media screen and (min-width: 2100px) and (max-width: 2799px) {
+            .block-container {
+                zoom: 1.15;
+                padding-left: 2.2rem !important;
+                padding-right: 2.2rem !important;
+            }
+        }
+
+        /* 3) FHD 표준 기준점 (1600px ~ 2099px) [사용자 표준 화면]: 100% 원본 1:1 보존 */
+        @media screen and (min-width: 1600px) and (max-width: 2099px) {
+            .block-container {
+                zoom: 1.0;
+                padding-left: 2rem !important;
+                padding-right: 2rem !important;
+            }
+        }
+
+        /* 4) 일반 노트북 / 소형 데스크톱 창 (1360px ~ 1599px): 90% 축소 */
+        @media screen and (min-width: 1360px) and (max-width: 1599px) {
+            .block-container {
+                zoom: 0.90;
+                padding-left: 1.2rem !important;
+                padding-right: 1.2rem !important;
+            }
+        }
+
+        /* 5) 갤럭시 탭 가로 / 콤팩트 화면 (1024px ~ 1359px): 82% 축소 및 5열 유지 */
+        @media screen and (min-width: 1024px) and (max-width: 1359px) {
+            .block-container {
+                zoom: 0.82;
+                padding-left: 0.8rem !important;
+                padding-right: 0.8rem !important;
+            }
+            [data-testid="column"] {
+                min-width: 0 !important;
+            }
+        }
+
+        /* 6) 갤럭시 탭 세로 (800px ~ 1023px): 72% 축소 및 5열 유지 */
+        @media screen and (min-width: 800px) and (max-width: 1023px) {
+            .block-container {
+                zoom: 0.72;
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            [data-testid="column"] {
+                min-width: 0 !important;
+            }
+        }
+
+        /* 🚀 상단 헤더 컴포넌트 iframe 깜빡임(화이트 플래시) 100% 원천 방지 */
+        iframe[title*="components.v1.html"],
+        div[data-testid="stCustomComponentV1"] iframe {
+            background-color: transparent !important;
+            border: none !important;
+            color-scheme: light !important;
+        }
+        }
+        div[data-testid="stCustomComponentV1"] {
+            background: transparent !important;
+        }
+
+        /* 🔘 시스템 표준 프리미엄 버튼 기본 스타일 (메일 발송 버튼 테마로 완전 일원화) */
+        div[data-testid="stButton"] > button,
+        .stButton > button,
+        button[kind="secondary"] {
+            background-color: #004060 !important;
+            background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            border-radius: 6px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            height: 38px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+            transition: all 0.2s ease !important;
+        }
+        div[data-testid="stButton"] > button p,
+        div[data-testid="stButton"] > button span,
+        .stButton > button p,
+        .stButton > button span,
+        button[kind="secondary"] p,
+        button[kind="secondary"] span {
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            font-size: 13.5px !important;
+            letter-spacing: -0.2px !important;
+        }
+        div[data-testid="stButton"] > button:hover,
+        .stButton > button:hover,
+        button[kind="secondary"]:hover {
+            background-color: #00608a !important;
+            background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
+            border-color: #38bdf8 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+        div[data-testid="stButton"] > button:hover p,
+        div[data-testid="stButton"] > button:hover span,
+        .stButton > button:hover p,
+        .stButton > button:hover span {
+            color: #FFFFFF !important;
+        }
+
+        /* 📊 [과중근무 배너 전용] 프로그레스 바 타입 버튼 스타일링 */
+        /* 1) 🚨 [52h 초과] 레드 프로그레스 바 */
+        div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.danger-chip-zone) button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"] {
+            background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%) !important;
+            background-color: #dc2626 !important;
+            border: 1px solid #b91c1c !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 8px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(220, 38, 38, 0.25) !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"]:hover {
+            background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%) !important;
+            border-color: #991b1b !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(220, 38, 38, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 2) ⚠️ [40h 초과] 주황색 프로그레스 바 */
+        div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="secondary"],
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div.stButton > button:not([kind="primary"]) {
+            background: linear-gradient(90deg, #ea580c 0%, #f97316 100%) !important;
+            background-color: #ea580c !important;
+            border: 1px solid #c2410c !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 8px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(234, 88, 12, 0.25) !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button:hover {
+            background: linear-gradient(90deg, #c2410c 0%, #ea580c 100%) !important;
+            border-color: #9a3412 !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(234, 88, 12, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 3) ✅ [보상 완료] 초록색 프로그레스 바 */
+        div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button {
+            background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%) !important;
+            background-color: #16a34a !important;
+            border: 1px solid #15803d !important;
+            border-radius: 6px !important;
+            height: 30px !important;
+            min-height: 30px !important;
+            padding: 0 8px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 3px rgba(22, 163, 74, 0.25) !important;
+            cursor: pointer !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover {
+            background: linear-gradient(90deg, #15803d 0%, #16a34a 100%) !important;
+            border-color: #166534 !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 3px 8px rgba(22, 163, 74, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* 4) 📝 프로그레스 바 내부 볼드 화이트 텍스트 + 입체 텍스트 그림자 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button *,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button p,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button span,
+        div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button *,
+        div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button *,
+        div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button * {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 11.5px !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+            letter-spacing: -0.3px !important;
+            white-space: nowrap !important;
+        }
+
+
+        /* ⚠️ Streamlit 알림창 (st.warning, st.info, st.success, st.error) 고대비 가독성 보장 (흰색 글씨 원천 방지) */
+        div[data-testid="stAlert"] {
+            border-radius: 8px !important;
+        }
+        div[data-testid="stAlert"] * {
+            color: #1e293b !important;
+            font-weight: 600 !important;
+        }
+        /* warning (노란색 배경) -> 짙은 다크 브라운 텍스트 */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] *,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] p,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] span,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] div,
+        div[data-testid="stAlert"] [data-testid="stAlertContentWarning"] strong,
+        div[data-testid="stNotificationContentWarning"],
+        div[data-testid="stNotificationContentWarning"] * {
+            color: #713f12 !important;
+            font-weight: 700 !important;
+        }
+        /* info (하늘색 배경) -> 짙은 네이비 텍스트 */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentInfo"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentInfo"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentInfo"] * {
+            color: #075985 !important;
+            font-weight: 700 !important;
+        }
+        /* success (초록색 배경) -> 짙은 그린 텍스트 (다이얼로그/모달 내부에서는 선명한 흰색 보장) */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"] * {
+            color: #14532d !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stDialog"] div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) *,
+        div[role="dialog"] div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) *,
+        div[data-baseweb="modal"] div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) *,
+        div[data-testid="stDialog"] div[data-testid="stAlertContentSuccess"] *,
+        .email-send-result-card,
+        .email-send-result-card * {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        /* error (빨간색 배경) -> 짙은 레드 텍스트 */
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentError"]),
+        div[data-testid="stAlert"] [data-testid="stAlertContentError"],
+        div[data-testid="stAlert"] [data-testid="stAlertContentError"] * {
+            color: #7f1d1d !important;
+            font-weight: 700 !important;
+        }
+
+        /* ⚠️ 노란색 경고창 배경 및 테두리 강제 적용 */
+        .overwork-warning-box,
+        div.overwork-warning-box {
+            background: #fef08a !important;
+            background-color: #fef08a !important;
+            border: 1.5px solid #facc15 !important;
+            border-left: 6px solid #ca8a04 !important;
+            border-radius: 8px !important;
+            padding: 13px 18px !important;
+            margin-bottom: 14px !important;
+            display: block !important;
+        }
+
+        /* 🚨 빨간색 경고창 배경 및 테두리 강제 적용 */
+        .overwork-danger-box,
+        div.overwork-danger-box {
+            background: #fee2e2 !important;
+            background-color: #fee2e2 !important;
+            border: 1.5px solid #f87171 !important;
+            border-left: 6px solid #ef4444 !important;
+            border-radius: 8px !important;
+            padding: 13px 18px !important;
+            margin-bottom: 14px !important;
+            display: block !important;
+        }
+
+        /* ⚠️ 노란색/연노란색/경고 배경 내 텍스트 시인성 완벽 보장 (모달 및 인라인 div 포함 흰색 글씨 원천 차단) */
+        .overwork-warning-box,
+        .overwork-warning-box *,
+        div.overwork-warning-box *,
+        div[style*="fefce8"],
+        div[style*="fefce8"] *,
+        div[style*="fffbeb"],
+        div[style*="fffbeb"] *,
+        div[style*="fef08a"],
+        div[style*="fef08a"] *,
+        div[style*="fef3c7"],
+        div[style*="fef3c7"] *,
+        div[style*="fde047"],
+        div[style*="fde047"] *,
+        div[style*="fff9db"],
+        div[style*="fff9db"] * {
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+            font-weight: 800 !important;
+            text-shadow: none !important;
+        }
+
+        /* 🚨 연빨간색 배경 내 텍스트 고대비 보장 */
+        .overwork-danger-box,
+        .overwork-danger-box *,
+        div.overwork-danger-box *,
+        div[style*="fef2f2"],
+        div[style*="fef2f2"] *,
+        div[style*="fecaca"],
+        div[style*="fecaca"] * {
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+            font-weight: 800 !important;
+            text-shadow: none !important;
+        }
+
+
+        /* 🏛️ Cisco ACI 스타일 필터 배지 및 고시인성 실시간 집계 기준 정보 패널 */
+        .filter-badge {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+            padding: 9px 16px !important;
+            border-radius: 8px !important;
+            font-size: 13.5px !important;
+            font-weight: 600 !important;
+            display: inline-block !important;
+            margin-bottom: 18px !important;
+            border: 1px solid #bae6fd !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        .active-criteria-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-left: 5px solid #005073 !important;
+            border-radius: 10px !important;
+            padding: 10px 16px !important;
+            margin-top: 4px !important;
+            margin-bottom: 18px !important;
+            box-shadow: 0 2px 8px rgba(0, 45, 66, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        }
+        .criteria-left {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            flex: 1;
+        }
+        .criteria-header {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #002d42 0%, #004d71 100%) !important;
+            color: #ffffff !important;
+            padding: 5px 11px !important;
+            border-radius: 6px !important;
+            font-weight: 800 !important;
+            font-size: 12.5px !important;
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+            box-shadow: 0 1px 3px rgba(0, 45, 66, 0.2) !important;
+        }
+        .criteria-chips-wrapper {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .criteria-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 11px;
+            border-radius: 6px;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        .criteria-chip .chip-label {
+            color: #64748b;
+            font-size: 11.5px;
+            font-weight: 600;
+        }
+        .criteria-chip .chip-value {
+            font-weight: 800;
+            font-size: 13px;
+        }
+        .chip-period {
+            background: #eff6ff !important;
+            border: 1px solid #bfdbfe !important;
+        }
+        .chip-period .chip-value { color: #1d4ed8 !important; }
+    
+        .chip-team {
+            background: #f0fdf4 !important;
+            border: 1px solid #bbf7d0 !important;
+        }
+        .chip-team .chip-value { color: #15803d !important; }
+    
+        .chip-worker {
+            background: #faf5ff !important;
+            border: 1px solid #e9d5ff !important;
+        }
+        .chip-worker .chip-value { color: #7e22ce !important; }
+
+        .chip-extra {
+            background: #fffbeb !important;
+            border: 1px solid #fde68a !important;
+        }
+        .chip-extra .chip-value { color: #b45309 !important; }
+
+        .criteria-count-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f8fafc !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 6px !important;
+            padding: 5px 13px !important;
+            font-size: 12.5px !important;
+            color: #475569 !important;
+            font-weight: 700 !important;
+            white-space: nowrap;
+        }
+        .criteria-count-badge b {
+            color: #005073 !important;
+            font-size: 14.5px !important;
+            font-weight: 800 !important;
+        }
+
+        /* 🏛️ Cisco ACI 탭 바 완벽 카드형 배경 및 가독성 보장 */
+        div[data-testid="stTabs"] [role="tablist"],
+        div[data-testid="stTabs"] [data-baseweb="tab-list"],
+        .stTabs [role="tablist"],
+        .stTabs [data-baseweb="tab-list"] {
+            display: flex !important;
+            gap: 12px !important;
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            margin-bottom: 16px !important;
+        }
+        div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+        div[data-testid="stTabs"] [data-baseweb="tab-border"],
+        .stTabs [data-baseweb="tab-highlight"],
+        .stTabs [data-baseweb="tab-border"] {
+            display: none !important;
+            height: 0px !important;
+            background-color: transparent !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"],
+        div[data-testid="stTabs"] button[data-baseweb="tab"],
+        .stTabs button[role="tab"],
+        .stTabs button[data-baseweb="tab"] {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            white-space: nowrap !important;
+            padding: 8px 20px !important;
+            border-radius: 8px !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+        /* 비선택 탭: 밝은 그레이 배경 + 선명한 다크네이비 글자 + 테두리 */
+        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]),
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="false"],
+        div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]),
+        .stTabs button[role="tab"]:not([aria-selected="true"]) {
+            background-color: #f1f5f9 !important;
+            background: #f1f5f9 !important;
+            border: 1.5px solid #cbd5e1 !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]) *,
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="false"] *,
+        div[data-testid="stTabs"] button[data-baseweb="tab"]:not([aria-selected="true"]) *,
+        .stTabs button[role="tab"]:not([aria-selected="true"]) * {
+            color: #002d42 !important;
+            font-weight: 800 !important;
+            font-size: 14px !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"]:not([aria-selected="true"]):hover,
+        .stTabs button[role="tab"]:not([aria-selected="true"]):hover {
+            background-color: #e2e8f0 !important;
+            border-color: #94a3b8 !important;
+        }
+        /* 선택된 활성 탭: Cisco ACI 딥블루 배경 + 볼드 화이트 글자 */
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"],
+        div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"],
+        .stTabs button[role="tab"][aria-selected="true"] {
+            background-color: #005073 !important;
+            background: linear-gradient(135deg, #005073 0%, #003852 100%) !important;
+            border: 1.5px solid #002233 !important;
+            box-shadow: 0 3px 10px rgba(0, 80, 115, 0.35) !important;
+        }
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] *,
+        div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] *,
+        .stTabs button[role="tab"][aria-selected="true"] * {
+            color: #ffffff !important;
+            font-weight: 900 !important;
+            font-size: 14px !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* 🏛️ 전역 다운로드 버튼 스타일링 (메일 발송 버튼과 높이 38px 및 디자인 100% 완벽 일원화) */
+        div[data-testid="stDownloadButton"] > button,
+        div[data-testid="stDownloadButton"] > a,
+        [data-testid="stDownloadButton"] button,
+        .stDownloadButton button,
+        .stDownloadButton a {
+            background-color: #004060 !important;
+            background: linear-gradient(135deg, #002d42 0%, #005073 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            border-radius: 6px !important;
+            font-size: 13.5px !important;
+            font-weight: 700 !important;
+            height: 38px !important;
+            min-height: 38px !important;
+            max-height: 38px !important;
+            line-height: 38px !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+            transition: all 0.2s ease !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 14px !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
+            text-decoration: none !important;
+        }
+        div[data-testid="stDownloadButton"] button *,
+        div[data-testid="stDownloadButton"] a *,
+        [data-testid="stDownloadButton"] button *,
+        .stDownloadButton button *,
+        .stDownloadButton a * {
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+            font-size: 13.5px !important;
+            letter-spacing: -0.2px !important;
+            line-height: 1 !important;
+        }
+        div[data-testid="stDownloadButton"] button:hover,
+        div[data-testid="stDownloadButton"] a:hover,
+        [data-testid="stDownloadButton"] button:hover,
+        .stDownloadButton button:hover,
+        .stDownloadButton a:hover {
+            background-color: #00608a !important;
+            background: linear-gradient(135deg, #004060 0%, #0284c7 100%) !important;
+            border-color: #38bdf8 !important;
+            color: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.45) !important;
+            transform: translateY(-1px) !important;
+        }
+        div[data-testid="stDownloadButton"] button:hover *,
+        div[data-testid="stDownloadButton"] a:hover *,
+        [data-testid="stDownloadButton"] button:hover *,
+        .stDownloadButton button:hover *,
+        .stDownloadButton a:hover * {
+            color: #FFFFFF !important;
+        }
+
+        /* 🏛️ Cisco ACI 엔터프라이즈 화이트 KPI 카드 스타일 (완벽 중앙 정렬 & 입체감) */
+        .kpi-card {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px !important;
+            padding: 16px 14px !important;
+            margin-bottom: 0px !important;
+            box-shadow: 0 4px 16px rgba(0, 45, 66, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+            cursor: pointer !important;
+            user-select: none;
+            text-align: center !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .kpi-card:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 10px 25px rgba(0, 45, 66, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+        }
+        /* 🎨 5대 KPI 카드별 소프트 파스텔 그라데이션 및 상단 5px 컬러 바 */
+        .kpi-card-hours {
+            background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 85%) !important;
+            border: 1px solid #bae6fd !important;
+            border-top: 5px solid #005073 !important;
+        }
+        .kpi-card-tasks {
+            background: linear-gradient(180deg, #eff6ff 0%, #ffffff 85%) !important;
+            border: 1px solid #bfdbfe !important;
+            border-top: 5px solid #0284c7 !important;
+        }
+        .kpi-card-workers {
+            background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 85%) !important;
+            border: 1px solid #ddd6fe !important;
+            border-top: 5px solid #4f46e5 !important;
+        }
+        .kpi-card-urgent {
+            background: linear-gradient(180deg, #fffbeb 0%, #ffffff 85%) !important;
+            border: 1px solid #fde68a !important;
+            border-top: 5px solid #ea580c !important;
+        }
+        .kpi-card-overdue-danger {
+            background: linear-gradient(180deg, #fef2f2 0%, #ffffff 85%) !important;
+            border: 1px solid #fca5a5 !important;
+            border-top: 5px solid #dc2626 !important;
+        }
+        .kpi-card-overdue-safe {
+            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 85%) !important;
+            border: 1px solid #bbf7d0 !important;
+            border-top: 5px solid #16a34a !important;
+        }
+        /* 🌟 5대 KPI 카드 투명 오버레이 버튼: 카드를 완벽하게 덮어서 원클릭 모달 오픈 유지 */
+        div[data-testid="column"]:hover .kpi-card,
+        div[data-testid="stColumn"]:hover .kpi-card {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 10px 25px rgba(0, 45, 66, 0.15), 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+        }
+        div.element-container:has(.kpi-card) + div.element-container {
+            margin-top: -138px !important;
+            height: 138px !important;
+            position: relative !important;
+            z-index: 20 !important;
+        }
+        div.element-container:has(.kpi-card) + div.element-container .stButton,
+        div.element-container:has(.kpi-card) + div.element-container button,
+        button[aria-label=" "] {
+            height: 138px !important;
+            min-height: 138px !important;
+            width: 100% !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: transparent !important;
+            opacity: 0 !important;
+            cursor: pointer !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .kpi-title {
+            font-size: 16.5px !important;
+            font-weight: 800 !important;
+            color: #002d42 !important;
+            text-transform: uppercase !important;
+            padding-bottom: 8px !important;
+            margin-bottom: 10px !important;
+            border-bottom: 1.5px solid #e2e8f0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            gap: 6px !important;
+            letter-spacing: -0.3px !important;
+            text-align: center !important;
+        }
+        .kpi-value {
+            font-size: 35px !important;
+            font-weight: 900 !important;
+            line-height: 1.1 !important;
+            margin-bottom: 10px !important;
+            font-family: 'Segoe UI', Pretendard, sans-serif !important;
+            color: #0f172a !important;
+            display: flex !important;
+            align-items: baseline !important;
+            justify-content: center !important;
+            width: 100% !important;
+            text-align: center !important;
+        }
+        .kpi-unit {
+            font-size: 15px !important;
+            font-weight: 700 !important;
+            color: #64748b !important;
+            margin-left: 4px !important;
+        }
+        .kpi-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 4px !important;
+            padding: 4px 10px !important;
+            border-radius: 6px !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.2px !important;
+            margin: 0 auto !important;
+        }
+        .badge-cyan { background-color: #e0f2fe !important; color: #0369a1 !important; border: 1px solid #bae6fd !important; }
+        .badge-green { background-color: #d1e7dd !important; color: #0f5132 !important; border: 1px solid #a3cfbb !important; }
+        .badge-purple { background-color: #ede9fe !important; color: #5b21b6 !important; border: 1px solid #c4b5fd !important; }
+        .badge-amber { background-color: #fef3c7 !important; color: #d97706 !important; border: 1px solid #fde68a !important; }
+        .badge-red { background-color: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; }
+        /* 🏛️ Cisco APIC 트리 메뉴 사이드바 스타일링 (배경·테두리는 바깥 1곳에만 → 우측 이중 세로선 방지) */
+        [data-testid="stSidebar"] {
+            background-color: #002d42 !important;
+            border-right: 1px solid #003852 !important;
+        }
+        [data-testid="stSidebar"] > div,
+        [data-testid="stSidebarContent"],
+        [data-testid="stSidebarUserContent"] {
+            background-color: #002d42 !important;
+            border-right: none !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+            background-color: transparent !important;
+            border-right: none !important;
+        }
+        [data-testid="stSidebar"] * {
+            color: #bdcddc !important;
+        }
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 {
+            color: #00b4d8 !important;
+        }
+        [data-testid="stSidebar"] .block-container,
+        [data-testid="stSidebarUserContent"] {
+            padding-top: 0rem !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }
+        [data-testid="stSidebarHeader"] {
+            padding-top: 0rem !important;
+            padding-bottom: 0rem !important;
+            height: auto !important;
+            min-height: 0px !important;
+        }
+        /* 사이드바 내부 엘리먼트 초밀착 (APIC 트리 간격) */
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"],
+        [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] > div {
+            gap: 1px !important;
+        }
+        [data-testid="stSidebar"] div.element-container {
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+        }
+        /* 🌲 APIC 트리 노드 (Expander = 폴더/카테고리 헤더) */
+        [data-testid="stSidebar"] [data-testid="stExpander"],
+        [data-testid="stSidebar"] details,
+        [data-testid="stSidebar"] details[data-testid="stExpander"] {
+            margin-top: 0px !important;
+            margin-bottom: 0px !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+        [data-testid="stSidebar"] details,
+        [data-testid="stSidebar"] div[data-testid="stExpanderDetails"] {
+            border: none !important;
+            border-radius: 0px !important;
+            background-color: transparent !important;
+            background: transparent !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+            box-shadow: none !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] summary,
+        [data-testid="stSidebar"] details[data-testid="stExpander"] summary,
+        [data-testid="stSidebar"] details summary,
+        [data-testid="stSidebar"] [data-testid="stExpanderSummary"],
+        [data-testid="stSidebar"] .streamlit-expanderHeader {
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            color: #ffffff !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            border: none !important;
+            border-radius: 0px !important;
+            border-bottom: 1px solid #1a5a73 !important;
+            padding: 8px 8px 6px 8px !important;
+            min-height: 28px !important;
+            box-shadow: none !important;
+            display: flex !important;
+            align-items: center !important;
+            letter-spacing: 0.3px !important;
+            text-transform: uppercase !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] summary *,
+        [data-testid="stSidebar"] details[data-testid="stExpander"] summary *,
+        [data-testid="stSidebar"] [data-testid="stExpanderSummary"] *,
+        [data-testid="stSidebar"] .streamlit-expanderHeader * {
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            color: #ffffff !important;
+            background: transparent !important;
+            background-color: transparent !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover,
+        [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover *,
+        [data-testid="stSidebar"] details[data-testid="stExpander"] summary:hover,
+        [data-testid="stSidebar"] details[data-testid="stExpander"] summary:hover * {
+            color: #00b4d8 !important;
+            background: rgba(0, 180, 216, 0.06) !important;
+            background-color: rgba(0, 180, 216, 0.06) !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] summary svg,
+        [data-testid="stSidebar"] details[data-testid="stExpander"] summary svg {
+            fill: #4a7b94 !important;
+            color: #4a7b94 !important;
+            width: 14px !important;
+            height: 14px !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] summary:hover svg,
+        [data-testid="stSidebar"] details[data-testid="stExpander"] summary:hover svg {
+            fill: #00b4d8 !important;
+            color: #00b4d8 !important;
+        }
+        /* 사이드바 내부 라벨 & 인풋 */
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] .stMarkdown p {
+            color: #e2e8f0 !important;
+            font-weight: 600 !important;
+        }
+        /* 사이드바 셀렉트박스 완벽 복원 (글씨 선명한 흰색 & 배경 유지) */
+        [data-testid="stSidebar"] [data-baseweb="select"] {
+            background-color: #002d42 !important;
+            color: #ffffff !important;
+        }
+        [data-testid="stSidebar"] [data-baseweb="select"] * {
+            color: #ffffff !important;
+        }
+        [data-testid="stSidebar"] [data-baseweb="select"] > div {
+            background-color: #002d42 !important;
+            border: 1px solid #003852 !important;
+            border-radius: 4px !important;
+            color: #ffffff !important;
+        }
+        [data-testid="stSidebar"] [data-baseweb="select"] svg {
+            fill: #00b4d8 !important;
+            color: #00b4d8 !important;
+        }
+        /* 사이드바 라디오 & 체크박스 */
+        [data-testid="stSidebar"] [data-baseweb="radio"] div {
+            color: #bdcddc !important;
+        }
+        [data-testid="stSidebar"] [data-baseweb="checkbox"] span {
+            color: #bdcddc !important;
+        }
+        /* 🌲 APIC 트리 아이템: 하위 메뉴 버튼에만 정밀하게 좌측 정렬 적용 (다른 위젯 간섭 0%) */
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button,
+        [data-testid="stSidebar"] details .stButton > button {
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            text-align: left !important;
+            border-radius: 0px !important;
+            font-size: 12.5px !important;
+            font-weight: 500 !important;
+            background-color: transparent !important;
+            border: none !important;
+            border-left: 3px solid transparent !important;
+            color: #bdcddc !important;
+            transition: all 0.12s ease !important;
+            padding: 6px 8px 6px 12px !important;
+            min-height: 30px !important;
+            width: 100% !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button div,
+        [data-testid="stSidebar"] details .stButton > button div {
+            justify-content: flex-start !important;
+            text-align: left !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button [data-testid="stMarkdownContainer"],
+        [data-testid="stSidebar"] details .stButton > button [data-testid="stMarkdownContainer"] {
+            width: 100% !important;
+            text-align: left !important;
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button [data-testid="stMarkdownContainer"] p,
+        [data-testid="stSidebar"] details .stButton > button [data-testid="stMarkdownContainer"] p {
+            text-align: left !important;
+            width: 100% !important;
+            margin: 0 !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button:hover,
+        [data-testid="stSidebar"] details .stButton > button:hover {
+            background-color: rgba(0, 180, 216, 0.10) !important;
+            color: #ffffff !important;
+            border-left: 3px solid #00b4d8 !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpander"] .stButton > button[kind="primary"],
+        [data-testid="stSidebar"] details .stButton > button[kind="primary"] {
+            background-color: rgba(0, 180, 216, 0.15) !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            border-left: 3px solid #00b4d8 !important;
+            border-radius: 0px !important;
+            box-shadow: none !important;
+        }
+        /* ◆ 사이드바 브랜드 헤더 (로고 마크 + 브랜드명) */
+        [data-testid="stSidebar"] .sb-brand-wrapper {
+            padding: 0px 4px 20px 4px !important;
+            margin-bottom: 6px !important;
+            display: block !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sb-brand-wrapper),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sb-brand-wrapper),
+        [data-testid="stSidebar"] .element-container:has(.sb-brand),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sb-brand) {
+            margin-top: 0px !important;
+            margin-bottom: 18px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+        }
+        [data-testid="stSidebar"] .sb-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0px !important;
+            margin: 0 !important;
+        }
+        [data-testid="stSidebar"] .sb-brand-mark {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #00b4d8 0%, #0284c7 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 900;
+            color: #002d42 !important;
+            box-shadow: 0 0 12px rgba(0, 180, 216, 0.35);
+        }
+        [data-testid="stSidebar"] .sb-brand-title {
+            font-size: 14.5px;
+            font-weight: 800;
+            color: #ffffff !important;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+        }
+        [data-testid="stSidebar"] .sb-brand-sub {
+            font-size: 9px;
+            font-weight: 700;
+            color: #5a8a9e !important;
+            letter-spacing: 1.1px;
+            margin-top: 2px;
+            line-height: 1.1;
+        }
+
+        /* 🏠 홈 버튼: 하위 메뉴 활성 표시와 동일한 시안 좌측 바 방식으로 통일 (빨간 선 제거) */
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) {
+            display: none !important;
+            height: 0px !important;
+            margin: 0px !important;
+            padding: 0px !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] {
+            margin-top: 6px !important;
+            margin-bottom: 14px !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button {
+            background: rgba(0, 180, 216, 0.06) !important;
+            background-color: rgba(0, 180, 216, 0.06) !important;
+            color: #e2e8f0 !important;
+            font-weight: 700 !important;
+            border: 1px solid rgba(0, 180, 216, 0.22) !important;
+            border-left: 3px solid rgba(0, 180, 216, 0.35) !important;
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            height: 40px !important;
+            box-shadow: none !important;
+            justify-content: center !important;
+            text-align: center !important;
+            transform: none !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button[kind="primary"],
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button[kind="primary"] {
+            background: linear-gradient(90deg, rgba(0, 180, 216, 0.22) 0%, rgba(0, 180, 216, 0.08) 100%) !important;
+            background-color: rgba(0, 180, 216, 0.18) !important;
+            border: 1px solid rgba(0, 180, 216, 0.45) !important;
+            border-left: 3px solid #00b4d8 !important;
+            box-shadow: 0 0 12px rgba(0, 180, 216, 0.15) !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button *,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button * {
+            color: #ffffff !important;
+            justify-content: center !important;
+            text-align: center !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button:hover,
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button:hover {
+            background-color: rgba(0, 180, 216, 0.16) !important;
+            border-left: 3px solid #00b4d8 !important;
+            transform: none !important;
+        }
+
+        /* 🗂️ 조회 기준 필터 카드 (반투명 네이비 카드 1장으로 묶음) */
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"]:has(.sb-filter-card-marker) {
+            background: rgba(0, 58, 85, 0.45) !important;
+            border: 1px solid rgba(0, 180, 216, 0.18) !important;
+            border-radius: 10px !important;
+            padding: 10px 10px 6px 10px !important;
+            margin: 8px 2px 10px 2px !important;
+        }
+        /* 필터 라벨: 짧고 작은 회색 라벨 */
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p,
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] label {
+            font-size: 11.5px !important;
+            font-weight: 700 !important;
+            color: #7fa6b8 !important;
+            letter-spacing: 0.2px !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stSelectbox"],
+        [data-testid="stSidebar"] [data-testid="stMultiSelect"] {
+            margin-bottom: 6px !important;
+        }
+        /* 셀렉트박스: 검은색 → 네이비 + 얇은 시안 테두리, 포커스 시 시안 글로우 */
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child {
+            background-color: #003a55 !important;
+            border: 1px solid rgba(0, 180, 216, 0.30) !important;
+            border-radius: 7px !important;
+            min-height: 36px !important;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child * {
+            background-color: transparent !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child:hover {
+            border-color: rgba(0, 180, 216, 0.60) !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div:first-child:focus-within {
+            border-color: #00b4d8 !important;
+            box-shadow: 0 0 0 2px rgba(0, 180, 216, 0.22) !important;
+        }
+        [data-testid="stSidebar"] div[data-baseweb="select"] span[data-baseweb="tag"] {
+            background-color: rgba(0, 180, 216, 0.22) !important;
+        }
+        /* 카드 안쪽 '상세 필터' 접이식: 밑줄 제거, 시안 텍스트 */
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] details summary,
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] [data-testid="stExpander"] summary {
+            border-bottom: none !important;
+            padding: 6px 2px 4px 2px !important;
+            text-transform: none !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] details summary *,
+        [data-testid="stSidebar"] [data-testid="stExpanderDetails"] [data-testid="stExpander"] summary * {
+            color: #38bdf8 !important;
+            font-size: 12.5px !important;
+            font-weight: 700 !important;
+        }
+
+        /* 👤 하단 사용자 카드 (사이드바 맨 아래로 밀착) */
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:has(> .element-container .sb-user-card),
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .sb-user-card) {
+            min-height: calc(100vh - 5.5rem) !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sb-user-card) {
+            margin-top: auto !important;
+            padding-top: 18px !important;
+        }
+        [data-testid="stSidebar"] .sb-user-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 11px;
+            margin-bottom: 6px;
+            background: rgba(0, 58, 85, 0.55);
+            border: 1px solid rgba(0, 180, 216, 0.18);
+            border-radius: 10px;
+        }
+        [data-testid="stSidebar"] .sb-user-avatar {
+            width: 32px;
+            height: 32px;
+            min-width: 32px;
+            border-radius: 50%;
+            background: rgba(0, 180, 216, 0.18);
+            border: 1px solid rgba(0, 180, 216, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            color: #00b4d8 !important;
+        }
+        [data-testid="stSidebar"] .sb-user-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: #ffffff !important;
+            line-height: 1.25;
+        }
+        [data-testid="stSidebar"] .sb-user-role {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #7fa6b8 !important;
+            margin-top: 1px;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sb-user-card) + .element-container button {
+            border-radius: 8px !important;
+            height: 38px !important;
+        }
+
+
+        /* 🏛️ Cisco ACI 표준 테이블 스타일링 */
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            background: #ffffff !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+            margin-bottom: 25px !important;
+        }
+        th {
+            background-color: #005073 !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            padding: 12px 16px !important;
+            text-align: left !important;
+            font-size: 13.5px !important;
+        }
+        td {
+            padding: 12px 16px !important;
+            border-bottom: 1px solid #e1e4e8 !important;
+            color: #334155 !important;
+            font-size: 13.5px !important;
+        }
+
+        /* 🏛️ 과중 근무 알림 배너 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) {
+            background: #fff5f5 !important;
+            border: 1.5px solid #fecaca !important;
+            border-left: 8px solid #dc2626 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+            padding: 14px 20px !important;
+            margin-top: 10px !important;
+            margin-bottom: 6px !important;
+        }
+        /* 🚨 과중 근무 알림 배너 내부 버튼 및 사람 이름 칩 글자 선명한 흰색 볼드 표출 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button {
+            background-color: #1e293b !important;
+            border: 1px solid #475569 !important;
+            border-radius: 6px !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            padding: 4px 12px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button *,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button * {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button:hover,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button:hover {
+            background-color: #334155 !important;
+            border-color: #94a3b8 !important;
+            color: #ffffff !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) .stButton > button:hover *,
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.alert-blink-badge) button:hover * {
+            color: #ffffff !important;
+        }
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.normal-status-badge) {
+            background: #f0fdf4 !important;
+            border: 1.5px solid #bbf7d0 !important;
+            border-left: 8px solid #16a34a !important;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+            padding: 12px 20px !important;
+            margin-top: 8px !important;
+            margin-bottom: 6px !important;
+            text-align: center !important;
+        }
+        .normal-status-badge {
+            background: #d1e7dd !important;
+            color: #0f5132 !important;
+            border: 1px solid #a3cfbb !important;
+            padding: 3px 12px !important;
+            border-radius: 4px !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+        .alert-blink-badge {
+            background: #fee2e2 !important;
+            color: #dc2626 !important;
+            border: 1px solid #fca5a5 !important;
+            padding: 3px 12px !important;
+            border-radius: 4px !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+        }
+
+        /* 🏛️ LIVE 관제 중 하위 통합 대형 네모 컨테이너 */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.live-board-main-container) {
+            background: #ffffff !important;
+            border: 1.5px solid #cbd5e1 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 18px rgba(0, 45, 66, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+            padding: 22px 24px 24px 24px !important;
+            margin-top: 4px !important;
+            margin-bottom: 24px !important;
+        }
+
+        /* 🚫 툴팁 오버레이 완전 차단 */
+        div[data-baseweb="tooltip"],
+        div[role="tooltip"],
+        .stTooltipContent,
+        [data-testid="stTooltipContent"],
+        [data-testid="stTooltipHoverTarget"] div[data-baseweb="tooltip"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* ⚡ 팝업 모달 다이얼로그(@st.dialog) 및 배경(Backdrop) 페이드/트랜지션 애니메이션 완전 제거 (즉시 표출) */
+        div[data-baseweb="backdrop"],
+        div[data-testid="stDialog"],
+        div[data-testid="stDialog"] > div,
+        div[role="dialog"],
+        div[role="dialog"] > div,
+        div[data-baseweb="modal"],
+        div[data-baseweb="modal"] > div {
+            transition: none !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+            animation: none !important;
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            transform: none !important;
+        }
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        section.main {
+            transition: none !important;
+        }
+
+        /* 🏛️ 팝업 모달 다이얼로그 (@st.dialog) 제목 및 닫기 버튼 흰색 스타일링 */
+        div[data-testid="stDialog"] h1,
+        div[data-testid="stDialog"] h2,
+        div[data-testid="stDialog"] h3,
+        div[data-testid="stDialog"] [data-testid="stHeadingWithActionElements"] h2,
+        div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] h2,
+        div[data-testid="stDialog"] header,
+        div[data-testid="stDialog"] header *,
+        div[role="dialog"] h1,
+        div[role="dialog"] h2,
+        div[role="dialog"] h3,
+        div[role="dialog"] [data-testid="stHeadingWithActionElements"] h2,
+        div[role="dialog"] [data-testid="stMarkdownContainer"] h2,
+        div[role="dialog"] header,
+        div[role="dialog"] header *,
+        div[data-baseweb="modal"] h1,
+        div[data-baseweb="modal"] h2,
+        div[data-baseweb="modal"] h3,
+        div[data-baseweb="modal"] header,
+        div[data-baseweb="modal"] header * {
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            fill: #ffffff !important;
+        }
+        div[data-testid="stDialog"] h1 *,
+        div[data-testid="stDialog"] h2 *,
+        div[data-testid="stDialog"] h3 *,
+        div[role="dialog"] h1 *,
+        div[role="dialog"] h2 *,
+        div[role="dialog"] h3 * {
+            color: #ffffff !important;
+            fill: #ffffff !important;
+        }
+        div[data-testid="stDialog"] button[aria-label="Close"],
+        div[data-testid="stDialog"] button[data-testid="stBaseButton-header"],
+        div[role="dialog"] button[aria-label="Close"],
+        div[role="dialog"] button[data-testid="stBaseButton-header"],
+        div[data-baseweb="modal"] button[aria-label="Close"] {
+            color: #ffffff !important;
+        }
+        div[data-testid="stDialog"] button[aria-label="Close"] svg,
+        div[role="dialog"] button[aria-label="Close"] svg {
+            fill: #ffffff !important;
+            stroke: #ffffff !important;
+        }
+
+        /* 🏛️ 드롭다운 팝오버 및 셀렉트박스 옵션 가독성 */
+        div[data-baseweb="popover"] {
+            background-color: #ffffff !important;
+            border: 1px solid #e1e4e8 !important;
+            border-radius: 6px !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+        }
+        div[data-baseweb="popover"] *,
+        ul[role="listbox"] * {
+            color: #0f172a !important;
+        }
+
+        /* ========================================================= */
+        /* 🏛️ [고시인성] 메인 영역 Expander (아코디언) 프리미엄 화이트 카드 테마 */
+        /* ========================================================= */
+        [data-testid="stMain"] [data-testid="stExpander"],
+        .stMain [data-testid="stExpander"],
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] div[data-testid="stExpander"]) {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            border-left: 1px solid #cbd5e1 !important;
+            border-radius: 9px !important;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+            margin-bottom: 14px !important;
+            overflow: hidden !important;
+        }
+
+        [data-testid="stMain"] [data-testid="stExpander"] details,
+        .stMain [data-testid="stExpander"] details,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) details {
+            background-color: #ffffff !important;
+            border-radius: 9px !important;
+        }
+
+        /* Expander 헤더 (Summary) - 화사하고 밝은 아이스 소프트 그레이-블루 배경 */
+        [data-testid="stMain"] [data-testid="stExpander"] summary,
+        [data-testid="stMain"] details[data-testid="stExpander"] summary,
+        .stMain [data-testid="stExpander"] summary,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary {
+            background: linear-gradient(90deg, #f0f9ff 0%, #f8fafc 100%) !important;
+            background-color: #f0f9ff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 10px 16px !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+
+        [data-testid="stMain"] [data-testid="stExpander"] summary:hover,
+        .stMain [data-testid="stExpander"] summary:hover,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary:hover {
+            background: linear-gradient(90deg, #e0f2fe 0%, #f1f5f9 100%) !important;
+            background-color: #e0f2fe !important;
+        }
+
+        /* 헤더 텍스트: 선명한 딥 네이비 볼드 (다크모드 간섭 100% 방지) */
+        [data-testid="stMain"] [data-testid="stExpander"] summary span,
+        [data-testid="stMain"] [data-testid="stExpander"] summary p,
+        [data-testid="stMain"] [data-testid="stExpander"] summary div,
+        .stMain [data-testid="stExpander"] summary *,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary * {
+            color: #0c4a6e !important;
+            font-size: 14.5px !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.3px !important;
+        }
+
+        /* Expander 토글 화살표 (SVG) */
+        [data-testid="stMain"] [data-testid="stExpander"] summary svg,
+        .stMain [data-testid="stExpander"] summary svg,
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) summary svg {
+            fill: #0284c7 !important;
+            color: #0284c7 !important;
+            width: 18px !important;
+            height: 18px !important;
+        }
+
+        /* 본문 컨테이너 */
+        [data-testid="stMain"] [data-testid="stExpander"] [data-testid="stExpanderDetails"],
+        div[data-testid="stExpander"]:not([data-testid="stSidebar"] *) [data-testid="stExpanderDetails"] {
+            background-color: #ffffff !important;
+            padding: 14px 16px !important;
+        }
+
+        /* 🔘 [고시인성] st.pills (팀원 필터 알약 버튼) 스타일링 - 검은 덩어리 방지 */
+        [data-testid="stPills"] {
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }
+        [data-testid="stPills"] label,
+        [data-testid="stPills"] p {
+            color: #334155 !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            margin-right: 6px !important;
+        }
+        [data-testid="stPills"] button {
+            background-color: #f1f5f9 !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #1e293b !important;
+            font-weight: 700 !important;
+            font-size: 12px !important;
+            padding: 3px 10px !important;
+            border-radius: 20px !important;
+            transition: all 0.15s ease !important;
+        }
+        [data-testid="stPills"] button:hover {
+            background-color: #e2e8f0 !important;
+            border-color: #94a3b8 !important;
+            color: #0f172a !important;
+        }
+        [data-testid="stPills"] button[aria-selected="true"] {
+            background-color: #0284c7 !important;
+            border-color: #0369a1 !important;
+            color: #ffffff !important;
+            font-weight: 800 !important;
+            box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3) !important;
+        }
+        /* ========================================================================= */
+        /* ☀️ 흰색 바탕 고대비 절대 가독성 보장 규칙 (사용자 필수 원칙: 흰색 바탕엔 무조건 검은색 글자) */
+        /* ========================================================================= */
+        .main label,
+        .main label *,
+        .main div[data-testid="stWidgetLabel"],
+        .main div[data-testid="stWidgetLabel"] *,
+        .main [data-testid="stWidgetLabel"] p,
+        .main [data-testid="stWidgetLabel"] span,
+        [data-testid="stAppViewContainer"] > .main label,
+        [data-testid="stAppViewContainer"] > .main label *,
+        [data-testid="stAppViewContainer"] > .main div[data-testid="stWidgetLabel"] * {
+            color: #000000 !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        /* 메인 영역 셀렉트박스 및 텍스트 인풋: 흰색 바탕에 최적화된 밝은 배경 + 선명한 검은 글씨 + 뚜렷한 테두리 */
+        .main [data-baseweb="input"],
+        .main [data-baseweb="base-input"],
+        .main [data-baseweb="select"] > div,
+        .main div[data-baseweb="select"] {
+            background-color: #ffffff !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            border: 1.5px solid #94a3b8 !important;
+            border-radius: 6px !important;
+        }
+        .main [data-baseweb="input"] input,
+        .main [data-baseweb="base-input"] input,
+        .main [data-baseweb="select"] span,
+        .main [data-baseweb="select"] div,
+        .main div[data-baseweb="select"] * {
+            color: #000000 !important;
+            font-weight: 600 !important;
+        }
+        .main [data-baseweb="select"] svg {
+            fill: #000000 !important;
+            color: #000000 !important;
+        }
+
+        /* 탭(stTabs) 텍스트: 비선택 탭도 흐린 글자 원천 차단 -> 선명한 블랙(#000000) */
+        .stTabs [data-baseweb="tab"] p,
+        .stTabs [data-baseweb="tab"] span,
+        .stTabs [data-baseweb="tab"] div,
+        div[data-testid="stTabs"] button[role="tab"] * {
+            color: #000000 !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+        }
+        .stTabs [data-baseweb="tab"][aria-selected="true"] p,
+        .stTabs [data-baseweb="tab"][aria-selected="true"] span,
+        div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] * {
+            color: #0284c7 !important;
+            font-weight: 800 !important;
+        }
+
+        /* 토글 스위치 & 체크박스 */
+        .main [data-testid="stToggle"] label span,
+        .main [data-testid="stCheckbox"] label span,
+        .main [data-testid="stRadio"] label span {
+            color: #000000 !important;
+            font-weight: 700 !important;
+        }
