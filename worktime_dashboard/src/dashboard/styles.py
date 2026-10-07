@@ -16,15 +16,15 @@ def apply_custom_styles():
             --secondary-background-color: #ffffff !important;
             --text-color: #0f172a !important;
         }
-        /* 🚫 다크모드 원천 차단: 삼성 인터넷/크롬의 강제 다크모드 반전 방어 및 라이트 테마 100% 고정 */
-        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"], div[data-testid="stVerticalBlock"] {
+        /* 🚫 다크모드 원천 차단: 본문 메인 영역 라이트 테마 100% 고정 (사이드바 고유 네이비 테마 보존) */
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stMain"] {
             color-scheme: only light !important;
             forced-color-adjust: none !important;
             background-color: #f4f6f9 !important;
             color: #0f172a !important;
         }
         @media (prefers-color-scheme: dark) {
-            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"], div[data-testid="stVerticalBlock"] {
+            :root, html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stMain"] {
                 color-scheme: only light !important;
                 forced-color-adjust: none !important;
                 background-color: #f4f6f9 !important;
@@ -968,7 +968,11 @@ def apply_custom_styles():
         .badge-amber { background-color: #fef3c7 !important; color: #d97706 !important; border: 1px solid #fde68a !important; }
         .badge-red { background-color: #fee2e2 !important; color: #dc2626 !important; border: 1px solid #fca5a5 !important; }
         /* 🏛️ Cisco APIC 트리 메뉴 사이드바 스타일링 */
-        [data-testid="stSidebar"] {
+        [data-testid="stSidebar"],
+        [data-testid="stSidebar"] > div,
+        [data-testid="stSidebarUserContent"],
+        [data-testid="stSidebarContent"],
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
             background-color: #002d42 !important;
             border-right: 1px solid #003852 !important;
         }
