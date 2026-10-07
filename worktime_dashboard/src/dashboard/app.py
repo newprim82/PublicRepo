@@ -157,11 +157,19 @@ def load_data() -> pd.DataFrame:
             if split_mask.any():
                 splits = df[split_mask].copy()
                 splits["_st_dt"] = pd.to_datetime(splits["start_time"], errors="coerce")
-                dup_origin_indices = []
-                for idx, r in df[~split_mask].iterrows():
-                    st_t = pd.to_datetime(r.get("start_time"), errors="coerce")
-                    et_t = pd.to_datetime(r.get("end_time"), errors="coerce")
-                    if pd.notna(st_t) and pd.notna(et_t) and st_t.date() != et_t.date():
+                
+                # 🚀 고속 최적화: 시작일과 종료일이 다른 다일(multiday) 원본 후보군만 선별 (99% 단일일 루프 생략)
+                non_splits = df[~split_mask]
+                st_series = pd.to_datetime(non_splits["start_time"], errors="coerce")
+                et_series = pd.to_datetime(non_splits["end_time"], errors="coerce")
+                multi_day_candidate_mask = st_series.notna() & et_series.notna() & (st_series.dt.date != et_series.dt.date)
+                
+                candidates = non_splits[multi_day_candidate_mask]
+                if not candidates.empty:
+                    dup_origin_indices = []
+                    for idx, r in candidates.iterrows():
+                        st_t = st_series.loc[idx]
+                        et_t = et_series.loc[idx]
                         m_splits = splits[
                             (splits["worker_name"] == r["worker_name"]) &
                             (splits["client_name"] == r["client_name"]) &
@@ -170,55 +178,63 @@ def load_data() -> pd.DataFrame:
                         ]
                         if not m_splits.empty:
                             dup_origin_indices.append(idx)
-                if dup_origin_indices:
-                    df = df.drop(index=dup_origin_indices).reset_index(drop=True)
+                    if dup_origin_indices:
+                        df = df.drop(index=dup_origin_indices).reset_index(drop=True)
 
         # 🛡️ 다일 작업(days 표기) 09:00~18:00 표준 근무시간 강제 및 당일 18:00 경과 시 자동 완료 보장
         if "task_description" in df.columns:
-            now_dt = get_current_kst_time()
-            for idx, r in df.iterrows():
-                raw_s = str(r.get("raw_start_message") or "")
-                raw_e = str(r.get("raw_end_message") or "")
-                m_d = re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_s, re.IGNORECASE) or re.search(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', raw_e, re.IGNORECASE)
-                if m_d and float(m_d.group(1)) >= 1.0:
-                    tot_d = max(1, int(float(m_d.group(1))))
-                    raw_st_str = re.sub(r'([+-]\d{2}:?\d{2}|Z)$', '', str(r.get("start_time", "")).replace("T", " ")).strip()
-                    st_val = pd.to_datetime(raw_st_str, errors="coerce")
-                    if pd.notna(st_val):
-                        if hasattr(st_val, "to_pydatetime"):
-                            st_val = st_val.to_pydatetime()
-                        if getattr(st_val, "tzinfo", None) is not None:
-                            st_val = st_val.replace(tzinfo=None)
+            # 🚀 고속 최적화: days/일 키워드가 포함된 행만 사전 선별하여 정규식 실행 (불필요한 전체 순회 0%)
+            day_pattern = re.compile(r'(\d+(?:\.\d+)?)\s*(?:days?|d(?![a-zA-Z])|D|일)', re.IGNORECASE)
+            raw_s_col = df["raw_start_message"].fillna("").astype(str) if "raw_start_message" in df.columns else pd.Series("", index=df.index)
+            raw_e_col = df["raw_end_message"].fillna("").astype(str) if "raw_end_message" in df.columns else pd.Series("", index=df.index)
+            
+            has_day_kw = raw_s_col.str.contains(r'days?|일|\dd', case=False, regex=True) | raw_e_col.str.contains(r'days?|일|\dd', case=False, regex=True)
+            if has_day_kw.any():
+                day_candidates = df[has_day_kw]
+                now_dt = get_current_kst_time()
+                for idx, r in day_candidates.iterrows():
+                    raw_s = str(r.get("raw_start_message") or "")
+                    raw_e = str(r.get("raw_end_message") or "")
+                    m_d = day_pattern.search(raw_s) or day_pattern.search(raw_e)
+                    if m_d and float(m_d.group(1)) >= 1.0:
+                        tot_d = max(1, int(float(m_d.group(1))))
+                        raw_st_str = re.sub(r'([+-]\d{2}:?\d{2}|Z)$', '', str(r.get("start_time", "")).replace("T", " ")).strip()
+                        st_val = pd.to_datetime(raw_st_str, errors="coerce")
+                        if pd.notna(st_val):
+                            if hasattr(st_val, "to_pydatetime"):
+                                st_val = st_val.to_pydatetime()
+                            if getattr(st_val, "tzinfo", None) is not None:
+                                st_val = st_val.replace(tzinfo=None)
 
-                        # ☀️ 사용자 절대 규칙: 시작보고 시각 상관없이 무조건 09:00 ~ 18:00 고정
-                        forced_st = st_val.replace(hour=9, minute=0, second=0, microsecond=0)
-                        forced_ed = forced_st.replace(hour=18, minute=0, second=0, microsecond=0)
-                        df.at[idx, "start_time"] = forced_st
-                        df.at[idx, "estimated_minutes"] = 540
-                        df.at[idx, "estimated_hours"] = 9.0
-                        df.at[idx, "total_hours"] = 9.0
-                        if "display_hours" in df.columns:
-                            df.at[idx, "display_hours"] = 9.0
+                            # ☀️ 시작보고 시각 상관없이 무조건 09:00 ~ 18:00 고정
+                            forced_st = st_val.replace(hour=9, minute=0, second=0, microsecond=0)
+                            forced_ed = forced_st.replace(hour=18, minute=0, second=0, microsecond=0)
+                            df.at[idx, "start_time"] = forced_st
+                            df.at[idx, "estimated_minutes"] = 540
+                            df.at[idx, "estimated_hours"] = 9.0
+                            df.at[idx, "total_hours"] = 9.0
+                            if "display_hours" in df.columns:
+                                df.at[idx, "display_hours"] = 9.0
 
-                        cur_desc = str(r.get("task_description") or "").strip()
-                        if not re.search(r'\(\d+/\d+일차\)', cur_desc):
-                            df.at[idx, "task_description"] = f"{cur_desc} (1/{tot_d}일차)"
-                        
-                        def _to_naive(dt_obj):
-                            t = pd.to_datetime(dt_obj)
-                            if hasattr(t, "tz") and t.tz is not None:
-                                t = t.tz_localize(None)
-                            return t.to_pydatetime() if hasattr(t, "to_pydatetime") else t
+                            cur_desc = str(r.get("task_description") or "").strip()
+                            if not re.search(r'\(\d+/\d+일차\)', cur_desc):
+                                df.at[idx, "task_description"] = f"{cur_desc} (1/{tot_d}일차)"
+                            
+                            def _to_naive(dt_obj):
+                                t = pd.to_datetime(dt_obj)
+                                if hasattr(t, "tz") and t.tz is not None:
+                                    t = t.tz_localize(None)
+                                return t.to_pydatetime() if hasattr(t, "to_pydatetime") else t
 
-                        # 당일 18:00 경과 시 또는 과거 일자이면 무조건 COMPLETED
-                        if _to_naive(now_dt) >= _to_naive(forced_ed):
-                            df.at[idx, "status"] = "COMPLETED"
-                            df.at[idx, "end_time"] = forced_ed
-                            df.at[idx, "actual_minutes"] = 540
-                            df.at[idx, "actual_hours"] = 9.0
-                        elif _to_naive(now_dt) >= _to_naive(forced_st):
-                            df.at[idx, "status"] = "PENDING"
-                            df.at[idx, "end_time"] = None
+                            # 당일 18:00 경과 시 또는 과거 일자이면 무조건 COMPLETED
+                            if _to_naive(now_dt) >= _to_naive(forced_ed):
+                                df.at[idx, "status"] = "COMPLETED"
+                                df.at[idx, "end_time"] = forced_ed
+                                df.at[idx, "actual_minutes"] = 540
+                                df.at[idx, "actual_hours"] = 9.0
+                            elif _to_naive(now_dt) >= _to_naive(forced_st):
+                                df.at[idx, "status"] = "PENDING"
+                                df.at[idx, "end_time"] = None
 
         mappings = TeamService.get_team_mappings()
         if mappings:
