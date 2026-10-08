@@ -29,10 +29,20 @@ class TestTaskTagger(unittest.TestCase):
         self.assertEqual(domain, "무선 / AP")
         self.assertEqual(wtype, "신규구축 / 설치")
 
-    def test_classify_router_wan(self):
-        domain, wtype = classify_text("지점 BGP 라우터 WAN 전용선 대역폭 테스트 및 기술지원 회의")
+    def test_classify_router_tech_support(self):
+        domain, wtype = classify_text("지점 BGP 라우터 WAN 전용선 대역폭 테스트 및 기술지원")
         self.assertEqual(domain, "라우터 / WAN")
-        self.assertEqual(wtype, "기술지원 / 회의")
+        self.assertEqual(wtype, "기술지원")
+
+    def test_classify_meeting(self):
+        domain, wtype = classify_text("고객사 주간 업무 미팅 및 프로젝트 아키텍처 협의 회의")
+        self.assertEqual(domain, "일반 네트워크")
+        self.assertEqual(wtype, "회의 / 협의")
+
+    def test_classify_resident(self):
+        domain, wtype = classify_text("BGF 본사 전산실 상주 근무 및 상주 지원 업무")
+        self.assertEqual(domain, "일반 네트워크")
+        self.assertEqual(wtype, "상주 지원")
 
     def test_apply_task_tags_dataframe(self):
         sample_df = pd.DataFrame([
