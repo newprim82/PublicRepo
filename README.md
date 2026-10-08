@@ -6,7 +6,7 @@
 
 ## 📁 프로젝트 목록
 
-### 📊 [worktime_dashboard (v2.5.5)](./worktime_dashboard)
+### 📊 [worktime_dashboard (v2.5.6)](./worktime_dashboard)
 - **기술본부 업무량 & 현장 지원 시간 실시간 관제 대시보드 (Cisco ACI / Catalyst Center 테마)**
 - 카카오톡 실시간 업무 보고와 Microsoft Outlook / Teams 캘린더 일정을 10분마다 자동 수집/연동하여 과거-현재-미래 3단계 시간축 모니터링을 제공하는 웹 포털
 - **주요 기능**:

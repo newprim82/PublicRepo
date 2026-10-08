@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.5.5 (Pin Admin Login Button to Bottom of Sidebar)
-APP_VERSION = "v2.5.5"
+# WorkTime Dashboard v2.5.6 (Position Login Button 300px Below Last Menu)
+APP_VERSION = "v2.5.6"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -867,8 +867,8 @@ def main():
                     st.rerun()
 
 
-        # 6. 👤 사이드바 최하단 사용자 상태 카드 및 로그인/로그아웃 버튼 (바닥 자동 배치)
-        st.markdown('<div class="sidebar-footer-wrapper"></div>', unsafe_allow_html=True)
+        # 6. 👤 사이드바 최하단 사용자 상태 카드 및 로그인/로그아웃 버튼 (맨 아래 메뉴 기준 300px 아래 배치)
+        st.markdown('<div class="sidebar-footer-spacer" style="height: 300px; min-height: 300px;"></div>', unsafe_allow_html=True)
         if not is_auth:
             is_login_active = (st.session_state.get("current_page") == "🔐 시스템 로그인")
             st.button(
