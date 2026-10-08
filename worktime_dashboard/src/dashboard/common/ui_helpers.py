@@ -885,5 +885,29 @@ def render_empty_week_notice(week_label: str, team_name: str = "전체"):
     st.markdown(html, unsafe_allow_html=True)
 
 
+def extract_selected_row_idx(event) -> Optional[int]:
+    """
+    Streamlit st.dataframe의 selection 이벤트에서
+    행(rows) 체크박스 선택뿐만 아니라 셀(cells) 직접 클릭 시에도 해당 행 인덱스를 100% 안전하게 추출합니다.
+    """
+    if not event:
+        return None
+    sel = getattr(event, "selection", None) if hasattr(event, "selection") else (event.get("selection") if isinstance(event, dict) else None)
+    if not sel:
+        return None
 
+    # 1. cells 검사 (사용자가 셀의 글자/숫자를 직접 클릭한 경우)
+    cells = getattr(sel, "cells", None) if hasattr(sel, "cells") else (sel.get("cells") if isinstance(sel, dict) else None)
+    if cells and len(cells) > 0:
+        first_cell = cells[0]
+        if isinstance(first_cell, (tuple, list)) and len(first_cell) > 0:
+            return first_cell[0]
+        if isinstance(first_cell, dict) and "row" in first_cell:
+            return first_cell["row"]
 
+    # 2. rows 검사 (행 체크박스를 클릭한 경우)
+    rows = getattr(sel, "rows", None) if hasattr(sel, "rows") else (sel.get("rows") if isinstance(sel, dict) else None)
+    if rows and len(rows) > 0:
+        return rows[0]
+
+    return None

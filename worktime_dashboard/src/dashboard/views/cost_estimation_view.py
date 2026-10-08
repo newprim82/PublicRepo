@@ -17,7 +17,8 @@ from ..common.ui_helpers import (
     get_job_title_color,
     get_job_title_rank,
     get_available_weeks_for_df,
-    is_same_team
+    is_same_team,
+    extract_selected_row_idx
 )
 
 
@@ -572,21 +573,20 @@ def render_cost_estimation_view(
                         height=360,
                         hide_index=True,
                         on_select="rerun",
-                        selection_mode="single-row",
+                        selection_mode=["single-row", "single-cell"],
                         key="tbl_cost_worker_selection"
                     )
 
-                    if sel_cost_worker and sel_cost_worker.selection and sel_cost_worker.selection.rows:
-                        selected_w_idx = sel_cost_worker.selection.rows[0]
-                        if 0 <= selected_w_idx < len(w_df):
-                            target_worker = w_df.iloc[selected_w_idx]["worker_name"]
-                            w_cost_subset = c_df[c_df["worker_name"] == target_worker]
-                            last_guard_key = "_last_dialog_cost_worker_row"
-                            curr_id = f"{target_worker}_{selected_w_idx}"
-                            if st.session_state.get(last_guard_key) != curr_id:
-                                st.session_state[last_guard_key] = curr_id
-                                show_cost_detail_dialog(f"{target_worker} 담당자", w_cost_subset)
-                    else:
+                    selected_w_idx = extract_selected_row_idx(sel_cost_worker)
+                    if selected_w_idx is not None and 0 <= selected_w_idx < len(w_df):
+                        target_worker = w_df.iloc[selected_w_idx]["worker_name"]
+                        w_cost_subset = c_df[c_df["worker_name"] == target_worker]
+                        last_guard_key = "_last_dialog_cost_worker_row"
+                        curr_id = f"{target_worker}_{selected_w_idx}"
+                        if st.session_state.get(last_guard_key) != curr_id:
+                            st.session_state[last_guard_key] = curr_id
+                            show_cost_detail_dialog(f"{target_worker} 담당자", w_cost_subset)
+                    elif selected_w_idx is None:
                         st.session_state["_last_dialog_cost_worker_row"] = None
 
                 _render_cost_worker_table(display_worker_df, worker_df, df_calc)
@@ -684,21 +684,20 @@ def render_cost_estimation_view(
                         height=240,
                         hide_index=True,
                         on_select="rerun",
-                        selection_mode="single-row",
+                        selection_mode=["single-row", "single-cell"],
                         key="tbl_cost_title_selection"
                     )
 
-                    if sel_cost_title and sel_cost_title.selection and sel_cost_title.selection.rows:
-                        selected_t_idx = sel_cost_title.selection.rows[0]
-                        if 0 <= selected_t_idx < len(t_df):
-                            target_title = t_df.iloc[selected_t_idx]["worker_title"]
-                            t_cost_subset = c_df[c_df["worker_title"] == target_title]
-                            last_guard_key = "_last_dialog_cost_title_row"
-                            curr_id = f"{target_title}_{selected_t_idx}"
-                            if st.session_state.get(last_guard_key) != curr_id:
-                                st.session_state[last_guard_key] = curr_id
-                                show_cost_detail_dialog(f"{target_title} 직급", t_cost_subset)
-                    else:
+                    selected_t_idx = extract_selected_row_idx(sel_cost_title)
+                    if selected_t_idx is not None and 0 <= selected_t_idx < len(t_df):
+                        target_title = t_df.iloc[selected_t_idx]["worker_title"]
+                        t_cost_subset = c_df[c_df["worker_title"] == target_title]
+                        last_guard_key = "_last_dialog_cost_title_row"
+                        curr_id = f"{target_title}_{selected_t_idx}"
+                        if st.session_state.get(last_guard_key) != curr_id:
+                            st.session_state[last_guard_key] = curr_id
+                            show_cost_detail_dialog(f"{target_title} 직급", t_cost_subset)
+                    elif selected_t_idx is None:
                         st.session_state["_last_dialog_cost_title_row"] = None
 
                 _render_cost_title_table(disp_title_df, title_df, df_calc)
@@ -833,21 +832,20 @@ def render_cost_estimation_view(
                         height=380,
                         hide_index=True,
                         on_select="rerun",
-                        selection_mode="single-row",
+                        selection_mode=["single-row", "single-cell"],
                         key="tbl_cost_client_selection"
                     )
 
-                    if sel_cost_client and sel_cost_client.selection and sel_cost_client.selection.rows:
-                        selected_c_idx = sel_cost_client.selection.rows[0]
-                        if 0 <= selected_c_idx < len(cl_df):
-                            target_client = cl_df.iloc[selected_c_idx]["client_name"]
-                            c_cost_subset = c_df[c_df["client_name"] == target_client]
-                            last_guard_key = "_last_dialog_cost_client_row"
-                            curr_id = f"{target_client}_{selected_c_idx}"
-                            if st.session_state.get(last_guard_key) != curr_id:
-                                st.session_state[last_guard_key] = curr_id
-                                show_cost_detail_dialog(f"{target_client} 고객사", c_cost_subset)
-                    else:
+                    selected_c_idx = extract_selected_row_idx(sel_cost_client)
+                    if selected_c_idx is not None and 0 <= selected_c_idx < len(cl_df):
+                        target_client = cl_df.iloc[selected_c_idx]["client_name"]
+                        c_cost_subset = c_df[c_df["client_name"] == target_client]
+                        last_guard_key = "_last_dialog_cost_client_row"
+                        curr_id = f"{target_client}_{selected_c_idx}"
+                        if st.session_state.get(last_guard_key) != curr_id:
+                            st.session_state[last_guard_key] = curr_id
+                            show_cost_detail_dialog(f"{target_client} 고객사", c_cost_subset)
+                    elif selected_c_idx is None:
                         st.session_state["_last_dialog_cost_client_row"] = None
 
                 _render_cost_client_table(disp_client_df, client_df, df_calc)
@@ -1066,21 +1064,20 @@ def render_cost_estimation_view(
                     height=220,
                     hide_index=True,
                     on_select="rerun",
-                    selection_mode="single-row",
+                    selection_mode=["single-row", "single-cell"],
                     key="tbl_cost_mom_selection"
                 )
 
-                if sel_cost_mom and sel_cost_mom.selection and sel_cost_mom.selection.rows:
-                    selected_m_idx = sel_cost_mom.selection.rows[0]
-                    if 0 <= selected_m_idx < len(disp_df):
-                        target_ym = disp_df.iloc[selected_m_idx]["월(YYYY-MM)"]
-                        ym_cost_subset = c_df[pd.to_datetime(c_df["start_time"], errors="coerce").dt.strftime("%Y-%m") == str(target_ym)]
-                        last_guard_key = "_last_dialog_cost_mom_row"
-                        curr_id = f"{target_ym}_{selected_m_idx}"
-                        if st.session_state.get(last_guard_key) != curr_id:
-                            st.session_state[last_guard_key] = curr_id
-                            show_cost_detail_dialog(f"{target_ym} 전체 작업", ym_cost_subset)
-                else:
+                selected_m_idx = extract_selected_row_idx(sel_cost_mom)
+                if selected_m_idx is not None and 0 <= selected_m_idx < len(disp_df):
+                    target_ym = disp_df.iloc[selected_m_idx]["월(YYYY-MM)"]
+                    ym_cost_subset = c_df[pd.to_datetime(c_df["start_time"], errors="coerce").dt.strftime("%Y-%m") == str(target_ym)]
+                    last_guard_key = "_last_dialog_cost_mom_row"
+                    curr_id = f"{target_ym}_{selected_m_idx}"
+                    if st.session_state.get(last_guard_key) != curr_id:
+                        st.session_state[last_guard_key] = curr_id
+                        show_cost_detail_dialog(f"{target_ym} 전체 작업", ym_cost_subset)
+                elif selected_m_idx is None:
                     st.session_state["_last_dialog_cost_mom_row"] = None
 
             _render_cost_mom_table(disp_mom_df, df_calc)
@@ -1471,13 +1468,12 @@ def render_cost_estimation_view(
                         height=420,
                         hide_index=True,
                         on_select="rerun",
-                        selection_mode="single-row",
+                        selection_mode=["single-row", "single-cell"],
                         key="tbl_cost_audit_selection"
                     )
 
-                    if sel_cost_audit and sel_cost_audit.selection and sel_cost_audit.selection.rows:
-                        selected_a_idx = sel_cost_audit.selection.rows[0]
-                        if 0 <= selected_a_idx < len(f_df):
+                    selected_a_idx = extract_selected_row_idx(sel_cost_audit)
+                    if selected_a_idx is not None and 0 <= selected_a_idx < len(f_df):
                             target_row = f_df.iloc[selected_a_idx]
                             target_task_id = str(target_row.get("task_id", ""))
                             matched_task = main_df[main_df["task_id"].astype(str) == target_task_id] if "task_id" in main_df.columns and target_task_id else pd.DataFrame()
@@ -1499,7 +1495,7 @@ def render_cost_estimation_view(
                                         "raw_message": f"수정 전: {target_row.get('before_hours')}h ➔ 수정 후: {target_row.get('after_hours')}h\n수정 사유: {target_row.get('note')}\n수정자: {target_row.get('adjusted_by')}"
                                     }
                                     show_single_task_dialog(audit_dict)
-                    else:
+                    elif selected_a_idx is None:
                         st.session_state["_last_dialog_cost_audit_row"] = None
 
                 _render_cost_audit_table(final_hist_disp, filt_df, df)

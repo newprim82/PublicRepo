@@ -27,7 +27,8 @@ from ..common.ui_helpers import (
     get_all_teams_safe,
     extract_week_sort_key,
     get_available_weeks_for_df,
-    render_empty_week_notice
+    render_empty_week_notice,
+    extract_selected_row_idx
 )
 
 def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
@@ -725,21 +726,20 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
-                selection_mode="single-row",
+                selection_mode=["single-row", "single-cell"],
                 key="tbl_summary_weekly_matrix_selection"
             )
 
-            if sel_weekly_matrix and sel_weekly_matrix.selection and sel_weekly_matrix.selection.rows:
-                sel_row_idx = sel_weekly_matrix.selection.rows[0]
-                if 0 <= sel_row_idx < len(weekly_matrix_df):
-                    target_week = weekly_matrix_df.iloc[sel_row_idx]["주차"]
-                    df_target_week = df_data[df_data["week_label"] == target_week]
-                    last_guard_key = "_last_dialog_summary_weekly_matrix_row"
-                    curr_id = f"{target_week}_{sel_row_idx}"
-                    if st.session_state.get(last_guard_key) != curr_id:
-                        st.session_state[last_guard_key] = curr_id
-                        show_team_work_logs_dialog(f"{target_week} 주차 전체 작업", df_target_week)
-            else:
+            sel_row_idx = extract_selected_row_idx(sel_weekly_matrix)
+            if sel_row_idx is not None and 0 <= sel_row_idx < len(weekly_matrix_df):
+                target_week = weekly_matrix_df.iloc[sel_row_idx]["주차"]
+                df_target_week = df_data[df_data["week_label"] == target_week]
+                last_guard_key = "_last_dialog_summary_weekly_matrix_row"
+                curr_id = f"{target_week}_{sel_row_idx}"
+                if st.session_state.get(last_guard_key) != curr_id:
+                    st.session_state[last_guard_key] = curr_id
+                    show_team_work_logs_dialog(f"{target_week} 주차 전체 작업", df_target_week)
+            elif sel_row_idx is None:
                 st.session_state["_last_dialog_summary_weekly_matrix_row"] = None
 
         if weekly_matrix_rows:
@@ -931,18 +931,17 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
-            selection_mode="single-row",
+            selection_mode=["single-row", "single-cell"],
             key="summary_client_table_selector"
         )
-        if sel_client_event and hasattr(sel_client_event, "selection") and sel_client_event.selection.rows:
-            c_row_idx = sel_client_event.selection.rows[0]
-            if c_row_idx < len(df_client_tbl):
-                c_target_name = df_client_tbl.iloc[c_row_idx]["고객사명"]
-                c_key = f"c_{c_target_name}_{c_row_idx}"
-                if st.session_state.get("_last_dialog_client_row") != c_key:
-                    st.session_state["_last_dialog_client_row"] = c_key
-                    show_client_tasks_dialog(c_target_name, df_data)
-        else:
+        c_row_idx = extract_selected_row_idx(sel_client_event)
+        if c_row_idx is not None and 0 <= c_row_idx < len(df_client_tbl):
+            c_target_name = df_client_tbl.iloc[c_row_idx]["고객사명"]
+            c_key = f"c_{c_target_name}_{c_row_idx}"
+            if st.session_state.get("_last_dialog_client_row") != c_key:
+                st.session_state["_last_dialog_client_row"] = c_key
+                show_client_tasks_dialog(c_target_name, df_data)
+        elif c_row_idx is None:
             st.session_state["_last_dialog_client_row"] = None
 
     if client_table_rows:
@@ -991,18 +990,17 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
-                selection_mode="single-row",
+                selection_mode=["single-row", "single-cell"],
                 key="summary_worker_table_selector"
             )
-            if sel_worker_event and hasattr(sel_worker_event, "selection") and sel_worker_event.selection.rows:
-                w_row_idx = sel_worker_event.selection.rows[0]
-                if w_row_idx < len(df_worker_tbl):
-                    w_target_name = df_worker_tbl.iloc[w_row_idx]["팀원명"]
-                    w_key = f"w_{w_target_name}_{w_row_idx}"
-                    if st.session_state.get("_last_dialog_worker_row") != w_key:
-                        st.session_state["_last_dialog_worker_row"] = w_key
-                        show_worker_all_tasks_dialog(w_target_name, df_data)
-            else:
+            w_row_idx = extract_selected_row_idx(sel_worker_event)
+            if w_row_idx is not None and 0 <= w_row_idx < len(df_worker_tbl):
+                w_target_name = df_worker_tbl.iloc[w_row_idx]["팀원명"]
+                w_key = f"w_{w_target_name}_{w_row_idx}"
+                if st.session_state.get("_last_dialog_worker_row") != w_key:
+                    st.session_state["_last_dialog_worker_row"] = w_key
+                    show_worker_all_tasks_dialog(w_target_name, df_data)
+            elif w_row_idx is None:
                 st.session_state["_last_dialog_worker_row"] = None
 
         if all_worker_rows:
@@ -1093,19 +1091,18 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
-            selection_mode="single-row",
+            selection_mode=["single-row", "single-cell"],
             key="summary_team_table_selector"
         )
-        if sel_team_event and hasattr(sel_team_event, "selection") and sel_team_event.selection.rows:
-            t_row_idx = sel_team_event.selection.rows[0]
-            if t_row_idx < len(df_team_tbl):
-                t_target_name = df_team_tbl.iloc[t_row_idx]["부서/팀명"]
-                t_key = f"t_{t_target_name}_{t_row_idx}"
-                if st.session_state.get("_last_dialog_team_row") != t_key:
-                    st.session_state["_last_dialog_team_row"] = t_key
-                    sub_team_logs = df_data[df_data["worker_team"] == t_target_name]
-                    show_team_work_logs_dialog(t_target_name, sub_team_logs)
-        else:
+        t_row_idx = extract_selected_row_idx(sel_team_event)
+        if t_row_idx is not None and 0 <= t_row_idx < len(df_team_tbl):
+            t_target_name = df_team_tbl.iloc[t_row_idx]["부서/팀명"]
+            t_key = f"t_{t_target_name}_{t_row_idx}"
+            if st.session_state.get("_last_dialog_team_row") != t_key:
+                st.session_state["_last_dialog_team_row"] = t_key
+                sub_team_logs = df_data[df_data["worker_team"] == t_target_name]
+                show_team_work_logs_dialog(t_target_name, sub_team_logs)
+        elif t_row_idx is None:
             st.session_state["_last_dialog_team_row"] = None
 
     if team_table_rows:

@@ -2,7 +2,7 @@ import io
 from datetime import datetime
 import pandas as pd
 import streamlit as st
-from ..common.ui_helpers import strip_tz
+from ..common.ui_helpers import strip_tz, extract_selected_row_idx
 from ..common.dialogs import show_single_task_dialog
 from ...services.excel_export_service import ExcelExportService
 
@@ -92,18 +92,17 @@ def render_worklog_view(df: pd.DataFrame):
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
-            selection_mode="single-row",
+            selection_mode=["single-row", "single-cell"],
             key="worklog_view_table_selector"
         )
-        if sel_worklog_event and hasattr(sel_worklog_event, "selection") and sel_worklog_event.selection.rows:
-            w_row_idx = sel_worklog_event.selection.rows[0]
-            if w_row_idx < len(out_data):
-                row_dict = out_data.iloc[w_row_idx].to_dict()
-                w_key = f"worklog_{row_dict.get('id', w_row_idx)}_{w_row_idx}"
-                if st.session_state.get("_last_dialog_worklog_row") != w_key:
-                    st.session_state["_last_dialog_worklog_row"] = w_key
-                    show_single_task_dialog(row_dict)
-        else:
+        w_row_idx = extract_selected_row_idx(sel_worklog_event)
+        if w_row_idx is not None and 0 <= w_row_idx < len(out_data):
+            row_dict = out_data.iloc[w_row_idx].to_dict()
+            w_key = f"worklog_{row_dict.get('id', w_row_idx)}_{w_row_idx}"
+            if st.session_state.get("_last_dialog_worklog_row") != w_key:
+                st.session_state["_last_dialog_worklog_row"] = w_key
+                show_single_task_dialog(row_dict)
+        elif w_row_idx is None:
             st.session_state["_last_dialog_worklog_row"] = None
 
     _render_worklog_table(disp_renamed, disp_df_out)

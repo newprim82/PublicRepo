@@ -6,7 +6,8 @@ from ..common.dialogs import show_team_work_logs_dialog
 from ..common.ui_helpers import (
     is_same_team,
     get_available_weeks_for_df,
-    render_empty_week_notice
+    render_empty_week_notice,
+    extract_selected_row_idx
 )
 
 def get_team_fixed_color(team_name: str) -> str:
@@ -111,14 +112,14 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
-        selection_mode="single-row",
+        selection_mode=["single-row", "single-cell"],
         key="tbl_team_summary_selection"
     )
 
     # 🖱️ 팀 클릭 이벤트 감지 및 세부 작업 원장 모달 팝업 연동
     curr_bar_pt = event_team_bar.selection.points[0] if (event_team_bar and hasattr(event_team_bar, "selection") and event_team_bar.selection.points) else None
     curr_avg_pt = event_team_avg.selection.points[0] if (event_team_avg and hasattr(event_team_avg, "selection") and event_team_avg.selection.points) else None
-    curr_tbl_row = event_team_tbl.selection.rows[0] if (event_team_tbl and hasattr(event_team_tbl, "selection") and event_team_tbl.selection.rows) else None
+    curr_tbl_row = extract_selected_row_idx(event_team_tbl)
 
     last_bar_id = st.session_state.get("last_selected_team_bar")
     last_avg_id = st.session_state.get("last_selected_team_avg")

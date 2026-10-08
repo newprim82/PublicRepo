@@ -10,7 +10,7 @@ from ..common.dialogs import (
     show_kpi_urgent_dialog,
     show_weekly_detail_dialog
 )
-from ..common.ui_helpers import extract_week_sort_key, get_available_weeks_for_df, render_empty_week_notice
+from ..common.ui_helpers import extract_week_sort_key, get_available_weeks_for_df, render_empty_week_notice, extract_selected_row_idx
 
 def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataFrame, chart_orientation: str, selected_view: str):
     """팀원별 업무량 랭킹 & 작업 유형 차트 (화면 전체 새로고침 없는 독립 Fragment)"""
@@ -550,18 +550,17 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
-                selection_mode="single-row",
+                selection_mode=["single-row", "single-cell"],
                 key="worker_summary_table_selector"
             )
-            if sel_worker_event and hasattr(sel_worker_event, "selection") and sel_worker_event.selection.rows:
-                w_idx = sel_worker_event.selection.rows[0]
-                if w_idx < len(disp_df):
-                    target_w = disp_df.iloc[w_idx]["담당자"]
-                    w_key = f"w_view_{target_w}_{w_idx}"
-                    if st.session_state.get("_last_dialog_worker_view_row") != w_key:
-                        st.session_state["_last_dialog_worker_view_row"] = w_key
-                        show_worker_all_tasks_dialog(target_w, p_df)
-            else:
+            w_idx = extract_selected_row_idx(sel_worker_event)
+            if w_idx is not None and 0 <= w_idx < len(disp_df):
+                target_w = disp_df.iloc[w_idx]["담당자"]
+                w_key = f"w_view_{target_w}_{w_idx}"
+                if st.session_state.get("_last_dialog_worker_view_row") != w_key:
+                    st.session_state["_last_dialog_worker_view_row"] = w_key
+                    show_worker_all_tasks_dialog(target_w, p_df)
+            elif w_idx is None:
                 st.session_state["_last_dialog_worker_view_row"] = None
 
         _render_worker_view_summary_table(disp_worker_summary, df_period)

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
-from ..common.ui_helpers import strip_tz, format_raw_chat_display, is_same_team, get_all_teams_safe
+from ..common.ui_helpers import strip_tz, format_raw_chat_display, is_same_team, get_all_teams_safe, extract_selected_row_idx
 from ..common.dialogs import show_single_task_dialog
 
 @st.cache_data(show_spinner=False)
@@ -299,18 +299,17 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             use_container_width=True,
             height=520,
             on_select="rerun",
-            selection_mode="single-row",
+            selection_mode=["single-row", "single-cell"],
             key="search_view_table_selector"
         )
-        if sel_search_event and hasattr(sel_search_event, "selection") and sel_search_event.selection.rows:
-            s_row_idx = sel_search_event.selection.rows[0]
-            if s_row_idx < len(filt_df):
-                row_dict = filt_df.iloc[s_row_idx].to_dict()
-                s_key = f"search_{row_dict.get('id', s_row_idx)}_{s_row_idx}"
-                if st.session_state.get("_last_dialog_search_row") != s_key:
-                    st.session_state["_last_dialog_search_row"] = s_key
-                    show_single_task_dialog(row_dict)
-        else:
+        s_row_idx = extract_selected_row_idx(sel_search_event)
+        if s_row_idx is not None and 0 <= s_row_idx < len(filt_df):
+            row_dict = filt_df.iloc[s_row_idx].to_dict()
+            s_key = f"search_{row_dict.get('id', s_row_idx)}_{s_row_idx}"
+            if st.session_state.get("_last_dialog_search_row") != s_key:
+                st.session_state["_last_dialog_search_row"] = s_key
+                show_single_task_dialog(row_dict)
+        elif s_row_idx is None:
             st.session_state["_last_dialog_search_row"] = None
 
     _render_search_results_table(display_df, filtered_df)
