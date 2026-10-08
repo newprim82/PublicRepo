@@ -1306,6 +1306,25 @@
             height: 38px !important;
         }
 
+        /* 🚀 사이드바 최하단 로그인/사용자 상태 바닥(Bottom) 자동 배치 */
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:first-child {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: calc(100vh - 2.5rem) !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sidebar-footer-wrapper),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sidebar-footer-wrapper) {
+            margin-top: auto !important;
+            padding-top: 36px !important;
+            height: 0px !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(.st-key-btn_sidebar_standalone_login),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.st-key-btn_sidebar_standalone_login) {
+            margin-top: auto !important;
+            padding-top: 24px !important;
+            margin-bottom: 12px !important;
+        }
+
 
         /* 🏛️ Cisco ACI 표준 테이블 스타일링 */
         table {
