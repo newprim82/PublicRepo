@@ -716,8 +716,9 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 "🏖️ 주말": f"{w_wknd}건",
                 "근무 건전성": w_status
             })
-        if weekly_matrix_rows:
-            weekly_matrix_df = pd.DataFrame(weekly_matrix_rows)
+        @st.fragment
+        def _render_summary_weekly_matrix(rows, df_data):
+            weekly_matrix_df = pd.DataFrame(rows)
             st.caption("💡 특정 주차 행을 클릭하시면 해당 주차의 세부 투입 작업 원장 팝업이 바로 열립니다.")
             sel_weekly_matrix = st.dataframe(
                 weekly_matrix_df,
@@ -732,7 +733,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 sel_row_idx = sel_weekly_matrix.selection.rows[0]
                 if 0 <= sel_row_idx < len(weekly_matrix_df):
                     target_week = weekly_matrix_df.iloc[sel_row_idx]["주차"]
-                    df_target_week = df_scope[df_scope["week_label"] == target_week]
+                    df_target_week = df_data[df_data["week_label"] == target_week]
                     last_guard_key = "_last_dialog_summary_weekly_matrix_row"
                     curr_id = f"{target_week}_{sel_row_idx}"
                     if st.session_state.get(last_guard_key) != curr_id:
@@ -740,6 +741,9 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                         show_team_work_logs_dialog(f"{target_week} 주차 전체 작업", df_target_week)
             else:
                 st.session_state["_last_dialog_summary_weekly_matrix_row"] = None
+
+        if weekly_matrix_rows:
+            _render_summary_weekly_matrix(weekly_matrix_rows, df_scope)
 
         st.write("")
         st.divider()
@@ -918,9 +922,10 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         for c_rank, (c_name, c_h) in enumerate(client_agg.items(), 1)
     ]
 
-    if client_table_rows:
+    @st.fragment
+    def _render_summary_client_table(rows, df_data):
         st.caption("💡 표에서 고객사 행을 클릭하시면 해당 고객사의 상세 투입 내역 팝업이 표시됩니다.")
-        df_client_tbl = pd.DataFrame(client_table_rows)
+        df_client_tbl = pd.DataFrame(rows)
         sel_client_event = st.dataframe(
             df_client_tbl,
             use_container_width=True,
@@ -936,9 +941,12 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 c_key = f"c_{c_target_name}_{c_row_idx}"
                 if st.session_state.get("_last_dialog_client_row") != c_key:
                     st.session_state["_last_dialog_client_row"] = c_key
-                    show_client_tasks_dialog(c_target_name, df_active)
+                    show_client_tasks_dialog(c_target_name, df_data)
         else:
             st.session_state["_last_dialog_client_row"] = None
+
+    if client_table_rows:
+        _render_summary_client_table(client_table_rows, df_active)
 
     st.write("")
     st.divider()
@@ -974,9 +982,10 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             }
             for rank, (w_name, w_hours) in enumerate(worker_agg.items(), 1)
         ]
-        if all_worker_rows:
+        @st.fragment
+        def _render_summary_worker_table(rows, df_data):
             st.caption("💡 표에서 팀원 행을 클릭하시면 해당 팀원의 전체 작업 내역 팝업이 표시됩니다.")
-            df_worker_tbl = pd.DataFrame(all_worker_rows)
+            df_worker_tbl = pd.DataFrame(rows)
             sel_worker_event = st.dataframe(
                 df_worker_tbl,
                 use_container_width=True,
@@ -992,9 +1001,12 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                     w_key = f"w_{w_target_name}_{w_row_idx}"
                     if st.session_state.get("_last_dialog_worker_row") != w_key:
                         st.session_state["_last_dialog_worker_row"] = w_key
-                        show_worker_all_tasks_dialog(w_target_name, df_active)
+                        show_worker_all_tasks_dialog(w_target_name, df_data)
             else:
                 st.session_state["_last_dialog_worker_row"] = None
+
+        if all_worker_rows:
+            _render_summary_worker_table(all_worker_rows, df_active)
 
     st.write("")
     st.divider()
@@ -1072,9 +1084,10 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             "🏖️ 주말작업": f"{t_weekend}건"
         })
 
-    if team_table_rows:
+    @st.fragment
+    def _render_summary_team_table(rows, df_data):
         st.caption("💡 표에서 부서/팀 행을 클릭하시면 해당 팀의 세부 작업 내역 팝업이 표시됩니다.")
-        df_team_tbl = pd.DataFrame(team_table_rows)
+        df_team_tbl = pd.DataFrame(rows)
         sel_team_event = st.dataframe(
             df_team_tbl,
             use_container_width=True,
@@ -1090,10 +1103,13 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 t_key = f"t_{t_target_name}_{t_row_idx}"
                 if st.session_state.get("_last_dialog_team_row") != t_key:
                     st.session_state["_last_dialog_team_row"] = t_key
-                    sub_team_logs = df_teams[df_teams["worker_team"] == t_target_name]
+                    sub_team_logs = df_data[df_data["worker_team"] == t_target_name]
                     show_team_work_logs_dialog(t_target_name, sub_team_logs)
         else:
             st.session_state["_last_dialog_team_row"] = None
+
+    if team_table_rows:
+        _render_summary_team_table(team_table_rows, df_teams)
 
     st.write("")
     st.divider()
@@ -1206,39 +1222,43 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         pivot_df = pivot_df.sort_values(by="합계(h)", ascending=False).round(1)
         pivot_display = pivot_df.reset_index().rename(columns={"tech_domain": "기술/장비 도메인"})
 
-        st.caption("💡 표에서 특정 셀이나 행(예: **일반 네트워크 ➔ 기술지원**)을 클릭하시면 상세 투입 내역 팝업이 표출됩니다.")
+        @st.fragment
+        def _render_summary_cross_matrix(display_df, df_data):
+            st.caption("💡 표에서 특정 셀이나 행(예: **일반 네트워크 ➔ 기술지원**)을 클릭하시면 상세 투입 내역 팝업이 표출됩니다.")
 
-        selection = st.dataframe(
-            pivot_display,
-            use_container_width=True,
-            hide_index=True,
-            on_select="rerun",
-            selection_mode=["single-cell", "single-row"],
-            key="pivot_domain_work_type_table"
-        )
+            selection = st.dataframe(
+                display_df,
+                use_container_width=True,
+                hide_index=True,
+                on_select="rerun",
+                selection_mode=["single-cell", "single-row"],
+                key="pivot_domain_work_type_table"
+            )
 
-        # 팝업 다이얼로그 연동 (셀 또는 행 클릭 이벤트)
-        if selection and hasattr(selection, "selection") and selection.selection:
-            sel_state = selection.selection
-            sel_cell = None
-            if hasattr(sel_state, "cells") and sel_state.cells:
-                sel_cell = sel_state.cells[0]  # (row_idx, col_name)
-            elif hasattr(sel_state, "rows") and sel_state.rows:
-                sel_cell = (sel_state.rows[0], "전체")
+            # 팝업 다이얼로그 연동 (셀 또는 행 클릭 이벤트)
+            if selection and hasattr(selection, "selection") and selection.selection:
+                sel_state = selection.selection
+                sel_cell = None
+                if hasattr(sel_state, "cells") and sel_state.cells:
+                    sel_cell = sel_state.cells[0]  # (row_idx, col_name)
+                elif hasattr(sel_state, "rows") and sel_state.rows:
+                    sel_cell = (sel_state.rows[0], "전체")
 
-            if sel_cell:
-                cell_key = f"{sel_cell[0]}_{sel_cell[1]}"
-                if st.session_state.get("_last_dialog_pivot_cell") != cell_key:
-                    st.session_state["_last_dialog_pivot_cell"] = cell_key
-                    row_idx, col_name = sel_cell
-                    if row_idx < len(pivot_display):
-                        target_domain = pivot_display.iloc[row_idx]["기술/장비 도메인"]
-                        target_work_type = None if col_name in ["기술/장비 도메인", "합계(h)", "전체"] else col_name
-                        show_tech_domain_task_dialog(target_domain, target_work_type, df_tagged)
+                if sel_cell:
+                    cell_key = f"{sel_cell[0]}_{sel_cell[1]}"
+                    if st.session_state.get("_last_dialog_pivot_cell") != cell_key:
+                        st.session_state["_last_dialog_pivot_cell"] = cell_key
+                        row_idx, col_name = sel_cell
+                        if row_idx < len(display_df):
+                            target_domain = display_df.iloc[row_idx]["기술/장비 도메인"]
+                            target_work_type = None if col_name in ["기술/장비 도메인", "합계(h)", "전체"] else col_name
+                            show_tech_domain_task_dialog(target_domain, target_work_type, df_data)
+                else:
+                    st.session_state["_last_dialog_pivot_cell"] = None
             else:
                 st.session_state["_last_dialog_pivot_cell"] = None
-        else:
-            st.session_state["_last_dialog_pivot_cell"] = None
+
+        _render_summary_cross_matrix(pivot_display, df_tagged)
 
 
 

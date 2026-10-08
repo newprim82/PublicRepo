@@ -15,13 +15,14 @@ from ...analytics.stats_service import StatsService
 
 
 def render_chat_messages_expander(target_df: pd.DataFrame, max_display: int = 20, title_prefix: str = "전체 작업"):
-    """모달 내 카카오톡 원본 메시지를 상위 N건으로 제한 렌더링하여 DOM 폭발 및 브라우저 프리징 방지"""
+    """모달 내 카카오톡 원본 메시지를 상위 N건으로 일괄 결합 렌더링하여 DOM 오버헤드 및 위젯 딜레이 제거"""
     total_cnt = len(target_df)
     if total_cnt == 0:
         return
     display_cnt = min(total_cnt, max_display)
     title = f"💬 {title_prefix} 카카오톡 원본 메시지 ({total_cnt}건 중 최근 {display_cnt}건)"
     with st.expander(title, expanded=False):
+        text_blocks = []
         for i, (_, r) in enumerate(target_df.head(max_display).iterrows()):
             start_str = r['start_time'].strftime('%Y-%m-%d %H:%M') if pd.notna(r.get('start_time')) else ''
             w_name = r.get('worker_name', '')
@@ -29,11 +30,14 @@ def render_chat_messages_expander(target_df: pd.DataFrame, max_display: int = 20
             t_desc = r.get('task_description', '')
             est_h = r.get('estimated_hours', 0)
             act_h = r.get('actual_hours', 0)
-            st.markdown(f"**[작업 #{i+1}] {start_str} | {w_name} - {c_name} ({t_desc}) [예정:{est_h}h ➔ 소요:{act_h}h]**")
-            st.code(format_raw_chat_display(r), language="text")
-            st.divider()
+            header = f"[작업 #{i+1}] {start_str} | {w_name} - {c_name} ({t_desc}) [예정:{est_h}h ➔ 소요:{act_h}h]"
+            raw_chat = format_raw_chat_display(r)
+            text_blocks.append(f"{header}\n{'-'*60}\n{raw_chat}")
+        
+        all_text = "\n\n" + f"\n{'='*70}\n\n".join(text_blocks)
+        st.code(all_text, language="text")
         if total_cnt > max_display:
-            st.caption(f"💡 표에서 행을 클릭하시면 개별 원본 대화를 확인하실 수 있습니다. (성능 최적화를 위해 최근 {max_display}건만 표시됩니다)")
+            st.caption(f"💡 성능 최적화를 위해 최근 {display_cnt}건만 표시됩니다. (전체 {total_cnt}건)")
 
 @st.dialog("🔍 세부 작업 내역 및 카카오톡 원본 분석", width="large")
 def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default_week_name: str = None):

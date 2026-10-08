@@ -85,22 +85,26 @@ def render_worklog_view(df: pd.DataFrame):
         "is_night_work": "야간여부",
         "is_weekend_work": "주말여부"
     })
-    sel_worklog_event = st.dataframe(
-        disp_renamed,
-        use_container_width=True,
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="single-row",
-        key="worklog_view_table_selector"
-    )
-    if sel_worklog_event and hasattr(sel_worklog_event, "selection") and sel_worklog_event.selection.rows:
-        w_row_idx = sel_worklog_event.selection.rows[0]
-        if w_row_idx < len(disp_df_out):
-            row_dict = disp_df_out.iloc[w_row_idx].to_dict()
-            w_key = f"worklog_{row_dict.get('id', w_row_idx)}_{w_row_idx}"
-            if st.session_state.get("_last_dialog_worklog_row") != w_key:
-                st.session_state["_last_dialog_worklog_row"] = w_key
-                show_single_task_dialog(row_dict)
-    else:
-        st.session_state["_last_dialog_worklog_row"] = None
+    @st.fragment
+    def _render_worklog_table(disp_data, out_data):
+        sel_worklog_event = st.dataframe(
+            disp_data,
+            use_container_width=True,
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="worklog_view_table_selector"
+        )
+        if sel_worklog_event and hasattr(sel_worklog_event, "selection") and sel_worklog_event.selection.rows:
+            w_row_idx = sel_worklog_event.selection.rows[0]
+            if w_row_idx < len(out_data):
+                row_dict = out_data.iloc[w_row_idx].to_dict()
+                w_key = f"worklog_{row_dict.get('id', w_row_idx)}_{w_row_idx}"
+                if st.session_state.get("_last_dialog_worklog_row") != w_key:
+                    st.session_state["_last_dialog_worklog_row"] = w_key
+                    show_single_task_dialog(row_dict)
+        else:
+            st.session_state["_last_dialog_worklog_row"] = None
+
+    _render_worklog_table(disp_renamed, disp_df_out)
     return
