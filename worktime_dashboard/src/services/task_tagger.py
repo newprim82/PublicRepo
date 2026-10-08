@@ -116,12 +116,20 @@ WORK_TYPE_RULES = [
             r"상주\s*인력", r"상주", r"resident"
         ]
     ),
+    # 교육 / 세미나
+    (
+        "교육 / 세미나",
+        [
+            r"교육", r"세미나", r"컨퍼런스", r"seminar", r"conference",
+            r"웨비나", r"webinar", r"워크숍", r"workshop", r"강의",
+            r"트레이닝", r"training"
+        ]
+    ),
     # 회의 / 협의
     (
         "회의 / 협의",
         [
-            r"회의", r"미팅", r"협의", r"세미나", r"교육",
-            r"meeting", r"seminar", r"보고회", r"컨퍼런스"
+            r"회의", r"미팅", r"협의", r"meeting", r"보고회", r"간담회"
         ]
     ),
     # 기술지원

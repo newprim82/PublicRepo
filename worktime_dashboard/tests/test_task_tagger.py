@@ -44,6 +44,11 @@ class TestTaskTagger(unittest.TestCase):
         self.assertEqual(domain, "일반 네트워크")
         self.assertEqual(wtype, "상주 지원")
 
+    def test_classify_education_seminar(self):
+        domain, wtype = classify_text("시스코 Live 글로벌 컨퍼런스 참가 및 파트너 기술 세미나 교육 수강")
+        self.assertEqual(domain, "일반 네트워크")
+        self.assertEqual(wtype, "교육 / 세미나")
+
     def test_apply_task_tags_dataframe(self):
         sample_df = pd.DataFrame([
             {"task_description": "ACI Spine 점검", "raw_start_message": "", "client_name": "A사"},
