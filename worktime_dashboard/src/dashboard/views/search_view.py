@@ -97,6 +97,10 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
 
     search_df = df_raw.copy()
     
+    # 🏷️ 기술 장비군 & 작업 유형 자동 태깅 적용
+    from ...services.task_tagger import apply_task_tags
+    search_df = apply_task_tags(search_df)
+    
     # 누락될 수 있는 필수 컬럼 안전 기본값 초기화
     default_columns = {
         "id": 0,
@@ -104,6 +108,8 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         "worker_team": UNASSIGNED_TEAM,
         "worker_title": "",
         "client_name": "미지정",
+        "tech_domain": "일반 네트워크",
+        "work_type": "일반 업무",
         "task_description": "",
         "start_time": pd.NaT,
         "end_time": pd.NaT,
@@ -149,6 +155,17 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         min_date = search_df["start_time"].dt.date.min() if pd.notna(search_df["start_time"].min()) else datetime.now().date()
         max_date = search_df["start_time"].dt.date.max() if pd.notna(search_df["start_time"].max()) else datetime.now().date()
         date_range = st.date_input("작업 기간 범위:", value=(min_date, max_date), key="smart_date_range", label_visibility="collapsed")
+
+    # 🏷️ 신규: 기술/장비 도메인 & 작업 유형 다중 선택 필터
+    f_col7, f_col8 = st.columns([1, 1])
+    with f_col7:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">🔧 기술 / 장비 도메인 다중 선택:</div>', unsafe_allow_html=True)
+        all_domains = sorted([d for d in search_df["tech_domain"].dropna().unique() if str(d).strip()])
+        sel_domains = st.multiselect("기술/장비군 선택:", options=all_domains, placeholder="전체 기술/장비군", key="smart_domains", label_visibility="collapsed")
+    with f_col8:
+        st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📋 작업 유형 다중 선택:</div>', unsafe_allow_html=True)
+        all_work_types = sorted([w for w in search_df["work_type"].dropna().unique() if str(w).strip()])
+        sel_work_types = st.multiselect("작업 유형 선택:", options=all_work_types, placeholder="전체 작업유형", key="smart_work_types", label_visibility="collapsed")
 
     # 2. 필터링 로직 적용
     filtered_df = search_df.copy()
@@ -202,6 +219,14 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             (filtered_df["start_time"].dt.date <= ed_d)
         ]
 
+    # 🏷️ 기술 장비군 필터
+    if sel_domains:
+        filtered_df = filtered_df[filtered_df["tech_domain"].isin(sel_domains)]
+
+    # 📋 작업 유형 필터
+    if sel_work_types:
+        filtered_df = filtered_df[filtered_df["work_type"].isin(sel_work_types)]
+
     filtered_df = filtered_df.sort_values("start_time", ascending=False)
 
     # 3. 실시간 결과 핵심 요약 카드 (메인 대시보드와 통일된 세련된 화이트 카드)
@@ -220,6 +245,7 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     # 4. 결과 표출: 인터랙티브 테이블 뷰 및 엑셀(XLSX) 다운로드 단독 노출
     target_cols = [
         "worker_name", "worker_team", "worker_title", "client_name", 
+        "tech_domain", "work_type",
         "task_description", "start_time", "end_time", "actual_hours", 
         "estimated_hours", "status", "is_night_work", "is_weekend_work", "remarks"
     ]
@@ -234,6 +260,8 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         "worker_team": "소속팀",
         "worker_title": "직급",
         "client_name": "고객사",
+        "tech_domain": "장비/기술군",
+        "work_type": "작업 유형",
         "task_description": "작업 내용",
         "start_time": "시작 시각",
         "end_time": "종료 시각",

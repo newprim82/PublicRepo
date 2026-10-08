@@ -1009,6 +1009,119 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     if team_table_rows:
         st.dataframe(pd.DataFrame(team_table_rows), use_container_width=True, hide_index=True)
 
+    st.write("")
+    st.divider()
+
+    # =========================================================================
+    # 6. 🏷️ 기술 장비군 & 작업 유형별 공수 분석 (Tech Domain & Work Type)
+    # =========================================================================
+    st.markdown("#### 🏷️ 6. 기술 장비군 & 작업 유형별 공수 분석")
+    st.caption("카카오톡 업무 보고를 지능형 룰 기반으로 분석하여 장비 도메인과 작업 성격별 투입 공수를 시각화합니다.")
+
+    from ...services.task_tagger import apply_task_tags
+    df_tagged = apply_task_tags(df_active)
+
+    if not df_tagged.empty:
+        domain_agg = df_tagged.groupby("tech_domain")["actual_hours"].sum().sort_values(ascending=False)
+        type_agg = df_tagged.groupby("work_type")["actual_hours"].sum().sort_values(ascending=False)
+
+        col_dom, col_typ = st.columns(2)
+
+        with col_dom:
+            st.markdown('<div style="font-size: 13.5px; font-weight: 800; color: #002d42; margin-bottom: 6px;">🍩 기술 / 장비군별 투입 비중</div>', unsafe_allow_html=True)
+            domain_df = domain_agg.reset_index()
+            domain_df.columns = ["tech_domain", "actual_hours"]
+            fig_dom = px.pie(
+                domain_df,
+                names="tech_domain",
+                values="actual_hours",
+                hole=0.45,
+                color_discrete_sequence=["#005073", "#0284c7", "#06b6d4", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#64748b"]
+            )
+            fig_dom.update_traces(
+                textposition="inside",
+                textinfo="percent+label",
+                hovertemplate="<b>%{label}</b><br>공수: %{value:.1f}h (%{percent})<extra></extra>"
+            )
+            fig_dom.update_layout(
+                paper_bgcolor="#ffffff",
+                plot_bgcolor="#ffffff",
+                font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42", size=12),
+                height=320,
+                margin=dict(l=10, r=10, t=10, b=10),
+                showlegend=False
+            )
+            st.plotly_chart(fig_dom, use_container_width=True)
+
+        with col_typ:
+            st.markdown('<div style="font-size: 13.5px; font-weight: 800; color: #002d42; margin-bottom: 6px;">📊 작업 유형별 투입 공수(시간)</div>', unsafe_allow_html=True)
+            type_df = type_agg.reset_index().sort_values(by="actual_hours", ascending=True)
+            type_df.columns = ["work_type", "actual_hours"]
+            fig_typ = px.bar(
+                type_df,
+                x="actual_hours",
+                y="work_type",
+                orientation="h",
+                text="actual_hours",
+                color_discrete_sequence=["#0284c7"],
+                labels={"actual_hours": "투입 공수(h)", "work_type": "작업 유형"}
+            )
+            fig_typ.update_traces(
+                texttemplate="%{x:.1f}h",
+                textposition="auto"
+            )
+            fig_typ.update_layout(
+                paper_bgcolor="#ffffff",
+                plot_bgcolor="#ffffff",
+                font=dict(family="Pretendard, -apple-system, sans-serif", color="#002d42", size=12),
+                height=320,
+                margin=dict(l=10, r=10, t=10, b=10),
+                xaxis=dict(
+                    title=dict(text="투입 공수(h)", font=dict(color="#002d42", size=11, family="Pretendard")),
+                    tickfont=dict(color="#002d42", size=10.5, family="Pretendard"),
+                    gridcolor="#f1f5f9"
+                ),
+                yaxis=dict(
+                    title=None,
+                    tickfont=dict(color="#002d42", size=11, family="Pretendard")
+                )
+            )
+            st.plotly_chart(fig_typ, use_container_width=True)
+
+        # 💡 장비 및 작업 유형 핵심 인사이트 칩
+        top_dom_name = domain_agg.index[0] if not domain_agg.empty else "-"
+        top_dom_hours = domain_agg.iloc[0] if not domain_agg.empty else 0.0
+        top_dom_pct = (top_dom_hours / tot_hours) * 100 if tot_hours > 0 else 0.0
+
+        top_typ_name = type_agg.index[0] if not type_agg.empty else "-"
+        top_typ_hours = type_agg.iloc[0] if not type_agg.empty else 0.0
+        top_typ_pct = (top_typ_hours / tot_hours) * 100 if tot_hours > 0 else 0.0
+
+        tag_insight_html = f"""
+        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-left: 5px solid #0284c7; border-radius: 8px; padding: 13px 18px; margin-top: 4px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <div style="font-size: 13.5px; color: #0f172a; font-weight: 700; line-height: 1.65;">
+                🏷️ <b>기술 도메인 & 작업 분석 인사이트</b>: 
+                가장 많은 공수가 투입된 장비군은 <b>{top_dom_name}</b>(<b>{top_dom_hours:.1f}h</b>, 전체의 <b>{top_dom_pct:.1f}%</b>)이며, 
+                작업 유형으로는 <b>{top_typ_name}</b>(<b>{top_typ_hours:.1f}h</b>, 전체의 <b>{top_typ_pct:.1f}%</b>)이 가장 큰 비중을 차지했습니다.
+            </div>
+        </div>
+        """
+        st.markdown(tag_insight_html, unsafe_allow_html=True)
+
+        # 상세 집계 테이블 (장비 도메인 x 작업 유형 피벗)
+        with st.expander("＋ 장비 도메인별 작업 유형 상세 교차 집계표 보기", expanded=False):
+            pivot_df = df_tagged.pivot_table(
+                index="tech_domain",
+                columns="work_type",
+                values="actual_hours",
+                aggfunc="sum",
+                fill_value=0.0
+            )
+            pivot_df["합계(h)"] = pivot_df.sum(axis=1)
+            pivot_df = pivot_df.sort_values(by="합계(h)", ascending=False).round(1)
+            pivot_display = pivot_df.reset_index().rename(columns={"tech_domain": "기술/장비 도메인"})
+            st.dataframe(pivot_display, use_container_width=True, hide_index=True)
+
 
 
 

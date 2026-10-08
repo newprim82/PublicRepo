@@ -1,11 +1,11 @@
-# 🚀 기술본부 카카오톡 & 아웃룩 업무량 및 실시간 관제 대시보드 (v2.5.7)
+# 🚀 기술본부 카카오톡 & 아웃룩 업무량 및 실시간 관제 대시보드 (v2.6.0)
 
-[![Version](https://img.shields.io/badge/version-v2.5.7-blue.svg)](https://github.com/)
+[![Version](https://img.shields.io/badge/version-v2.6.0-blue.svg)](https://github.com/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg)](https://streamlit.io)
 [![Database](https://img.shields.io/badge/Database-Supabase%20Cloud-3ECF8E.svg)](https://supabase.com)
 [![Time Standard](https://img.shields.io/badge/NTP-time.bora.net%20(KST)-purple.svg)](#-0-단일-진실-소스-시간-표준-single-source-of-truth-timeboranet-kst)
-[![Tests](https://img.shields.io/badge/Tests-25%20passed%20(100%25)-success.svg)](#-6-단위-테스트-스위트-unit-test-suite)
+[![Tests](https://img.shields.io/badge/Tests-32%20passed%20(100%25)-success.svg)](#-6-단위-테스트-스위트-unit-test-suite)
 
 카카오톡 `[기술본부] 업무공유방`의 **시작/완료 보고 메시지**와 Microsoft Outlook / Teams의 **캘린더 일정**을 무간섭 자동 수집하여, **과거시(누적 실적 KPI) ➔ 현재시(LIVE 관제) ➔ 미래시(통합 월간 캘린더)**로 이어지는 완벽한 3단계 시간축 모니터링을 제공하는 **Cisco ACI / Catalyst Center 관제 테마 기반 엔터프라이즈 실시간 업무 포털**입니다.
 
@@ -21,7 +21,7 @@
 
 ## 🌟 1. 핵심 아키텍처 & 수집 파이프라인
 
-### 1.1 현재 데이터 수집 및 동기화 구조 (v2.5.6)
+### 1.1 현재 데이터 수집 및 동기화 구조 (v2.6.0)
 ```mermaid
 flowchart TD
     subgraph HostServer["🖥️ 수집기 호스트 환경"]
@@ -108,8 +108,8 @@ flowchart TD
 | **⚙️ 관리** | **팀원 소속 및 직급 관리** | 관리자 | 팀 생성/삭제, 팀원 팀 배정, 직급(사원~수석) 매핑 관리 |
 | | **작업 기록 원장 & 엑셀** | 관리자 | 전체 수집 로우 데이터 테이블 그리드 조회 및 엑셀 다운로드 |
 | **📊 분석** | **작업 캘린더 & 밀도 히트맵** | 전체 공개 | 월간 일별 투입 시간 및 작업 밀도 히트맵 시각화 |
-| | **전체 작업 스마트 검색** | 전체 공개 | 작업자, 고객사, 내용 키워드 기반 다차원 고속 검색 |
-| | **Summary** | 전체 공개 | 실적 요약, 엑셀 리포트 다운로드, 주간 메일 발송, Gemini AI 브리핑 |
+| | **전체 작업 스마트 검색** | 전체 공개 | 키워드, 고객사, 장비 도메인, 작업 유형 다차원 고속 검색 및 엑셀 다운로드 |
+| | **Summary** | 전체 공개 | 실적 요약, 기술 장비군/작업유형 분석(도넛/바 차트), 엑셀 리포트, 메일 발송, Gemini AI 브리핑 |
 | | **팀원별 업무량 분석** | 전체 공개 | 팀원별 투입 공수, 지원 고객사 순위, 주차별 근무 추이 분석 |
 | | **팀별 업무량 비교** | 전체 공개 | 팀 간 공수 비교, 파레토 차트, 비중 분석 |
 | | **월별/일별 추이** | 전체 공개 | 장기 공수 트렌드 및 요일별/시간대별 패턴 분석 |
@@ -174,6 +174,14 @@ flowchart TD
   - `🔑 관리자 로그인` 버튼이 뷰포트 크기에 구애받지 않고, **맨 아래 메뉴 기준 적절한 여백인 80px 아래(`sidebar-footer-spacer`)에 안정적으로 위치**하도록 정돈했습니다.
   - 중복 구분선(`border-top`)을 제거하여 미니멀하고 정갈한 사이드바를 유지합니다.
 
+### 4.7 기술 장비군 & 작업 유형 자동 태깅 규칙 (v2.6.0)
+- **지능형 룰 기반 분류 (`src/services/task_tagger.py`)**:
+  - **기술/장비 도메인 (Tech Domain)**: `Cisco ACI`, `Cisco Nexus`, `Catalyst / 스위치`, `보안 / 방화벽`, `무선 / AP`, `라우터 / WAN`, `서버 / 가상화`, `일반 네트워크` 8대 도메인 자동 분류.
+  - **작업 유형 (Work Type)**: `정기점검`, `장애대응 / 긴급`, `패치 / 업그레이드`, `신규구축 / 설치`, `구성변경 / 설정`, `기술지원 / 회의`, `일반 업무` 7대 유형 자동 분류.
+- **다차원 시각화 & 필터 연동**:
+  - `📊 Summary` 화면: 도메인별 투입 비중 도넛 차트 + 작업 유형별 공수 바 차트 + 핵심 인사이트 카드 + 도메인/유형 교차 피벗 집계표 제공.
+  - `🔍 전체 작업 스마트 검색`: `[장비군]` 및 `[작업유형]` 다중 선택 필터 연동 및 엑셀 다운로드 컬럼 자동 반영.
+
 ---
 
 ## 📁 5. 프로젝트 디렉토리 구조
@@ -190,8 +198,10 @@ PublicRepo/
 │   │   ├── database/               # Supabase Cloud DB & SQLite 영속성
 │   │   ├── parser/                 # 카톡 메시지 파싱 및 시작-완료 매칭
 │   │   ├── services/               # 비즈니스 로직 (AI 브리핑, 정규화, 스케줄 동기화 등)
+│   │   │   └── task_tagger.py      # 🏷️ 기술 장비군 & 작업 유형 지능형 룰 기반 태거 (v2.6.0)
 │   │   └── dashboard/              # Streamlit 프론트엔드 (app.py, styles.css, 12대 뷰)
-│   ├── tests/                      # 단위 테스트 스위트 (25개 테스트)
+│   ├── tests/                      # 단위 테스트 스위트 (32개 테스트)
+│   │   └── test_task_tagger.py     # 🏷️ 장비군/작업유형 단위 테스트 (7건)
 │   └── requirements.txt            # Python 의존성 목록
 ├── update_and_run.bat              # 최신 Git 동기화 & 대시보드 통합 실행
 ├── run_dashboard.bat               # 대시보드 단독 실행
@@ -204,12 +214,12 @@ PublicRepo/
 
 ## 🧪 6. 단위 테스트 스위트 (Unit Test Suite)
 
-본 시스템은 안정적인 프로덕션 운영을 위해 핵심 비즈니스 로직에 대해 **총 25개 단위 테스트**를 상시 유지합니다.
+본 시스템은 안정적인 프로덕션 운영을 위해 핵심 비즈니스 로직에 대해 **총 32개 단위 테스트**를 상시 유지합니다.
 
 ### 6.1 테스트 실행 방법
 ```bash
-# 루트 또는 worktime_dashboard 디렉토리에서 실행
-python -m unittest discover worktime_dashboard/tests
+# 전체 테스트 일괄 수행
+python -m unittest discover tests
 ```
 
 ### 6.2 테스트 커버리지 영역
@@ -219,6 +229,7 @@ python -m unittest discover worktime_dashboard/tests
 4. **메시지 파싱 (`test_kakao_parser.py`, 5건)**: 단발성/다일 작업 파싱, 시간 단위 정규화, 다중 작업자 분할.
 5. **야간/주말 판정 (`test_night_weekend.py`, 4건)**: 18시 이후 야간 작업 분류, 공휴일/주말 근무 판정.
 6. **일정 동기화 & 정각 승격 (`test_schedule_sync.py`, 3건)**: 09:00 이전 예정 일정 유지, 09:00 정각 LIVE 승격, 카톡-아웃룩 중복 제거.
+7. **장비 도메인 & 작업 유형 태깅 (`test_task_tagger.py`, 7건)**: ACI, Nexus, Catalyst, 방화벽, 무선 등 8대 장비군 및 7대 작업유형 자동 분류 검증.
 
 ---
 
