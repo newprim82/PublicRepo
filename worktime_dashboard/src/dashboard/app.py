@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.5.3 (Clean Sidebar Footer Layout & Remove Redundant Divider Line)
-APP_VERSION = "v2.5.3"
+# WorkTime Dashboard v2.5.4 (Hide Guest Role Card & Keep Admin Role Display)
+APP_VERSION = "v2.5.4"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -870,15 +870,6 @@ def main():
         # 6. 👤 사이드바 최하단 사용자 상태 카드 및 로그인/로그아웃 버튼
         st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
         if not is_auth:
-            st.markdown("""
-            <div class="sb-user-card">
-                <div class="sb-user-avatar">👤</div>
-                <div>
-                    <div class="sb-user-name">게스트 모드</div>
-                    <div class="sb-user-role">일반 관제 조회 권한</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
             is_login_active = (st.session_state.get("current_page") == "🔐 시스템 로그인")
             st.button(
                 "🔑 관리자 로그인",
