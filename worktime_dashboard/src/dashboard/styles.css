@@ -1306,10 +1306,10 @@
             height: 38px !important;
         }
 
-        /* 🚀 사이드바 최하단 로그인/사용자 상태: 맨 아래 메뉴 기준 300px 아래 배치 */
+        /* 🚀 사이드바 최하단 로그인/사용자 상태: 맨 아래 메뉴 기준 80px 아래 배치 */
         .sidebar-footer-spacer {
-            height: 300px !important;
-            min-height: 300px !important;
+            height: 80px !important;
+            min-height: 80px !important;
             display: block !important;
             width: 100% !important;
         }

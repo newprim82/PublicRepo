@@ -1,6 +1,6 @@
-# 🚀 기술본부 카카오톡 & 아웃룩 업무량 및 실시간 관제 대시보드 (v2.5.6)
+# 🚀 기술본부 카카오톡 & 아웃룩 업무량 및 실시간 관제 대시보드 (v2.5.7)
 
-[![Version](https://img.shields.io/badge/version-v2.5.6-blue.svg)](https://github.com/)
+[![Version](https://img.shields.io/badge/version-v2.5.7-blue.svg)](https://github.com/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg)](https://streamlit.io)
 [![Database](https://img.shields.io/badge/Database-Supabase%20Cloud-3ECF8E.svg)](https://supabase.com)
@@ -166,12 +166,12 @@ flowchart TD
 - **2단계: 주 52h 이상 (위험)**: `🚨 [과중 근무 발생 알림]` 붉은색 네온 사이렌 배너 및 `🚨 팀원명(주차:XX.Xh)` 강조 버튼 표출.
 - **보상 휴가 연동**: 초과 근무에 대해 보상휴가가 승인된 건은 `✅ 보상 완료` 초록색 칩으로 전환.
 
-### 4.6 페이지 전환 속도 최적화 & 사이드바 UI (v2.5.1 ~ v2.5.6)
+### 4.6 페이지 전환 속도 최적화 & 사이드바 UI (v2.5.1 ~ v2.5.7)
 - **필터 고속 캐싱 (`get_cached_filtered_data`)**: `@st.cache_data`를 적용하여 사용자가 메뉴를 전환할 때 이미 계산된 데이터프레임을 0ms로 즉시 반환합니다.
 - **비데이터 화면 지연 연산 (Lazy Evaluation)**: 공휴일 관리, 계정 관리, 정기 메일 설정 등 `NON_DATA_PAGES`에 진입할 때는 대용량 데이터 필터링을 완전 건너뜁니다.
-- **사이드바 UI 정돈 및 300px 스페이서 배치 (`v2.5.6`)**:
+- **사이드바 UI 정돈 및 80px 스페이서 배치 (`v2.5.7`)**:
   - 미로그인 상태에서 인지 부하를 주던 `[게스트 모드]` 카드를 제거하고, 로그인 시에만 관리자 권한 카드를 노출합니다.
-  - `🔑 관리자 로그인` 버튼이 뷰포트 크기에 따라 보이지 않던 과도한 100vh 바닥 밀착 대신, **맨 아래 메뉴 기준 정확히 300px 아래(`sidebar-footer-spacer`)에 안정적으로 위치**하도록 정돈했습니다.
+  - `🔑 관리자 로그인` 버튼이 뷰포트 크기에 구애받지 않고, **맨 아래 메뉴 기준 적절한 여백인 80px 아래(`sidebar-footer-spacer`)에 안정적으로 위치**하도록 정돈했습니다.
   - 중복 구분선(`border-top`)을 제거하여 미니멀하고 정갈한 사이드바를 유지합니다.
 
 ---
