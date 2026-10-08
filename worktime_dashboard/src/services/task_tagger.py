@@ -25,15 +25,6 @@ TECH_DOMAIN_RULES = [
         "Cisco Nexus",
         [r"\bnexus\b", r"\bn9k\b", r"\bn7k\b", r"\bn5k\b", r"\bn3k\b", r"넥서스"]
     ),
-    # Catalyst 및 스위치
-    (
-        "Catalyst / 스위치",
-        [
-            r"\bcatalyst\b", r"\bc9\d{3}\b", r"\bc3\d{3}\b", r"\bc2\d{3}\b",
-            r"카탈리스트", r"스위치", r"\bl2\b", r"\bl3\b", r"\bl4\b", r"\bl7\b",
-            r"백본", r"backbone", r"워크그룹", r"wg\s*sw"
-        ]
-    ),
     # 보안 및 방화벽
     (
         "보안 / 방화벽",

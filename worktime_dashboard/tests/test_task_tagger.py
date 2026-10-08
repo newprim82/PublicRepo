@@ -16,7 +16,7 @@ class TestTaskTagger(unittest.TestCase):
 
     def test_classify_catalyst_upgrade(self):
         domain, wtype = classify_text("BGF 본사 C9300 스위치 IOS 펌웨어 패치 및 업그레이드")
-        self.assertEqual(domain, "Catalyst / 스위치")
+        self.assertEqual(domain, "일반 네트워크")
         self.assertEqual(wtype, "패치 / 업그레이드")
 
     def test_classify_firewall_config(self):
