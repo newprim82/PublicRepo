@@ -1,6 +1,6 @@
-# 🚀 기술본부 카카오톡 & 아웃룩 업무량 및 실시간 관제 대시보드 (v2.6.1)
+# 🚀 기술본부 카카오톡 & 아웃룩 업무량 및 실시간 관제 대시보드 (v2.6.2)
 
-[![Version](https://img.shields.io/badge/version-v2.6.1-blue.svg)](https://github.com/)
+[![Version](https://img.shields.io/badge/version-v2.6.2-blue.svg)](https://github.com/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-FF4B4B.svg)](https://streamlit.io)
 [![Database](https://img.shields.io/badge/Database-Supabase%20Cloud-3ECF8E.svg)](https://supabase.com)
@@ -174,12 +174,12 @@ flowchart TD
   - `🔑 관리자 로그인` 버튼이 뷰포트 크기에 구애받지 않고, **맨 아래 메뉴 기준 적절한 여백인 80px 아래(`sidebar-footer-spacer`)에 안정적으로 위치**하도록 정돈했습니다.
   - 중복 구분선(`border-top`)을 제거하여 미니멀하고 정갈한 사이드바를 유지합니다.
 
-### 4.7 기술 장비군 & 작업 유형 자동 태깅 규칙 (v2.6.1)
+### 4.7 기술 장비군 & 작업 유형 자동 태깅 규칙 (v2.6.1 ~ v2.6.2)
 - **지능형 룰 기반 분류 (`src/services/task_tagger.py`)**:
   - **기술/장비 도메인 (Tech Domain)**: `Cisco ACI`, `Cisco Nexus`, `Catalyst / 스위치`, `보안 / 방화벽`, `무선 / AP`, `라우터 / WAN`, `서버 / 가상화`, `일반 네트워크` 8대 도메인 자동 분류.
   - **작업 유형 (Work Type - 9대 유형)**: `정기점검`, `장애대응 / 긴급`, `패치 / 업그레이드`, `신규구축 / 설치`, `구성변경 / 설정`, `상주 지원`, `회의 / 협의`, `기술지원`, `일반 업무`. (기존 단일 묶음이었던 `상주 지원`, `회의 / 협의`, `기술지원`을 3대 독립 카테고리로 분리하여 실무 공수 분석의 투명성 극대화)
 - **다차원 시각화 & 필터 연동**:
-  - `📊 Summary` 화면: 도메인별 투입 비중 도넛 차트 + 작업 유형별 공수 바 차트 + 핵심 인사이트 카드 + 도메인/유형 교차 피벗 집계표 제공.
+  - `📊 Summary` 화면: 도메인별 투입 비중 도넛 차트 + 작업 유형별 공수 바 차트 + 핵심 인사이트 카드 + **장비 도메인별 작업 유형 상세 교차 집계표 상시 노출(v2.6.2)**.
   - `🔍 전체 작업 스마트 검색`: `[장비군]` 및 `[작업유형]` 다중 선택 필터 연동 및 엑셀 다운로드 컬럼 자동 반영.
 
 ---

@@ -1108,19 +1108,18 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         """
         st.markdown(tag_insight_html, unsafe_allow_html=True)
 
-        # 상세 집계 테이블 (장비 도메인 x 작업 유형 피벗)
-        with st.expander("＋ 장비 도메인별 작업 유형 상세 교차 집계표 보기", expanded=False):
-            pivot_df = df_tagged.pivot_table(
-                index="tech_domain",
-                columns="work_type",
-                values="actual_hours",
-                aggfunc="sum",
-                fill_value=0.0
-            )
-            pivot_df["합계(h)"] = pivot_df.sum(axis=1)
-            pivot_df = pivot_df.sort_values(by="합계(h)", ascending=False).round(1)
-            pivot_display = pivot_df.reset_index().rename(columns={"tech_domain": "기술/장비 도메인"})
-            st.dataframe(pivot_display, use_container_width=True, hide_index=True)
+        # 상세 집계 테이블 (장비 도메인 x 작업 유형 교차 집계표 - 항상 노출)
+        pivot_df = df_tagged.pivot_table(
+            index="tech_domain",
+            columns="work_type",
+            values="actual_hours",
+            aggfunc="sum",
+            fill_value=0.0
+        )
+        pivot_df["합계(h)"] = pivot_df.sum(axis=1)
+        pivot_df = pivot_df.sort_values(by="합계(h)", ascending=False).round(1)
+        pivot_display = pivot_df.reset_index().rename(columns={"tech_domain": "기술/장비 도메인"})
+        st.dataframe(pivot_display, use_container_width=True, hide_index=True)
 
 
 
