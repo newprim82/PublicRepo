@@ -107,33 +107,21 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
         "worker_count": "투입 인원(명)",
         "avg_hours_per_person": "1인당 평균시간(h)"
     })
+    ver_tbl_key = "_tbl_ver_team_summary"
+    tbl_ver = st.session_state.get(ver_tbl_key, 0)
     event_team_tbl = st.dataframe(
         disp_team_summary,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
         selection_mode=["single-row", "single-cell"],
-        key="tbl_team_summary_selection"
+        key=f"tbl_team_summary_selection_{tbl_ver}"
     )
 
     # 🖱️ 팀 클릭 이벤트 감지 및 세부 작업 원장 모달 팝업 연동
     curr_bar_pt = event_team_bar.selection.points[0] if (event_team_bar and hasattr(event_team_bar, "selection") and event_team_bar.selection.points) else None
     curr_avg_pt = event_team_avg.selection.points[0] if (event_team_avg and hasattr(event_team_avg, "selection") and event_team_avg.selection.points) else None
     curr_tbl_row = extract_selected_row_idx(event_team_tbl)
-
-    last_bar_id = st.session_state.get("last_selected_team_bar")
-    last_avg_id = st.session_state.get("last_selected_team_avg")
-    last_tbl_id = st.session_state.get("last_selected_team_tbl")
-
-    if curr_bar_pt is None and last_bar_id is not None:
-        st.session_state["last_selected_team_bar"] = None
-        last_bar_id = None
-    if curr_avg_pt is None and last_avg_id is not None:
-        st.session_state["last_selected_team_avg"] = None
-        last_avg_id = None
-    if curr_tbl_row is None and last_tbl_id is not None:
-        st.session_state["last_selected_team_tbl"] = None
-        last_tbl_id = None
 
     def _extract_pt_team(pt):
         if not pt:
@@ -156,32 +144,14 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
     if curr_tbl_row is not None and curr_tbl_row < len(team_summary):
         tbl_target = str(team_summary.iloc[curr_tbl_row]["worker_team"]).strip()
 
-    bar_changed = (bar_target is not None) and (bar_target != last_bar_id)
-    avg_changed = (avg_target is not None) and (avg_target != last_avg_id)
-    tbl_changed = (tbl_target is not None) and (tbl_target != last_tbl_id)
-
     team_to_open = None
-    if bar_changed:
-        st.session_state["last_selected_team_bar"] = bar_target
-        st.session_state["last_selected_team_avg"] = None
-        st.session_state["last_selected_team_tbl"] = None
-        team_to_open = bar_target
-    elif avg_changed:
-        st.session_state["last_selected_team_avg"] = avg_target
-        st.session_state["last_selected_team_bar"] = None
-        st.session_state["last_selected_team_tbl"] = None
-        team_to_open = avg_target
-    elif tbl_changed:
-        st.session_state["last_selected_team_tbl"] = tbl_target
-        st.session_state["last_selected_team_bar"] = None
-        st.session_state["last_selected_team_avg"] = None
+    if tbl_target:
+        st.session_state[ver_tbl_key] = tbl_ver + 1
         team_to_open = tbl_target
-    elif bar_target and (last_avg_id is None and last_tbl_id is None):
+    elif bar_target:
         team_to_open = bar_target
-    elif avg_target and (last_bar_id is None and last_tbl_id is None):
+    elif avg_target:
         team_to_open = avg_target
-    elif tbl_target and (last_bar_id is None and last_avg_id is None):
-        team_to_open = tbl_target
 
     if team_to_open and str(team_to_open).strip() and str(team_to_open).strip() != "None":
         team_target_df = team_df[team_df["worker_team"] == team_to_open]

@@ -339,17 +339,19 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
 
             # 1. 주차별 매트릭스 표 렌더링 (특정 셀/숫자 클릭 시 해당 주차 팝업 즉시 연동)
             st.caption("💡 표에서 **원하는 숫자(예: 99.0)나 셀을 클릭**하시면, 해당 인원의 **그 주차 세부 작업 내역 팝업(새창)**이 즉시 열립니다.")
+            ver_key = "_tbl_ver_weekly_matrix"
+            tbl_ver = st.session_state.get(ver_key, 0)
             selected_table = st.dataframe(
                 styled_pivot,
                 column_config=column_configs,
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
-                selection_mode="single-cell",
-                key="weekly_matrix_selector"
+                selection_mode=["single-cell", "single-row"],
+                key=f"weekly_matrix_selector_{tbl_ver}"
             )
 
-            # 2. 셀/숫자 클릭 감지 시 모달 팝업 자동 실행 (1회성 클릭 이벤트만 감지하여 사이드바 조작 시 오작동 방지)
+            # 2. 셀/숫자 클릭 감지 시 모달 팝업 자동 실행
             target_w_name = None
             target_col_name = None
 
@@ -389,15 +391,9 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
                     if cols and len(cols) > 0:
                         target_col_name = cols[0]
 
-            # 3. 새로운 셀 클릭 시에만 팝업 실행 (사이드바 조작 시에는 팝업 방지)
-            current_click_token = f"{target_w_name}_{target_col_name}" if target_w_name else None
-            last_click_token = st.session_state.get("_last_matrix_click_token")
-
-            if current_click_token and current_click_token != last_click_token:
-                st.session_state["_last_matrix_click_token"] = current_click_token
+            if target_w_name:
+                st.session_state[ver_key] = tbl_ver + 1
                 show_weekly_detail_dialog(target_w_name, mat_df, default_week_name=target_col_name)
-            elif not current_click_token:
-                st.session_state["_last_matrix_click_token"] = None
 
 
 
@@ -545,23 +541,21 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
         @st.fragment
         def _render_worker_view_summary_table(disp_df, p_df):
             st.caption("💡 표에서 엔지니어 행을 클릭하시면 해당 담당자의 전체 작업 내역 팝업이 표시됩니다.")
+            ver_key = "_tbl_ver_worker_view_summary"
+            tbl_ver = st.session_state.get(ver_key, 0)
             sel_worker_event = st.dataframe(
                 disp_df,
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
                 selection_mode=["single-row", "single-cell"],
-                key="worker_summary_table_selector"
+                key=f"worker_summary_table_selector_{tbl_ver}"
             )
             w_idx = extract_selected_row_idx(sel_worker_event)
             if w_idx is not None and 0 <= w_idx < len(disp_df):
+                st.session_state[ver_key] = tbl_ver + 1
                 target_w = disp_df.iloc[w_idx]["담당자"]
-                w_key = f"w_view_{target_w}_{w_idx}"
-                if st.session_state.get("_last_dialog_worker_view_row") != w_key:
-                    st.session_state["_last_dialog_worker_view_row"] = w_key
-                    show_worker_all_tasks_dialog(target_w, p_df)
-            elif w_idx is None:
-                st.session_state["_last_dialog_worker_view_row"] = None
+                show_worker_all_tasks_dialog(target_w, p_df)
 
         _render_worker_view_summary_table(disp_worker_summary, df_period)
     else:

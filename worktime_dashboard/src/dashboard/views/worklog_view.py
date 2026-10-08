@@ -87,23 +87,21 @@ def render_worklog_view(df: pd.DataFrame):
     })
     @st.fragment
     def _render_worklog_table(disp_data, out_data):
+        ver_key = "_tbl_ver_worklog_view"
+        tbl_ver = st.session_state.get(ver_key, 0)
         sel_worklog_event = st.dataframe(
             disp_data,
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
             selection_mode=["single-row", "single-cell"],
-            key="worklog_view_table_selector"
+            key=f"worklog_view_table_selector_{tbl_ver}"
         )
         w_row_idx = extract_selected_row_idx(sel_worklog_event)
         if w_row_idx is not None and 0 <= w_row_idx < len(out_data):
+            st.session_state[ver_key] = tbl_ver + 1
             row_dict = out_data.iloc[w_row_idx].to_dict()
-            w_key = f"worklog_{row_dict.get('id', w_row_idx)}_{w_row_idx}"
-            if st.session_state.get("_last_dialog_worklog_row") != w_key:
-                st.session_state["_last_dialog_worklog_row"] = w_key
-                show_single_task_dialog(row_dict)
-        elif w_row_idx is None:
-            st.session_state["_last_dialog_worklog_row"] = None
+            show_single_task_dialog(row_dict)
 
     _render_worklog_table(disp_renamed, disp_df_out)
     return

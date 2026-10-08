@@ -294,23 +294,21 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
     @st.fragment
     def _render_search_results_table(disp_df, filt_df):
         st.caption("💡 표에서 작업 행을 클릭하시면 해당 건의 카카오톡 시작/완료 보고 원본 대화 및 세부 정보 팝업이 표시됩니다.")
+        ver_key = "_tbl_ver_search_view"
+        tbl_ver = st.session_state.get(ver_key, 0)
         sel_search_event = st.dataframe(
             disp_df,
             use_container_width=True,
             height=520,
             on_select="rerun",
             selection_mode=["single-row", "single-cell"],
-            key="search_view_table_selector"
+            key=f"search_view_table_selector_{tbl_ver}"
         )
         s_row_idx = extract_selected_row_idx(sel_search_event)
         if s_row_idx is not None and 0 <= s_row_idx < len(filt_df):
+            st.session_state[ver_key] = tbl_ver + 1
             row_dict = filt_df.iloc[s_row_idx].to_dict()
-            s_key = f"search_{row_dict.get('id', s_row_idx)}_{s_row_idx}"
-            if st.session_state.get("_last_dialog_search_row") != s_key:
-                st.session_state["_last_dialog_search_row"] = s_key
-                show_single_task_dialog(row_dict)
-        elif s_row_idx is None:
-            st.session_state["_last_dialog_search_row"] = None
+            show_single_task_dialog(row_dict)
 
     _render_search_results_table(display_df, filtered_df)
 
