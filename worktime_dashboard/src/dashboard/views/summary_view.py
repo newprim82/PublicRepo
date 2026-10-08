@@ -10,7 +10,13 @@ from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...services.email_report_service import EmailReportService
 from ...services.excel_export_service import ExcelExportService
 from ...services.ai_briefing_service import FactExtractor, AIBriefingService
-from ..common.dialogs import show_email_report_dialog, show_tech_domain_task_dialog
+from ..common.dialogs import (
+    show_email_report_dialog,
+    show_tech_domain_task_dialog,
+    show_client_tasks_dialog,
+    show_worker_all_tasks_dialog,
+    show_team_work_logs_dialog
+)
 from ..common.ui_helpers import (
     strip_tz,
     get_job_title_badge,
@@ -711,7 +717,29 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 "근무 건전성": w_status
             })
         if weekly_matrix_rows:
-            st.dataframe(pd.DataFrame(weekly_matrix_rows), use_container_width=True, hide_index=True)
+            weekly_matrix_df = pd.DataFrame(weekly_matrix_rows)
+            st.caption("💡 특정 주차 행을 클릭하시면 해당 주차의 세부 투입 작업 원장 팝업이 바로 열립니다.")
+            sel_weekly_matrix = st.dataframe(
+                weekly_matrix_df,
+                use_container_width=True,
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key="tbl_summary_weekly_matrix_selection"
+            )
+
+            if sel_weekly_matrix and sel_weekly_matrix.selection and sel_weekly_matrix.selection.rows:
+                sel_row_idx = sel_weekly_matrix.selection.rows[0]
+                if 0 <= sel_row_idx < len(weekly_matrix_df):
+                    target_week = weekly_matrix_df.iloc[sel_row_idx]["주차"]
+                    df_target_week = df_scope[df_scope["week_label"] == target_week]
+                    last_guard_key = "_last_dialog_summary_weekly_matrix_row"
+                    curr_id = f"{target_week}_{sel_row_idx}"
+                    if st.session_state.get(last_guard_key) != curr_id:
+                        st.session_state[last_guard_key] = curr_id
+                        show_team_work_logs_dialog(f"{target_week} 주차 전체 작업", df_target_week)
+            else:
+                st.session_state["_last_dialog_summary_weekly_matrix_row"] = None
 
         st.write("")
         st.divider()
@@ -891,7 +919,26 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     ]
 
     if client_table_rows:
-        st.dataframe(pd.DataFrame(client_table_rows), use_container_width=True, hide_index=True)
+        st.caption("💡 표에서 고객사 행을 클릭하시면 해당 고객사의 상세 투입 내역 팝업이 표시됩니다.")
+        df_client_tbl = pd.DataFrame(client_table_rows)
+        sel_client_event = st.dataframe(
+            df_client_tbl,
+            use_container_width=True,
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="summary_client_table_selector"
+        )
+        if sel_client_event and hasattr(sel_client_event, "selection") and sel_client_event.selection.rows:
+            c_row_idx = sel_client_event.selection.rows[0]
+            if c_row_idx < len(df_client_tbl):
+                c_target_name = df_client_tbl.iloc[c_row_idx]["고객사명"]
+                c_key = f"c_{c_target_name}_{c_row_idx}"
+                if st.session_state.get("_last_dialog_client_row") != c_key:
+                    st.session_state["_last_dialog_client_row"] = c_key
+                    show_client_tasks_dialog(c_target_name, df_active)
+        else:
+            st.session_state["_last_dialog_client_row"] = None
 
     st.write("")
     st.divider()
@@ -928,7 +975,26 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             for rank, (w_name, w_hours) in enumerate(worker_agg.items(), 1)
         ]
         if all_worker_rows:
-            st.dataframe(pd.DataFrame(all_worker_rows), use_container_width=True, hide_index=True)
+            st.caption("💡 표에서 팀원 행을 클릭하시면 해당 팀원의 전체 작업 내역 팝업이 표시됩니다.")
+            df_worker_tbl = pd.DataFrame(all_worker_rows)
+            sel_worker_event = st.dataframe(
+                df_worker_tbl,
+                use_container_width=True,
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key="summary_worker_table_selector"
+            )
+            if sel_worker_event and hasattr(sel_worker_event, "selection") and sel_worker_event.selection.rows:
+                w_row_idx = sel_worker_event.selection.rows[0]
+                if w_row_idx < len(df_worker_tbl):
+                    w_target_name = df_worker_tbl.iloc[w_row_idx]["팀원명"]
+                    w_key = f"w_{w_target_name}_{w_row_idx}"
+                    if st.session_state.get("_last_dialog_worker_row") != w_key:
+                        st.session_state["_last_dialog_worker_row"] = w_key
+                        show_worker_all_tasks_dialog(w_target_name, df_active)
+            else:
+                st.session_state["_last_dialog_worker_row"] = None
 
     st.write("")
     st.divider()
@@ -1007,7 +1073,27 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         })
 
     if team_table_rows:
-        st.dataframe(pd.DataFrame(team_table_rows), use_container_width=True, hide_index=True)
+        st.caption("💡 표에서 부서/팀 행을 클릭하시면 해당 팀의 세부 작업 내역 팝업이 표시됩니다.")
+        df_team_tbl = pd.DataFrame(team_table_rows)
+        sel_team_event = st.dataframe(
+            df_team_tbl,
+            use_container_width=True,
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="summary_team_table_selector"
+        )
+        if sel_team_event and hasattr(sel_team_event, "selection") and sel_team_event.selection.rows:
+            t_row_idx = sel_team_event.selection.rows[0]
+            if t_row_idx < len(df_team_tbl):
+                t_target_name = df_team_tbl.iloc[t_row_idx]["부서/팀명"]
+                t_key = f"t_{t_target_name}_{t_row_idx}"
+                if st.session_state.get("_last_dialog_team_row") != t_key:
+                    st.session_state["_last_dialog_team_row"] = t_key
+                    sub_team_logs = df_teams[df_teams["worker_team"] == t_target_name]
+                    show_team_work_logs_dialog(t_target_name, sub_team_logs)
+        else:
+            st.session_state["_last_dialog_team_row"] = None
 
     st.write("")
     st.divider()

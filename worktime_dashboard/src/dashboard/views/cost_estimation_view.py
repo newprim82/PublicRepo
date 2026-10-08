@@ -11,6 +11,7 @@ from ...services.cost_estimation_service import CostEstimationService
 from ...services.excel_export_service import ExcelExportService
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...auth.auth_manager import AuthManager
+from ..common.dialogs import show_cost_detail_dialog, show_single_task_dialog
 from ..common.ui_helpers import (
     get_job_title_badge,
     get_job_title_color,
@@ -553,7 +554,8 @@ def render_cost_estimation_view(
                     "작업 건수", "보정 건수"
                 ]
 
-                st.dataframe(
+                st.caption("💡 팀원 행을 클릭하시면 해당 담당자의 세부 작업 목록 및 정산 팝업이 바로 열립니다.")
+                sel_cost_worker = st.dataframe(
                     display_worker_df.style.format({
                         "시간당 단가(원)": "{:,.0f}원",
                         "총 인정공수(h)": "{:,.1f}h",
@@ -566,8 +568,24 @@ def render_cost_estimation_view(
                     }),
                     use_container_width=True,
                     height=360,
-                    hide_index=True
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="tbl_cost_worker_selection"
                 )
+
+                if sel_cost_worker and sel_cost_worker.selection and sel_cost_worker.selection.rows:
+                    selected_w_idx = sel_cost_worker.selection.rows[0]
+                    if 0 <= selected_w_idx < len(worker_df):
+                        target_worker = worker_df.iloc[selected_w_idx]["worker_name"]
+                        w_cost_subset = df_calc[df_calc["worker_name"] == target_worker]
+                        last_guard_key = "_last_dialog_cost_worker_row"
+                        curr_id = f"{target_worker}_{selected_w_idx}"
+                        if st.session_state.get(last_guard_key) != curr_id:
+                            st.session_state[last_guard_key] = curr_id
+                            show_cost_detail_dialog(f"{target_worker} 담당자", w_cost_subset)
+                else:
+                    st.session_state["_last_dialog_cost_worker_row"] = None
 
                 try:
                     safe_slug = re.sub(r'[\\/*?:"<>| ~()]', '_', current_report_period).strip('_')
@@ -644,7 +662,8 @@ def render_cost_estimation_view(
                     "직급", "단가(원/h)", "투입인원", "총 인정공수(h)", "야간·주말(h)",
                     "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "금액 점유율(%)"
                 ]
-                st.dataframe(
+                st.caption("💡 직급 행을 클릭하시면 해당 직급의 세부 작업 목록 및 정산 팝업이 바로 열립니다.")
+                sel_cost_title = st.dataframe(
                     disp_title_df.style.format({
                         "단가(원/h)": "{:,.0f}원",
                         "투입인원": "{:,}명",
@@ -657,8 +676,24 @@ def render_cost_estimation_view(
                     }),
                     use_container_width=True,
                     height=240,
-                    hide_index=True
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="tbl_cost_title_selection"
                 )
+
+                if sel_cost_title and sel_cost_title.selection and sel_cost_title.selection.rows:
+                    selected_t_idx = sel_cost_title.selection.rows[0]
+                    if 0 <= selected_t_idx < len(title_df):
+                        target_title = title_df.iloc[selected_t_idx]["worker_title"]
+                        t_cost_subset = df_calc[df_calc["worker_title"] == target_title]
+                        last_guard_key = "_last_dialog_cost_title_row"
+                        curr_id = f"{target_title}_{selected_t_idx}"
+                        if st.session_state.get(last_guard_key) != curr_id:
+                            st.session_state[last_guard_key] = curr_id
+                            show_cost_detail_dialog(f"{target_title} 직급", t_cost_subset)
+                else:
+                    st.session_state["_last_dialog_cost_title_row"] = None
             with col_t_tab2:
                 fig_t = px.pie(
                     title_df,
@@ -772,7 +807,8 @@ def render_cost_estimation_view(
                     "고객사명", "투입 인원수", "총 인정 공수(h)", "야간·주말(h)",
                     "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "작업 건수", "보정 건수"
                 ]
-                st.dataframe(
+                st.caption("💡 고객사 행을 클릭하시면 해당 고객사의 세부 투입 작업 목록 및 정산 팝업이 바로 열립니다.")
+                sel_cost_client = st.dataframe(
                     disp_client_df.style.format({
                         "투입 인원수": "{:,}명",
                         "총 인정 공수(h)": "{:,.1f}h",
@@ -785,8 +821,24 @@ def render_cost_estimation_view(
                     }),
                     use_container_width=True,
                     height=380,
-                    hide_index=True
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="tbl_cost_client_selection"
                 )
+
+                if sel_cost_client and sel_cost_client.selection and sel_cost_client.selection.rows:
+                    selected_c_idx = sel_cost_client.selection.rows[0]
+                    if 0 <= selected_c_idx < len(client_df):
+                        target_client = client_df.iloc[selected_c_idx]["client_name"]
+                        c_cost_subset = df_calc[df_calc["client_name"] == target_client]
+                        last_guard_key = "_last_dialog_cost_client_row"
+                        curr_id = f"{target_client}_{selected_c_idx}"
+                        if st.session_state.get(last_guard_key) != curr_id:
+                            st.session_state[last_guard_key] = curr_id
+                            show_cost_detail_dialog(f"{target_client} 고객사", c_cost_subset)
+                else:
+                    st.session_state["_last_dialog_cost_client_row"] = None
 
                 csv_c_data = disp_client_df.to_csv(index=False).encode("utf-8-sig")
                 st.download_button(
@@ -985,7 +1037,8 @@ def render_cost_estimation_view(
                 "총 인정공수(h)", "야간·주말(h)", "MoM 공수증감(%)", "투입인원", "작업건수"
             ]
 
-            st.dataframe(
+            st.caption("💡 월(YYYY-MM) 행을 클릭하시면 해당 월의 전체 세부 정산 작업 팝업이 바로 열립니다.")
+            sel_cost_mom = st.dataframe(
                 disp_mom_df.style.format({
                     "최종 청구금액(원)": "₩ {:,.0f}",
                     "기본금액(원)": "₩ {:,.0f}",
@@ -997,8 +1050,24 @@ def render_cost_estimation_view(
                 }),
                 use_container_width=True,
                 height=220,
-                hide_index=True
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key="tbl_cost_mom_selection"
             )
+
+            if sel_cost_mom and sel_cost_mom.selection and sel_cost_mom.selection.rows:
+                selected_m_idx = sel_cost_mom.selection.rows[0]
+                if 0 <= selected_m_idx < len(disp_mom_df):
+                    target_ym = disp_mom_df.iloc[selected_m_idx]["월(YYYY-MM)"]
+                    ym_cost_subset = df_calc[pd.to_datetime(df_calc["start_time"], errors="coerce").dt.strftime("%Y-%m") == str(target_ym)]
+                    last_guard_key = "_last_dialog_cost_mom_row"
+                    curr_id = f"{target_ym}_{selected_m_idx}"
+                    if st.session_state.get(last_guard_key) != curr_id:
+                        st.session_state[last_guard_key] = curr_id
+                        show_cost_detail_dialog(f"{target_ym} 전체 작업", ym_cost_subset)
+            else:
+                st.session_state["_last_dialog_cost_mom_row"] = None
 
             # 📥 다운로드 버튼 섹션 (1. 그래프·표·요약 포함 엑셀 보고서 / 2. 데이터 분석용 순수 CSV)
             safe_team_name = str(selected_team).replace(" ", "_") if selected_team and selected_team != "전체 팀" else "전체_기술본부"
@@ -1362,7 +1431,8 @@ def render_cost_estimation_view(
                 ]
                 final_hist_disp = disp_hist[disp_cols].copy()
 
-                st.dataframe(
+                st.caption("💡 감사 이력 행을 클릭하시면 해당 작업의 세부 정보 및 카카오톡 원본 대화 팝업이 바로 열립니다.")
+                sel_cost_audit = st.dataframe(
                     final_hist_disp.style.format({
                         "수정전(h)": "{:,.1f}h",
                         "수정후(h)": "{:,.1f}h"
@@ -1381,8 +1451,38 @@ def render_cost_estimation_view(
                     },
                     use_container_width=True,
                     height=420,
-                    hide_index=True
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    key="tbl_cost_audit_selection"
                 )
+
+                if sel_cost_audit and sel_cost_audit.selection and sel_cost_audit.selection.rows:
+                    selected_a_idx = sel_cost_audit.selection.rows[0]
+                    if 0 <= selected_a_idx < len(filt_df):
+                        target_row = filt_df.iloc[selected_a_idx]
+                        target_task_id = str(target_row.get("task_id", ""))
+                        matched_task = df[df["task_id"].astype(str) == target_task_id] if "task_id" in df.columns and target_task_id else pd.DataFrame()
+                        
+                        last_guard_key = "_last_dialog_cost_audit_row"
+                        curr_id = f"{target_task_id}_{selected_a_idx}"
+                        if st.session_state.get(last_guard_key) != curr_id:
+                            st.session_state[last_guard_key] = curr_id
+                            if not matched_task.empty:
+                                show_single_task_dialog(matched_task.iloc[0].to_dict())
+                            else:
+                                audit_dict = {
+                                    "worker_name": target_row.get("worker_name", "-"),
+                                    "client_name": target_row.get("client_name", "-"),
+                                    "start_time": target_row.get("work_date", target_row.get("created_at", "-")),
+                                    "end_time": None,
+                                    "task_description": f"{target_row.get('task_description', '')} [수정사유: {target_row.get('note', '')}]",
+                                    "actual_hours": target_row.get("after_hours", target_row.get("before_hours", 0.0)),
+                                    "raw_message": f"수정 전: {target_row.get('before_hours')}h ➔ 수정 후: {target_row.get('after_hours')}h\n수정 사유: {target_row.get('note')}\n수정자: {target_row.get('adjusted_by')}"
+                                }
+                                show_single_task_dialog(audit_dict)
+                else:
+                    st.session_state["_last_dialog_cost_audit_row"] = None
 
                 csv_hist = final_hist_disp.to_csv(index=False).encode("utf-8-sig")
                 st.download_button(

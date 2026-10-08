@@ -1321,5 +1321,141 @@ def show_tech_domain_task_dialog(domain_name: str, work_type_name: str | None, d
     render_chat_messages_expander(target_df, max_display=20, title_prefix=prefix)
 
 
+@st.dialog("🏢 고객사별 세부 작업 내역", width="large")
+def show_client_tasks_dialog(client_name: str, client_df: pd.DataFrame):
+    """특정 고객사에 투입된 모든 작업 내역과 엔지니어 투입 현황을 표시하는 모달"""
+    inject_dialog_title_style()
+    c_df = client_df[client_df["client_name"] == client_name].copy() if not client_df.empty else pd.DataFrame()
+    if c_df.empty:
+        st.info(f"[{client_name}] 의 작업 데이터가 없습니다.")
+        return
+
+    tot_h = round(c_df["actual_hours"].sum(), 1) if "actual_hours" in c_df.columns else 0.0
+    tot_cnt = len(c_df)
+    workers = c_df["worker_name"].dropna().unique() if "worker_name" in c_df.columns else []
+    night_cnt = int(c_df["is_night_work"].sum()) if "is_night_work" in c_df.columns else 0
+    weekend_cnt = int(c_df["is_weekend_work"].sum()) if "is_weekend_work" in c_df.columns else 0
+
+    st.markdown(f"### 🏢 **{client_name}** 지원 상세 내역 (총 **{tot_h}시간** / **{tot_cnt}건**)")
+    
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.metric("총 투입 시간", f"{tot_h}시간")
+    with m2:
+        st.metric("총 작업 건수", f"{tot_cnt}건")
+    with m3:
+        st.metric("투입 엔지니어", f"{len(workers)}명")
+    with m4:
+        st.metric("야간 / 주말", f"야간 {night_cnt}건 / 주말 {weekend_cnt}건")
+
+    st.write("")
+    disp_df = c_df.copy()
+    if "start_time" in disp_df.columns:
+        disp_df["일자"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M")
+        disp_df = disp_df.sort_values(by="start_time", ascending=False)
+    else:
+        disp_df["일자"] = "-"
+
+    table_cols = {
+        "일자": "시작시각",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "work_type": "작업유형",
+        "actual_hours": "공수(h)",
+        "task_description": "작업내용"
+    }
+    existing_cols = [c for c in table_cols.keys() if c in disp_df.columns]
+    grid_df = disp_df[existing_cols].rename(columns={c: table_cols[c] for c in existing_cols})
+    st.dataframe(grid_df, use_container_width=True, hide_index=True)
+
+    render_chat_messages_expander(c_df, max_display=20, title_prefix=f"{client_name} 작업")
+
+
+@st.dialog("💰 비용 산정 세부 작업 내역", width="large")
+def show_cost_detail_dialog(title: str, cost_df: pd.DataFrame):
+    """비용 산정/정산 관련 상세 작업 목록 및 금액 내역 모달"""
+    inject_dialog_title_style()
+    st.markdown(f"### 💰 **{title}** 상세 정산 내역")
+    if cost_df is None or cost_df.empty:
+        st.info("해당 조건의 정산 내역이 없습니다.")
+        return
+
+    tot_cost = int(cost_df["estimated_cost"].sum()) if "estimated_cost" in cost_df.columns else 0
+    tot_h = round(cost_df["billable_hours"].sum(), 1) if "billable_hours" in cost_df.columns else (
+        round(cost_df["actual_hours"].sum(), 1) if "actual_hours" in cost_df.columns else 0.0
+    )
+    tot_cnt = len(cost_df)
+
+    m1, m2, m3 = st.columns(3)
+    with m1:
+        st.metric("총 정산 금액", f"{tot_cost:,}원")
+    with m2:
+        st.metric("청구 공수", f"{tot_h}시간")
+    with m3:
+        st.metric("작업 건수", f"{tot_cnt}건")
+
+    st.write("")
+    disp_df = cost_df.copy()
+    if "start_time" in disp_df.columns:
+        disp_df["일자"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M")
+        disp_df = disp_df.sort_values(by="start_time", ascending=False)
+    else:
+        disp_df["일자"] = "-"
+
+    table_cols = {
+        "일자": "시작시각",
+        "worker_name": "담당자",
+        "client_name": "고객사",
+        "billable_hours": "청구공수(h)",
+        "rate_multiplier": "배율",
+        "estimated_cost": "산정금액(원)",
+        "task_description": "작업내용"
+    }
+    existing_cols = [c for c in table_cols.keys() if c in disp_df.columns]
+    grid_df = disp_df[existing_cols].rename(columns={c: table_cols[c] for c in existing_cols})
+    st.dataframe(grid_df, use_container_width=True, hide_index=True)
+
+    render_chat_messages_expander(cost_df, max_display=20, title_prefix=title)
+
+
+@st.dialog("💬 작업 세부 정보 및 카카오톡 원본 대화", width="large")
+def show_single_task_dialog(row_data: dict):
+    """단일 작업 클릭 시 카카오톡 원본 대화 및 상세 정보 모달"""
+    inject_dialog_title_style()
+    w_name = row_data.get("worker_name", "-")
+    c_name = row_data.get("client_name", "-")
+    st_t = str(row_data.get("start_time", "-"))[:16]
+    ed_t = str(row_data.get("end_time", "-"))[:16] if pd.notna(row_data.get("end_time")) else "진행 중"
+    t_desc = row_data.get("task_description", "-")
+    act_h = row_data.get("actual_hours", row_data.get("billable_hours", 0.0))
+
+    st.markdown(f"### 📋 **[{w_name} | {c_name}]** 작업 상세")
+    st.markdown(f"**작업 내용**: `{t_desc}`")
+
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.metric("소요 시간", f"{act_h}시간")
+    with m2:
+        st.metric("시작 시각", st_t)
+    with m3:
+        st.metric("완료 시각", ed_t)
+    with m4:
+        is_nt = row_data.get("is_night_work", False)
+        is_wk = row_data.get("is_weekend_work", False)
+        status_label = "야간+주말" if (is_nt and is_wk) else ("주말" if is_wk else ("야간" if is_nt else "주간"))
+        st.metric("근무 형태", status_label)
+
+    st.write("")
+    st.markdown("#### 💬 카카오톡 보고 원본 메시지")
+    raw_start = row_data.get("raw_start_message", "")
+    raw_end = row_data.get("raw_end_message", "")
+    if raw_start or raw_end:
+        single_df = pd.DataFrame([row_data])
+        st.code(format_raw_chat_display(pd.Series(row_data)), language="text")
+    else:
+        st.info("카카오톡 원본 메시지가 등록되지 않은 일정(아웃룩 동기화 등)입니다.")
+
+
+
 
 

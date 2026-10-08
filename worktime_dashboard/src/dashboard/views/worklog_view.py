@@ -3,6 +3,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 from ..common.ui_helpers import strip_tz
+from ..common.dialogs import show_single_task_dialog
 from ...services.excel_export_service import ExcelExportService
 
 @st.cache_data(show_spinner=False)
@@ -69,22 +70,37 @@ def render_worklog_view(df: pd.DataFrame):
     if "status" in disp_df_out.columns:
         disp_df_out["status"] = disp_df_out["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_df_out["status"])
     
-    st.dataframe(
-        disp_df_out.rename(columns={
-            "start_time": "시작 보고시각",
-            "end_time": "완료 보고시각",
-            "status": "상태",
-            "log_type": "구분",
-            "worker_name": "담당자",
-            "worker_team": "소속팀",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "actual_hours": "소요(h)",
-            "is_night_work": "야간여부",
-            "is_weekend_work": "주말여부"
-        }),
+    st.caption("💡 표에서 작업 행을 클릭하시면 해당 건의 카카오톡 시작/완료 보고 원본 대화 및 세부 정보 팝업이 표시됩니다.")
+    disp_renamed = disp_df_out.rename(columns={
+        "start_time": "시작 보고시각",
+        "end_time": "완료 보고시각",
+        "status": "상태",
+        "log_type": "구분",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "actual_hours": "소요(h)",
+        "is_night_work": "야간여부",
+        "is_weekend_work": "주말여부"
+    })
+    sel_worklog_event = st.dataframe(
+        disp_renamed,
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="worklog_view_table_selector"
     )
+    if sel_worklog_event and hasattr(sel_worklog_event, "selection") and sel_worklog_event.selection.rows:
+        w_row_idx = sel_worklog_event.selection.rows[0]
+        if w_row_idx < len(disp_df_out):
+            row_dict = disp_df_out.iloc[w_row_idx].to_dict()
+            w_key = f"worklog_{row_dict.get('id', w_row_idx)}_{w_row_idx}"
+            if st.session_state.get("_last_dialog_worklog_row") != w_key:
+                st.session_state["_last_dialog_worklog_row"] = w_key
+                show_single_task_dialog(row_dict)
+    else:
+        st.session_state["_last_dialog_worklog_row"] = None
     return

@@ -5,6 +5,7 @@ import pandas as pd
 import streamlit as st
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ..common.ui_helpers import strip_tz, format_raw_chat_display, is_same_team, get_all_teams_safe
+from ..common.dialogs import show_single_task_dialog
 
 @st.cache_data(show_spinner=False)
 def _get_cached_search_excel(display_df: pd.DataFrame) -> bytes:
@@ -290,7 +291,25 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         key="dl_smart_search_xlsx"
     )
 
-    st.dataframe(display_df, use_container_width=True, height=520)
+    st.caption("💡 표에서 작업 행을 클릭하시면 해당 건의 카카오톡 시작/완료 보고 원본 대화 및 세부 정보 팝업이 표시됩니다.")
+    sel_search_event = st.dataframe(
+        display_df,
+        use_container_width=True,
+        height=520,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="search_view_table_selector"
+    )
+    if sel_search_event and hasattr(sel_search_event, "selection") and sel_search_event.selection.rows:
+        s_row_idx = sel_search_event.selection.rows[0]
+        if s_row_idx < len(filtered_df):
+            row_dict = filtered_df.iloc[s_row_idx].to_dict()
+            s_key = f"search_{row_dict.get('id', s_row_idx)}_{s_row_idx}"
+            if st.session_state.get("_last_dialog_search_row") != s_key:
+                st.session_state["_last_dialog_search_row"] = s_key
+                show_single_task_dialog(row_dict)
+    else:
+        st.session_state["_last_dialog_search_row"] = None
 
 
 def render_search_view(df_raw: pd.DataFrame, team_mappings: dict):

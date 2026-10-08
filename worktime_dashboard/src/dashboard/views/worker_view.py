@@ -541,11 +541,25 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
         other_cols = [c for c in disp_worker_summary.columns if c not in existing_cols]
         disp_worker_summary = disp_worker_summary[existing_cols + other_cols]
 
-        st.dataframe(
+        st.caption("💡 표에서 엔지니어 행을 클릭하시면 해당 담당자의 전체 작업 내역 팝업이 표시됩니다.")
+        sel_worker_event = st.dataframe(
             disp_worker_summary,
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            key="worker_summary_table_selector"
         )
+        if sel_worker_event and hasattr(sel_worker_event, "selection") and sel_worker_event.selection.rows:
+            w_idx = sel_worker_event.selection.rows[0]
+            if w_idx < len(disp_worker_summary):
+                target_w = disp_worker_summary.iloc[w_idx]["담당자"]
+                w_key = f"w_view_{target_w}_{w_idx}"
+                if st.session_state.get("_last_dialog_worker_view_row") != w_key:
+                    st.session_state["_last_dialog_worker_view_row"] = w_key
+                    show_worker_all_tasks_dialog(target_w, df_period)
+        else:
+            st.session_state["_last_dialog_worker_view_row"] = None
     else:
         if sel_period != "📅 월간 전체 종합":
             render_empty_week_notice(target_week, selected_team)
