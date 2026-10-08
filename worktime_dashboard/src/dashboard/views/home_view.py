@@ -523,6 +523,37 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
             mask_on_leave = pend_df.apply(_is_active_during_leave, axis=1)
             pend_df = pend_df[~mask_on_leave].copy()
 
+    # 🌟 [사용자 요구 반영 & 완벽한 상하단 배타성 보장]
+    # 1) 시작 시각 전(now < start_time)인 작업은 진행 중(pend_df)에 절대 남지 않고 예정(sched_df)으로 이동
+    # 2) 9시 정각이 되면 비로소 위로 카드가 승격
+    now_kst_naive = get_current_kst_time().replace(tzinfo=None)
+    if not pend_df.empty and "start_time" in pend_df.columns:
+        def _is_premature_task(row):
+            st_val = row.get("start_time")
+            if pd.isna(st_val):
+                return False
+            st_dt = st_val.to_pydatetime() if hasattr(st_val, "to_pydatetime") else pd.to_datetime(st_val)
+            if hasattr(st_dt, "tzinfo") and st_dt.tzinfo is not None:
+                st_dt = st_dt.replace(tzinfo=None)
+            return st_dt > now_kst_naive
+
+        premature_mask = pend_df.apply(_is_premature_task, axis=1)
+        if premature_mask.any():
+            premature_tasks = pend_df[premature_mask].copy()
+            premature_tasks["status"] = "SCHEDULED"
+            sched_df = pd.concat([sched_df, premature_tasks], ignore_index=True)
+            pend_df = pend_df[~premature_mask].copy()
+
+    # 3) 동일 작업자가 상단(진행 중)에 등록되어 있으면 하단(예정)의 동일 작업은 완벽 배제
+    if not pend_df.empty and not sched_df.empty:
+        pend_keys = set(pend_df["worker_name"].dropna().astype(str) + "_" + pend_df["client_name"].dropna().astype(str))
+        def _is_dup_in_sched(row):
+            k = f"{str(row.get('worker_name', ''))}_{str(row.get('client_name', ''))}"
+            return k in pend_keys
+        dup_sched_mask = sched_df.apply(_is_dup_in_sched, axis=1)
+        if dup_sched_mask.any():
+            sched_df = sched_df[~dup_sched_mask].copy()
+
 
 
     tot_workers_set = set()

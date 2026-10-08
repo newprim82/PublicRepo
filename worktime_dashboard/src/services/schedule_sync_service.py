@@ -48,6 +48,8 @@ class ScheduleSyncService:
             for prefix in ["수협", "국민", "신한", "하나", "농협", "기업", "신협", "대구", "IM", "iM", "KDB", "IBK", "SBI", "BGF", "AIG", "금호", "가온", "애경", "명인", "상상인", "한전"]:
                 if token.startswith(prefix) or prefix in token:
                     words.add(prefix.upper())
+            if any(k in token for k in ["대구", "IM", "iM", "DGB"]):
+                words.add("IM뱅크")
             # 일반 2글자 이상 명사 추가
             sub_clean = re.sub(r"(?:은행|증권|생명|화재|캐피탈|저축은행|카드|센터|지점|본점|연구소|공장|공전소|사무소|IT센터|영업부|사업처)$", "", token)
             if len(sub_clean) >= 2 and sub_clean not in stopwords:
@@ -315,6 +317,15 @@ class ScheduleSyncService:
         else:
             final_comp_df = pd.DataFrame()
 
+        if kakao_sched_df is not None and not kakao_sched_df.empty:
+            if "is_outlook" in kakao_sched_df.columns:
+                final_sched_df = kakao_sched_df[kakao_sched_df["is_outlook"] != True].copy()
+            else:
+                final_sched_df = kakao_sched_df.copy()
+            final_sched_df["has_both"] = False
+        else:
+            final_sched_df = pd.DataFrame()
+
         # 3. 비-휴가 일반 작업 일정 처리 (휴가 일정 원천 배제)
         work_rows = today_out[~leave_mask]
 
@@ -417,6 +428,25 @@ class ScheduleSyncService:
                         is_dup = True
                         break
 
+            # 🛡️ 카카오톡 예정 일정(final_sched_df)과 아웃룩 동일 작업 중복 배제 (카카오톡 최우선 존중 & 1개만 표출)
+            if not is_dup and not final_sched_df.empty:
+                for s_idx, s_row in final_sched_df.iterrows():
+                    if s_row.get("worker_name") != w_name:
+                        continue
+                    if s_row.get("is_outlook") == True or str(s_row.get("msg_hash", "")).startswith("OUTLOOK_"):
+                        continue
+                    k_client = str(s_row.get("client_name", "")).strip()
+                    k_desc = str(s_row.get("task_description", "")).strip()
+                    k_st = s_row.get("start_time")
+                    k_st_dt = k_st.to_pydatetime() if (pd.notna(k_st) and hasattr(k_st, "to_pydatetime")) else k_st
+
+                    if cls.is_same_task_match(k_client, k_desc, k_st_dt, parsed_client, parsed_desc, r["subject"], st_dt):
+                        final_sched_df.at[s_idx, "has_both"] = True
+                        if r.get("schedule_type") == "교육":
+                            final_sched_df.at[s_idx, "log_type"] = "교육"
+                        is_dup = True
+                        break
+
             if is_dup:
                 continue
 
@@ -443,14 +473,10 @@ class ScheduleSyncService:
                     "is_night_work": False,
                     "is_weekend_work": False
                 })
-            # B. 시작 30분 전부터 종료 이전 -> 실시간 진행 중 작업 승격 (시작 전에는 프로그레스 바 0%)
-            elif now >= (st_dt - timedelta(minutes=30)):
-                if now >= st_dt:
-                    pct = min(99, max(5, int((elapsed_sec / total_sec) * 100)))
-                    actual_mins = int((elapsed_sec / 60))
-                else:
-                    pct = 0
-                    actual_mins = 0
+            # B. 시작 시각 이후부터 종료 이전 -> 실시간 진행 중 작업 승격 (9시 정각이 되면 위로 카드 이동)
+            elif now >= st_dt:
+                pct = min(99, max(5, int((elapsed_sec / total_sec) * 100)))
+                actual_mins = int((elapsed_sec / 60))
                 promoted_pend_rows.append({
                     "msg_hash": f"OUTLOOK_PEND_{r.get('entry_id', '')}",
                     "log_type": "작업",
@@ -505,14 +531,6 @@ class ScheduleSyncService:
             prom_df = pd.DataFrame(promoted_pend_rows)
             final_pend_df = pd.concat([final_pend_df, prom_df], ignore_index=True)
 
-        if kakao_sched_df is not None and not kakao_sched_df.empty:
-            if "is_outlook" in kakao_sched_df.columns:
-                final_sched_df = kakao_sched_df[kakao_sched_df["is_outlook"] != True].copy()
-            else:
-                final_sched_df = kakao_sched_df.copy()
-            final_sched_df["has_both"] = False
-        else:
-            final_sched_df = pd.DataFrame()
 
         if upcoming_rows:
             up_df = pd.DataFrame(upcoming_rows)
@@ -717,22 +735,18 @@ class ScheduleSyncService:
                     log_type = "회의" if sched_type == "회의" else ("교육" if sched_type == "교육" else "작업")
 
                     is_completed = (now >= ed_dt)
-                    is_pending = (now >= (st_dt - timedelta(minutes=30)) and now < ed_dt)
+                    is_pending = (now >= st_dt and now < ed_dt)
                     if is_completed:
                         status = "COMPLETED"
                         act_h = dur_hours
                         act_m = int(dur_hours * 60)
                     elif is_pending:
                         status = "PENDING"
-                        if now >= st_dt:
-                            elapsed_sec = max(0, (now - st_dt).total_seconds())
-                            act_h = round(elapsed_sec / 3600.0, 1)
-                            act_m = int(elapsed_sec / 60)
-                        else:
-                            act_h = 0.0
-                            act_m = 0
+                        elapsed_sec = max(0, (now - st_dt).total_seconds())
+                        act_h = round(elapsed_sec / 3600.0, 1)
+                        act_m = int(elapsed_sec / 60)
                     else:
-                        # 🔮 미래 예정 일정: 미래시는 아직 근무하지 않았으므로 0.0h 부여
+                        # 🔮 시작 전 예정 일정 (now < st_dt): 9시 이전에는 SCHEDULED 보장
                         status = "SCHEDULED"
                         act_h = 0.0
                         act_m = 0

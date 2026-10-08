@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.5.1 (Instant Page Switching with Cached Data Filtering & Non-Data Lazy Evaluation)
-APP_VERSION = "v2.5.1"
+# WorkTime Dashboard v2.5.2 (Fix Live vs Upcoming Schedule Progression & Strict 09:00 Promotion Policy)
+APP_VERSION = "v2.5.2"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -234,6 +234,10 @@ def load_data() -> pd.DataFrame:
                                 df.at[idx, "actual_hours"] = 9.0
                             elif _to_naive(now_dt) >= _to_naive(forced_st):
                                 df.at[idx, "status"] = "PENDING"
+                                df.at[idx, "end_time"] = None
+                            else:
+                                # 🌟 당일 09:00 이전이면 아직 시작 전이므로 SCHEDULED (오늘 예정 일정) 부여
+                                df.at[idx, "status"] = "SCHEDULED"
                                 df.at[idx, "end_time"] = None
 
         mappings = TeamService.get_team_mappings()

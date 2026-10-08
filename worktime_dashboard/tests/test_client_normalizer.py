@@ -18,6 +18,7 @@ class TestClientNormalizer(unittest.TestCase):
         self.assertEqual(normalize_client_name("iM뱅크"), "IM뱅크")
         self.assertEqual(normalize_client_name("dgb대구은행"), "IM뱅크")
         self.assertEqual(normalize_client_name("DGB대구은행"), "IM뱅크")
+        self.assertEqual(normalize_client_name("대구은행"), "IM뱅크")
 
     def test_insurance_and_retail(self):
         self.assertEqual(normalize_client_name("aig"), "AIG손해보험")
