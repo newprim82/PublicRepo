@@ -3,8 +3,8 @@ import sys
 import re
 from pathlib import Path
 
-# WorkTime Dashboard v2.5.2 (Fix Live vs Upcoming Schedule Progression & Strict 09:00 Promotion Policy)
-APP_VERSION = "v2.5.2"
+# WorkTime Dashboard v2.5.3 (Clean Sidebar Footer Layout & Remove Redundant Divider Line)
+APP_VERSION = "v2.5.3"
 
 # Streamlit Cloud 및 모든 환경에서 프로젝트 루트 경로를 sys.path 최우선으로 등록
 _current_file = Path(__file__).resolve()
@@ -868,7 +868,7 @@ def main():
 
 
         # 6. 👤 사이드바 최하단 사용자 상태 카드 및 로그인/로그아웃 버튼
-        st.markdown('<div style="height: 18px;"></div><div style="border-top: 1px solid rgba(0, 180, 216, 0.18); margin-bottom: 12px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 16px;"></div>', unsafe_allow_html=True)
         if not is_auth:
             st.markdown("""
             <div class="sb-user-card">
