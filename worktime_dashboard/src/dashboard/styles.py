@@ -13,8 +13,8 @@ CSS_FILE_PATH = Path(__file__).resolve().parent / "styles.css"
 
 
 @st.cache_data(show_spinner=False)
-def _load_stylesheet() -> str:
-    """styles.css 파일을 읽어와 메모리에 캐싱"""
+def _load_stylesheet(mtime: float = 0.0) -> str:
+    """styles.css 파일을 읽어와 메모리에 캐싱 (파일 수정 시 자동 갱신)"""
     if CSS_FILE_PATH.exists():
         return CSS_FILE_PATH.read_text(encoding="utf-8")
     return ""
@@ -22,7 +22,8 @@ def _load_stylesheet() -> str:
 
 def apply_custom_styles():
     """전역 Cisco ACI Enterprise 테마 및 Pretendard 폰트 CSS 주입"""
-    css_content = _load_stylesheet()
+    mtime = CSS_FILE_PATH.stat().st_mtime if CSS_FILE_PATH.exists() else 0.0
+    css_content = _load_stylesheet(mtime)
     if css_content:
         st.markdown(f"<style>\n{css_content}\n</style>", unsafe_allow_html=True)
 

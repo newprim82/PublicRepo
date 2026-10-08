@@ -1256,15 +1256,7 @@
             font-weight: 700 !important;
         }
 
-        /* 👤 하단 사용자 카드 (사이드바 맨 아래로 밀착) */
-        [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:has(> .element-container .sb-user-card),
-        [data-testid="stSidebar"] [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .sb-user-card) {
-            min-height: calc(100vh - 5.5rem) !important;
-        }
-        [data-testid="stSidebar"] .element-container:has(.sb-user-card) {
-            margin-top: auto !important;
-            padding-top: 18px !important;
-        }
+        /* 👤 하단 사용자 카드 */
         [data-testid="stSidebar"] .sb-user-card {
             display: flex;
             align-items: center;
@@ -1310,8 +1302,14 @@
         .sidebar-footer-spacer {
             height: 80px !important;
             min-height: 80px !important;
+            max-height: 80px !important;
             display: block !important;
             width: 100% !important;
+        }
+        [data-testid="stSidebar"] .element-container:has(.sidebar-footer-spacer),
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.sidebar-footer-spacer) {
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
 
