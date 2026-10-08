@@ -1254,4 +1254,72 @@ def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
                     st.rerun()
 
 
+@st.dialog("🏷️ 기술 장비군 & 작업 유형 세부 작업 내역", width="large")
+def show_tech_domain_task_dialog(domain_name: str, work_type_name: str | None, df_tagged: pd.DataFrame):
+    """
+    기술 장비 도메인 및 작업 유형별 세부 작업 내역을 표출하는 팝업 모달
+    """
+    inject_dialog_title_style()
+    
+    target_df = df_tagged.copy() if df_tagged is not None and not df_tagged.empty else pd.DataFrame()
+    if not target_df.empty:
+        if domain_name and domain_name not in ["전체", "합계(h)"]:
+            target_df = target_df[target_df["tech_domain"] == domain_name]
+        if work_type_name and work_type_name not in ["합계(h)", "기술/장비 도메인", "전체"]:
+            target_df = target_df[target_df["work_type"] == work_type_name]
+            
+    title_suffix = f"[{domain_name} ➔ {work_type_name}]" if work_type_name and work_type_name not in ["합계(h)", "기술/장비 도메인", "전체"] else f"[{domain_name} 전체]"
+    st.markdown(f"### 📋 **{title_suffix}** 상세 투입 내역")
+    
+    if target_df.empty:
+        st.info("해당 조건의 작업 내역이 없습니다.")
+        return
+
+    # 4대 핵심 지표 카드
+    tot_h = round(target_df["actual_hours"].sum(), 1) if "actual_hours" in target_df.columns else 0.0
+    tot_cnt = len(target_df)
+    workers = target_df["worker_name"].dropna().unique() if "worker_name" in target_df.columns else []
+    clients = target_df["client_name"].dropna().unique() if "client_name" in target_df.columns else []
+
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.metric("총 투입 공수", f"{tot_h}시간")
+    with m2:
+        st.metric("총 작업 건수", f"{tot_cnt}건")
+    with m3:
+        st.metric("투입 인원", f"{len(workers)}명")
+    with m4:
+        st.metric("지원 고객사", f"{len(clients)}개사")
+
+    st.write("")
+    
+    # 상세 그리드 테이블
+    disp_df = target_df.copy()
+    if "start_time" in disp_df.columns:
+        disp_df["일자"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d")
+        disp_df = disp_df.sort_values(by="start_time", ascending=False)
+    else:
+        disp_df["일자"] = "-"
+
+    table_cols = {
+        "일자": "일자",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "client_name": "고객사",
+        "work_type": "작업유형",
+        "actual_hours": "공수(h)",
+        "task_description": "작업내용"
+    }
+    
+    existing_cols = [c for c in table_cols.keys() if c in disp_df.columns]
+    grid_df = disp_df[existing_cols].rename(columns={c: table_cols[c] for c in existing_cols})
+    
+    st.dataframe(grid_df, use_container_width=True, hide_index=True)
+
+    # 카카오톡 원본 메시지 익스팬더
+    prefix = f"{domain_name} {work_type_name or ''}".strip()
+    render_chat_messages_expander(target_df, max_display=20, title_prefix=prefix)
+
+
+
 

@@ -10,7 +10,7 @@ from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...services.email_report_service import EmailReportService
 from ...services.excel_export_service import ExcelExportService
 from ...services.ai_briefing_service import FactExtractor, AIBriefingService
-from ..common.dialogs import show_email_report_dialog
+from ..common.dialogs import show_email_report_dialog, show_tech_domain_task_dialog
 from ..common.ui_helpers import (
     strip_tz,
     get_job_title_badge,
@@ -1119,7 +1119,40 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         pivot_df["합계(h)"] = pivot_df.sum(axis=1)
         pivot_df = pivot_df.sort_values(by="합계(h)", ascending=False).round(1)
         pivot_display = pivot_df.reset_index().rename(columns={"tech_domain": "기술/장비 도메인"})
-        st.dataframe(pivot_display, use_container_width=True, hide_index=True)
+
+        st.caption("💡 표에서 특정 셀이나 행(예: **일반 네트워크 ➔ 기술지원**)을 클릭하시면 상세 투입 내역 팝업이 표출됩니다.")
+
+        selection = st.dataframe(
+            pivot_display,
+            use_container_width=True,
+            hide_index=True,
+            on_select="rerun",
+            selection_mode=["single-cell", "single-row"],
+            key="pivot_domain_work_type_table"
+        )
+
+        # 팝업 다이얼로그 연동 (셀 또는 행 클릭 이벤트)
+        if selection and hasattr(selection, "selection") and selection.selection:
+            sel_state = selection.selection
+            sel_cell = None
+            if hasattr(sel_state, "cells") and sel_state.cells:
+                sel_cell = sel_state.cells[0]  # (row_idx, col_name)
+            elif hasattr(sel_state, "rows") and sel_state.rows:
+                sel_cell = (sel_state.rows[0], "전체")
+
+            if sel_cell:
+                cell_key = f"{sel_cell[0]}_{sel_cell[1]}"
+                if st.session_state.get("_last_dialog_pivot_cell") != cell_key:
+                    st.session_state["_last_dialog_pivot_cell"] = cell_key
+                    row_idx, col_name = sel_cell
+                    if row_idx < len(pivot_display):
+                        target_domain = pivot_display.iloc[row_idx]["기술/장비 도메인"]
+                        target_work_type = None if col_name in ["기술/장비 도메인", "합계(h)", "전체"] else col_name
+                        show_tech_domain_task_dialog(target_domain, target_work_type, df_tagged)
+            else:
+                st.session_state["_last_dialog_pivot_cell"] = None
+        else:
+            st.session_state["_last_dialog_pivot_cell"] = None
 
 
 
