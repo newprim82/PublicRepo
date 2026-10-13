@@ -537,7 +537,8 @@ def render_main_content_frame(
             team_mappings=team_mappings,
             month_desc=month_desc,
             worker_desc=worker_desc,
-            extra_chips_str=extra_chips_str
+            extra_chips_str=extra_chips_str,
+            selected_workers=selected_workers if worker_mode != "팀 전체 인원" else None
         )
     elif curr_page == "📅 작업 캘린더 & 밀도 히트맵":
         render_calendar_view(df, df_raw, selected_team)

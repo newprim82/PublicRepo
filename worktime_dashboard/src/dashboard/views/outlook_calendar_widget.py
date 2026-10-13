@@ -24,11 +24,36 @@ OUTLOOK_MEMBER_COLORS = {
     "김형일": {"bg": "#fef9c3", "border": "#ca8a04", "text": "#713f12", "name": "김형일 수석"},  # 🟡 따뜻한 골드 옐로우
 }
 
+EXTRA_PALETTES = [
+    {"bg": "#e0f2fe", "border": "#0284c7", "text": "#0369a1"},  # 스카이블루
+    {"bg": "#fef3c7", "border": "#d97706", "text": "#b45309"},  # 앰버
+    {"bg": "#fce7f3", "border": "#db2777", "text": "#be185d"},  # 로즈핑크
+    {"bg": "#ede9fe", "border": "#7c3aed", "text": "#6d28d9"},  # 퍼플
+    {"bg": "#ccfbf1", "border": "#0f766e", "text": "#115e59"},  # 틸
+    {"bg": "#fae8ff", "border": "#c026d3", "text": "#a21caf"},  # 푸시아
+    {"bg": "#e2e8f0", "border": "#64748b", "text": "#334155"},  # 슬레이트
+]
+
 DEFAULT_COLOR = {"bg": "#f1f5f9", "border": "#94a3b8", "text": "#0f172a", "name": "기타"}
 
 
-def render_outlook_calendar_widget():
-    """🏠 대시보드 첫 화면 상단에 배치되는 아웃룩 스타일 미래시 통합 캘린더 위젯"""
+def get_worker_color(w_name: str) -> dict:
+    """팀원 이름에 매핑된 고유 색상 또는 일관된 해시 기반 동적 팔레트 색상 반환"""
+    if w_name in OUTLOOK_MEMBER_COLORS:
+        return OUTLOOK_MEMBER_COLORS[w_name]
+    # 등록되지 않은 타 팀 인원도 이름별로 고유한 색상 유지
+    idx = abs(hash(w_name)) % len(EXTRA_PALETTES)
+    c = dict(EXTRA_PALETTES[idx])
+    c["name"] = w_name
+    return c
+
+
+def render_outlook_calendar_widget(
+    selected_team: Optional[str] = None,
+    team_mappings: Optional[dict] = None,
+    selected_workers: Optional[List[str]] = None
+):
+    """🏠 대시보드 첫 화면 상단에 배치되는 아웃룩 스타일 미래시 통합 캘린더 위젯 (현재 조회 기준 동적 연동)"""
     # 1. 아웃룩 전용 CSS 주입
     st.markdown("""
     <style>
@@ -167,11 +192,10 @@ def render_outlook_calendar_widget():
     kst_now = get_current_kst_time()
     today_dt = kst_now.date()
 
-    if "outlook_cal_year" not in st.session_state:
-        st.session_state["outlook_cal_year"] = today_dt.year
-    if "outlook_cal_month" not in st.session_state:
-        st.session_state["outlook_cal_month"] = today_dt.month
-    if "outlook_cal_filter_worker" not in st.session_state:
+    # 사이드바에서 선택된 팀이 변경되었으면 위젯 내부 팀원 필터 초기화
+    last_view_team = st.session_state.get("_last_outlook_team")
+    if last_view_team != selected_team:
+        st.session_state["_last_outlook_team"] = selected_team
         st.session_state["outlook_cal_filter_worker"] = "전체 팀원"
 
     y = st.session_state["outlook_cal_year"]
@@ -208,7 +232,39 @@ def render_outlook_calendar_widget():
     # 중복 표출 방지 (동일 작업자, 제목, 시작시간 기준 1건만 유지)
     df_schedules = df_schedules.drop_duplicates(subset=["worker_name", "subject", "start_time"])
 
-    # 팀원 필터링
+    # 🎯 3-1. 사이드바 조회 기준(소속 팀 및 팀원) 연동 필터링
+    if not team_mappings:
+        try:
+            team_mappings = TeamService.get_team_mappings()
+        except Exception:
+            team_mappings = {}
+
+    # 소속 팀 필터링 (선택된 팀이 "전체 팀"이 아닌 경우)
+    if selected_team and selected_team != "전체 팀" and selected_team != "미지정":
+        team_workers = {w for w, t in team_mappings.items() if t == selected_team}
+        if selected_team == "기술 1팀":
+            team_workers.add("김경현")
+        df_schedules = df_schedules[df_schedules["worker_name"].isin(team_workers)].reset_index(drop=True)
+
+    # 사이드바에서 특정 팀원을 직접 선택한 경우
+    if selected_workers and len(selected_workers) > 0:
+        df_schedules = df_schedules[df_schedules["worker_name"].isin(selected_workers)].reset_index(drop=True)
+
+    if df_schedules.empty:
+        team_label = selected_team if selected_team else "선택된 조회 기준"
+        st.info(f"📅 [{team_label}] 소속 팀원의 아웃룩 일정이 없습니다.")
+        return
+
+    # 🎯 3-2. 캘린더 상단 팀원 필터 pills 목록 구성 (현재 조회 대상 인원 기준)
+    active_workers = sorted(list(df_schedules["worker_name"].dropna().unique()))
+    avail_workers = ["전체 팀원"] + active_workers
+
+    # 만약 기존 선택값이 현재 필터링된 팀원 목록에 없으면 "전체 팀원"으로 안전 복구
+    if selected_worker not in avail_workers:
+        selected_worker = "전체 팀원"
+        st.session_state["outlook_cal_filter_worker"] = "전체 팀원"
+
+    # 개별 팀원 단독 필터링
     if selected_worker != "전체 팀원":
         df_view = df_schedules[df_schedules["worker_name"] == selected_worker]
     else:
@@ -257,8 +313,7 @@ def render_outlook_calendar_widget():
                     st.rerun()
 
     with col_tabs:
-        # 팀원 선택 라디오 또는 셀렉트박스
-        avail_workers = ["전체 팀원"] + [w for w in OUTLOOK_MEMBER_COLORS.keys() if w in df_schedules["worker_name"].values]
+        # 팀원 선택 탭 (현재 팀/조건에 해당하는 인원만 표출)
         worker_choice = st.pills("팀원 필터:", avail_workers, default=selected_worker, key="pills_out_worker")
         if worker_choice and worker_choice != selected_worker:
             st.session_state["outlook_cal_filter_worker"] = worker_choice
@@ -314,7 +369,7 @@ def render_outlook_calendar_widget():
         # 일정 칩들 추가
         for _, ev in day_events.iterrows():
             w_name = ev["worker_name"]
-            c_info = OUTLOOK_MEMBER_COLORS.get(w_name, DEFAULT_COLOR)
+            c_info = get_worker_color(w_name)
             subj = str(ev["subject"]).strip()
             # 🌟 작업 내역에서 앞의 [이름]을 분리하여 [이름]만 bold 처리
             clean_task = re.sub(rf"^\[\s*{re.escape(w_name)}\s*\]\s*", "", subj).strip()
