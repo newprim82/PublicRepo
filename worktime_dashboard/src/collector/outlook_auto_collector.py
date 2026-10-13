@@ -57,12 +57,13 @@ def clean_worker_name(raw: str) -> str:
         return m.group(1).strip()
     return re.sub(r"\s*(수석|과장|대리|사원|팀장|본부장|부장|차장|이사|상무|전무)$", "", raw).strip()
 
-def extract_outlook_schedules_with_meta(months_ahead: int = 2) -> Tuple[List[OutlookScheduleRecord], Dict[str, Any]]:
+def extract_outlook_schedules_with_meta(months_behind: int = 2, months_ahead: int = 2) -> Tuple[List[OutlookScheduleRecord], Dict[str, Any]]:
     """
     PC B의 Outlook 데스크톱 앱에서 내 일정 및 공유 캘린더 일정을 안전하게 추출하고,
     삭제 동기화를 위한 메타데이터(수집 기간, 대상 작업자)를 함께 반환
     - '종일' 체크 시 09:00~18:00 (8.0h) 자동 시간 보정
     - 휴가/연차/반차 자동 감지
+    - 과거 months_behind(기본 2개월) ~ 미래 months_ahead(기본 2개월) 캘린더 일정 겹침(Overlap) 전수 추출
     """
     if not WIN32_AVAILABLE:
         safe_print("[-] Windows COM 모듈이 지원되지 않는 환경입니다.")
@@ -80,23 +81,36 @@ def extract_outlook_schedules_with_meta(months_ahead: int = 2) -> Tuple[List[Out
         safe_print(f"[-] Outlook MAPI 연결 실패: {e}")
         return [], {}
 
-    # 1. 날짜 필터링 범위 (현재 달 1일 ~ N개월 후 말일)
+    # 1. 날짜 필터링 범위 (이전 N개월 1일 00:00 ~ 이후 N개월 말일 23:59)
     now = get_current_kst_time()
     cur_year = now.year
     cur_month = now.month
-    start_date_str = f"{cur_year:04d}-{cur_month:02d}-01 00:00"
 
-    # N개월 후 계산
-    future_month = cur_month + months_ahead
-    future_year = cur_year + (future_month - 1) // 12
-    future_month = ((future_month - 1) % 12) + 1
+    # 이전 N개월 계산 (기본 2개월 전 1일 00:00)
+    past_month_val = cur_month - months_behind
+    past_year = cur_year + (past_month_val - 1) // 12
+    past_month = ((past_month_val - 1) % 12) + 1
+    start_date_str = f"{past_year:04d}-{past_month:02d}-01 00:00"
+
+    # 이후 N개월 계산 (기본 2개월 후 말일 23:59)
+    future_month_val = cur_month + months_ahead
+    future_year = cur_year + (future_month_val - 1) // 12
+    future_month = ((future_month_val - 1) % 12) + 1
     import calendar
     last_day = calendar.monthrange(future_year, future_month)[1]
     end_date_str = f"{future_year:04d}-{future_month:02d}-{last_day:02d} 23:59"
 
-    restriction = f"[Start] >= '{start_date_str}' AND [End] <= '{end_date_str}'"
+    # 캘린더 일정 겹침(Overlap) 필터링 표준 공식 (월초 걸침 일정 누락 방지)
+    restriction = f"[End] >= '{start_date_str}' AND [Start] <= '{end_date_str}'"
 
     team_members_info = TeamService.get_team_members_info()
+    registered_workers = [
+        w for w in team_members_info.keys()
+        if w not in ("김경현",) and not w.startswith("SYSTEM_") and not w.startswith("SYS_")
+    ]
+    base_members = ["문영민", "이동우", "홍정표", "전종필", "김시우", "김형일"]
+    all_target_workers = list(dict.fromkeys(base_members + registered_workers))
+
     records: List[OutlookScheduleRecord] = []
     seen_ids = set()
 
@@ -311,7 +325,7 @@ def extract_outlook_schedules_with_meta(months_ahead: int = 2) -> Tuple[List[Out
                     if clean_target in processed_clean_names:
                         continue
                     matched_member = None
-                    for tm in ["문영민", "이동우", "홍정표", "전종필", "김형일", "김시우"]:
+                    for tm in all_target_workers:
                         if tm in d_name:
                             matched_member = tm
                             break
@@ -329,10 +343,15 @@ def extract_outlook_schedules_with_meta(months_ahead: int = 2) -> Tuple[List[Out
         pass
 
     # 3-2. 네비게이션 창에서 아직 수집되지 않은 팀원을 대상으로 MAPI 직접 공유 폴더 연동(GetSharedDefaultFolder)
-    target_names = [
-        "문영민 수석", "이동우 수석", "홍정표 과장", "전종필 대리", "김형일 수석", "김시우 사원",
-        "문영민", "이동우", "홍정표", "전종필", "김형일", "김시우"
-    ]
+    target_names = []
+    for w in all_target_workers:
+        title = team_members_info.get(w, {}).get("title", "")
+        if title:
+            target_names.append(f"{w} {title}")
+        target_names.append(w)
+    for cand in DEFAULT_TARGET_MEMBERS:
+        if cand not in target_names:
+            target_names.append(cand)
 
     for name in target_names:
         clean_target = clean_worker_name(name)
@@ -360,16 +379,16 @@ def extract_outlook_schedules_with_meta(months_ahead: int = 2) -> Tuple[List[Out
     return records, meta
 
 
-def extract_outlook_schedules(months_ahead: int = 2) -> List[OutlookScheduleRecord]:
+def extract_outlook_schedules(months_behind: int = 2, months_ahead: int = 2) -> List[OutlookScheduleRecord]:
     """하위 호환용 래퍼: 레코드 목록만 반환"""
-    records, _ = extract_outlook_schedules_with_meta(months_ahead=months_ahead)
+    records, _ = extract_outlook_schedules_with_meta(months_behind=months_behind, months_ahead=months_ahead)
     return records
 
 
-def run_outlook_collection_cycle() -> Dict[str, Any]:
+def run_outlook_collection_cycle(months_behind: int = 2, months_ahead: int = 2) -> Dict[str, Any]:
     """10분 정기 아웃룩 스케줄 동기화 사이클 실행 (추가/수정 및 아웃룩에서 삭제된 일정 DB 자동 삭제 동기화)"""
     safe_print(f"[{get_current_kst_time().strftime('%Y-%m-%d %H:%M:%S')}] 📅 아웃룩 캘린더 동기화 가동...")
-    records, meta = extract_outlook_schedules_with_meta(months_ahead=2)
+    records, meta = extract_outlook_schedules_with_meta(months_behind=months_behind, months_ahead=months_ahead)
     if not records:
         safe_print("[-] 아웃룩에서 수집된 일정이 없습니다.")
         return {"success": False, "count": 0}

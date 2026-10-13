@@ -28,6 +28,8 @@ except ImportError:
 
 from src.config import config
 from src.database.supabase_client import db_manager
+
+_APP_FULLY_INITIALIZED = False
 from src.services.team_service import TeamService, UNASSIGNED_TEAM
 from src.services.client_normalizer import normalize_client_name
 from src.auth.auth_manager import AuthManager
@@ -108,6 +110,8 @@ def clear_all_web_caches():
         pass
         
     # 3. 파이썬 서브 모듈 강제 핫리로드 (Streamlit Cloud 메모리 캐시 파괴)
+    if not globals().get("_APP_FULLY_INITIALIZED", False):
+        return
     import importlib
     modules_to_reload = [
         "src.services.client_normalizer",
@@ -940,6 +944,8 @@ def main():
         custom_period_desc=custom_period_desc
     )
 
+
+_APP_FULLY_INITIALIZED = True
 
 if __name__ == "__main__":
     main()

@@ -215,9 +215,9 @@ def render_outlook_calendar_widget():
         df_view = df_schedules
 
     # 4. 상단 컨트롤 바 (오늘 / 이전달 / 다음달 및 팀원 탭)
-    col_nav, col_tabs = st.columns([1.2, 2.8])
+    col_nav, col_tabs = st.columns([1.5, 2.5])
     with col_nav:
-        c1, c2, c3, c4 = st.columns([1, 0.6, 0.6, 2])
+        c1, c2, c3, c4, c5 = st.columns([0.8, 0.5, 0.5, 1.4, 1.2])
         with c1:
             if st.button("오늘", key="btn_out_today", use_container_width=True):
                 st.session_state["outlook_cal_year"] = today_dt.year
@@ -241,6 +241,20 @@ def render_outlook_calendar_widget():
                 st.rerun()
         with c4:
             st.markdown(f"<div style='font-size: 16px; font-weight: 800; color: #0f172a; padding-top: 4px;'>📅 {y}년 {m}월</div>", unsafe_allow_html=True)
+        with c5:
+            if st.button("⚡ 동기화", key="btn_out_sync_now", use_container_width=True, help="Outlook 데스크톱 앱에서 팀원 캘린더 일정을 지금 즉시 동기화합니다."):
+                with st.spinner("Outlook 캘린더 동기화 중..."):
+                    try:
+                        from src.collector.outlook_auto_collector import run_outlook_collection_cycle
+                        res = run_outlook_collection_cycle()
+                        if res.get("success"):
+                            st.toast(f"✅ Outlook 일정 {res.get('count', 0)}건 동기화 완료!", icon="📅")
+                        else:
+                            st.toast("⚠️ Outlook 일정이 없거나 동기화 대기 중입니다.", icon="ℹ️")
+                    except Exception as e_sync:
+                        st.toast(f"❌ 동기화 실패: {e_sync}", icon="⚠️")
+                    st.cache_data.clear()
+                    st.rerun()
 
     with col_tabs:
         # 팀원 선택 라디오 또는 셀렉트박스

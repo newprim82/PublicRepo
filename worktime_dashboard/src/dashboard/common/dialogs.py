@@ -1206,8 +1206,12 @@ def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
             from src.database.supabase_client import db_manager
             updated = db_manager.resolve_stale_pending_tasks(hashes)
             st.success(f"총 {updated}건의 미마감 작업이 정상적으로 완료 마감되었습니다!")
-            from src.dashboard.app import clear_all_web_caches
-            clear_all_web_caches()
+            st.cache_data.clear()
+            try:
+                from src.services.team_service import TeamService
+                TeamService.clear_cache()
+            except Exception:
+                pass
             st.rerun()
 
     st.markdown("---")
@@ -1253,8 +1257,12 @@ def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
                 if m_hash:
                     db_manager.resolve_stale_pending_tasks([m_hash], custom_minutes_map={m_hash: custom_m})
                     st.success(f"{sel_row['worker_name']} 님의 작업이 {custom_h}시간 완료 마감되었습니다!")
-                    from src.dashboard.app import clear_all_web_caches
-                    clear_all_web_caches()
+                    st.cache_data.clear()
+                    try:
+                        from src.services.team_service import TeamService
+                        TeamService.clear_cache()
+                    except Exception:
+                        pass
                     st.rerun()
 
 

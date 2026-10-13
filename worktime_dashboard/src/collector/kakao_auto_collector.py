@@ -364,9 +364,24 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
     return ""
 
 
+def trigger_outlook_collection_safely(months_behind: int = 2, months_ahead: int = 2) -> Dict[str, Any]:
+    """
+    카카오톡 대화방 창 열림/로그인 상태와 100% 독립적으로 아웃룩 캘린더 일정을 안전하게 동기화
+    """
+    try:
+        from .outlook_auto_collector import run_outlook_collection_cycle
+        out_res = run_outlook_collection_cycle(months_behind=months_behind, months_ahead=months_ahead)
+        if out_res.get("success"):
+            log_trace(f"[📅 아웃룩 연동] 일정 {out_res.get('count', 0)}건 동기화 완료")
+        return out_res
+    except Exception as e_out:
+        log_trace(f"[아웃룩 연동 알림]: {e_out}")
+        return {"success": False, "error": str(e_out)}
+
+
 def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
     """
-    1회 증분 수집 사이클 실행: 카톡 창 탐색 -> 텍스트 추출 -> 파싱 -> DB Upsert
+    1회 증분 수집 사이클 실행: 아웃룩 독립 동기화 보장 + 카톡 창 탐색 -> 텍스트 추출 -> 파싱 -> DB Upsert
     """
     global _last_execution_timestamp
     
@@ -389,6 +404,9 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
         COLLECTOR_STATUS["total_cycles"] += 1
         COLLECTOR_STATUS["next_run_time"] = kst_now + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
         
+        # 📅 1. 아웃룩 캘린더 동기화 (카카오톡 창 상태/로그인 여부와 100% 독립 실행)
+        trigger_outlook_collection_safely()
+
         try:
             log_trace(f"==================================================")
             log_trace(f"🤖 [{now_str}] 카카오톡 증분 수집 ({'⚡ 수동 즉시' if is_manual else '⏳ 10분 정기'}) 대상: '{target_chat}'")
@@ -425,16 +443,6 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
                 COLLECTOR_STATUS["last_status"] = "새 작업 없음"
                 COLLECTOR_STATUS["last_log_message"] = msg
                 CollectorStatusService.report_status("ONLINE", msg, 0, 0)
-
-                # 📅 아웃룩 캘린더 동시 연동 (10분 주기)
-                try:
-                    from .outlook_auto_collector import run_outlook_collection_cycle
-                    out_res = run_outlook_collection_cycle()
-                    if out_res.get("success"):
-                        log_trace(f"[📅 아웃룩 연동] 일정 {out_res.get('count', 0)}건 동기화 완료")
-                except Exception as e_out:
-                    log_trace(f"[아웃룩 연동 알림]: {e_out}")
-
                 return {"status": "no_records", "message": msg, "time": now_str}
                 
             saved = db_manager.save_work_logs(records)
@@ -445,16 +453,6 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
             }
             COLLECTOR_STATUS["last_log_message"] = f"🎉 {len(records)}건 분석 완료 (DB 저장: {saved}건)"
             CollectorStatusService.report_status("ONLINE", f"{len(records)}건 분석 완료 (DB 저장: {saved}건)", len(records), saved)
-            
-            # 📅 아웃룩 캘린더 동시 연동 (10분 주기)
-            try:
-                from .outlook_auto_collector import run_outlook_collection_cycle
-                out_res = run_outlook_collection_cycle()
-                if out_res.get("success"):
-                    log_trace(f"[📅 아웃룩 연동] 일정 {out_res.get('count', 0)}건 동기화 완료")
-            except Exception as e_out:
-                log_trace(f"[아웃룩 연동 알림]: {e_out}")
-
             log_trace(f"[✓] [{now_str}] 🎉 {len(records)}건 작업 분석 완료 (DB 저장: {saved}건)")
             return {
                 "status": "success",
