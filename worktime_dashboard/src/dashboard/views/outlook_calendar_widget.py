@@ -192,6 +192,13 @@ def render_outlook_calendar_widget(
     kst_now = get_current_kst_time()
     today_dt = kst_now.date()
 
+    if "outlook_cal_year" not in st.session_state:
+        st.session_state["outlook_cal_year"] = today_dt.year
+    if "outlook_cal_month" not in st.session_state:
+        st.session_state["outlook_cal_month"] = today_dt.month
+    if "outlook_cal_filter_worker" not in st.session_state:
+        st.session_state["outlook_cal_filter_worker"] = "전체 팀원"
+
     # 사이드바에서 선택된 팀이 변경되었으면 위젯 내부 팀원 필터 초기화
     last_view_team = st.session_state.get("_last_outlook_team")
     if last_view_team != selected_team:

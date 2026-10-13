@@ -1124,4 +1124,5 @@ def render_home_view(
                 selected_workers=selected_workers
             )
         except Exception as e_cal:
+            print(f"[아웃룩 위젯 렌더링 예외]: {e_cal}")
             st.info("📅 아웃룩 일정을 동기화하는 중입니다. (잠시 후 새로고침 시 정상 반영됩니다)")
