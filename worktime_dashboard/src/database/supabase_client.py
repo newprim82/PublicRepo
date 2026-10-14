@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import pandas as pd
@@ -900,20 +901,46 @@ class DatabaseManager:
     def get_hourly_rates(self) -> Dict[str, int]:
         """
         직급별 시간당 단가(원/h) 딕셔너리 반환
-        예: {'수석': 80000, '차장': 70000, '과장': 60000, '대리': 50000, '사원': 35000, '기타': 50000}
+        - 금고 언락 상태: 암호화된 단가를 RAM에서 즉시 복호화하여 반환
+        - 금고 잠금 상태 (보안 금고 활성화 시): 보안 유지를 위해 0원 마스킹 반환
+        - 금고 미설정 상태: 기존 평문 기본값 반환
         """
+        from ..services.cost_vault_service import CostVaultService
         rates = {}
+        is_vault_init = CostVaultService.is_vault_initialized()
+        is_unlocked = CostVaultService.is_unlocked()
+
         # 1. Supabase 시도
         if self.use_supabase and self.supabase:
             try:
                 res = self.supabase.table("worktime_hourly_rates").select("job_title, hourly_rate").execute()
                 if res.data:
+                    # 암호화된 전용 페이로드 레코드(-99998) 탐색
+                    for r in res.data:
+                        jt = str(r.get("job_title", "")).strip()
+                        val = int(r.get("hourly_rate", 0))
+                        if val == -99998 and jt.startswith("__VAULT_RATES__:"):
+                            if is_unlocked:
+                                try:
+                                    enc_payload = jt[len("__VAULT_RATES__:"):]
+                                    dec_json = CostVaultService.decrypt_str(enc_payload)
+                                    if dec_json:
+                                        rates = json.loads(dec_json)
+                                        rates = {k: int(v) for k, v in rates.items()}
+                                        return rates
+                                except Exception as e_dec:
+                                    print(f"[CostVault] Supabase 단가 복호화 실패: {e_dec}")
+                            elif is_vault_init:
+                                # 잠겨 있는 경우 0원 마스킹
+                                return {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+                    
+                    # 일반 평문 레코드 폴백
                     for r in res.data:
                         t = str(r.get("job_title", "")).strip()
                         val = int(r.get("hourly_rate", 0))
-                        if t:
+                        if t and val >= 0 and not t.startswith("__"):
                             rates[t] = val
-                    if rates:
+                    if rates and not is_vault_init:
                         return rates
             except Exception:
                 pass
@@ -925,13 +952,30 @@ class DatabaseManager:
             cursor.execute("SELECT job_title, hourly_rate FROM hourly_rates")
             for t, val in cursor.fetchall():
                 t = str(t).strip()
-                if t:
-                    rates[t] = int(val)
+                if not t or t.startswith("__"):
+                    continue
+                if isinstance(val, str) and val.startswith("ENC:"):
+                    if is_unlocked:
+                        rates[t] = CostVaultService.decrypt_int(val, fallback=0)
+                    elif is_vault_init:
+                        rates[t] = 0
+                else:
+                    try:
+                        rates[t] = int(val)
+                    except ValueError:
+                        rates[t] = 0
             conn.close()
+            if rates:
+                if is_vault_init and not is_unlocked:
+                    return {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+                return rates
         except Exception as e:
             print(f"[DB 오류] 직급별 단가 로컬 조회 실패: {e}")
 
         # 기본 폴백값 (사원, 대리, 과장, 수석 4가지 고정)
+        if is_vault_init and not is_unlocked:
+            return {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+
         default_fallback = {
             "수석": 80000,
             "과장": 60000,
@@ -944,16 +988,32 @@ class DatabaseManager:
 
     def save_hourly_rates(self, rates: Dict[str, int]) -> bool:
         """
-        직급별 시간당 단가 저장 (Supabase 및 로컬 SQLite)
+        직급별 시간당 단가 저장 (제로-트러스트 암호화 적용)
+        - 금고 언락 상태: 암호화된 페이로드 및 로컬 암호문 저장, Supabase 평문은 0원 마스킹
         """
         if not rates:
             return False
 
+        from ..services.cost_vault_service import CostVaultService
+        is_unlocked = CostVaultService.is_unlocked()
+
         # 1. Supabase 저장 시도
         if self.use_supabase and self.supabase:
             try:
-                payloads = [{"job_title": k.strip(), "hourly_rate": int(v)} for k, v in rates.items() if k.strip()]
-                self.supabase.table("worktime_hourly_rates").upsert(payloads).execute()
+                if is_unlocked:
+                    # 보안 모드: 단가 원본을 암호화하여 특수 레코드(-99998)에 보관
+                    enc_payload = CostVaultService.encrypt_str(json.dumps(rates))
+                    vault_record_key = f"__VAULT_RATES__:{enc_payload}"
+                    self.supabase.table("worktime_hourly_rates").delete().eq("hourly_rate", -99998).execute()
+                    self.supabase.table("worktime_hourly_rates").insert({"job_title": vault_record_key, "hourly_rate": -99998}).execute()
+
+                    # 일반 레코드는 0원으로 마스킹 업서트 (해킹당해도 0원만 노출)
+                    masked_payloads = [{"job_title": k.strip(), "hourly_rate": 0} for k, _ in rates.items() if k.strip()]
+                    self.supabase.table("worktime_hourly_rates").upsert(masked_payloads).execute()
+                else:
+                    # 금고 미사용 시 기존 평문 저장
+                    payloads = [{"job_title": k.strip(), "hourly_rate": int(v)} for k, v in rates.items() if k.strip()]
+                    self.supabase.table("worktime_hourly_rates").upsert(payloads).execute()
             except Exception as e:
                 print(f"[DB 오류] 직급별 단가 Supabase 저장 알림: {e}")
 
@@ -963,15 +1023,17 @@ class DatabaseManager:
             cursor = conn.cursor()
             for k, v in rates.items():
                 k_clean = str(k).strip()
-                if not k_clean:
+                if not k_clean or k_clean.startswith("__"):
                     continue
+                # 금고 언락 상태이면 로컬 SQLite에도 암호화하여 보관
+                stored_val = CostVaultService.encrypt_int(v) if is_unlocked else int(v)
                 cursor.execute("""
                     INSERT INTO hourly_rates (job_title, hourly_rate, updated_at)
                     VALUES (?, ?, datetime('now', 'localtime'))
                     ON CONFLICT(job_title) DO UPDATE SET
                         hourly_rate=excluded.hourly_rate,
                         updated_at=excluded.updated_at
-                """, (k_clean, int(v)))
+                """, (k_clean, stored_val))
             conn.commit()
             conn.close()
             return True
@@ -985,43 +1047,27 @@ class DatabaseManager:
     def get_adjusted_hours_map(self) -> Dict[str, float]:
         """
         작업 고유 키(msg_hash)별 보정 인정 시간(h) 매핑 반환
+        - 금고 언락 상태: 암호화된 시간 정상 복호화
+        - 금고 잠금 상태: 0.0 마스킹
         """
-        adj_map = {}
-        # 1. Supabase 시도
-        if self.use_supabase and self.supabase:
-            try:
-                res = self.supabase.table("worktime_adjusted_work_logs").select("msg_hash, adjusted_hours").execute()
-                if res.data:
-                    for r in res.data:
-                        h_key = str(r.get("msg_hash", "")).strip()
-                        val = float(r.get("adjusted_hours", 0.0))
-                        if h_key:
-                            adj_map[h_key] = val
-                    if adj_map:
-                        return adj_map
-            except Exception:
-                pass
+        from ..services.cost_vault_service import CostVaultService
+        is_vault_init = CostVaultService.is_vault_initialized()
+        is_unlocked = CostVaultService.is_unlocked()
 
-        # 2. 로컬 SQLite 조회
-        try:
-            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
-            cursor = conn.cursor()
-            cursor.execute("SELECT msg_hash, adjusted_hours FROM adjusted_work_logs")
-            for h_key, val in cursor.fetchall():
-                h_key = str(h_key).strip()
-                if h_key:
-                    adj_map[h_key] = float(val)
-            conn.close()
-        except Exception as e:
-            print(f"[DB 오류] 보정 시간 로컬 조회 실패: {e}")
-
-        return adj_map
+        rec_map = self.get_adjusted_records_map()
+        return {k: v.get("adjusted_hours", 0.0) for k, v in rec_map.items()}
 
     def get_adjusted_records_map(self) -> Dict[str, Dict[str, Any]]:
         """
         작업 고유 키(msg_hash)별 보정 전체 레코드 매핑 반환
         반환: {msg_hash: {"adjusted_hours": float, "original_hours": float, "note": str}}
+        - 금고 언락 상태: 암호화된 note(ENC_ADJ:...)에서 원본 복호화
+        - 금고 잠금 상태: 0.0 마스킹 반환
         """
+        from ..services.cost_vault_service import CostVaultService
+        is_vault_init = CostVaultService.is_vault_initialized()
+        is_unlocked = CostVaultService.is_unlocked()
+
         rec_map = {}
         # 1. Supabase 시도
         if self.use_supabase and self.supabase:
@@ -1030,11 +1076,35 @@ class DatabaseManager:
                 if res.data:
                     for r in res.data:
                         h_key = str(r.get("msg_hash", "")).strip()
-                        if h_key:
+                        raw_note = str(r.get("note", ""))
+                        if not h_key:
+                            continue
+
+                        # 암호화된 페이로드 확인
+                        if raw_note.startswith("ENC_ADJ:"):
+                            if is_unlocked:
+                                try:
+                                    dec_json = CostVaultService.decrypt_str(raw_note[len("ENC_ADJ:"):])
+                                    if dec_json:
+                                        payload = json.loads(dec_json)
+                                        rec_map[h_key] = {
+                                            "adjusted_hours": float(payload.get("adjusted_hours", 0.0)),
+                                            "original_hours": float(payload.get("original_hours", 0.0)),
+                                            "note": str(payload.get("note", ""))
+                                        }
+                                        continue
+                                except Exception:
+                                    pass
+                            elif is_vault_init:
+                                rec_map[h_key] = {"adjusted_hours": 0.0, "original_hours": 0.0, "note": ""}
+                                continue
+
+                        # 기존 평문 데이터
+                        if not is_vault_init or is_unlocked:
                             rec_map[h_key] = {
                                 "adjusted_hours": float(r.get("adjusted_hours", 0.0)),
                                 "original_hours": float(r.get("original_hours", 0.0)),
-                                "note": str(r.get("note", ""))
+                                "note": raw_note
                             }
                     if rec_map:
                         return rec_map
@@ -1048,11 +1118,33 @@ class DatabaseManager:
             cursor.execute("SELECT msg_hash, adjusted_hours, original_hours, note FROM adjusted_work_logs")
             for h_key, adj_h, orig_h, note_val in cursor.fetchall():
                 h_key = str(h_key).strip()
-                if h_key:
+                if not h_key:
+                    continue
+                raw_note = str(note_val or "")
+                if raw_note.startswith("ENC_ADJ:"):
+                    if is_unlocked:
+                        try:
+                            dec_json = CostVaultService.decrypt_str(raw_note[len("ENC_ADJ:"):])
+                            if dec_json:
+                                payload = json.loads(dec_json)
+                                rec_map[h_key] = {
+                                    "adjusted_hours": float(payload.get("adjusted_hours", 0.0)),
+                                    "original_hours": float(payload.get("original_hours", 0.0)),
+                                    "note": str(payload.get("note", ""))
+                                }
+                                continue
+                        except Exception:
+                            pass
+                    elif is_vault_init:
+                        rec_map[h_key] = {"adjusted_hours": 0.0, "original_hours": 0.0, "note": ""}
+                        continue
+
+                # 기존 평문 레코드
+                if not is_vault_init or is_unlocked:
                     rec_map[h_key] = {
                         "adjusted_hours": float(adj_h or 0.0),
                         "original_hours": float(orig_h or 0.0),
-                        "note": str(note_val or "")
+                        "note": raw_note
                     }
             conn.close()
         except Exception as e:
@@ -1068,20 +1160,38 @@ class DatabaseManager:
         note: str = ""
     ) -> bool:
         """
-        단건 작업 시간 보정 저장 (Supabase 및 로컬 SQLite)
+        단건 작업 시간 보정 저장 (제로-트러스트 암호화 적용)
         """
         msg_hash = str(msg_hash).strip()
         if not msg_hash:
             return False
+
+        from ..services.cost_vault_service import CostVaultService
+        is_unlocked = CostVaultService.is_unlocked()
+
+        # 암호화 페이로드 준비
+        stored_note = str(note)
+        stored_adj = float(adjusted_hours)
+        stored_orig = float(original_hours)
+        if is_unlocked:
+            payload = {
+                "adjusted_hours": float(adjusted_hours),
+                "original_hours": float(original_hours),
+                "note": str(note)
+            }
+            enc_str = CostVaultService.encrypt_str(json.dumps(payload))
+            stored_note = f"ENC_ADJ:{enc_str}"
+            stored_adj = 0.0
+            stored_orig = 0.0
 
         # 1. Supabase 저장
         if self.use_supabase and self.supabase:
             try:
                 self.supabase.table("worktime_adjusted_work_logs").upsert({
                     "msg_hash": msg_hash,
-                    "adjusted_hours": float(adjusted_hours),
-                    "original_hours": float(original_hours),
-                    "note": str(note)
+                    "adjusted_hours": stored_adj,
+                    "original_hours": stored_orig,
+                    "note": stored_note
                 }).execute()
             except Exception as e:
                 print(f"[DB 오류] 시간 보정 Supabase 저장 알림: {e}")
@@ -1098,7 +1208,7 @@ class DatabaseManager:
                     original_hours=excluded.original_hours,
                     note=excluded.note,
                     updated_at=excluded.updated_at
-            """, (msg_hash, float(adjusted_hours), float(original_hours), str(note)))
+            """, (msg_hash, stored_adj, stored_orig, stored_note))
 
             # 아웃룩 일정인 경우 outlook_schedules duration_hours도 동시 업데이트
             if msg_hash.startswith("OUTLOOK_WORK_"):
@@ -1120,11 +1230,14 @@ class DatabaseManager:
 
     def batch_save_adjusted_work_logs(self, records: List[Dict[str, Any]]) -> int:
         """
-        다건 작업 시간 일괄 보정 저장 (장표에서 다건 수정 시 호출)
+        다건 작업 시간 일괄 보정 저장 (제로-트러스트 암호화 적용)
         records: [{"msg_hash": str, "adjusted_hours": float, "original_hours": float, "note": str}, ...]
         """
         if not records:
             return 0
+
+        from ..services.cost_vault_service import CostVaultService
+        is_unlocked = CostVaultService.is_unlocked()
 
         # 1. Supabase 저장 시도
         if self.use_supabase and self.supabase:
@@ -1132,12 +1245,27 @@ class DatabaseManager:
                 payloads = []
                 for r in records:
                     mh = str(r.get("msg_hash", "")).strip()
-                    if mh:
+                    if not mh:
+                        continue
+                    adj_h = float(r.get("adjusted_hours", 0.0))
+                    orig_h = float(r.get("original_hours", 0.0))
+                    note_val = str(r.get("note", ""))
+
+                    if is_unlocked:
+                        p_dict = {"adjusted_hours": adj_h, "original_hours": orig_h, "note": note_val}
+                        enc_str = CostVaultService.encrypt_str(json.dumps(p_dict))
                         payloads.append({
                             "msg_hash": mh,
-                            "adjusted_hours": float(r.get("adjusted_hours", 0.0)),
-                            "original_hours": float(r.get("original_hours", 0.0)),
-                            "note": str(r.get("note", ""))
+                            "adjusted_hours": 0.0,
+                            "original_hours": 0.0,
+                            "note": f"ENC_ADJ:{enc_str}"
+                        })
+                    else:
+                        payloads.append({
+                            "msg_hash": mh,
+                            "adjusted_hours": adj_h,
+                            "original_hours": orig_h,
+                            "note": note_val
                         })
                 if payloads:
                     self.supabase.table("worktime_adjusted_work_logs").upsert(payloads).execute()
@@ -1155,7 +1283,14 @@ class DatabaseManager:
                     continue
                 adj_h = float(r.get("adjusted_hours", 0.0))
                 orig_h = float(r.get("original_hours", 0.0))
-                note = str(r.get("note", ""))
+                note_val = str(r.get("note", ""))
+
+                if is_unlocked:
+                    p_dict = {"adjusted_hours": adj_h, "original_hours": orig_h, "note": note_val}
+                    enc_str = CostVaultService.encrypt_str(json.dumps(p_dict))
+                    st_adj, st_orig, st_note = 0.0, 0.0, f"ENC_ADJ:{enc_str}"
+                else:
+                    st_adj, st_orig, st_note = adj_h, orig_h, note_val
 
                 cursor.execute("""
                     INSERT INTO adjusted_work_logs (msg_hash, adjusted_hours, original_hours, note, updated_at)
@@ -1165,7 +1300,7 @@ class DatabaseManager:
                         original_hours=excluded.original_hours,
                         note=excluded.note,
                         updated_at=excluded.updated_at
-                """, (mh, adj_h, orig_h, note))
+                """, (mh, st_adj, st_orig, st_note))
 
                 # 동기화
                 if mh.startswith("OUTLOOK_WORK_"):

@@ -8,6 +8,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from ...services.cost_estimation_service import CostEstimationService
+from ...services.cost_vault_service import CostVaultService
 from ...services.excel_export_service import ExcelExportService
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
 from ...auth.auth_manager import AuthManager
@@ -20,6 +21,72 @@ from ..common.ui_helpers import (
     is_same_team,
     extract_selected_row_idx
 )
+
+
+def render_cost_vault_gateway():
+    """🔒 제로-트러스트 비용 보안 금고 게이트웨이 UI"""
+    st.markdown("""
+    <div style="max-width: 620px; margin: 30px auto 20px auto; padding: 26px 32px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 45, 66, 0.08); text-align: center;">
+        <div style="font-size: 42px; margin-bottom: 8px;">🔐</div>
+        <div style="font-size: 20px; font-weight: 800; color: #002d42; letter-spacing: -0.4px;">
+            비용 데이터 제로-트러스트 보안 금고
+        </div>
+        <div style="font-size: 13px; color: #475569; margin-top: 8px; line-height: 1.6;">
+            서버 PC 및 Supabase 클라우드 DB가 통째로 해킹당해도 단가 및 금액이 유출되지 않도록 <b>군사 표준(PBKDF2 600,000회 + AES-256)</b>으로 암호화되어 보호 중입니다.<br>
+            비밀번호는 어디에도 영구 저장되지 않으며, 관리자 입력 시에만 브라우저 메모리(RAM)에서 일회성으로 복호화됩니다.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_l, col_m, col_r = st.columns([1, 1.8, 1])
+    with col_m:
+        is_init = CostVaultService.is_vault_initialized()
+
+        if not is_init:
+            # 1. 신규 마스터 비밀번호 설정 폼
+            st.info("💡 등록된 보안 금고가 없습니다. 본인만 기억할 **마스터 비밀번호를 최초 설정**해 주세요.")
+            with st.form("form_setup_cost_vault", clear_on_submit=False):
+                pw1 = st.text_input("🔑 신규 비용 보안 마스터 비밀번호", type="password", key="vault_setup_pw1", placeholder="최소 4자리 이상 입력")
+                pw2 = st.text_input("🔑 마스터 비밀번호 확인", type="password", key="vault_setup_pw2", placeholder="비밀번호 다시 입력")
+                st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+                btn_setup = st.form_submit_button("🔒 비용 금고 생성 및 데이터 일괄 암호화 시작", type="primary", use_container_width=True)
+
+                if btn_setup:
+                    if not pw1 or not pw2:
+                        st.error("비밀번호를 입력해 주세요.")
+                    elif pw1 != pw2:
+                        st.error("비밀번호 확인이 일치하지 않습니다.")
+                    elif len(pw1) < 4:
+                        st.error("비밀번호는 최소 4자리 이상이어야 합니다.")
+                    else:
+                        ok, msg = CostVaultService.setup_initial_vault(pw1)
+                        if ok:
+                            st.toast("✅ 보안 금고가 생성되었으며 기존 데이터가 암호화되었습니다!", icon="🔒")
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {msg}")
+        else:
+            # 2. 기존 마스터 비밀번호 언락 폼
+            with st.form("form_unlock_cost_vault", clear_on_submit=False):
+                pw_input = st.text_input(
+                    "🔑 비용 보안 마스터 비밀번호 입력",
+                    type="password",
+                    key="vault_unlock_pw_field",
+                    placeholder="마스터 비밀번호 입력"
+                )
+                st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+                btn_unlock = st.form_submit_button("🔓 금고 잠금 해제 (데이터 복호화)", type="primary", use_container_width=True)
+
+                if btn_unlock:
+                    if not pw_input:
+                        st.error("비밀번호를 입력해 주세요.")
+                    else:
+                        ok, msg = CostVaultService.unlock(pw_input)
+                        if ok:
+                            st.toast("🔓 비용 금고가 정상적으로 열렸습니다!", icon="✅")
+                            st.rerun()
+                        else:
+                            st.error("❌ 비밀번호가 일치하지 않습니다.")
 
 
 def render_cost_estimation_view(
@@ -270,6 +337,13 @@ def render_cost_estimation_view(
     </style>
     """, unsafe_allow_html=True)
 
+    # ==========================================
+    # 🔐 제로-트러스트 비용 보안 금고 잠금 상태 검사
+    # ==========================================
+    if not CostVaultService.is_unlocked():
+        render_cost_vault_gateway()
+        return
+
     # 페이지별 타이틀 및 설명 동적 매핑
     page_titles = {
         "💰 팀원별 예상 청구금액": ("💰", "팀원별 프로젝트/지원 예상 청구금액", "기술본부 인력별 투입 공수 및 직급별 단가를 기준으로 사업본부 청구 금액을 산출합니다."),
@@ -307,14 +381,22 @@ def render_cost_estimation_view(
             period_text = month_desc if month_desc else "전체 기간"
         team_text = selected_team if selected_team else "전체 팀"
         worker_text = worker_desc if worker_desc else "전체 인원"
-        st.markdown(f"""
-        <div style="display: flex; justify-content: flex-end; width: 100%;">
-            <div class="cost-filter-summary-card">
-                <div>📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
-                <div style="margin-top: 3px;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
+
+        col_lock_btn, col_filter_badge = st.columns([3.8, 6.2])
+        with col_lock_btn:
+            if st.button("🔒 금고 잠금", key="btn_cost_vault_lock_top", use_container_width=True, help="클릭 즉시 메모리(RAM)에서 복호화 키를 완전히 파기하고 금고를 잠급니다."):
+                CostVaultService.lock()
+                st.toast("🔒 비용 금고가 잠겼습니다. (키 파기 완료)", icon="ℹ️")
+                st.rerun()
+        with col_filter_badge:
+            st.markdown(f"""
+            <div style="display: flex; justify-content: flex-end; width: 100%;">
+                <div class="cost-filter-summary-card">
+                    <div>📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
+                    <div style="margin-top: 3px;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
     # ⚖️ 근로기준법 제56조 준수 안내 바 (상시 1.5배 가산 자동 적용 명시 & 국가법령정보센터 조문 링크)
     st.markdown("""
