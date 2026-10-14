@@ -1549,9 +1549,13 @@ def render_cost_estimation_view(
                     selected_a_idx = extract_selected_row_idx(sel_cost_audit)
                     if selected_a_idx is not None and 0 <= selected_a_idx < len(f_df):
                         st.session_state[ver_key] = tbl_ver + 1
-                        target_row = f_df.iloc[selected_a_idx]
-                        target_task_id = str(target_row.get("task_id", ""))
-                        matched_task = main_df[main_df["task_id"].astype(str) == target_task_id] if "task_id" in main_df.columns and target_task_id else pd.DataFrame()
+                        target_msg_hash = str(target_row.get("msg_hash", target_row.get("task_id", "")))
+                        matched_task = pd.DataFrame()
+                        if target_msg_hash:
+                            if "msg_hash" in main_df.columns:
+                                matched_task = main_df[main_df["msg_hash"].astype(str) == target_msg_hash]
+                            elif "task_id" in main_df.columns:
+                                matched_task = main_df[main_df["task_id"].astype(str) == target_msg_hash]
                         
                         if not matched_task.empty:
                             show_single_task_dialog(matched_task.iloc[0].to_dict())

@@ -139,20 +139,25 @@ class CostVaultService:
     # 2. 인메모리(RAM) 세션 생명주기 관리
     # -------------------------------------------------------------
     @classmethod
-    def _get_cipher(cls) -> Optional[Fernet]:
-        """현재 세션 RAM에 상주하는 Fernet 암호화 객체 반환"""
+    def _is_streamlit_context(cls) -> bool:
         try:
-            import streamlit as st
-            if "_cost_vault_cipher" in st.session_state:
-                return st.session_state["_cost_vault_cipher"]
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+            return get_script_run_ctx() is not None
         except Exception:
-            pass
+            return False
+
+    @classmethod
+    def _get_cipher(cls) -> Optional[Fernet]:
+        """현재 세션 RAM에 상주하는 Fernet 암호화 객체 반환 (세션 간 완벽 격리)"""
+        if cls._is_streamlit_context():
+            import streamlit as st
+            return st.session_state.get("_cost_vault_cipher", None)
         return cls._fallback_cipher
 
     @classmethod
     def _set_cipher(cls, cipher: Optional[Fernet]):
-        """세션 RAM에 Fernet 암호화 객체 보관 또는 소멸"""
-        try:
+        """세션 RAM에 Fernet 암호화 객체 보관 또는 소멸 (세션 간 완벽 격리)"""
+        if cls._is_streamlit_context():
             import streamlit as st
             if cipher is not None:
                 st.session_state["_cost_vault_cipher"] = cipher
@@ -160,9 +165,8 @@ class CostVaultService:
             else:
                 st.session_state.pop("_cost_vault_cipher", None)
                 st.session_state["_cost_vault_unlocked"] = False
-        except Exception:
-            pass
-        cls._fallback_cipher = cipher
+        else:
+            cls._fallback_cipher = cipher
 
     @classmethod
     def is_unlocked(cls) -> bool:

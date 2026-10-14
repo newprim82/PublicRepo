@@ -135,6 +135,7 @@ class CostEstimationService:
         # 3. Supabase 저장 시도
         try:
             if db_manager.use_supabase and db_manager.supabase:
+                db_manager.supabase.table("worktime_excluded_cost_clients").delete().neq("client_name", "").execute()
                 payloads = [{"client_name": c} for c in clean_clients]
                 if payloads:
                     db_manager.supabase.table("worktime_excluded_cost_clients").upsert(payloads).execute()

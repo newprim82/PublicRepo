@@ -12,6 +12,7 @@ from ...services.authorized_recipient_service import AuthorizedRecipientService
 from ...services.team_service import TeamService
 from ...services.reward_leave_service import RewardLeaveService
 from ...analytics.stats_service import StatsService
+from ...config import config
 
 
 def render_chat_messages_expander(target_df: pd.DataFrame, max_display: int = 20, title_prefix: str = "전체 작업"):
@@ -1000,14 +1001,14 @@ def show_email_report_dialog(selected_team: str):
             unsafe_allow_html=True
         )
 
-    st.markdown("<div style='font-size: 12px; color: #cbd5e1; margin-top: 4px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>newprim82@gmail.com</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size: 12px; color: #cbd5e1; margin-top: 4px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>{config.SMTP_SENDER_EMAIL}</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
     
     if st.button("🚀 보고서 즉시 발송", type="primary", use_container_width=True, key="btn_confirm_send_email"):
         with st.spinner("🤖 Gemini AI 심층 브리핑 생성 및 이메일 전송 중..."):
             success, send_msg = EmailSender.send_weekly_report(
                 recipient_emails=mail_rcpt,
-                sender_email="newprim82@gmail.com",
-                sender_password="dlugbvfuhgdozkgr",
+                sender_email=config.SMTP_SENDER_EMAIL,
+                sender_password=config.SMTP_SENDER_PASSWORD,
                 selected_team=selected_team,
                 df_active_override=df_active,
                 prev_df_override=prev_df,

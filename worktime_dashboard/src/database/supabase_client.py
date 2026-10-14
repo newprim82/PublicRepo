@@ -143,6 +143,7 @@ class DatabaseManager:
             CREATE TABLE IF NOT EXISTS adjust_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 msg_hash TEXT NOT NULL,
+                work_date TEXT DEFAULT '',
                 worker_name TEXT NOT NULL,
                 worker_title TEXT DEFAULT '',
                 client_name TEXT DEFAULT '',
@@ -155,6 +156,10 @@ class DatabaseManager:
                 created_at TEXT DEFAULT (datetime('now', 'localtime'))
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE adjust_history ADD COLUMN work_date TEXT DEFAULT ''")
+        except Exception:
+            pass
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_ah_created_at ON adjust_history(created_at DESC)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_ah_msg_hash ON adjust_history(msg_hash)")
 
@@ -334,7 +339,7 @@ class DatabaseManager:
 
         return saved_count
 
-    def resolve_expired_pending_tasks(self, df_source: Optional[pd.DataFrame] = None) -> int:
+    def resolve_expired_pending_tasks(self, df_source: Optional[pd.DataFrame] = None) -> List[WorkLogRecord]:
         """
         DB에 존재하는 PENDING(진행 중) 레코드 중 시작 시각으로부터
         48시간(다일 작업은 예정일수*24h + 48h)이 경과한 작업을
@@ -345,7 +350,7 @@ class DatabaseManager:
                 if "status" in df_source.columns:
                     pend_rows = df_source[df_source["status"] == "PENDING"]
                 else:
-                    return 0
+                    return []
             else:
                 # DB 직접 조회 (Supabase 우선, 없으면 SQLite)
                 if self.use_supabase and self.supabase:
@@ -357,7 +362,7 @@ class DatabaseManager:
                     conn.close()
 
             if pend_rows.empty:
-                return 0
+                return []
 
             now = get_current_kst_time()
             resolved_records: List[WorkLogRecord] = []
@@ -1210,17 +1215,6 @@ class DatabaseManager:
                     updated_at=excluded.updated_at
             """, (msg_hash, stored_adj, stored_orig, stored_note))
 
-            # 아웃룩 일정인 경우 outlook_schedules duration_hours도 동시 업데이트
-            if msg_hash.startswith("OUTLOOK_WORK_"):
-                entry_id = msg_hash.replace("OUTLOOK_WORK_", "")
-                cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (float(adjusted_hours), entry_id))
-            elif msg_hash.startswith("OUTLOOK_LEAVE_"):
-                entry_id = msg_hash.replace("OUTLOOK_LEAVE_", "")
-                cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (float(adjusted_hours), entry_id))
-            else:
-                # 카카오톡 work_logs인 경우 actual_minutes 동시 업데이트
-                cursor.execute("UPDATE work_logs SET actual_minutes=? WHERE msg_hash=?", (int(adjusted_hours * 60), msg_hash))
-
             conn.commit()
             conn.close()
             return True
@@ -1302,16 +1296,6 @@ class DatabaseManager:
                         updated_at=excluded.updated_at
                 """, (mh, st_adj, st_orig, st_note))
 
-                # 동기화
-                if mh.startswith("OUTLOOK_WORK_"):
-                    entry_id = mh.replace("OUTLOOK_WORK_", "")
-                    cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (adj_h, entry_id))
-                elif mh.startswith("OUTLOOK_LEAVE_"):
-                    entry_id = mh.replace("OUTLOOK_LEAVE_", "")
-                    cursor.execute("UPDATE outlook_schedules SET duration_hours=? WHERE entry_id=?", (adj_h, entry_id))
-                else:
-                    cursor.execute("UPDATE work_logs SET actual_minutes=? WHERE msg_hash=?", (int(adj_h * 60), mh))
-
                 saved_count += 1
 
             conn.commit()
@@ -1346,11 +1330,12 @@ class DatabaseManager:
             for r in history_records:
                 cursor.execute("""
                     INSERT INTO adjust_history (
-                        msg_hash, worker_name, worker_title, client_name, task_description,
+                        msg_hash, work_date, worker_name, worker_title, client_name, task_description,
                         before_hours, after_hours, diff_hours, note, adjusted_by, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
                 """, (
                     str(r.get("msg_hash", "")),
+                    str(r.get("work_date", "")),
                     str(r.get("worker_name", "")),
                     str(r.get("worker_title", "")),
                     str(r.get("client_name", "")),
