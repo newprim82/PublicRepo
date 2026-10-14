@@ -391,9 +391,15 @@ def render_cost_estimation_view(
         team_text = selected_team if selected_team else "전체 팀"
         worker_text = worker_desc if worker_desc else "전체 인원"
 
-        col_lock_btn, col_filter_badge = st.columns([3.8, 6.2])
+        col_lock_btn, col_filter_badge = st.columns([4.2, 5.8])
         with col_lock_btn:
-            if st.button("🔒 금고 잠금", key="btn_cost_vault_lock_top", use_container_width=True, help="클릭 즉시 메모리(RAM)에서 복호화 키를 완전히 파기하고 금고를 잠급니다."):
+            st.markdown("""
+            <div style="font-size: 11px; font-weight: 800; color: #10b981; margin-bottom: 2px; display: flex; align-items: center; gap: 4px;">
+                <span style="display: inline-block; width: 7px; height: 7px; background: #10b981; border-radius: 50%;"></span>
+                🔓 금고 열림 (복호화 중)
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button("🔒 지금 금고 잠그기", key="btn_cost_vault_lock_top", use_container_width=True, help="클릭 즉시 메모리(RAM)에서 복호화 키를 완전히 파기하고 화면을 잠급니다."):
                 CostVaultService.lock()
                 st.toast("🔒 비용 금고가 잠겼습니다. (키 파기 완료)", icon="ℹ️")
                 st.rerun()
