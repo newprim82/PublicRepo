@@ -821,6 +821,8 @@ def main():
 
         # 4. 💰 비용산정 (로그인 시에만 노출)
         if is_auth:
+            from src.services.cost_vault_service import CostVaultService
+            vault_icon = "🔓" if CostVaultService.is_unlocked() else "🔒"
             cost_menu_items = [
                 "💰 팀원별 예상 청구금액",
                 "✏️ 업무 시간 직접 수정 장표",
@@ -828,7 +830,7 @@ def main():
                 "⚙️ 직급별 시간당 단가 설정"
             ]
             is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 비용산정", "💰 비용산정 대시보드", "💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
-            with st.expander("💰 비용산정", expanded=is_cost_active):
+            with st.expander(f"{vault_icon} 비용산정", expanded=is_cost_active):
                 for c_item in cost_menu_items:
                     is_active = (
                         st.session_state["current_page"] == c_item or 
