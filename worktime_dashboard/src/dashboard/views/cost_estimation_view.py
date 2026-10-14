@@ -48,6 +48,7 @@ def render_cost_vault_gateway():
             with st.form("form_setup_cost_vault", clear_on_submit=False):
                 pw1 = st.text_input("🔑 신규 비용 보안 마스터 비밀번호", type="password", key="vault_setup_pw1", placeholder="최소 4자리 이상 입력")
                 pw2 = st.text_input("🔑 마스터 비밀번호 확인", type="password", key="vault_setup_pw2", placeholder="비밀번호 다시 입력")
+                st.caption("⚠️ 웹 브라우저의 비밀번호 자동 완성 기능이 켜져 있는 경우, 기존 저장된 비밀번호 대신 새로 사용할 비용 금고 비밀번호를 직접 입력해 주세요.")
                 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
                 btn_setup = st.form_submit_button("🔒 비용 금고 생성 및 데이터 일괄 암호화 시작", type="primary", use_container_width=True)
 
@@ -74,6 +75,7 @@ def render_cost_vault_gateway():
                     key="vault_unlock_pw_field",
                     placeholder="마스터 비밀번호 입력"
                 )
+                st.caption("⚠️ 웹 브라우저가 관리자 로그인 비밀번호를 자동으로 채워 넣었을 수 있습니다. 설정하신 비용 금고 마스터 비밀번호를 직접 입력해 주세요.")
                 st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
                 btn_unlock = st.form_submit_button("🔓 금고 잠금 해제 (데이터 복호화)", type="primary", use_container_width=True)
 
@@ -87,6 +89,13 @@ def render_cost_vault_gateway():
                             st.rerun()
                         else:
                             st.error("❌ 비밀번호가 일치하지 않습니다.")
+
+            with st.expander("🔄 비밀번호를 분실하셨나요? (금고 초기화)"):
+                st.caption("금고를 초기화하면 저장된 복호화 키가 소멸되며, 신규 비밀번호를 다시 설정할 수 있습니다.")
+                if st.button("🗑️ 비용 금고 설정 초기화", type="secondary", use_container_width=True, key="btn_reset_vault_view"):
+                    CostVaultService.reset_vault()
+                    st.toast("✅ 금고가 초기화되었습니다. 새로고침 후 신규 비밀번호를 설정하세요.", icon="🔄")
+                    st.rerun()
 
 
 def render_cost_estimation_view(

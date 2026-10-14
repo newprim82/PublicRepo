@@ -207,6 +207,33 @@ class CostVaultService:
         return True, "비용 보안 마스터 비밀번호가 설정되고 기존 데이터가 안전하게 일괄 암호화되었습니다."
 
     @classmethod
+    def reset_vault(cls) -> bool:
+        """금고 설정 완전 초기화 (비밀번호 분실 또는 재설정 시)"""
+        cls.lock()
+        success = True
+        # 1. 로컬 SQLite 초기화
+        try:
+            cls._ensure_local_vault_table()
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM cost_vault_config")
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[CostVault] 로컬 금고 초기화 오류: {e}")
+            success = False
+
+        # 2. Supabase 초기화
+        try:
+            from ..database.supabase_client import db_manager
+            if db_manager.use_supabase and db_manager.supabase:
+                db_manager.supabase.table("worktime_hourly_rates").delete().eq("hourly_rate", -99999).execute()
+        except Exception as e:
+            print(f"[CostVault] Supabase 금고 초기화 오류: {e}")
+
+        return success
+
+    @classmethod
     def migrate_legacy_data_to_encrypted(cls) -> int:
         """기존 평문 단가 및 보정 데이터를 안전하게 일괄 암호화하여 DB 덮어쓰기"""
         migrated_count = 0
