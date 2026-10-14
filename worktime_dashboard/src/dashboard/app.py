@@ -470,8 +470,10 @@ def render_main_content_frame(
     admin_only_pages = [
         "⚙️ 팀원 소속 및 직급 관리 (팀 생성/배정)",
         "📋 작업 기록 원장 & 엑셀",
+        "💰 비용산정",
         "💰 예상 비용산정",
         "💰 팀원별 예상 청구금액",
+        "💰 비용산정 대시보드",
         "💰 예상 비용산정 대시보드",
         "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
@@ -559,8 +561,10 @@ def render_main_content_frame(
     elif curr_page == "📑 팀 전월 엑셀 원장 정기 발송":
         render_monthly_worklog_dispatch_view()
     elif curr_page in [
+        "💰 비용산정",
         "💰 예상 비용산정",
         "💰 팀원별 예상 청구금액",
+        "💰 비용산정 대시보드",
         "💰 예상 비용산정 대시보드",
         "🏢 고객사별 청구 금액",
         "✏️ 업무 시간 직접 수정 장표",
@@ -815,7 +819,7 @@ def main():
                     args=(d_item,)
                 )
 
-        # 4. 💰 예상 비용산정 (로그인 시에만 노출)
+        # 4. 💰 비용산정 (로그인 시에만 노출)
         if is_auth:
             cost_menu_items = [
                 "💰 팀원별 예상 청구금액",
@@ -823,12 +827,12 @@ def main():
                 "🕒 시간 수정 감사 이력",
                 "⚙️ 직급별 시간당 단가 설정"
             ]
-            is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
-            with st.expander("💰 예상 비용산정", expanded=is_cost_active):
+            is_cost_active = (st.session_state.get("current_page") in cost_menu_items or st.session_state.get("current_page") in ["💰 비용산정", "💰 비용산정 대시보드", "💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
+            with st.expander("💰 비용산정", expanded=is_cost_active):
                 for c_item in cost_menu_items:
                     is_active = (
                         st.session_state["current_page"] == c_item or 
-                        (c_item == "💰 팀원별 예상 청구금액" and st.session_state["current_page"] in ["💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
+                        (c_item == "💰 팀원별 예상 청구금액" and st.session_state["current_page"] in ["💰 비용산정", "💰 비용산정 대시보드", "💰 예상 비용산정", "💰 예상 비용산정 대시보드"])
                     )
                     btn_prefix = "▸ " if is_active else "  "
                     st.button(
