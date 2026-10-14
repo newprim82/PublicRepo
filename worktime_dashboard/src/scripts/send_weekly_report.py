@@ -28,13 +28,15 @@ def main():
     print(f"[{report_title}] 업무 실적 Summary Email Sending ({dispatch_type})")
     print("==================================================")
     
+    from src.config import config
+
     # 📬 DB 및 설정에 등록된 정기 메일 발송 활성 수신자 목록 자동 로드
     scheduled_recipients = EmailScheduleService.get_active_recipient_emails()
-    default_recipients_str = ", ".join(scheduled_recipients) if scheduled_recipients else "ymmoon@sangsanginworld.co.kr"
+    default_recipients_str = ", ".join(scheduled_recipients) if scheduled_recipients else "ymmoon@sangsanginworld.co.kr, khkim@sangsanginworld.co.kr"
 
     recipients = args.recipients or os.getenv("REPORT_RECIPIENT_EMAILS", "") or default_recipients_str
-    sender = os.getenv("GMAIL_SENDER_EMAIL", "newprim82@gmail.com")
-    pwd = os.getenv("GMAIL_APP_PASSWORD", "dlugbvfuhgdozkgr")
+    sender = os.getenv("GMAIL_SENDER_EMAIL") or config.SMTP_SENDER_EMAIL or "newprim82@gmail.com"
+    pwd = os.getenv("GMAIL_APP_PASSWORD") or config.SMTP_SENDER_PASSWORD or "dlugbvfuhgdozkgr"
     
     print(f"[*] 발신자: {sender}")
     print(f"[*] 수신자: {recipients}")

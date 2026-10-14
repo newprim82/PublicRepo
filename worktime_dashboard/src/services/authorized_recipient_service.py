@@ -12,6 +12,7 @@ AUTH_RECIPIENTS_FILE = DATA_DIR / "authorized_recipients.json"
 # 시스템 기본 등록 수신자
 DEFAULT_AUTHORIZED_EMAILS = [
     "ymmoon@sangsanginworld.co.kr",
+    "khkim@sangsanginworld.co.kr",
     "newprim82@gmail.com"
 ]
 

@@ -21,6 +21,16 @@ DEFAULT_RECIPIENTS = [
         "is_active": True,
         "note": "기본 수신자 (주간 업무 실적 및 정산 보고서)",
         "created_at": "2026-09-01 08:00:00"
+    },
+    {
+        "email": "khkim@sangsanginworld.co.kr",
+        "name": "김경현 수석",
+        "department": "기술 1팀",
+        "schedule_cron": "매주 월요일 08:00",
+        "include_cost": True,
+        "is_active": True,
+        "note": "정기 주간 업무 실적 및 예상 비용산정 리포트 공유",
+        "created_at": "2026-10-01 06:09:00"
     }
 ]
 
@@ -70,9 +80,88 @@ class EmailScheduleService:
             pass
 
     @classmethod
-    def _ensure_supabase_table(cls, client):
+    def _load_from_cloud(cls) -> Optional[List[Dict[str, Any]]]:
+        """Supabase 클라우드 DB에서 수신자 목록 조회 (전용 테이블 -> hourly_rates -99997 폴백)"""
         try:
-            client.table("worktime_scheduled_email_recipients").select("email").limit(1).execute()
+            from ..database.supabase_client import db_manager
+            client = getattr(db_manager, "supabase", None)
+            if not client:
+                return None
+
+            # 1-1. 전용 테이블 시도
+            try:
+                res = client.table("worktime_scheduled_email_recipients").select("*").execute()
+                if res.data:
+                    return res.data
+            except Exception:
+                pass
+
+            # 1-2. worktime_hourly_rates 전역 설정 레코드(-99997) 폴백
+            try:
+                res = client.table("worktime_hourly_rates").select("job_title").eq("hourly_rate", -99997).execute()
+                if res.data:
+                    for row in res.data:
+                        jt = str(row.get("job_title", ""))
+                        if jt.startswith("__SCHEDULED_RECIPIENTS__:"):
+                            raw_json = jt[len("__SCHEDULED_RECIPIENTS__:"):]
+                            parsed = json.loads(raw_json)
+                            if isinstance(parsed, list) and len(parsed) > 0:
+                                return parsed
+            except Exception:
+                pass
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def _save_to_cloud(cls, recipients: List[Dict[str, Any]]):
+        """Supabase 클라우드 DB에 수신자 목록 영구 동기화 (전용 테이블 + hourly_rates -99997 2중화)"""
+        try:
+            from ..database.supabase_client import db_manager
+            client = getattr(db_manager, "supabase", None)
+            if not client:
+                return
+
+            # 1. 전용 테이블 존재 시 upsert
+            try:
+                client.table("worktime_scheduled_email_recipients").upsert(recipients).execute()
+            except Exception:
+                pass
+
+            # 2. worktime_hourly_rates (-99997)에 JSON 영구 보존
+            try:
+                client.table("worktime_hourly_rates").delete().eq("hourly_rate", -99997).execute()
+                payload = {
+                    "job_title": f"__SCHEDULED_RECIPIENTS__:{json.dumps(recipients, ensure_ascii=False)}",
+                    "hourly_rate": -99997
+                }
+                client.table("worktime_hourly_rates").insert(payload).execute()
+            except Exception as e:
+                pass
+        except Exception:
+            pass
+
+    @classmethod
+    def _save_to_sqlite(cls, recipients: List[Dict[str, Any]]):
+        """로컬 SQLite 테이블 영구 동기화"""
+        cls._init_sqlite_table()
+        try:
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            cur = conn.cursor()
+            for r in recipients:
+                cur.execute("""
+                    INSERT OR REPLACE INTO scheduled_email_recipients (
+                        email, name, department, schedule_cron, include_cost, is_active, note, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    r["email"], r.get("name", ""), r.get("department", ""),
+                    r.get("schedule_cron", "매주 월요일 08:00"), 1 if r.get("include_cost", True) else 0,
+                    1 if r.get("is_active", True) else 0, r.get("note", ""),
+                    r.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                ))
+            conn.commit()
+            conn.close()
         except Exception:
             pass
 
@@ -92,28 +181,22 @@ class EmailScheduleService:
 
         # 1. Supabase Cloud DB 조회 시도
         loaded_from_cloud = False
-        try:
-            from ..database.supabase_client import db_manager
-            client = getattr(db_manager, "supabase", None)
-            if client:
-                res = client.table("worktime_scheduled_email_recipients").select("*").execute()
-                if res.data:
-                    for r in res.data:
-                        em = str(r.get("email", "")).lower().strip()
-                        if em:
-                            recipients_map[em] = {
-                                "email": em,
-                                "name": str(r.get("name", "")),
-                                "department": str(r.get("department", "")),
-                                "schedule_cron": str(r.get("schedule_cron", "매주 월요일 08:00")),
-                                "include_cost": bool(r.get("include_cost", True)),
-                                "is_active": bool(r.get("is_active", True)),
-                                "note": str(r.get("note", "")),
-                                "created_at": str(r.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-                            }
-                    loaded_from_cloud = True
-        except Exception:
-            loaded_from_cloud = False
+        cloud_data = cls._load_from_cloud()
+        if cloud_data:
+            for r in cloud_data:
+                em = str(r.get("email", "")).lower().strip()
+                if em:
+                    recipients_map[em] = {
+                        "email": em,
+                        "name": str(r.get("name", "")),
+                        "department": str(r.get("department", "")),
+                        "schedule_cron": str(r.get("schedule_cron", "매주 월요일 08:00")),
+                        "include_cost": bool(r.get("include_cost", True)),
+                        "is_active": bool(r.get("is_active", True)),
+                        "note": str(r.get("note", "")),
+                        "created_at": str(r.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                    }
+            loaded_from_cloud = True
 
         # 2. 로컬 SQLite 보강
         cls._init_sqlite_table()
@@ -157,8 +240,11 @@ class EmailScheduleService:
         result.sort(key=lambda x: (0 if x["email"] == "ymmoon@sangsanginworld.co.kr" else 1, x["email"]))
         cls._cached_recipients = result
 
-        # 로컬 파일 영구 보존 싱크
+        # 영구 보존 싱크
         cls._save_to_local_json(result)
+        cls._save_to_sqlite(result)
+        if not loaded_from_cloud:
+            cls._save_to_cloud(result)
         return result
 
     @classmethod
@@ -248,12 +334,17 @@ class EmailScheduleService:
         recipients.append(new_item)
         recipients.sort(key=lambda x: (0 if x["email"] == "ymmoon@sangsanginworld.co.kr" else 1, x["email"]))
         cls._cached_recipients = recipients
+        cls._save_to_cloud(recipients)
+        cls._save_to_sqlite(recipients)
         cls._save_to_local_json(recipients)
 
         # 4. AuthorizedRecipientService 화이트리스트에도 자동 등록
         try:
             from .authorized_recipient_service import AuthorizedRecipientService
-            AuthorizedRecipientService.add_authorized_recipient(clean_email)
+            if new_item.get("include_cost", True):
+                AuthorizedRecipientService.add_authorized_recipient(clean_email)
+            else:
+                AuthorizedRecipientService.remove_authorized_recipient(clean_email)
         except Exception:
             pass
 
@@ -324,7 +415,19 @@ class EmailScheduleService:
 
         # 3. 로컬 JSON 동기화 & 캐시 갱신
         cls._cached_recipients = recipients
+        cls._save_to_cloud(recipients)
+        cls._save_to_sqlite(recipients)
         cls._save_to_local_json(recipients)
+
+        # 4. AuthorizedRecipientService 화이트리스트 동기화
+        try:
+            from .authorized_recipient_service import AuthorizedRecipientService
+            if target.get("include_cost", True) and target.get("is_active", True):
+                AuthorizedRecipientService.add_authorized_recipient(clean_email)
+            else:
+                AuthorizedRecipientService.remove_authorized_recipient(clean_email)
+        except Exception:
+            pass
 
         return True, f"'{clean_email}' 수신자 설정이 성공적으로 변경되었습니다."
 
@@ -334,8 +437,8 @@ class EmailScheduleService:
         등록된 수신자 삭제 (기본 수신자는 삭제 불가)
         """
         clean_email = str(email).lower().strip()
-        if clean_email == "ymmoon@sangsanginworld.co.kr":
-            return False, "기본 수신자(ymmoon@sangsanginworld.co.kr)는 시스템 보호 대상이므로 삭제할 수 없습니다. 대신 '비활성화'로 전환하십시오."
+        if clean_email in ("ymmoon@sangsanginworld.co.kr", "khkim@sangsanginworld.co.kr"):
+            return False, f"기본 수신자({clean_email})는 시스템 보호 대상이므로 삭제할 수 없습니다. 대신 '비활성화'로 전환하십시오."
 
         recipients = cls.get_all_recipients(force_reload=True)
         new_list = [r for r in recipients if r["email"].lower() != clean_email]
@@ -363,7 +466,16 @@ class EmailScheduleService:
 
         # 3. 로컬 JSON 동기화 & 캐시 갱신
         cls._cached_recipients = new_list
+        cls._save_to_cloud(new_list)
+        cls._save_to_sqlite(new_list)
         cls._save_to_local_json(new_list)
+
+        # 4. AuthorizedRecipientService 화이트리스트 동기화
+        try:
+            from .authorized_recipient_service import AuthorizedRecipientService
+            AuthorizedRecipientService.remove_authorized_recipient(clean_email)
+        except Exception:
+            pass
 
         return True, f"'{clean_email}' 수신자가 발송 대상 목록에서 삭제되었습니다."
 

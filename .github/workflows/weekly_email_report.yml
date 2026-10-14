@@ -1,4 +1,4 @@
-name: Weekly Executive Summary Email Report
+name: Weekly Summary Email Report
 
 on:
   schedule:
@@ -23,15 +23,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas openpyxl supabase requests
+          pip install -r worktime_dashboard/requirements.txt
 
       - name: Send Weekly Report Email
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           GMAIL_SENDER_EMAIL: ${{ secrets.GMAIL_SENDER_EMAIL || 'newprim82@gmail.com' }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD || 'Rlarudgus1!' }}
-          DEFAULT_RECIPIENT_EMAIL: ${{ secrets.DEFAULT_RECIPIENT_EMAIL || 'ymmoon@sangsanginworld.co.kr' }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD || 'dlugbvfuhgdozkgr' }}
+          REPORT_RECIPIENT_EMAILS: ${{ secrets.REPORT_RECIPIENT_EMAILS || '' }}
+          COST_VAULT_MASTER_PASSWORD: ${{ secrets.COST_VAULT_MASTER_PASSWORD || '' }}
         working-directory: worktime_dashboard
         run: |
           python -m src.scripts.send_weekly_report
