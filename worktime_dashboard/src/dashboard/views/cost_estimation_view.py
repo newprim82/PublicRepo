@@ -90,12 +90,13 @@ def render_cost_vault_gateway():
                         else:
                             st.error("❌ 비밀번호가 일치하지 않습니다.")
 
-            with st.expander("🔄 비밀번호를 분실하셨나요? (금고 초기화)"):
-                st.caption("금고를 초기화하면 저장된 복호화 키가 소멸되며, 신규 비밀번호를 다시 설정할 수 있습니다.")
-                if st.button("🗑️ 비용 금고 설정 초기화", type="secondary", use_container_width=True, key="btn_reset_vault_view"):
-                    CostVaultService.reset_vault()
-                    st.toast("✅ 금고가 초기화되었습니다. 새로고침 후 신규 비밀번호를 설정하세요.", icon="🔄")
-                    st.rerun()
+            if AuthManager.is_super_admin():
+                with st.expander("🔄 비밀번호를 분실하셨나요? (금고 초기화)"):
+                    st.caption("금고를 초기화하면 저장된 복호화 키가 소멸되며, 기본 표준 단가로 안전 복원 후 신규 비밀번호를 다시 설정할 수 있습니다.")
+                    if st.button("🗑️ 비용 금고 설정 초기화", type="secondary", use_container_width=True, key="btn_reset_vault_view"):
+                        CostVaultService.reset_vault()
+                        st.toast("✅ 금고가 초기화되었습니다. 새로고침 후 신규 비밀번호를 설정하세요.", icon="🔄")
+                        st.rerun()
 
 
 def render_cost_estimation_view(
@@ -1563,6 +1564,7 @@ def render_cost_estimation_view(
                     selected_a_idx = extract_selected_row_idx(sel_cost_audit)
                     if selected_a_idx is not None and 0 <= selected_a_idx < len(f_df):
                         st.session_state[ver_key] = tbl_ver + 1
+                        target_row = f_df.iloc[selected_a_idx]
                         target_msg_hash = str(target_row.get("msg_hash", target_row.get("task_id", "")))
                         matched_task = pd.DataFrame()
                         if target_msg_hash:
@@ -1581,7 +1583,7 @@ def render_cost_estimation_view(
                                 "end_time": None,
                                 "task_description": f"{target_row.get('task_description', '')} [수정사유: {target_row.get('note', '')}]",
                                 "actual_hours": target_row.get("after_hours", target_row.get("before_hours", 0.0)),
-                                "raw_message": f"수정 전: {target_row.get('before_hours')}h ➔ 수정 후: {target_row.get('after_hours')}h\n수정 사유: {target_row.get('note')}\n수정자: {target_row.get('adjusted_by')}"
+                                "raw_start_message": f"수정 전: {target_row.get('before_hours')}h ➔ 수정 후: {target_row.get('after_hours')}h\n수정 사유: {target_row.get('note')}\n수정자: {target_row.get('adjusted_by')}"
                             }
                             show_single_task_dialog(audit_dict)
 

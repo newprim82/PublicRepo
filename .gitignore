@@ -27,3 +27,11 @@ scratch/
 *.log
 data/*.log
 
+# Temporary Dump & Export Files
+all_source_code.txt
+cost_vault_security_code.txt
+Part*.txt
+worktime_dashboard/data/scheduled_email_recipients.json
+data/scheduled_email_recipients.json
+
+

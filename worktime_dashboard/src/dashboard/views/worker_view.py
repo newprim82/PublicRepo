@@ -557,7 +557,7 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
                 target_w = disp_df.iloc[w_idx]["담당자"]
                 show_worker_all_tasks_dialog(target_w, p_df)
 
-        _render_worker_view_summary_table(disp_worker_summary, df_period)
+        _render_worker_view_summary_table(disp_worker_summary, df_active)
     else:
         if sel_period != "📅 월간 전체 종합":
             render_empty_week_notice(target_week, selected_team)

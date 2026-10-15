@@ -9,6 +9,7 @@ from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, stri
 from ...services.email_report_service import EmailReportService
 from ...services.email_sender import EmailSender
 from ...services.authorized_recipient_service import AuthorizedRecipientService
+from ...services.cost_vault_service import CostVaultService
 from ...services.team_service import TeamService
 from ...services.reward_leave_service import RewardLeaveService
 from ...analytics.stats_service import StatsService
@@ -396,16 +397,21 @@ def show_kpi_workers_dialog(df_data: pd.DataFrame):
     w_summary = StatsService.get_worker_summary(df_data)
     st.markdown(f"### 👥 총 투입 인원: **{len(w_summary)}명** (1인당 평균 {round(df_data['actual_hours'].sum() / max(len(w_summary), 1), 1)}h)")
     
+    disp_cols = ["worker_name", "team", "title", "total_hours", "total_tasks", "weekday_day_tasks", "weekday_night_tasks", "weekend_tasks", "avg_hours"]
+    avail_cols = [c for c in disp_cols if c in w_summary.columns]
+    disp_summary = w_summary[avail_cols].rename(columns={
+        "worker_name": "담당자",
+        "team": "소속팀",
+        "title": "직급",
+        "total_hours": "총 투입시간(h)",
+        "total_tasks": "작업 건수",
+        "weekday_day_tasks": "평일주간 건수",
+        "weekday_night_tasks": "평일야간 건수",
+        "weekend_tasks": "주말 건수",
+        "avg_hours": "건당 평균(h)"
+    })
     st.dataframe(
-        w_summary.rename(columns={
-            "worker_name": "담당자",
-            "team": "소속팀",
-            "total_hours": "총 투입시간(h)",
-            "task_count": "작업 건수",
-            "night_tasks": "야간 건수",
-            "weekend_tasks": "주말 건수",
-            "avg_hours": "건당 평균(h)"
-        }),
+        disp_summary,
         use_container_width=True,
         hide_index=True
     )
@@ -1000,6 +1006,25 @@ def show_email_report_dialog(selected_team: str):
             """,
             unsafe_allow_html=True
         )
+
+    if auth_list and CostVaultService.is_vault_initialized() and not CostVaultService.is_unlocked():
+        st.warning("🔒 비용산정 보안 금고가 잠겨 있어 청구금액이 마스킹됩니다. 정산 금액을 정상 발송하려면 금고를 해제해 주세요.")
+        with st.expander("🔑 보안 금고 즉시 해제 (권장)", expanded=True):
+            v_col1, v_col2 = st.columns([3, 1])
+            with v_col1:
+                vault_pw_input = st.text_input("금고 마스터 비밀번호", type="password", key="email_dialog_vault_pw", label_visibility="collapsed", placeholder="마스터 비밀번호 입력")
+            with v_col2:
+                if st.button("잠금 해제", key="btn_unlock_vault_in_email_dialog", use_container_width=True):
+                    if vault_pw_input:
+                        u_ok, u_msg = CostVaultService.unlock(vault_pw_input)
+                        if u_ok:
+                            st.success("보안 금고가 정상 해제되었습니다.")
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error(u_msg)
+                    else:
+                        st.warning("비밀번호를 입력하세요.")
 
     st.markdown(f"<div style='font-size: 12px; color: #cbd5e1; margin-top: 4px; margin-bottom: 12px;'>발신 계정: <b style='color: #38bdf8;'>{config.SMTP_SENDER_EMAIL}</b> (Gmail SMTP 연동 완료)</div>", unsafe_allow_html=True)
     

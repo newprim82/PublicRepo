@@ -63,10 +63,12 @@ def render_worklog_view(df: pd.DataFrame):
         "start_time", "end_time", "status", "log_type", "worker_name", "worker_team",
         "client_name", "task_description", "estimated_hours", "actual_hours", "is_night_work", "is_weekend_work"
     ]
-    available_display_cols = [c for c in display_cols if c in df.columns]
-    disp_df_out = strip_tz(df[available_display_cols].copy())
-    if "start_time" in disp_df_out.columns:
-        disp_df_out = disp_df_out.sort_values(by="start_time", ascending=False)
+    full_sorted_df = strip_tz(df.copy())
+    if "start_time" in full_sorted_df.columns:
+        full_sorted_df = full_sorted_df.sort_values(by="start_time", ascending=False).reset_index(drop=True)
+
+    available_display_cols = [c for c in display_cols if c in full_sorted_df.columns]
+    disp_df_out = full_sorted_df[available_display_cols].copy()
     if "status" in disp_df_out.columns:
         disp_df_out["status"] = disp_df_out["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_df_out["status"])
     
@@ -103,5 +105,5 @@ def render_worklog_view(df: pd.DataFrame):
             row_dict = out_data.iloc[w_row_idx].to_dict()
             show_single_task_dialog(row_dict)
 
-    _render_worklog_table(disp_renamed, disp_df_out)
+    _render_worklog_table(disp_renamed, full_sorted_df)
     return

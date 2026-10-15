@@ -578,6 +578,21 @@ class EmailReportService:
 
         if include_cost_estimation and not df_active.empty:
             try:
+                from .cost_vault_service import CostVaultService
+                if CostVaultService.is_vault_initialized() and not CostVaultService.is_unlocked():
+                    cost_dashboard_html = """
+                    <div style="margin-top: 24px; padding: 18px 20px; background-color: #fef2f2; border: 1.5px dashed #f87171; border-radius: 8px;">
+                        <div style="font-size: 14px; font-weight: bold; color: #991b1b; margin-bottom: 6px;">
+                            🔒 비용산정 보안 금고가 잠겨 있어 상세 정산 금액이 마스킹되었습니다.
+                        </div>
+                        <div style="font-size: 12px; color: #7f1d1d; line-height: 1.5;">
+                            정산 금액을 포함하여 발송하려면 대시보드 [예상 비용산정] 메뉴에서 보안 금고를 해제한 후 다시 발송해 주세요.
+                        </div>
+                    </div>
+                    """
+                    cost_excel_bytes = None
+                    raise RuntimeError("VAULT_LOCKED_MASKED")
+
                 df_calc = CostEstimationService.calculate_costs(df_active)
                 cost_kpis = CostEstimationService.get_cost_summary_kpis(df_calc)
                 worker_cost_df = CostEstimationService.get_worker_cost_summary(df_calc)
@@ -741,6 +756,9 @@ class EmailReportService:
                     </div>
                 </div>
                 """
+            except RuntimeError as r_err:
+                if str(r_err) != "VAULT_LOCKED_MASKED":
+                    cost_dashboard_html = f"<!-- 비용산정 섹션 렌더링 오류: {r_err} -->"
             except Exception as cost_e:
                 cost_dashboard_html = f"<!-- 비용산정 섹션 렌더링 오류: {cost_e} -->"
 

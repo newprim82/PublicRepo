@@ -183,6 +183,9 @@ class CostVaultService:
         """
         최초 비밀번호 설정 (16바이트 솔트 생성 -> 검증 토큰 암호화 -> DB 저장 -> 즉시 언락)
         """
+        if cls.is_vault_initialized():
+            return False, "이미 금고 마스터 비밀번호가 설정되어 있습니다. 재설정하려면 금고 초기화를 먼저 진행하세요."
+
         clean_pw = password.strip()
         if len(clean_pw) < 4:
             return False, "비밀번호는 최소 4자리 이상이어야 합니다."
@@ -217,6 +220,20 @@ class CostVaultService:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cursor = conn.cursor()
             cursor.execute("DELETE FROM cost_vault_config")
+
+            # 구 암호문 정리 및 기본 표준 단가 복원
+            default_rates = [("수석", 80000), ("과장", 60000), ("대리", 50000), ("사원", 35000)]
+            for jt, rate in default_rates:
+                cursor.execute("""
+                    INSERT INTO hourly_rates (job_title, hourly_rate, updated_at)
+                    VALUES (?, ?, datetime('now', 'localtime'))
+                    ON CONFLICT(job_title) DO UPDATE SET
+                        hourly_rate=excluded.hourly_rate,
+                        updated_at=excluded.updated_at
+                """, (jt, rate))
+
+            # 이전 키로 암호화된 보정 내역 정리
+            cursor.execute("DELETE FROM task_adjustments WHERE note LIKE 'ENC_ADJ:%'")
             conn.commit()
             conn.close()
         except Exception as e:
@@ -227,7 +244,20 @@ class CostVaultService:
         try:
             from ..database.supabase_client import db_manager
             if db_manager.use_supabase and db_manager.supabase:
-                db_manager.supabase.table("worktime_hourly_rates").delete().eq("hourly_rate", -99999).execute()
+                # 메타데이터(-99999) 및 암호화 단가 페이로드(-99998) 삭제
+                db_manager.supabase.table("worktime_hourly_rates").delete().in_("hourly_rate", [-99999, -99998]).execute()
+
+                # 기본 표준 단가 복원 (0원 마스킹 해제)
+                default_payloads = [
+                    {"job_title": "수석", "hourly_rate": 80000},
+                    {"job_title": "과장", "hourly_rate": 60000},
+                    {"job_title": "대리", "hourly_rate": 50000},
+                    {"job_title": "사원", "hourly_rate": 35000}
+                ]
+                db_manager.supabase.table("worktime_hourly_rates").upsert(default_payloads).execute()
+
+                # 이전 암호화된 보정 장표 삭제
+                db_manager.supabase.table("worktime_task_adjustments").delete().like("note", "ENC_ADJ:%").execute()
         except Exception as e:
             print(f"[CostVault] Supabase 금고 초기화 오류: {e}")
 

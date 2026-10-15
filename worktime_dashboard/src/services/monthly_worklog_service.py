@@ -824,8 +824,8 @@ class MonthlyWorklogService:
         excel_bytes = cls.generate_monthly_worklog_excel(team_df, team_name, month_str)
         subject, html_content = cls.generate_email_html(team_name, month_str, team_df)
 
-        sender = "newprim82@gmail.com"
-        password = "dlugbvfuhgdozkgr"
+        sender = config.SMTP_SENDER_EMAIL
+        password = config.SMTP_SENDER_PASSWORD
         recipients = [em.strip() for em in target_email.split(",") if em.strip()]
 
         try:
@@ -867,9 +867,7 @@ class MonthlyWorklogService:
                 server.starttls()
                 server.login(sender, password)
                 server.sendmail(sender, recipients, msg.as_string())
-            clean_team_fn = team_name.replace(" ", "")
-            clean_month_fn = month_str.replace("-", "")
-            excel_filename = f"{clean_team_fn}_{clean_month_fn}_전월_업무원장_통합리포트.xlsx"
+                server.quit()
             tot_act_h = round(team_df["actual_hours"].sum(), 1) if "actual_hours" in team_df.columns else 0.0
 
             # 📑 팀 전월 엑셀 원장 전용 DB 발송 이력 기록

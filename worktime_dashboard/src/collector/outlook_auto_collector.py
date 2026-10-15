@@ -114,7 +114,7 @@ def extract_outlook_schedules_with_meta(months_behind: int = 2, months_ahead: in
     records: List[OutlookScheduleRecord] = []
     seen_ids = set()
 
-    def process_calendar_folder(folder, owner_name: str) -> int:
+    def process_calendar_folder(folder, owner_name: str) -> Tuple[bool, int]:
         """단일 캘린더 폴더에서 즉시 일정을 추출 (COM 핸들 캐시 유실 방지)"""
         count_before = len(records)
         try:
@@ -122,7 +122,7 @@ def extract_outlook_schedules_with_meta(months_behind: int = 2, months_ahead: in
                 items = folder.Items
             except Exception as e_items:
                 safe_print(f"[i] 공유 캘린더 '{owner_name}': 사서함 세부 일정 접근 권한이 없어 건너뜁니다.")
-                return 0
+                return False, 0
 
             try:
                 items.IncludeRecurrences = True
@@ -288,17 +288,16 @@ def extract_outlook_schedules_with_meta(months_behind: int = 2, months_ahead: in
                 except Exception:
                     pass
                 item = flt.GetNext()
+            added = len(records) - count_before
+            return True, added
         except Exception as e:
-            pass
-
-        added = len(records) - count_before
-        return added
+            return False, 0
 
     # 2. 내 기본 캘린더 연동 (Calendar)
     try:
         def_cal = namespace.GetDefaultFolder(9)
         my_name = "김경현 수석"
-        added = process_calendar_folder(def_cal, my_name)
+        _, added = process_calendar_folder(def_cal, my_name)
         safe_print(f"[✓] Outlook 내 기본 캘린더 연결 성공: '{my_name}' (추출: {added}건)")
     except Exception as e:
         safe_print(f"[-] 기본 캘린더 접근 실패: {e}")
@@ -334,9 +333,12 @@ def extract_outlook_schedules_with_meta(months_behind: int = 2, months_ahead: in
                     try:
                         folder = nav_f.Folder
                         if folder:
-                            added = process_calendar_folder(folder, d_name)
-                            processed_clean_names.add(matched_member)
-                            safe_print(f"[✓] Outlook 공유 캘린더(UI) 연결 성공: '{d_name}' (항목: {folder.Items.Count}, 추출: {added}건)")
+                            is_ok, added = process_calendar_folder(folder, d_name)
+                            if is_ok:
+                                processed_clean_names.add(matched_member)
+                                safe_print(f"[✓] Outlook 공유 캘린더(UI) 연결 성공: '{d_name}' (추출: {added}건)")
+                            else:
+                                safe_print(f"[-] Outlook 공유 캘린더(UI) '{d_name}' 세부 일정 접근 권한 없음")
                     except Exception as e_nav:
                         safe_print(f"[-] Outlook 공유 캘린더(UI) '{d_name}' 접근 실패: {e_nav}")
     except Exception:
@@ -362,9 +364,12 @@ def extract_outlook_schedules_with_meta(months_behind: int = 2, months_ahead: in
             recip = namespace.CreateRecipient(name)
             folder = namespace.GetSharedDefaultFolder(recip, 9)
             if folder:
-                processed_clean_names.add(clean_target)
-                added = process_calendar_folder(folder, name)
-                safe_print(f"[✓] Outlook 공유 캘린더(MAPI) 연결 성공: '{name}' (항목: {folder.Items.Count}, 추출: {added}건)")
+                is_ok, added = process_calendar_folder(folder, name)
+                if is_ok:
+                    processed_clean_names.add(clean_target)
+                    safe_print(f"[✓] Outlook 공유 캘린더(MAPI) 연결 성공: '{name}' (추출: {added}건)")
+                else:
+                    safe_print(f"[-] Outlook 공유 캘린더 '{name}': 세부 일정 접근 권한이 없거나 읽기에 실패했습니다.")
             else:
                 safe_print(f"[-] Outlook 공유 캘린더 '{name}': 폴더를 가져오지 못했습니다.")
         except Exception as e_sh:

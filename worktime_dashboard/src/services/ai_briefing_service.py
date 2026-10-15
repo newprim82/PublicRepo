@@ -240,7 +240,7 @@ class AIBriefingService:
 [정량 데이터 팩트 JSON]:
 {json.dumps(facts, ensure_ascii=False, indent=2)}
 """
-        model_candidates = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.6-flash"]
+        model_candidates = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
         for model in model_candidates:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
