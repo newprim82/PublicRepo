@@ -655,37 +655,33 @@ def render_cost_estimation_view(
                     "작업 건수", "보정 건수"
                 ]
 
-                @st.fragment
-                def _render_cost_worker_table(disp_df, w_df, c_df):
-                    ver_key = "_tbl_ver_cost_worker"
-                    tbl_ver = st.session_state.get(ver_key, 0)
-                    sel_cost_worker = st.dataframe(
-                        disp_df.style.format({
-                            "시간당 단가(원)": "{:,.0f}원",
-                            "총 인정공수(h)": "{:,.1f}h",
-                            "야간·주말(h)": "{:,.1f}h",
-                            "기본 금액(원)": "₩ {:,.0f}",
-                            "할증 가산액(원)": "+₩ {:,.0f}",
-                            "최종 청구금액(원)": "₩ {:,.0f}",
-                            "작업 건수": "{:,}건",
-                            "보정 건수": "{:,}건"
-                        }),
-                        use_container_width=True,
-                        height=360,
-                        hide_index=True,
-                        on_select="rerun",
-                        selection_mode=["single-row", "single-cell"],
-                        key=f"tbl_cost_worker_selection_{tbl_ver}"
-                    )
+                ver_key_w = "_tbl_ver_cost_worker"
+                tbl_ver_w = st.session_state.get(ver_key_w, 0)
+                sel_cost_worker = st.dataframe(
+                    display_worker_df.style.format({
+                        "시간당 단가(원)": "{:,.0f}원",
+                        "총 인정공수(h)": "{:,.1f}h",
+                        "야간·주말(h)": "{:,.1f}h",
+                        "기본 금액(원)": "₩ {:,.0f}",
+                        "할증 가산액(원)": "+₩ {:,.0f}",
+                        "최종 청구금액(원)": "₩ {:,.0f}",
+                        "작업 건수": "{:,}건",
+                        "보정 건수": "{:,}건"
+                    }),
+                    use_container_width=True,
+                    height=360,
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode=["single-row", "single-cell"],
+                    key=f"tbl_cost_worker_selection_{tbl_ver_w}"
+                )
 
-                    selected_w_idx = extract_selected_row_idx(sel_cost_worker)
-                    if selected_w_idx is not None and 0 <= selected_w_idx < len(w_df):
-                        st.session_state[ver_key] = tbl_ver + 1
-                        target_worker = w_df.iloc[selected_w_idx]["worker_name"]
-                        w_cost_subset = c_df[c_df["worker_name"] == target_worker]
-                        show_cost_detail_dialog(f"{target_worker} 담당자", w_cost_subset)
-
-                _render_cost_worker_table(display_worker_df, worker_df, df_calc)
+                selected_w_idx = extract_selected_row_idx(sel_cost_worker)
+                if selected_w_idx is not None and 0 <= selected_w_idx < len(worker_df):
+                    st.session_state[ver_key_w] = tbl_ver_w + 1
+                    target_worker = worker_df.iloc[selected_w_idx]["worker_name"]
+                    w_cost_subset = df_calc[df_calc["worker_name"] == target_worker]
+                    show_cost_detail_dialog(f"{target_worker} 담당자", w_cost_subset)
 
                 try:
                     safe_slug = re.sub(r'[\\/*?:"<>| ~()]', '_', current_report_period).strip('_')
@@ -766,37 +762,33 @@ def render_cost_estimation_view(
                     "직급", "단가(원/h)", "투입인원", "총 인정공수(h)", "야간·주말(h)",
                     "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "금액 점유율(%)"
                 ]
-                @st.fragment
-                def _render_cost_title_table(disp_df, t_df, c_df):
-                    ver_key = "_tbl_ver_cost_title"
-                    tbl_ver = st.session_state.get(ver_key, 0)
-                    sel_cost_title = st.dataframe(
-                        disp_df.style.format({
-                            "단가(원/h)": "{:,.0f}원",
-                            "투입인원": "{:,}명",
-                            "총 인정공수(h)": "{:,.1f}h",
-                            "야간·주말(h)": "{:,.1f}h",
-                            "기본 금액(원)": "₩ {:,.0f}",
-                            "할증 가산액(원)": "+₩ {:,.0f}",
-                            "최종 청구금액(원)": "₩ {:,.0f}",
-                            "금액 점유율(%)": "{:.1f}%"
-                        }),
-                        use_container_width=True,
-                        height=240,
-                        hide_index=True,
-                        on_select="rerun",
-                        selection_mode=["single-row", "single-cell"],
-                        key=f"tbl_cost_title_selection_{tbl_ver}"
-                    )
+                ver_key_t = "_tbl_ver_cost_title"
+                tbl_ver_t = st.session_state.get(ver_key_t, 0)
+                sel_cost_title = st.dataframe(
+                    disp_title_df.style.format({
+                        "단가(원/h)": "{:,.0f}원",
+                        "투입인원": "{:,}명",
+                        "총 인정공수(h)": "{:,.1f}h",
+                        "야간·주말(h)": "{:,.1f}h",
+                        "기본 금액(원)": "₩ {:,.0f}",
+                        "할증 가산액(원)": "+₩ {:,.0f}",
+                        "최종 청구금액(원)": "₩ {:,.0f}",
+                        "금액 점유율(%)": "{:.1f}%"
+                    }),
+                    use_container_width=True,
+                    height=240,
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode=["single-row", "single-cell"],
+                    key=f"tbl_cost_title_selection_{tbl_ver_t}"
+                )
 
-                    selected_t_idx = extract_selected_row_idx(sel_cost_title)
-                    if selected_t_idx is not None and 0 <= selected_t_idx < len(t_df):
-                        st.session_state[ver_key] = tbl_ver + 1
-                        target_title = t_df.iloc[selected_t_idx]["worker_title"]
-                        t_cost_subset = c_df[c_df["worker_title"] == target_title]
-                        show_cost_detail_dialog(f"{target_title} 직급", t_cost_subset)
-
-                _render_cost_title_table(disp_title_df, title_df, df_calc)
+                selected_t_idx = extract_selected_row_idx(sel_cost_title)
+                if selected_t_idx is not None and 0 <= selected_t_idx < len(title_df):
+                    st.session_state[ver_key_t] = tbl_ver_t + 1
+                    target_title = title_df.iloc[selected_t_idx]["worker_title"]
+                    t_cost_subset = df_calc[df_calc["worker_title"] == target_title]
+                    show_cost_detail_dialog(f"{target_title} 직급", t_cost_subset)
             with col_t_tab2:
                 fig_t = px.pie(
                     title_df,
@@ -911,37 +903,33 @@ def render_cost_estimation_view(
                     "고객사명", "투입 인원수", "총 인정 공수(h)", "야간·주말(h)",
                     "기본 금액(원)", "할증 가산액(원)", "최종 청구금액(원)", "작업 건수", "보정 건수"
                 ]
-                @st.fragment
-                def _render_cost_client_table(disp_df, cl_df, c_df):
-                    ver_key = "_tbl_ver_cost_client"
-                    tbl_ver = st.session_state.get(ver_key, 0)
-                    sel_cost_client = st.dataframe(
-                        disp_df.style.format({
-                            "투입 인원수": "{:,}명",
-                            "총 인정 공수(h)": "{:,.1f}h",
-                            "야간·주말(h)": "{:,.1f}h",
-                            "기본 금액(원)": "₩ {:,.0f}",
-                            "할증 가산액(원)": "+₩ {:,.0f}",
-                            "최종 청구금액(원)": "₩ {:,.0f}",
-                            "작업 건수": "{:,}건",
-                            "보정 건수": "{:,}건"
-                        }),
-                        use_container_width=True,
-                        height=380,
-                        hide_index=True,
-                        on_select="rerun",
-                        selection_mode=["single-row", "single-cell"],
-                        key=f"tbl_cost_client_selection_{tbl_ver}"
-                    )
+                ver_key_c = "_tbl_ver_cost_client"
+                tbl_ver_c = st.session_state.get(ver_key_c, 0)
+                sel_cost_client = st.dataframe(
+                    disp_client_df.style.format({
+                        "투입 인원수": "{:,}명",
+                        "총 인정 공수(h)": "{:,.1f}h",
+                        "야간·주말(h)": "{:,.1f}h",
+                        "기본 금액(원)": "₩ {:,.0f}",
+                        "할증 가산액(원)": "+₩ {:,.0f}",
+                        "최종 청구금액(원)": "₩ {:,.0f}",
+                        "작업 건수": "{:,}건",
+                        "보정 건수": "{:,}건"
+                    }),
+                    use_container_width=True,
+                    height=380,
+                    hide_index=True,
+                    on_select="rerun",
+                    selection_mode=["single-row", "single-cell"],
+                    key=f"tbl_cost_client_selection_{tbl_ver_c}"
+                )
 
-                    selected_c_idx = extract_selected_row_idx(sel_cost_client)
-                    if selected_c_idx is not None and 0 <= selected_c_idx < len(cl_df):
-                        st.session_state[ver_key] = tbl_ver + 1
-                        target_client = cl_df.iloc[selected_c_idx]["client_name"]
-                        c_cost_subset = c_df[c_df["client_name"] == target_client]
-                        show_cost_detail_dialog(f"{target_client} 고객사", c_cost_subset)
-
-                _render_cost_client_table(disp_client_df, client_df, df_calc)
+                selected_c_idx = extract_selected_row_idx(sel_cost_client)
+                if selected_c_idx is not None and 0 <= selected_c_idx < len(client_df):
+                    st.session_state[ver_key_c] = tbl_ver_c + 1
+                    target_client = client_df.iloc[selected_c_idx]["client_name"]
+                    c_cost_subset = df_calc[df_calc["client_name"] == target_client]
+                    show_cost_detail_dialog(f"{target_client} 고객사", c_cost_subset)
 
                 csv_c_data = disp_client_df.to_csv(index=False).encode("utf-8-sig")
                 st.download_button(
