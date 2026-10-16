@@ -640,6 +640,7 @@ def render_cost_estimation_view(
         if worker_df.empty:
             st.info("조회 기준에 해당하는 팀원 작업 데이터가 없습니다.")
         else:
+            st.caption("💡 팀원 행을 클릭하시면 해당 담당자의 세부 작업 목록 및 정산 팝업이 바로 열립니다.")
             col_w1, col_w2 = st.columns([6, 4])
             with col_w1:
                 display_worker_df = worker_df.copy()
@@ -656,7 +657,6 @@ def render_cost_estimation_view(
 
                 @st.fragment
                 def _render_cost_worker_table(disp_df, w_df, c_df):
-                    st.caption("💡 팀원 행을 클릭하시면 해당 담당자의 세부 작업 목록 및 정산 팝업이 바로 열립니다.")
                     ver_key = "_tbl_ver_cost_worker"
                     tbl_ver = st.session_state.get(ver_key, 0)
                     sel_cost_worker = st.dataframe(
@@ -710,6 +710,7 @@ def render_cost_estimation_view(
 
             with col_w2:
                 top_workers = worker_df.head(10).sort_values(by="total_cost", ascending=True)
+                max_w_cost = float(top_workers["total_cost"].max()) if not top_workers.empty else 0.0
                 fig_w = px.bar(
                     top_workers,
                     x="total_cost",
@@ -723,6 +724,7 @@ def render_cost_estimation_view(
                     marker_color="#005073",
                     texttemplate='₩ %{text:,.0f}',
                     textposition='outside',
+                    cliponaxis=False,
                     textfont=dict(color="#000000", size=12, family="Pretendard, sans-serif")
                 )
                 fig_w.update_layout(
@@ -735,7 +737,8 @@ def render_cost_estimation_view(
                         title=dict(text="예상 청구금액 (원)", font=dict(color="#000000", size=12, family="Pretendard, sans-serif")),
                         tickfont=dict(color="#000000", size=11, family="Pretendard, sans-serif"),
                         showgrid=True,
-                        gridcolor="#e2e8f0"
+                        gridcolor="#e2e8f0",
+                        range=[0, max_w_cost * 1.25] if max_w_cost > 0 else None
                     ),
                     yaxis=dict(
                         title=dict(text="팀원", font=dict(color="#000000", size=12, family="Pretendard, sans-serif")),
@@ -751,6 +754,7 @@ def render_cost_estimation_view(
         st.markdown(f'<div class="cost-table-header-cisco" style="margin-top: 20px;"><span>👔</span><span>직급별 공수 및 청구 금액 점유율{period_header_suffix}</span></div>', unsafe_allow_html=True)
         title_df = CostEstimationService.get_title_cost_summary(df_calc)
         if not title_df.empty:
+            st.caption("💡 직급 행을 클릭하시면 해당 직급의 세부 작업 목록 및 정산 팝업이 바로 열립니다.")
             col_t_tab1, col_t_tab2 = st.columns([6, 4])
             with col_t_tab1:
                 disp_title_df = title_df.copy()
@@ -764,7 +768,6 @@ def render_cost_estimation_view(
                 ]
                 @st.fragment
                 def _render_cost_title_table(disp_df, t_df, c_df):
-                    st.caption("💡 직급 행을 클릭하시면 해당 직급의 세부 작업 목록 및 정산 팝업이 바로 열립니다.")
                     ver_key = "_tbl_ver_cost_title"
                     tbl_ver = st.session_state.get(ver_key, 0)
                     sel_cost_title = st.dataframe(
@@ -896,6 +899,7 @@ def render_cost_estimation_view(
         if client_df.empty:
             st.info("조회 기준에 해당하는 고객사 작업 데이터가 없습니다.")
         else:
+            st.caption("💡 고객사 행을 클릭하시면 해당 고객사의 세부 투입 작업 목록 및 정산 팝업이 바로 열립니다.")
             col_c1, col_c2 = st.columns([6, 4])
             with col_c1:
                 disp_client_df = client_df.copy()
@@ -909,7 +913,6 @@ def render_cost_estimation_view(
                 ]
                 @st.fragment
                 def _render_cost_client_table(disp_df, cl_df, c_df):
-                    st.caption("💡 고객사 행을 클릭하시면 해당 고객사의 세부 투입 작업 목록 및 정산 팝업이 바로 열립니다.")
                     ver_key = "_tbl_ver_cost_client"
                     tbl_ver = st.session_state.get(ver_key, 0)
                     sel_cost_client = st.dataframe(
