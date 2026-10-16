@@ -140,6 +140,10 @@ def render_cost_estimation_view(
     }
 
     /* 2. 상단 필터 요약 박스 (텍스트 길이에 맞춰 다이나믹하게 확장 & 줄바꿈 방지) */
+    div[data-testid="column"]:has(.cost-badge-col-marker) {
+        min-width: max-content !important;
+        flex: 0 0 auto !important;
+    }
     .cost-filter-summary-card {
         background: #ffffff !important;
         border: 1.5px solid #cbd5e1 !important;
@@ -151,7 +155,7 @@ def render_cost_estimation_view(
         box-shadow: 0 1px 4px rgba(0, 45, 66, 0.05) !important;
         width: max-content !important;
         min-width: fit-content !important;
-        max-width: 100% !important;
+        max-width: none !important;
         margin-left: auto !important;
         display: inline-block !important;
         white-space: nowrap !important;
@@ -164,24 +168,33 @@ def render_cost_estimation_view(
     }
 
     /* 2-1. 상단 액션 바 버튼: 텍스트 잘림(...) 원천 방지 및 내용물 맞춤 다이나믹 너비 */
-    div:has(> .cost-vault-lock-btn-wrap) + div[data-testid="stButton"] button,
-    div[data-testid="column"]:has(.cost-vault-lock-btn-wrap) button,
-    .cost-vault-lock-btn-wrap ~ div[data-testid="stButton"] button {
+    div[data-testid="column"]:has(.cost-lock-col-marker) {
+        min-width: max-content !important;
+        flex: 0 0 auto !important;
+    }
+    div[data-testid="column"]:has(.cost-lock-col-marker) .stButton {
+        width: auto !important;
+        min-width: max-content !important;
+    }
+    div[data-testid="column"]:has(.cost-lock-col-marker) .stButton button,
+    div[data-testid="column"]:has(.cost-vault-lock-btn-wrap) button {
         white-space: nowrap !important;
         min-width: max-content !important;
-        width: 100% !important;
+        width: auto !important;
+        overflow: visible !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
     }
-    div:has(> .cost-vault-lock-btn-wrap) + div[data-testid="stButton"] button p,
-    div[data-testid="column"]:has(.cost-vault-lock-btn-wrap) button p,
-    .cost-vault-lock-btn-wrap ~ div[data-testid="stButton"] button p {
+    div[data-testid="column"]:has(.cost-lock-col-marker) .stButton button *,
+    div[data-testid="column"]:has(.cost-vault-lock-btn-wrap) button * {
         white-space: nowrap !important;
         overflow: visible !important;
         text-overflow: clip !important;
         word-break: keep-all !important;
-        display: inline-block !important;
     }
-    div[data-testid="stHorizontalBlock"] button[data-testid="baseButton-secondary"] p,
-    div[data-testid="stHorizontalBlock"] button[data-testid="baseButton-primary"] p {
+    /* 헤더 수평 블록 내 모든 버튼 공통 텍스트 잘림 방지 */
+    div[data-testid="stHorizontalBlock"] button[data-testid="baseButton-secondary"] *,
+    div[data-testid="stHorizontalBlock"] button[data-testid="baseButton-primary"] * {
         white-space: nowrap !important;
         overflow: visible !important;
         text-overflow: clip !important;
@@ -402,12 +415,20 @@ def render_cost_estimation_view(
     icon, title_txt, desc_txt = page_titles.get(curr_page, ("💰", "프로젝트/현장지원 비용산정", "기술본부 인력의 투입 공수 및 직급별 단가를 기준으로 예상 청구 금액을 산출합니다."))
 
     # 2. 상단 헤더 및 조회 기준 요약 배지 바 (선명한 다크 네이비 & 화이트 배지)
-    try:
-        col_t1, col_t2 = st.columns([3.8, 6.2], vertical_alignment="center")
-    except TypeError:
-        col_t1, col_t2 = st.columns([3.8, 6.2])
+    cur_sel_period = st.session_state.get("cost_estimation_period_selector", "🗓️ 월간 전체 종합")
+    if cur_sel_period != "🗓️ 월간 전체 종합":
+        period_text = f"{month_desc} ({cur_sel_period.replace('📌 ', '').strip()})" if month_desc else cur_sel_period.replace('📌 ', '').strip()
+    else:
+        period_text = month_desc if month_desc else "전체 기간"
+    team_text = selected_team if selected_team else "전체 팀"
+    worker_text = worker_desc if worker_desc else "전체 인원"
 
-    with col_t1:
+    try:
+        col_title, col_lock, col_badge = st.columns([4.2, 2.3, 3.5], vertical_alignment="center")
+    except TypeError:
+        col_title, col_lock, col_badge = st.columns([4.2, 2.3, 3.5])
+
+    with col_title:
         st.markdown(f"""
         <div style="margin-bottom: 6px;">
             <div class="cost-main-title">
@@ -420,40 +441,28 @@ def render_cost_estimation_view(
         </div>
         """, unsafe_allow_html=True)
 
-    with col_t2:
-        cur_sel_period = st.session_state.get("cost_estimation_period_selector", "🗓️ 월간 전체 종합")
-        if cur_sel_period != "🗓️ 월간 전체 종합":
-            period_text = f"{month_desc} ({cur_sel_period.replace('📌 ', '').strip()})" if month_desc else cur_sel_period.replace('📌 ', '').strip()
-        else:
-            period_text = month_desc if month_desc else "전체 기간"
-        team_text = selected_team if selected_team else "전체 팀"
-        worker_text = worker_desc if worker_desc else "전체 인원"
+    with col_lock:
+        st.markdown('<div class="cost-lock-col-marker"></div>', unsafe_allow_html=True)
+        if st.button(
+            "🔓 금고 열림 (클릭 시 잠금)",
+            key="btn_cost_vault_lock_top",
+            use_container_width=True,
+            help="현재 복호화 키가 RAM에 로드되어 정상 표출 중입니다. 클릭 시 즉시 키를 파기하고 화면을 잠급니다."
+        ):
+            CostVaultService.lock()
+            st.toast("🔒 비용 금고가 잠겼습니다. (키 파기 완료)", icon="ℹ️")
+            st.rerun()
 
-        try:
-            col_lock_btn, col_filter_badge = st.columns([3.7, 6.3], vertical_alignment="center")
-        except TypeError:
-            col_lock_btn, col_filter_badge = st.columns([3.7, 6.3])
-
-        with col_lock_btn:
-            st.markdown('<div class="cost-vault-lock-btn-wrap"></div>', unsafe_allow_html=True)
-            if st.button(
-                "🔓 금고 열림 (클릭 시 잠금)",
-                key="btn_cost_vault_lock_top",
-                use_container_width=True,
-                help="현재 복호화 키가 RAM에 로드되어 정상 표출 중입니다. 클릭 시 즉시 키를 파기하고 화면을 잠급니다."
-            ):
-                CostVaultService.lock()
-                st.toast("🔒 비용 금고가 잠겼습니다. (키 파기 완료)", icon="ℹ️")
-                st.rerun()
-        with col_filter_badge:
-            st.markdown(f"""
-            <div style="display: flex; justify-content: flex-end; width: 100%;">
-                <div class="cost-filter-summary-card">
-                    <div style="white-space: nowrap;">📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
-                    <div style="margin-top: 3px; white-space: nowrap;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
-                </div>
+    with col_badge:
+        st.markdown('<div class="cost-badge-col-marker"></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style="display: flex; justify-content: flex-end; width: 100%;">
+            <div class="cost-filter-summary-card">
+                <div style="white-space: nowrap;">📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
+                <div style="margin-top: 3px; white-space: nowrap;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
             </div>
-            """, unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
 
     # ⚖️ 근로기준법 제56조 준수 안내 바 (상시 1.5배 가산 자동 적용 명시 & 국가법령정보센터 조문 링크)
     st.markdown("""
