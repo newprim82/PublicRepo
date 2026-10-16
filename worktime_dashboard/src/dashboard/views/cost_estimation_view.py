@@ -424,9 +424,9 @@ def render_cost_estimation_view(
     worker_text = worker_desc if worker_desc else "전체 인원"
 
     try:
-        col_title, col_lock, col_badge = st.columns([1.8, 1.3, 1.9], vertical_alignment="center")
+        col_title, col_lock, col_badge = st.columns([3.5, 2.7, 3.8], vertical_alignment="center")
     except TypeError:
-        col_title, col_lock, col_badge = st.columns([1.8, 1.3, 1.9])
+        col_title, col_lock, col_badge = st.columns([3.5, 2.7, 3.8])
 
     with col_title:
         st.markdown(f"""
@@ -446,7 +446,7 @@ def render_cost_estimation_view(
         if st.button(
             "🔓 금고 열림 (클릭 시 잠금)",
             key="btn_cost_vault_lock_top",
-            use_container_width=False,
+            use_container_width=True,
             help="현재 복호화 키가 RAM에 로드되어 정상 표출 중입니다. 클릭 시 즉시 키를 파기하고 화면을 잠급니다."
         ):
             CostVaultService.lock()
@@ -457,7 +457,7 @@ def render_cost_estimation_view(
         st.markdown('<div class="cost-badge-col-marker"></div>', unsafe_allow_html=True)
         st.markdown(f"""
         <div style="display: flex; justify-content: flex-end; width: 100%;">
-            <div class="cost-filter-summary-card" style="background: #ffffff !important; border: 1.5px solid #cbd5e1 !important; border-radius: 8px !important; padding: 7px 14px !important; text-align: right !important; font-size: 12px !important; color: #334155 !important; box-shadow: 0 1px 4px rgba(0, 45, 66, 0.05) !important; width: max-content !important; min-width: max-content !important; max-width: none !important; white-space: nowrap !important; box-sizing: border-box !important;">
+            <div class="cost-filter-summary-card" style="background: #ffffff !important; border: 1.5px solid #cbd5e1 !important; border-radius: 8px !important; padding: 7px 14px !important; text-align: right !important; font-size: 12px !important; color: #334155 !important; box-shadow: 0 1px 4px rgba(0, 45, 66, 0.05) !important; width: 100% !important; min-width: max-content !important; max-width: none !important; white-space: nowrap !important; box-sizing: border-box !important;">
                 <div style="white-space: nowrap !important; word-break: keep-all !important;">📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
                 <div style="margin-top: 3px; white-space: nowrap !important; word-break: keep-all !important;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
             </div>
