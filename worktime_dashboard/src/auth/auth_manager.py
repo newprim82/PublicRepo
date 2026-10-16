@@ -522,24 +522,29 @@ class AuthManager:
         """
         현재 사용자의 권한 반환:
         - newprim: 'SUPER_ADMIN'
-        - 그 외: 'ADMIN' (미로그인 시 'GUEST')
+        - 그 외 로그인 사용자: 'ADMIN'
+        - 미로그인: 'GUEST'
         """
         if cls.is_authenticated():
             u = cls.get_current_user()
-            if u and u.lower() == SUPER_ADMIN_USERNAME.lower():
+            if u and u.strip().lower() == SUPER_ADMIN_USERNAME.lower():
                 return "SUPER_ADMIN"
-            auth_info = st.session_state.get("auth_user", {})
-            return auth_info.get("role", "ADMIN")
+            return "ADMIN"
         return "GUEST"
 
     @classmethod
     def is_super_admin(cls) -> bool:
         """
         현재 로그인 사용자가 최고 관리자(Super Admin: newprim)인지 여부 반환
-        - newprim만 True 반환 (시스템 관리 메뉴 및 계정 등록 메뉴 열람 가능)
-        - 다른 계정은 False 반환
+        - 반드시 인증되어 있어야 하며, 아이디가 'newprim'인 경우에만 True
+        - 미로그인(GUEST) 또는 일반 관리자(ADMIN)는 무조건 False 반환
         """
-        return cls.get_current_role() == "SUPER_ADMIN"
+        if not cls.is_authenticated():
+            return False
+        u = cls.get_current_user()
+        if not u:
+            return False
+        return u.strip().lower() == SUPER_ADMIN_USERNAME.lower()
 
     # =========================================================
     # 5. 로그인 및 로그아웃 (Brute Force 무차별 대입 방어)
