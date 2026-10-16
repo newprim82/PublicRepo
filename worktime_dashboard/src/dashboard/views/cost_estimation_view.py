@@ -1213,7 +1213,7 @@ def render_cost_estimation_view(
                     data=csv_mom_data,
                     file_name=f"월별청구추이_MoM분석_{safe_team_name}_{file_date_str}.csv",
                     mime="text/csv",
-                    key="btn_dl_mom_trend_csv"
+                    key="btn_dl_mom_trend_csv_fallback"
                 )
 
 

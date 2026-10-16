@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 sys.path.insert(0, r"c:\Python\work-time-dashboard")
 from src.database.supabase_client import db_manager
 from src.parser.multiday_splitter import split_multiday_record, is_multiday_record
