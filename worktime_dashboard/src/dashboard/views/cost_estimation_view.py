@@ -139,7 +139,7 @@ def render_cost_estimation_view(
         line-height: 1.5;
     }
 
-    /* 2. 상단 필터 요약 박스 (텍스트 길이에 맞춘 플렉서블 핏) */
+    /* 2. 상단 필터 요약 박스 (텍스트 길이에 맞춰 다이나믹하게 확장 & 줄바꿈 방지) */
     .cost-filter-summary-card {
         background: #ffffff !important;
         border: 1.5px solid #cbd5e1 !important;
@@ -149,10 +149,43 @@ def render_cost_estimation_view(
         font-size: 12px !important;
         color: #334155 !important;
         box-shadow: 0 1px 4px rgba(0, 45, 66, 0.05) !important;
-        width: fit-content !important;
+        width: max-content !important;
+        min-width: fit-content !important;
         max-width: 100% !important;
         margin-left: auto !important;
         display: inline-block !important;
+        white-space: nowrap !important;
+        box-sizing: border-box !important;
+    }
+    .cost-filter-summary-card div,
+    .cost-filter-summary-card span {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+    }
+
+    /* 2-1. 상단 액션 바 버튼: 텍스트 잘림(...) 원천 방지 및 내용물 맞춤 다이나믹 너비 */
+    div:has(> .cost-vault-lock-btn-wrap) + div[data-testid="stButton"] button,
+    div[data-testid="column"]:has(.cost-vault-lock-btn-wrap) button,
+    .cost-vault-lock-btn-wrap ~ div[data-testid="stButton"] button {
+        white-space: nowrap !important;
+        min-width: max-content !important;
+        width: 100% !important;
+    }
+    div:has(> .cost-vault-lock-btn-wrap) + div[data-testid="stButton"] button p,
+    div[data-testid="column"]:has(.cost-vault-lock-btn-wrap) button p,
+    .cost-vault-lock-btn-wrap ~ div[data-testid="stButton"] button p {
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        word-break: keep-all !important;
+        display: inline-block !important;
+    }
+    div[data-testid="stHorizontalBlock"] button[data-testid="baseButton-secondary"] p,
+    div[data-testid="stHorizontalBlock"] button[data-testid="baseButton-primary"] p {
+        white-space: nowrap !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        word-break: keep-all !important;
     }
 
     /* 3. 4대 KPI 메트릭 화이트 펄스 카드 (summary_view 표준 일원화) */
@@ -369,10 +402,14 @@ def render_cost_estimation_view(
     icon, title_txt, desc_txt = page_titles.get(curr_page, ("💰", "프로젝트/현장지원 비용산정", "기술본부 인력의 투입 공수 및 직급별 단가를 기준으로 예상 청구 금액을 산출합니다."))
 
     # 2. 상단 헤더 및 조회 기준 요약 배지 바 (선명한 다크 네이비 & 화이트 배지)
-    col_t1, col_t2 = st.columns([7, 3])
+    try:
+        col_t1, col_t2 = st.columns([3.8, 6.2], vertical_alignment="center")
+    except TypeError:
+        col_t1, col_t2 = st.columns([3.8, 6.2])
+
     with col_t1:
         st.markdown(f"""
-        <div style="margin-bottom: 10px;">
+        <div style="margin-bottom: 6px;">
             <div class="cost-main-title">
                 <span>{icon}</span>
                 <span>{title_txt}</span>
@@ -392,8 +429,13 @@ def render_cost_estimation_view(
         team_text = selected_team if selected_team else "전체 팀"
         worker_text = worker_desc if worker_desc else "전체 인원"
 
-        col_lock_btn, col_filter_badge = st.columns([4.5, 5.5])
+        try:
+            col_lock_btn, col_filter_badge = st.columns([3.7, 6.3], vertical_alignment="center")
+        except TypeError:
+            col_lock_btn, col_filter_badge = st.columns([3.7, 6.3])
+
         with col_lock_btn:
+            st.markdown('<div class="cost-vault-lock-btn-wrap"></div>', unsafe_allow_html=True)
             if st.button(
                 "🔓 금고 열림 (클릭 시 잠금)",
                 key="btn_cost_vault_lock_top",
@@ -407,8 +449,8 @@ def render_cost_estimation_view(
             st.markdown(f"""
             <div style="display: flex; justify-content: flex-end; width: 100%;">
                 <div class="cost-filter-summary-card">
-                    <div>📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
-                    <div style="margin-top: 3px;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
+                    <div style="white-space: nowrap;">📅 <b>기간:</b> <span style="color: #005073; font-weight: 800;">{period_text}</span></div>
+                    <div style="margin-top: 3px; white-space: nowrap;">🏢 <b>대상:</b> <span style="color: #0284c7; font-weight: 800;">{team_text}</span> | <span style="color: #6366f1; font-weight: 700;">{worker_text}</span></div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
