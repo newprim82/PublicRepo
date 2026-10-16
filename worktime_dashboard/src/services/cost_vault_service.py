@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import base64
 import json
 import sqlite3
@@ -14,6 +15,8 @@ from ..config import config
 
 VERIFIER_PLAINTEXT = "COST_VAULT_VERIFY_TOKEN_v1"
 PBKDF2_ITERATIONS = 600_000  # OWASP 2024 권장 군사 표준
+MAX_VAULT_ATTEMPTS = 5
+VAULT_LOCKOUT_SECONDS = 180  # 5회 연속 실패 시 3분 잠금
 
 
 class CostVaultService:
@@ -27,6 +30,8 @@ class CostVaultService:
     """
 
     _fallback_cipher: Optional[Fernet] = None  # 비 Streamlit 환경(단위 테스트 등)용 메모리 캐시
+    _failed_attempts: int = 0
+    _lockout_until: float = 0.0
 
     @classmethod
     def derive_key(cls, password: str, salt: bytes) -> bytes:
@@ -213,6 +218,8 @@ class CostVaultService:
     def reset_vault(cls) -> bool:
         """금고 설정 완전 초기화 (비밀번호 분실 또는 재설정 시)"""
         cls.lock()
+        cls._failed_attempts = 0
+        cls._lockout_until = 0.0
         success = True
         # 1. 로컬 SQLite 초기화
         try:
@@ -296,8 +303,13 @@ class CostVaultService:
     @classmethod
     def unlock(cls, password: str) -> Tuple[bool, str]:
         """
-        비밀번호 검증 및 금고 잠금 해제 (일치 시 RAM에 키 탑재)
+        비밀번호 검증 및 금고 잠금 해제 (일치 시 RAM에 키 탑재, 5회 연속 실패 시 3분 잠금)
         """
+        now_ts = time.time()
+        if cls._lockout_until > now_ts:
+            rem_sec = int(cls._lockout_until - now_ts) + 1
+            return False, f"비밀번호 5회 연속 오류로 인해 잠겼습니다. {rem_sec}초 후에 다시 시도해주세요."
+
         clean_pw = password.strip()
         if not clean_pw:
             return False, "비밀번호를 입력해 주세요."
@@ -318,12 +330,22 @@ class CostVaultService:
 
             decrypted = cipher.decrypt(verifier_token.encode()).decode()
             if decrypted == VERIFIER_PLAINTEXT:
+                cls._failed_attempts = 0
+                cls._lockout_until = 0.0
                 cls._set_cipher(cipher)
                 return True, "비용 보안 금고가 정상적으로 잠금 해제되었습니다."
             else:
-                return False, "비밀번호가 일치하지 않습니다."
+                cls._failed_attempts += 1
+                if cls._failed_attempts >= MAX_VAULT_ATTEMPTS:
+                    cls._lockout_until = time.time() + VAULT_LOCKOUT_SECONDS
+                    return False, f"비밀번호가 {MAX_VAULT_ATTEMPTS}회 연속 불일치하여 3분간 잠금 처리되었습니다."
+                return False, f"비밀번호가 일치하지 않습니다. (실패 {cls._failed_attempts}/{MAX_VAULT_ATTEMPTS})"
         except InvalidToken:
-            return False, "비밀번호가 일치하지 않습니다."
+            cls._failed_attempts += 1
+            if cls._failed_attempts >= MAX_VAULT_ATTEMPTS:
+                cls._lockout_until = time.time() + VAULT_LOCKOUT_SECONDS
+                return False, f"비밀번호가 {MAX_VAULT_ATTEMPTS}회 연속 불일치하여 3분간 잠금 처리되었습니다."
+            return False, f"비밀번호가 일치하지 않습니다. (실패 {cls._failed_attempts}/{MAX_VAULT_ATTEMPTS})"
         except Exception as e:
             return False, f"인증 처리 중 오류 발생: {e}"
 

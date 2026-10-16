@@ -31,7 +31,8 @@ data/*.log
 all_source_code.txt
 cost_vault_security_code.txt
 Part*.txt
-worktime_dashboard/data/scheduled_email_recipients.json
-data/scheduled_email_recipients.json
-
-
+worktime_dashboard/data/*.json
+worktime_dashboard/data/.session_cache.json
+data/*.json
+worktime_dashboard/archive/
+archive/

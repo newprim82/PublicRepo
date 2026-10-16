@@ -1,5 +1,6 @@
 import io
 import re
+import html
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 from typing import Dict, Any, Tuple, Optional, List
@@ -612,12 +613,15 @@ class EmailReportService:
                 worker_cost_rows_html = ""
                 for c_idx, (_, r) in enumerate(worker_cost_df.iterrows(), start=1):
                     bg_row = "#f8fafc" if c_idx % 2 == 1 else "#ffffff"
+                    w_name_esc = html.escape(str(r.get('worker_name', '')))
+                    w_team_esc = html.escape(str(r.get('worker_team', '')))
+                    w_title_esc = html.escape(str(r.get('worker_title', '')))
                     worker_cost_rows_html += f"""
                     <tr style="background-color: {bg_row}; border-bottom: 1px solid #e2e8f0; font-size: 12px;">
                         <td style="padding: 7px 8px; text-align: center; color: #64748b;">{c_idx}</td>
-                        <td style="padding: 7px 8px; font-weight: bold; color: #002d42;">{r.get('worker_name', '')}</td>
-                        <td style="padding: 7px 8px; text-align: center; color: #475569;">{r.get('worker_team', '')}</td>
-                        <td style="padding: 7px 8px; text-align: center; color: #475569;">{r.get('worker_title', '')}</td>
+                        <td style="padding: 7px 8px; font-weight: bold; color: #002d42;">{w_name_esc}</td>
+                        <td style="padding: 7px 8px; text-align: center; color: #475569;">{w_team_esc}</td>
+                        <td style="padding: 7px 8px; text-align: center; color: #475569;">{w_title_esc}</td>
                         <td style="padding: 7px 8px; text-align: right; color: #334155;">{int(r.get('hourly_rate', 0)):,}원</td>
                         <td style="padding: 7px 8px; text-align: right; font-weight: bold; color: #005073;">{float(r.get('total_hours', 0.0)):,.1f}h</td>
                         <td style="padding: 7px 8px; text-align: right; color: #d97706;">{float(r.get('overtime_hours', 0.0)):,.1f}h</td>
@@ -654,10 +658,11 @@ class EmailReportService:
                 top_clients = client_cost_df.head(5) if not client_cost_df.empty else pd.DataFrame()
                 for c_rank, (_, cr) in enumerate(top_clients.iterrows(), start=1):
                     bg_c = "#f8fafc" if c_rank % 2 == 1 else "#ffffff"
+                    c_name_esc = html.escape(str(cr.get('client_name', '')))
                     client_cost_rows_html += f"""
                     <tr style="background-color: {bg_c}; border-bottom: 1px solid #e2e8f0; font-size: 12px;">
                         <td style="padding: 6px 8px; text-align: center; color: #64748b;">{c_rank}위</td>
-                        <td style="padding: 6px 8px; font-weight: bold; color: #002d42;">{cr.get('client_name', '')}</td>
+                        <td style="padding: 6px 8px; font-weight: bold; color: #002d42;">{c_name_esc}</td>
                         <td style="padding: 6px 8px; text-align: center; color: #475569;">{int(cr.get('worker_count', 0))}명</td>
                         <td style="padding: 6px 8px; text-align: right; color: #005073; font-weight: bold;">{float(cr.get('total_hours', 0.0)):,.1f}h</td>
                         <td style="padding: 6px 8px; text-align: right; color: #d97706;">{float(cr.get('overtime_hours', 0.0)):,.1f}h</td>

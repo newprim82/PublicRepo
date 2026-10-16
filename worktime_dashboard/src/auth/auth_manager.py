@@ -159,12 +159,25 @@ class AuthManager:
         return sqlite3.connect(str(db_path))
 
     @staticmethod
+    def _hash_token(token: str) -> str:
+        """세션 토큰 원문 노출 방지를 위한 SHA-256 단방향 해시"""
+        return hashlib.sha256(str(token).encode("utf-8")).hexdigest()
+
+    @staticmethod
     def _load_session_cache() -> Dict[str, Any]:
-        """로컬 파일 기반 세션 캐시 로드"""
+        """로컬 파일 기반 세션 캐시 로드 (만료된 세션 자동 정리)"""
         if SESSION_CACHE_FILE.exists():
             try:
                 with open(SESSION_CACHE_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
+                    raw_cache = json.load(f)
+                if not isinstance(raw_cache, dict):
+                    return {}
+                now = time.time()
+                valid_cache = {
+                    k: v for k, v in raw_cache.items()
+                    if isinstance(v, dict) and (now - v.get("login_at", 0) < SESSION_DURATION_SECONDS)
+                }
+                return valid_cache
             except Exception:
                 return {}
         return {}
@@ -477,17 +490,19 @@ class AuthManager:
                     return False
 
         # 2. 브라우저 쿼리 파라미터 기반 세션 토큰 복원 (새로고침 / 탭 복원 시)
-        token = st.query_params.get("session_token")
-        if token:
+        token = str(st.query_params.get("session_token", "") or "").strip()
+        if token and len(token) == 32 and all(c in "0123456789abcdefABCDEF" for c in token):
+            token_hash = cls._hash_token(token)
             cache = cls._load_session_cache()
-            if token in cache:
-                s_info = cache[token]
+            lookup_key = token_hash if token_hash in cache else (token if token in cache else None)
+            if lookup_key:
+                s_info = cache[lookup_key]
                 login_at = s_info.get("login_at", 0)
                 if now - login_at < SESSION_DURATION_SECONDS:
                     st.session_state["auth_user"] = s_info
                     return True
                 else:
-                    del cache[token]
+                    del cache[lookup_key]
                     cls._save_session_cache(cache)
                     if "session_token" in st.query_params:
                         del st.query_params["session_token"]
@@ -597,6 +612,7 @@ class AuthManager:
 
             now = time.time()
             token = secrets.token_hex(16)
+            token_hash = cls._hash_token(token)
             role = "SUPER_ADMIN" if matched_acc["username"].lower() == SUPER_ADMIN_USERNAME.lower() else "ADMIN"
 
             session_info = {
@@ -604,16 +620,15 @@ class AuthManager:
                 "name": matched_acc.get("name", ""),
                 "role": role,
                 "login_at": now,
-                "token": token
+                "token_hash": token_hash
             }
 
             # 1. Streamlit 세션 저장
-            st.session_state["auth_user"] = session_info
+            st.session_state["auth_user"] = {**session_info, "token": token}
 
-            # 2. 로컬 캐시 파일 저장 (새로고침 대응)
+            # 2. 로컬 캐시 파일 저장 (새로고침 대응 — 원문 토큰 대신 SHA-256 해시 키만 디스크 보관)
             cache = cls._load_session_cache()
-            cache = {k: v for k, v in cache.items() if now - v.get("login_at", 0) < SESSION_DURATION_SECONDS}
-            cache[token] = session_info
+            cache[token_hash] = session_info
             cls._save_session_cache(cache)
 
             # 3. 브라우저 쿼리 파라미터에 세션 토큰 저장
@@ -636,17 +651,28 @@ class AuthManager:
     def logout(cls):
         """로그아웃 처리"""
         token = None
+        token_hash = None
         if "auth_user" in st.session_state:
             token = st.session_state["auth_user"].get("token")
+            token_hash = st.session_state["auth_user"].get("token_hash")
             del st.session_state["auth_user"]
 
         if not token:
             token = st.query_params.get("session_token")
 
-        if token:
+        if token and not token_hash:
+            token_hash = cls._hash_token(token)
+
+        if token or token_hash:
             cache = cls._load_session_cache()
-            if token in cache:
+            changed = False
+            if token_hash and token_hash in cache:
+                del cache[token_hash]
+                changed = True
+            if token and token in cache:
                 del cache[token]
+                changed = True
+            if changed:
                 cls._save_session_cache(cache)
 
         if "session_token" in st.query_params:

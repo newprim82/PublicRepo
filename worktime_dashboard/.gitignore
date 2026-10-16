@@ -20,6 +20,9 @@ data/*.db
 
 # Backup files
 backup/
+archive/
 data/.session_cache.json
+data/*.json
 *.cache
 collector_status.json
+

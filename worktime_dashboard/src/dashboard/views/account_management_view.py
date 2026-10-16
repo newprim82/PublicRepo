@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import html
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -98,6 +99,11 @@ def render_account_management_view():
                 dt = acc.get("created_at", "")[:16]
                 is_super = (un.lower() == SUPER_ADMIN_USERNAME.lower())
 
+                un_esc = html.escape(str(un))
+                name_esc = html.escape(str(name or '성명 미등록'))
+                note_esc = html.escape(str(note))
+                dt_esc = html.escape(str(dt))
+
                 border_left_color = "#f59e0b" if is_super else "#0284c7"
                 role_badge = (
                     '<span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800;">👑 Super Admin</span>'
@@ -118,14 +124,14 @@ def render_account_management_view():
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     {role_badge}
-                                    <span style="font-weight: 800; color: #002d42; font-size: 14.5px;">{un}</span>
-                                    <span style="color: #475569; font-weight: 600; font-size: 13px;">({name or '성명 미등록'})</span>
+                                    <span style="font-weight: 800; color: #002d42; font-size: 14.5px;">{un_esc}</span>
+                                    <span style="color: #475569; font-weight: 600; font-size: 13px;">({name_esc})</span>
                                 </div>
                                 <div style="font-size: 11.5px; color: #94a3b8;">
-                                    등록: {dt}
+                                    등록: {dt_esc}
                                 </div>
                             </div>
-                            {f'<div style="margin-top: 5px; font-size: 12px; color: #64748b;">📌 비고: {note}</div>' if note else ''}
+                            {f'<div style="margin-top: 5px; font-size: 12px; color: #64748b;">📌 비고: {note_esc}</div>' if note_esc else ''}
                         </div>
                         """, unsafe_allow_html=True)
 
@@ -134,7 +140,7 @@ def render_account_management_view():
                         st.markdown(f"""
                         <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 10px 14px; margin: 4px 0 10px 28px;">
                             <div style="font-size: 12.5px; font-weight: 800; color: #005073; margin-bottom: 6px;">
-                                ⚙️ [{un}] 계정 제어 패널
+                                ⚙️ [{un_esc}] 계정 제어 패널
                             </div>
                         </div>
                         """, unsafe_allow_html=True)

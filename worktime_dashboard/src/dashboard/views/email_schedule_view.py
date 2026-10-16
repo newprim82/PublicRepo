@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
 import re
+import html
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 from typing import Dict, Any, List
 
 try:
+    from src.config import config
     from src.services.email_schedule_service import EmailScheduleService
     from src.auth.auth_manager import AuthManager
     from src.services.email_sender import EmailSender
     from src.services.authorized_recipient_service import AuthorizedRecipientService
 except ImportError:
+    from ...config import config
     from ...services.email_schedule_service import EmailScheduleService
     from ...auth.auth_manager import AuthManager
     from ...services.email_sender import EmailSender
@@ -236,13 +239,15 @@ def render_email_schedule_view():
     # 테이블 렌더링
     for idx, r in enumerate(recipients, start=1):
         em = r["email"]
-        nm = r.get("name", "") or "-"
-        dept = r.get("department", "") or "-"
-        cron = r.get("schedule_cron", "매주 월요일 08:00")
+        em_esc = html.escape(str(em))
+        nm_esc = html.escape(str(r.get("name", "") or "-"))
+        dept_esc = html.escape(str(r.get("department", "") or "-"))
+        cron_esc = html.escape(str(r.get("schedule_cron", "매주 월요일 08:00")))
         is_act = r.get("is_active", True)
         inc_cost = r.get("include_cost", True)
-        note = r.get("note", "") or ""
-        created_str = str(r.get("created_at", ""))[:16]
+        note_raw = r.get("note", "") or ""
+        note_esc = html.escape(str(note_raw))
+        created_str = html.escape(str(r.get("created_at", ""))[:16])
 
         status_badge = '<span class="schedule-badge-active">● 활성화 (발송 중)</span>' if is_act else '<span class="schedule-badge-inactive">○ 일시 중지</span>'
         cost_badge = '<span style="color: #0284c7; font-weight: 800; font-size: 11.5px; background: #e0f2fe; padding: 2px 7px; border-radius: 4px;">💰 비용 포함</span>' if inc_cost else '<span style="color: #64748b; font-size: 11.5px; background: #f1f5f9; padding: 2px 7px; border-radius: 4px;">실적만</span>'
@@ -253,18 +258,18 @@ def render_email_schedule_view():
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-weight: 800; color: #002d42; font-size: 14px;">#{idx}</span>
-                        <span style="font-weight: 900; color: #002d42; font-size: 14.5px;">{em}</span>
-                        <span style="color: #475569; font-weight: 700; font-size: 13px;">({nm} | {dept})</span>
+                        <span style="font-weight: 900; color: #002d42; font-size: 14.5px;">{em_esc}</span>
+                        <span style="color: #475569; font-weight: 700; font-size: 13px;">({nm_esc} | {dept_esc})</span>
                         {status_badge}
                         {cost_badge}
                     </div>
                     <div style="font-size: 11.5px; color: #64748b;">
-                        <span>⏰ {cron}</span>
+                        <span>⏰ {cron_esc}</span>
                         <span style="margin: 0 6px;">|</span>
                         <span>등록: {created_str}</span>
                     </div>
                 </div>
-                {f'<div style="margin-top: 6px; font-size: 12px; color: #64748b;">📌 비고: {note}</div>' if note else ''}
+                {f'<div style="margin-top: 6px; font-size: 12px; color: #64748b;">📌 비고: {note_esc}</div>' if note_esc else ''}
             </div>
             """, unsafe_allow_html=True)
 
@@ -390,8 +395,8 @@ def render_email_schedule_view():
                     else:
                         ok, msg = EmailSender.send_weekly_report(
                             recipient_emails=active_emails,
-                            sender_email="newprim82@gmail.com",
-                            sender_password="dlugbvfuhgdozkgr",
+                            sender_email=config.SMTP_SENDER_EMAIL,
+                            sender_password=config.SMTP_SENDER_PASSWORD,
                             selected_team="기술 1팀",
                             dispatch_type="AUTO_WEEKLY"
                         )

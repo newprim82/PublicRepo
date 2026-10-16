@@ -12,6 +12,7 @@ from datetime import datetime
 from .email_report_service import EmailReportService
 from .authorized_recipient_service import AuthorizedRecipientService
 from ..common.logger import get_logger
+from ..config import config
 
 logger = get_logger("email_sender")
 
@@ -28,8 +29,8 @@ def get_secret(key: str, default: str = "") -> str:
     val = os.getenv(key, "").strip()
     return val if val else default
 
-DEFAULT_SENDER = "newprim82@gmail.com"
-DEFAULT_APP_PWD = "dlugbvfuhgdozkgr"
+DEFAULT_SENDER = config.SMTP_SENDER_EMAIL
+DEFAULT_APP_PWD = config.SMTP_SENDER_PASSWORD
 DEFAULT_RECIPIENT = "ymmoon@sangsanginworld.co.kr"
 
 class EmailSender:
@@ -57,9 +58,8 @@ class EmailSender:
         Returns:
             (success: bool, message: str)
         """
-        sender = "newprim82@gmail.com"
-        # 🛡️ 구글에서 발급된 16자리 앱 비밀번호 직통 적용 (Secrets 오염 완전 방어)
-        password = "dlugbvfuhgdozkgr"
+        sender = str(sender_email).strip() if sender_email and str(sender_email).strip() else config.SMTP_SENDER_EMAIL
+        password = config.SMTP_SENDER_PASSWORD
         if sender_password:
             clean_input_pwd = str(sender_password).replace(" ", "").strip()
             if len(clean_input_pwd) == 16 and clean_input_pwd.isalpha():
