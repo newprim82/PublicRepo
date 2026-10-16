@@ -42,6 +42,19 @@ from src.collector.kakao_auto_collector import (
     WIN32_AVAILABLE
 )
 
+import importlib
+for _mod_name, _mod_obj in list(sys.modules.items()):
+    if _mod_name.startswith(("src.dashboard.", "src.services.", "src.analytics.")):
+        _mod_file = getattr(_mod_obj, "__file__", None)
+        if _mod_file and os.path.exists(_mod_file):
+            try:
+                _cur_mtime = os.path.getmtime(_mod_file)
+                if getattr(_mod_obj, "_last_hot_reload_mtime", None) != _cur_mtime:
+                    importlib.reload(_mod_obj)
+                    setattr(_mod_obj, "_last_hot_reload_mtime", _cur_mtime)
+            except Exception:
+                pass
+
 from src.dashboard.styles import apply_custom_styles, render_header_banner
 from src.dashboard.common.ui_helpers import (
     get_bora_ntp_timestamp,
@@ -110,9 +123,6 @@ def clear_all_web_caches():
         pass
         
     # 3. 파이썬 서브 모듈 강제 핫리로드 (Streamlit Cloud 메모리 캐시 파괴)
-    if not globals().get("_APP_FULLY_INITIALIZED", False):
-        return
-    import importlib
     modules_to_reload = [
         "src.services.client_normalizer",
         "src.dashboard.common.ui_helpers",
