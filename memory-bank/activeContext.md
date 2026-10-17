@@ -2,6 +2,14 @@
 
 ## 1. 최근 완료된 핵심 작업 내역 (2026-10-08 ~ 2026-10-17)
 
+- **전체 앱 2차 종합 개선: 체감 속도 혁신, 아웃룩 일정 전수 페이지네이션, 월간 자동발송 복구 및 장기 구동 안정화 (`5afe8fb`)**:
+  - **다중 시트 엑셀 사전 생성 병목 제거**: `summary_view.py`, `cost_estimation_view.py`, `monthly_worklog_dispatch_view.py`에서 화면 진입/클릭 시마다 무거운 `openpyxl` 엑셀 파일을 매번 새로 생성하던 병목을 `@st.cache_data` 캐싱으로 제거하여 화면 전환 및 셀 클릭 반응 속도 대폭 향상.
+  - **수집기 상태 조회 30초 메모리 캐시 적용**: `collector_status_service.py`에 30초 인메모리 캐시(`CACHE_TTL = 30.0`)를 도입하여 매 클릭마다 발생하던 Supabase 네트워크 왕복 지연(200~400ms) 제거.
+  - **아웃룩 일정 1,000건 초과 시 최신 일정 증발 버그 수정**: `supabase_client.py`의 `fetch_outlook_schedules` 및 삭제 동기화에 1,000건 단위 연속 조회(Pagination) 루프를 적용하고, 월말~월초 걸친 일정 누락 방지를 위해 기간 필터를 `start_time` 기준으로 통일.
+  - **매월 1일 08:00 전월 업무원장 자동 발송 워크플로우 신설 및 개인정보 보호**: `.github/workflows/monthly_team_worklog.yml`을 신설하여 매달 1일 오전 8시(KST) 무인 자동 발송 파이프라인을 완결하고, `monthly_worklog_service.py`에서도 다중 수신자 개별 발송(`_send_to_all`) 적용.
+  - **표준 시간(NTP) UDP 소켓 리소스 누수 해결**: `time_utils.py`에서 `with socket.socket(...) as client:` 컨텍스트 매니저를 적용하여 `ResourceWarning: unclosed <socket.socket>` 누수 원천 해소.
+  - **로컬 SQLite 동시성(WAL) 및 타임아웃 강화**: `supabase_client.py`의 로컬 DB 초기화 시 `PRAGMA journal_mode=WAL;` 및 `timeout=15.0`을 적용하여 백그라운드 수집기와 웹 화면 간 동시 쓰기 잠금(`database is locked`) 방지.
+
 - **보안 자격증명 격리, 런타임 안정화, 개인정보 보호 및 파서 결함 전수 해결 (`b3f31f9`)**:
   - **자격증명 하드코딩 제거**: `config.py`, `send_weekly_report.py`, `weekly_email_report.yml` 내 실제 Gmail 앱 비밀번호 하드코딩 완전 제거 및 환경변수/GitHub Secrets 단독 참조로 유출 위험 원천 차단.
   - **최고 관리자 기본 비밀번호 환경변수화**: `auth_manager.py`의 `DEFAULT_SUPER_ADMIN_PWD`를 `SUPER_ADMIN_INITIAL_PWD` 환경변수로 격리.
@@ -51,12 +59,13 @@
 ## 2. 현재 시스템 상태 (Current State)
 
 - **애플리케이션 버전**: `v2.6.3`
-- **단일 진실 소스 시간**: LGU+ 공식 NTP `time.bora.net` (KST Naive datetime)
-- **보안 상태**: 자격증명 완전 환경변수화, 제로-트러스트 영지식 암호화 금고 가동 (AES-256 / PBKDF2), URL 세션 토큰 노출 차단, 이메일 개별 전송 프라이버시 보호
-- **런타임 상태**: 클라우드 데몬 수집기 상태 플래핑 원천 차단
+- **단일 진실 소스 시간**: LGU+ 공식 NTP `time.bora.net` (KST Naive datetime, UDP 소켓 자동 종료 보장)
+- **보안 상태**: 자격증명 완전 환경변수화, 제로-트러스트 영지식 암호화 금고 가동 (AES-256 / PBKDF2), URL 세션 토큰 노출 차단, 주간·월간 이메일 개별 전송 프라이버시 보호
+- **런타임 및 성능 상태**: 클라우드 데몬 플래핑 원천 차단, 다중 엑셀 생성 `@st.cache_data` 캐싱, 수집기 상태 30초 메모리 캐싱, 아웃룩 일정 전수 페이지네이션, SQLite WAL 동시성 모드 가동
+- **자동화 파이프라인**: 매주 월요일 주간 리포트(`weekly_email_report.yml`) + 매월 1일 08:00 전월 업무원장(`monthly_team_worklog.yml`) 무인 발송 완비
 - **화면 구성**: 12대 메뉴 (역할 기반 접근 제어: 일반 관제 / 관리자 / 최고관리자)
-- **테스트 현황**: 38/38 Tests Passing (100% 통과, OK)
-- **Git 브랜치**: `main` (최신 커밋: `b3f31f9`)
+- **테스트 현황**: 38/38 Tests Passing (100% 통과, OK, 리소스 누수 경고 0건)
+- **Git 브랜치**: `main` (최신 커밋: `5afe8fb`)
 
 ---
 
