@@ -390,12 +390,15 @@ def render_outlook_calendar_widget(
                 st_time_str = ev["start_time"].strftime("%H:%M") if hasattr(ev["start_time"], "strftime") else ""
                 time_tag = st_time_str
 
+            import html
+            safe_w_name = html.escape(str(w_name))
+            safe_clean_task = html.escape(str(clean_task))
             leave_icon = "🏖️ " if is_leave else ""
             chip_style = f"background: {c_info['bg']}; border-color: {c_info['border']}; color: {c_info['text']};"
             time_part = f"{leave_icon}{time_tag} " if time_tag else f"{leave_icon}"
-            bold_name = f"<b style='font-weight: 800;'>[{w_name}]</b>"
-            chip_text = f"{time_part}{bold_name} <span style='font-weight: 400;'>{clean_task}</span>"
-            full_title = f"[{w_name}] {clean_task}"
+            bold_name = f"<b style='font-weight: 800;'>[{safe_w_name}]</b>"
+            chip_text = f"{time_part}{bold_name} <span style='font-weight: 400;'>{safe_clean_task}</span>"
+            full_title = html.escape(f"[{w_name}] {clean_task}", quote=True)
 
             grid_html += f'<div class="outlook-chip" style="{chip_style}" title="{full_title} ({ev.get("duration_hours", 1)}h)">{chip_text}</div>'
 

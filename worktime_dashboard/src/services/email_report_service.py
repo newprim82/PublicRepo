@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 from typing import Dict, Any, Tuple, Optional, List
 
-from ..database.supabase_client import DatabaseManager
+from ..database.supabase_client import db_manager
+from ..common.time_utils import get_current_kst_time
 from ..services.team_service import TeamService, UNASSIGNED_TEAM
 from ..services.client_normalizer import normalize_client_name
 from ..services.ai_briefing_service import FactExtractor, AIBriefingService
@@ -52,8 +53,7 @@ class EmailReportService:
             df_scope = df_scope_override.copy() if df_scope_override is not None else df_active.copy()
             is_weekly_view = "주차" in current_period_label and "월간 전체" not in current_period_label
         else:
-            db = DatabaseManager()
-            df_raw = db.fetch_all_work_logs()
+            df_raw = db_manager.fetch_all_work_logs()
             if df_raw.empty:
                 return "📊 [Summary 보고서] 데이터 없음", "<p>조회된 업무 내역이 없습니다.</p>", b""
 
@@ -111,10 +111,16 @@ class EmailReportService:
                         break
                 return f"{y:04d}-{m:02d} 1주차"
 
-            df["week_label"] = df["start_time"].apply(get_week_label)
-            raw_weeks = [w for w in df["week_label"].dropna().unique() if str(w).strip()]
+            if "week_label" not in df.columns or df["week_label"].isna().all():
+                df["week_label"] = df["start_time"].apply(get_week_label)
+            raw_weeks = [w for w in df["week_label"].dropna().unique() if str(w).strip() and str(w).strip() != "미정"]
+
+            def _week_sort_key(w_str: str):
+                nums = [int(n) for n in re.findall(r"\d+", str(w_str))]
+                return (nums[0], nums[1], nums[2]) if len(nums) >= 3 else (0, 0, 0)
+
             try:
-                available_weeks = sorted(raw_weeks, key=lambda x: int(''.join(filter(str.isdigit, str(x)))) if any(c.isdigit() for c in str(x)) else str(x))
+                available_weeks = sorted(raw_weeks, key=_week_sort_key)
             except Exception:
                 available_weeks = sorted(raw_weeks)
 
@@ -145,8 +151,16 @@ class EmailReportService:
                     if selected_team not in ["전체", "전체 팀"] and not prev_df.empty:
                         prev_df = prev_df[prev_df["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
             else:
-                # 특정 주차 (기본값: 마지막 주차)
-                target_week = clean_target if clean_target in available_weeks else available_weeks[-1]
+                # 특정 주차 (월요일 아침 자동 발송 시 새벽 1건짜리 이번 주 대신 직전 완료된 주간 우선 선택)
+                if clean_target in available_weeks:
+                    target_week = clean_target
+                else:
+                    now_kst = get_current_kst_time()
+                    prev_day_week = get_week_label(now_kst - timedelta(days=1))
+                    if now_kst.weekday() == 0 and prev_day_week in available_weeks:
+                        target_week = prev_day_week
+                    else:
+                        target_week = available_weeks[-1]
                 df_active = df[df["week_label"] == target_week].copy()
                 if selected_team not in ["전체", "전체 팀"] and not df_active.empty:
                     df_active = df_active[df_active["worker_team"].apply(lambda t: is_same_team(t, selected_team))]
@@ -937,7 +951,7 @@ class EmailReportService:
                 <tr>
                     <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 30px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.6;">
                         본 메일은 기술본부 현장 업무 관제 시스템에서 발송된 업무 실적 Summary 리포트입니다.<br>
-                        상세 작업 내역은 첨부된 엑셀 파일(<code>Work_Summary_{datetime.now().strftime('%Y%m%d')}.xlsx</code>) 또는 웹 대시보드에서 확인하실 수 있습니다.
+                        상세 작업 내역은 첨부된 엑셀 파일(<code>Work_Summary_{get_current_kst_time().strftime('%Y%m%d')}.xlsx</code>) 또는 웹 대시보드에서 확인하실 수 있습니다.
                     </td>
                 </tr>
             </table>

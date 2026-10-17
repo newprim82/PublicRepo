@@ -149,13 +149,13 @@ class MonthlyWorklogService:
             "schedule_cron": "매달 1일 08:00",
             "is_active": True,
             "note": f"{team_name} 전월 업무 원장 정기 발송",
-            "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            "updated_at": get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
         }
 
     @classmethod
     def save_team_config(cls, team_name: str, team_email: str, is_active: bool = True, note: str = "") -> bool:
         cls._init_sqlite_table()
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
         
         clean_email = team_email.strip()
         # 1. SQLite 저장
@@ -311,7 +311,7 @@ class MonthlyWorklogService:
         ws1 = wb.create_sheet(title="요약 현황")
         ws1.views.sheetView[0].showGridLines = True
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M")
         ws1["A1"] = f"📊 {team_name} {month_str} 전월 업무 실적 및 원장 총괄 요약"
         ws1["A1"].font = font_main_title
         ws1["A2"] = f"출력 일시: {now_str} | 대상 팀: {team_name} | 대상 기간: {month_str}"

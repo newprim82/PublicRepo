@@ -29,7 +29,20 @@ class AuthorizedRecipientService:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         recipients = set(m.lower().strip() for m in DEFAULT_AUTHORIZED_EMAILS)
 
-        # 환경변수 REPORT_RECIPIENT_EMAILS 병합
+        # 1. 로컬 JSON 파일(authorized_recipients.json) 로드
+        if AUTH_RECIPIENTS_FILE.exists():
+            try:
+                with open(AUTH_RECIPIENTS_FILE, "r", encoding="utf-8") as f:
+                    saved = json.load(f)
+                    if isinstance(saved, list):
+                        for em in saved:
+                            clean = str(em).lower().strip()
+                            if clean and "@" in clean:
+                                recipients.add(clean)
+            except Exception:
+                pass
+
+        # 2. 환경변수 REPORT_RECIPIENT_EMAILS 병합
         env_recipients = os.getenv("REPORT_RECIPIENT_EMAILS", "")
         if env_recipients:
             for em in env_recipients.split(","):
@@ -37,15 +50,18 @@ class AuthorizedRecipientService:
                 if clean:
                     recipients.add(clean)
 
-        # 정기 메일 발송 대상(EmailScheduleService) 등록 수신자 자동 병합
+        # 3. 정기 메일 발송 대상(EmailScheduleService) 활성화된 비용 포함 수신자 동기화
         try:
             from .email_schedule_service import EmailScheduleService
             sched_recipients = EmailScheduleService.get_all_recipients()
             for sr in sched_recipients:
-                if sr.get("include_cost", True):
-                    em = str(sr.get("email", "")).lower().strip()
-                    if em:
-                        recipients.add(em)
+                em = str(sr.get("email", "")).lower().strip()
+                if not em:
+                    continue
+                if sr.get("is_active", True) and sr.get("include_cost", True):
+                    recipients.add(em)
+                elif em not in [m.lower() for m in DEFAULT_AUTHORIZED_EMAILS]:
+                    recipients.discard(em)
         except Exception:
             pass
 

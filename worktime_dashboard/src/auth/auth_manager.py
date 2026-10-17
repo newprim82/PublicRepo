@@ -274,8 +274,8 @@ class AuthManager:
     def _migrate_plain_passwords(cls, accounts_map: Dict[str, Dict[str, Any]]):
         """기존 평문으로 저장된 계정 비밀번호가 있으면 자동으로 PBKDF2 단방향 솔트 해시로 일괄 승격"""
         migrated = False
-        from datetime import datetime
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        from ..utils.time_utils import get_current_kst_time
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
 
         for un, acc in accounts_map.items():
             pwd = acc.get("password", "")
@@ -345,8 +345,8 @@ class AuthManager:
         if any(acc["username"].lower() == u.lower() for acc in accounts):
             return False, f"이미 존재하는 아이디입니다: {u}"
 
-        from datetime import datetime
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        from ..utils.time_utils import get_current_kst_time
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
 
         # 🔒 비밀번호 단방향 솔트 해시 생성
         hashed_pwd = hash_password(p)
@@ -399,8 +399,8 @@ class AuthManager:
         if len(p) < 4:
             return False, "비밀번호는 최소 4자 이상이어야 합니다."
 
-        from datetime import datetime
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        from ..utils.time_utils import get_current_kst_time
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
 
         # 🔒 비밀번호 단방향 솔트 해시 생성
         hashed_pwd = hash_password(p)

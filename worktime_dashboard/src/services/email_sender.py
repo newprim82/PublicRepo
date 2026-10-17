@@ -87,7 +87,8 @@ class EmailSender:
             dispatch_tasks.append((unauth_recipients, False))
 
         try:
-            today_str = datetime.now().strftime("%Y%m%d")
+            from ..common.time_utils import get_current_kst_time
+            today_str = get_current_kst_time().strftime("%Y%m%d")
 
             for group_recipients, include_cost in dispatch_tasks:
                 report_res = EmailReportService.generate_weekly_report(

@@ -260,7 +260,7 @@ class CostVaultService:
                 """, (jt, rate))
 
             # 이전 키로 암호화된 보정 내역 정리
-            cursor.execute("DELETE FROM task_adjustments WHERE note LIKE 'ENC_ADJ:%'")
+            cursor.execute("DELETE FROM adjusted_work_logs WHERE note LIKE 'ENC_ADJ:%'")
             conn.commit()
             conn.close()
         except Exception as e:
@@ -284,7 +284,7 @@ class CostVaultService:
                 db_manager.supabase.table("worktime_hourly_rates").upsert(default_payloads).execute()
 
                 # 이전 암호화된 보정 장표 삭제
-                db_manager.supabase.table("worktime_task_adjustments").delete().like("note", "ENC_ADJ:%").execute()
+                db_manager.supabase.table("worktime_adjusted_work_logs").delete().like("note", "ENC_ADJ:%").execute()
         except Exception as e:
             print(f"[CostVault] Supabase 금고 초기화 오류: {e}")
 

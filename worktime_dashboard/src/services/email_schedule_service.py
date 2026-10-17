@@ -148,6 +148,8 @@ class EmailScheduleService:
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cur = conn.cursor()
+            from ..utils.time_utils import get_current_kst_time
+            now_kst_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
             for r in recipients:
                 cur.execute("""
                     INSERT OR REPLACE INTO scheduled_email_recipients (
@@ -157,8 +159,8 @@ class EmailScheduleService:
                     r["email"], r.get("name", ""), r.get("department", ""),
                     r.get("schedule_cron", "매주 월요일 08:00"), 1 if r.get("include_cost", True) else 0,
                     1 if r.get("is_active", True) else 0, r.get("note", ""),
-                    r.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    r.get("created_at", now_kst_str),
+                    now_kst_str
                 ))
             conn.commit()
             conn.close()
@@ -174,6 +176,8 @@ class EmailScheduleService:
             return cls._cached_recipients
 
         recipients_map: Dict[str, Dict[str, Any]] = {}
+        from ..utils.time_utils import get_current_kst_time
+        now_kst_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
 
         # 0. 기본 내장 수신자 사전 탑재
         for dr in DEFAULT_RECIPIENTS:
@@ -194,7 +198,7 @@ class EmailScheduleService:
                         "include_cost": bool(r.get("include_cost", True)),
                         "is_active": bool(r.get("is_active", True)),
                         "note": str(r.get("note", "")),
-                        "created_at": str(r.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                        "created_at": str(r.get("created_at", now_kst_str))
                     }
             loaded_from_cloud = True
 
@@ -217,7 +221,7 @@ class EmailScheduleService:
                         "include_cost": bool(row[4]),
                         "is_active": bool(row[5]),
                         "note": str(row[6] or ""),
-                        "created_at": str(row[7] or datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                        "created_at": str(row[7] or now_kst_str)
                     }
         except Exception:
             pass
@@ -290,7 +294,8 @@ class EmailScheduleService:
             if r["email"].lower() == clean_email:
                 return False, f"이미 등록되어 있는 이메일 주소입니다. ({clean_email})"
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        from ..utils.time_utils import get_current_kst_time
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
         new_item = {
             "email": clean_email,
             "name": name.strip(),
@@ -341,7 +346,7 @@ class EmailScheduleService:
         # 4. AuthorizedRecipientService 화이트리스트에도 자동 등록
         try:
             from .authorized_recipient_service import AuthorizedRecipientService
-            if new_item.get("include_cost", True):
+            if new_item.get("include_cost", True) and new_item.get("is_active", True):
                 AuthorizedRecipientService.add_authorized_recipient(clean_email)
             else:
                 AuthorizedRecipientService.remove_authorized_recipient(clean_email)
@@ -379,7 +384,8 @@ class EmailScheduleService:
         target["is_active"] = bool(is_active)
         target["include_cost"] = bool(include_cost)
         target["note"] = note.strip()
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        from ..utils.time_utils import get_current_kst_time
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
 
         # 1. Supabase 동기화
         try:

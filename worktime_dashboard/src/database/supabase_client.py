@@ -29,11 +29,18 @@ class DatabaseManager:
     - Supabase 미설정 시: 로컬 SQLite 단독 모드
     """
     
+    OUTLOOK_CACHE_TTL: float = 30.0
+
     def __init__(self):
         self.supabase: Optional[Client] = None
         self.use_supabase = False
+        self._outlook_cache: Dict[ Any, Any ] = {}
         self._init_connection()
         self._init_local_db()
+
+    def clear_outlook_cache(self):
+        """아웃룩 일정 인메모리 캐시 즉시 초기화"""
+        self._outlook_cache.clear()
 
     def _init_connection(self):
         """Supabase 클라우드 연결 초기화"""
@@ -656,38 +663,43 @@ class DatabaseManager:
             df["month_str"] = df["start_time"].dt.strftime("%Y-%m")
             df["date_str"] = df["start_time"].dt.strftime("%Y-%m-%d")
             
-            # 주차 레이블 생성 (월 경계를 넘지 않는 1일~말일 주차 분할)
+            # 주차 레이블 생성 (고유 날짜(date_str)별로 1회만 계산하여 매핑 -> 수천 건 루프 제거)
             import calendar
             from datetime import date as d_date, timedelta as d_timedelta
-            def get_week_label(dt):
-                if pd.isna(dt):
+            def _calc_week_label_from_str(d_str: str) -> str:
+                if not d_str or pd.isna(d_str):
                     return "미정"
-                if hasattr(dt, "to_pydatetime"):
-                    dt = dt.to_pydatetime()
-                y, m, d = dt.year, dt.month, dt.day
-                target_date = d_date(y, m, d)
-                last_day_num = calendar.monthrange(y, m)[1]
-                cur_start = d_date(y, m, 1)
-                week_num = 1
-                while cur_start.day <= last_day_num:
-                    days_to_sun = 6 - cur_start.weekday()
-                    cur_sun = cur_start + d_timedelta(days=days_to_sun)
-                    cur_end = min(cur_sun, d_date(y, m, last_day_num))
-                    if cur_start <= target_date <= cur_end:
-                        return f"{y:04d}-{m:02d} {week_num}주차 ({cur_start.strftime('%m/%d')}~{cur_end.strftime('%m/%d')})"
-                    cur_start = cur_end + d_timedelta(days=1)
-                    week_num += 1
-                    if cur_start.month != m:
-                        break
-                return f"{y:04d}-{m:02d} 1주차"
-                
-            df["week_label"] = df["start_time"].apply(get_week_label)
+                try:
+                    parts = str(d_str)[:10].split("-")
+                    y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
+                    target_date = d_date(y, m, d)
+                    last_day_num = calendar.monthrange(y, m)[1]
+                    cur_start = d_date(y, m, 1)
+                    week_num = 1
+                    while cur_start.day <= last_day_num:
+                        days_to_sun = 6 - cur_start.weekday()
+                        cur_sun = cur_start + d_timedelta(days=days_to_sun)
+                        cur_end = min(cur_sun, d_date(y, m, last_day_num))
+                        if cur_start <= target_date <= cur_end:
+                            return f"{y:04d}-{m:02d} {week_num}주차 ({cur_start.strftime('%m/%d')}~{cur_end.strftime('%m/%d')})"
+                        cur_start = cur_end + d_timedelta(days=1)
+                        week_num += 1
+                        if cur_start.month != m:
+                            break
+                    return f"{y:04d}-{m:02d} 1주차"
+                except Exception:
+                    return "미정"
+
+            unique_dates = df["date_str"].dropna().unique()
+            date_to_week_map = {ds: _calc_week_label_from_str(ds) for ds in unique_dates}
+            df["week_label"] = df["date_str"].map(date_to_week_map).fillna("미정")
             df["week_str"] = df["start_time"].dt.strftime("%Y-%U주")
         else:
-            df["month_str"] = "2026-08"
-            df["date_str"] = "2026-08-01"
-            df["week_label"] = "2026-08 1주차"
-            df["week_str"] = "2026-31주"
+            now_kst = get_current_kst_time()
+            df["month_str"] = now_kst.strftime("%Y-%m")
+            df["date_str"] = now_kst.strftime("%Y-%m-%d")
+            df["week_label"] = f"{now_kst.strftime('%Y-%m')} 1주차"
+            df["week_str"] = now_kst.strftime("%Y-%U주")
 
         df["is_night_work"] = df.get("is_night_work", 0).astype(bool)
         df["is_weekend_work"] = df.get("is_weekend_work", 0).astype(bool)
@@ -707,11 +719,13 @@ class DatabaseManager:
         if not records:
             return 0
 
-        # 1. Supabase Cloud DB Upsert
+        # 1. Supabase Cloud DB Upsert (200개 단위 안전 배치 처리)
         if self.use_supabase and self.supabase:
             try:
                 rows = [r.to_dict() for r in records]
-                self.supabase.table("worktime_outlook_schedules").upsert(rows, on_conflict="entry_id").execute()
+                for i in range(0, len(rows), 200):
+                    batch = rows[i:i + 200]
+                    self.supabase.table("worktime_outlook_schedules").upsert(batch, on_conflict="entry_id").execute()
                 print(f"[DB] [Cloud] Supabase worktime_outlook_schedules에 {len(records)}건 Upsert 완료")
             except Exception as e:
                 print(f"[DB 오류] Supabase 아웃룩 스케줄 저장 실패: {e}")
@@ -719,7 +733,7 @@ class DatabaseManager:
         # 2. 로컬 SQLite 백업 저장
         saved_count = 0
         try:
-            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH), timeout=15.0)
             cursor = conn.cursor()
             for r in records:
                 cursor.execute("""
@@ -763,6 +777,7 @@ class DatabaseManager:
             except Exception as e_del:
                 print(f"[DB 오류] 아웃룩 삭제 일정 동기화 처리 중 오류: {e_del}")
 
+        self.clear_outlook_cache()
         return saved_count
 
     def _delete_removed_outlook_schedules(
@@ -855,8 +870,30 @@ class DatabaseManager:
 
     def fetch_outlook_schedules(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
         """
-        아웃룩 일정 데이터프레임 조회 (Supabase 우선 + 1,000건 이상 전수 페이지네이션, Fallback 로컬 SQLite)
+        아웃룩 일정 데이터프레임 조회 (30초 인메모리 캐시 + Supabase 1,000건 페이지네이션, Fallback 로컬 SQLite)
         """
+        import time as _time
+        now_ts = _time.time()
+        cache_key = (start_date or "", end_date or "")
+
+        # 1. 정확히 일치하는 캐시 히트 확인
+        cached_item = self._outlook_cache.get(cache_key)
+        if cached_item is not None and (now_ts - cached_item[0] < self.OUTLOOK_CACHE_TTL):
+            return cached_item[1].copy()
+
+        # 2. 전체 조회 캐시(("", ""))가 살아있다면 부분 날짜 조회도 메모리 슬라이싱으로 즉시 반환
+        full_cached = self._outlook_cache.get(("", ""))
+        if full_cached is not None and (now_ts - full_cached[0] < self.OUTLOOK_CACHE_TTL) and (start_date or end_date):
+            full_df = full_cached[1]
+            if full_df.empty or "start_time" not in full_df.columns:
+                return full_df.copy()
+            sub_df = full_df
+            if start_date:
+                sub_df = sub_df[sub_df["start_time"] >= pd.to_datetime(f"{start_date} 00:00:00")]
+            if end_date:
+                sub_df = sub_df[sub_df["start_time"] <= pd.to_datetime(f"{end_date} 23:59:59")]
+            return sub_df.reset_index(drop=True).copy()
+
         df = pd.DataFrame()
         if self.use_supabase and self.supabase:
             try:
@@ -918,6 +955,7 @@ class DatabaseManager:
             if "duration_hours" in df.columns:
                 df["duration_hours"] = pd.to_numeric(df["duration_hours"], errors="coerce").fillna(0.0)
 
+        self._outlook_cache[cache_key] = (now_ts, df.copy())
         return df
 
     # -------------------------------------------------------------
@@ -1073,12 +1111,8 @@ class DatabaseManager:
         """
         작업 고유 키(msg_hash)별 보정 인정 시간(h) 매핑 반환
         - 금고 언락 상태: 암호화된 시간 정상 복호화
-        - 금고 잠금 상태: 0.0 마스킹
+        - 금고 잠금 상태: 암호화된 보정분은 오버라이드하지 않고 원본 공수 보존
         """
-        from ..services.cost_vault_service import CostVaultService
-        is_vault_init = CostVaultService.is_vault_initialized()
-        is_unlocked = CostVaultService.is_unlocked()
-
         rec_map = self.get_adjusted_records_map()
         return {k: v.get("adjusted_hours", 0.0) for k, v in rec_map.items()}
 
@@ -1087,19 +1121,32 @@ class DatabaseManager:
         작업 고유 키(msg_hash)별 보정 전체 레코드 매핑 반환
         반환: {msg_hash: {"adjusted_hours": float, "original_hours": float, "note": str}}
         - 금고 언락 상태: 암호화된 note(ENC_ADJ:...)에서 원본 복호화
-        - 금고 잠금 상태: 0.0 마스킹 반환
+        - 금고 잠금 상태: 암호화된 보정 레코드는 건너뛰어 일반 대시보드에서 원본 공수가 0.0h로 증발하는 현상 방지
         """
         from ..services.cost_vault_service import CostVaultService
         is_vault_init = CostVaultService.is_vault_initialized()
         is_unlocked = CostVaultService.is_unlocked()
 
         rec_map = {}
-        # 1. Supabase 시도
+        # 1. Supabase 시도 (1,000건 이상 전수 페이지네이션)
         if self.use_supabase and self.supabase:
             try:
-                res = self.supabase.table("worktime_adjusted_work_logs").select("msg_hash, adjusted_hours, original_hours, note").execute()
-                if res.data:
-                    for r in res.data:
+                all_rows = []
+                page_size = 1000
+                start_idx = 0
+                while True:
+                    res = self.supabase.table("worktime_adjusted_work_logs") \
+                        .select("msg_hash, adjusted_hours, original_hours, note") \
+                        .range(start_idx, start_idx + page_size - 1) \
+                        .execute()
+                    rows = res.data or []
+                    all_rows.extend(rows)
+                    if len(rows) < page_size:
+                        break
+                    start_idx += page_size
+
+                if all_rows:
+                    for r in all_rows:
                         h_key = str(r.get("msg_hash", "")).strip()
                         raw_note = str(r.get("note", ""))
                         if not h_key:
@@ -1121,7 +1168,7 @@ class DatabaseManager:
                                 except Exception:
                                     pass
                             elif is_vault_init:
-                                rec_map[h_key] = {"adjusted_hours": 0.0, "original_hours": 0.0, "note": ""}
+                                # 금고 잠금 상태에서는 원본 작업 공수가 0.0h로 덮어써지지 않도록 보정 오버라이드 제외
                                 continue
 
                         # 기존 평문 데이터
@@ -1138,7 +1185,7 @@ class DatabaseManager:
 
         # 2. 로컬 SQLite 조회
         try:
-            conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+            conn = sqlite3.connect(str(config.LOCAL_DB_PATH), timeout=15.0)
             cursor = conn.cursor()
             cursor.execute("SELECT msg_hash, adjusted_hours, original_hours, note FROM adjusted_work_logs")
             for h_key, adj_h, orig_h, note_val in cursor.fetchall():
@@ -1161,7 +1208,6 @@ class DatabaseManager:
                         except Exception:
                             pass
                     elif is_vault_init:
-                        rec_map[h_key] = {"adjusted_hours": 0.0, "original_hours": 0.0, "note": ""}
                         continue
 
                 # 기존 평문 레코드

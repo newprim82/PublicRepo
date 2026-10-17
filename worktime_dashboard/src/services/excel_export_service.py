@@ -65,7 +65,8 @@ class ExcelExportService:
         ws1 = wb.create_sheet(title="요약 현황")
         ws1.views.sheetView[0].showGridLines = True
         
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+        from ..common.time_utils import get_current_kst_time
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M")
         period_text = title_suffix if title_suffix else "전체 기간"
         
         ws1["A1"] = f"📊 정기 업무 투입 현황 리포트 ({period_text})"
@@ -390,7 +391,8 @@ class ExcelExportService:
                 period_text = "전체 기간"
         else:
             period_text = title_suffix
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M")
+        from ..common.time_utils import get_current_kst_time
+        now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M")
 
         # =========================================================
         # Sheet 1: 요약표 (팀 전체 집계)

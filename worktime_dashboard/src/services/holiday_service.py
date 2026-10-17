@@ -79,8 +79,7 @@ class HolidayService:
         holidays = {}
         # 1. Supabase Cloud DB 조회
         try:
-            from ..database.supabase_client import DatabaseManager
-            db = DatabaseManager()
+            from ..database.supabase_client import db_manager as db
             if db.use_supabase and db.supabase:
                 res = db.supabase.table("worktime_custom_holidays").select("holiday_date, holiday_name").execute()
                 if res.data:
@@ -140,8 +139,7 @@ class HolidayService:
 
         # 1. Supabase 저장
         try:
-            from ..database.supabase_client import DatabaseManager
-            db = DatabaseManager()
+            from ..database.supabase_client import db_manager as db
             if db.use_supabase and db.supabase:
                 db.supabase.table("worktime_custom_holidays").upsert({
                     "holiday_date": d_clean,
@@ -200,8 +198,7 @@ class HolidayService:
 
         # 1. Supabase 삭제
         try:
-            from ..database.supabase_client import DatabaseManager
-            db = DatabaseManager()
+            from ..database.supabase_client import db_manager as db
             if db.use_supabase and db.supabase:
                 db.supabase.table("worktime_custom_holidays").delete().eq("holiday_date", d_clean).execute()
         except Exception:

@@ -721,7 +721,8 @@ class CostEstimationService:
         ws.merge_cells('A1:J1')
         ws.row_dimensions[1].height = 26
 
-        ws['A2'] = f"생성일시: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | 기준: LGU+ time.bora.net NTP 타임서버 동기화"
+        from ..common.time_utils import get_current_kst_time
+        ws['A2'] = f"생성일시: {get_current_kst_time().strftime('%Y-%m-%d %H:%M:%S')} | 기준: LGU+ time.bora.net NTP 타임서버 동기화"
         ws['A2'].font = Font(name="맑은 고딕", size=9, color=c_gray)
         ws['A2'].alignment = Alignment(vertical="center")
         ws.merge_cells('A2:J2')

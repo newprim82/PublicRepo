@@ -16,6 +16,7 @@ class TeamService:
     _team_members_cache: Optional[Dict[str, Dict[str, str]]] = None
     _all_teams_cache: Optional[List[str]] = None
     _cache_time: float = 0.0
+    _all_teams_cache_time: float = 0.0
     CACHE_TTL: float = 60.0  # 60초 유효시간 (데이터 변경 시 즉시 무효화)
     _table_initialized: bool = False
 
@@ -25,6 +26,7 @@ class TeamService:
         cls._team_members_cache = None
         cls._all_teams_cache = None
         cls._cache_time = 0.0
+        cls._all_teams_cache_time = 0.0
 
     @classmethod
     def init_team_table(cls):
@@ -64,7 +66,7 @@ class TeamService:
     def get_all_teams(cls) -> List[str]:
         """기본 팀 및 사용자가 직접 생성한 커스텀 팀 전체 목록을 반환 (RAM 캐싱)"""
         now = time.time()
-        if cls._all_teams_cache is not None and (now - cls._cache_time < cls.CACHE_TTL):
+        if cls._all_teams_cache is not None and (now - cls._all_teams_cache_time < cls.CACHE_TTL):
             return list(cls._all_teams_cache)
 
         cls.init_team_table()
@@ -89,21 +91,20 @@ class TeamService:
         except Exception:
             pass
             
-        # 2. Supabase team_members에서 등록된 팀도 병합
-        if db_manager.use_supabase and db_manager.supabase:
-            try:
-                res = db_manager.supabase.table("worktime_team_members").select("worker_name, team_name").execute()
-                for row in (res.data or []):
-                    w = str(row.get("worker_name", ""))
-                    if w.startswith("SYSTEM_") or w.startswith("SYS_"):
-                        continue
-                    t = (row.get("team_name") or "").strip()
-                    if t and t not in teams and t != UNASSIGNED_TEAM:
-                        teams.append(t)
-            except Exception:
-                pass
+        # 2. 이미 캐시된 get_team_members_info()를 통해 Supabase 팀 목록 병합 (중복 네트워크 조회 방지)
+        try:
+            members_info = cls.get_team_members_info()
+            for w, info in members_info.items():
+                if str(w).startswith("SYSTEM_") or str(w).startswith("SYS_"):
+                    continue
+                t = (info.get("team") or "").strip()
+                if t and t not in teams and t != UNASSIGNED_TEAM:
+                    teams.append(t)
+        except Exception:
+            pass
                 
         cls._all_teams_cache = list(teams)
+        cls._all_teams_cache_time = time.time()
         return teams
 
     @classmethod

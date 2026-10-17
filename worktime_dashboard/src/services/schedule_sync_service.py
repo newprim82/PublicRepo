@@ -574,13 +574,18 @@ class ScheduleSyncService:
             except Exception:
                 outlook_df = pd.DataFrame()
 
-        # 1. 카카오톡 작업 목록 (작업자별) 매핑
-        kakao_tasks_by_worker = {}
+        # 1. 카카오톡 작업 목록 (작업자 + 날짜별) 고속 인덱싱 매핑
+        kakao_tasks_by_worker_date = {}
         if not kakao_df.empty and "worker_name" in kakao_df.columns:
             for _, k_r in kakao_df.iterrows():
                 wn = k_r.get("worker_name")
-                if wn:
-                    kakao_tasks_by_worker.setdefault(wn, []).append(k_r.to_dict())
+                k_st = k_r.get("start_time")
+                if wn and pd.notna(k_st):
+                    k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
+                    if hasattr(k_st_dt, "date"):
+                        k_dict = k_r.to_dict()
+                        k_dict["_parsed_st_dt"] = k_st_dt
+                        kakao_tasks_by_worker_date.setdefault((wn, k_st_dt.date()), []).append(k_dict)
 
         outlook_converted_rows = []
 
@@ -710,16 +715,12 @@ class ScheduleSyncService:
                     # 🏢 비-휴가 일반 작업 일정
                     parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(subj, r.get("location", ""))
 
-                    # 중복 검사: 동일 날짜의 카카오톡에 이미 보고된 동일 작업인지 지능적 확인
-                    worker_k_tasks = kakao_tasks_by_worker.get(w_name, [])
+                    # 중복 검사: 동일 작업자·동일 날짜의 카카오톡 작업만 O(1) 해시 조회하여 즉시 비교
+                    worker_k_tasks = kakao_tasks_by_worker_date.get((w_name, st_dt.date()), [])
                     is_dup = False
                     for k in worker_k_tasks:
-                        k_st = k.get("start_time")
-                        if pd.isna(k_st):
-                            continue
-                        k_st_dt = k_st.to_pydatetime() if hasattr(k_st, "to_pydatetime") else k_st
-                        # 🌟 필수: 같은 날짜의 카카오톡 작업만 중복 비교 대상으로 한정
-                        if st_dt.date() != k_st_dt.date():
+                        k_st_dt = k.get("_parsed_st_dt")
+                        if not k_st_dt:
                             continue
 
                         k_client = str(k.get("client_name", "")).strip()
