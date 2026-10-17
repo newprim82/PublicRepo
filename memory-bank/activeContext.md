@@ -2,6 +2,13 @@
 
 ## 1. 최근 완료된 핵심 작업 내역 (2026-10-08 ~ 2026-10-17)
 
+- **전체 앱 4차 심층 개선: 시간 보정 시 야간·주말 1.5배 할증 자동 재계산, 임시공휴일 즉시 연동, 단가·보정 30초 캐시 및 사용자 클립보드 보존 (`fbce985`)**:
+  - **시간 보정 시 야간·주말 1.5배 할증 여부 자동 재판정**: `cost_estimation_service.py`(`calculate_costs`) 및 `schedule_sync_service.py`(`combine_all_work_logs`)에서 관리자가 작업 인정 시간을 보정(축소/연장)한 경우, 보정된 시간을 기준으로 `check_is_night_work`, `check_is_weekend_work`를 다시 계산하여 1.5배 할증 배율 및 최종 청구 금액이 정확히 연동되도록 개선.
+  - **임시공휴일 추가 시 과거 수집 작업 1.5배 할증 즉시 연동**: `supabase_client.py`(`_process_dataframe`)에서 정부 지정 임시공휴일(`HolidayService.get_custom_holidays()`) 날짜에 해당하는 기존 수집 작업(1시간 이상 근무, 휴가 제외)도 즉시 `is_weekend_work = True`로 자동 반영되도록 연결.
+  - **단가·보정 데이터 30초 인메모리 캐시 및 금고 잠금/해제 연동**: `supabase_client.py`(`get_hourly_rates`, `get_adjusted_records_map`)에 금고 상태를 포함한 30초 메모리 캐시를 도입하여 반복 DB 조회·복호화 지연을 제거하고, 단가·보정 저장 및 `cost_vault_service.py`/`cost_estimation_view.py`에서 금고 잠금·해제·초기화 시 캐시를 즉시 비우도록 연동 (`app.py`의 `get_cached_filtered_data` 캐시 설정은 그대로 유지).
+  - **카톡 자동 수집 시 사용자 클립보드 원상 복원 및 로그 파일 자동 정리**: `kakao_auto_collector.py`에서 카톡 대화 복사 직전 사용자의 기존 클립보드 텍스트를 백업 후 수집 직후 복원하도록 개선하고, `@AutomationLog.txt` 파일이 5MB 초과 시 최근 1MB만 유지하도록 로그 회전(rotation) 적용.
+  - **수동 마감 시 로컬 SQLite 종료시각 통일 및 뷰 KST 일원화**: `supabase_client.py`(`resolve_stale_pending_tasks`) 로컬 SQLite 업데이트 시에도 클라우드와 동일하게 `start_time + 실제분수`로 종료시각 및 야간·주말 여부를 계산하여 저장하고, `worklog_view.py`, `search_view.py`, `holiday_management_view.py`의 날짜 기준을 `get_current_kst_time()`으로 통일.
+
 - **전체 앱 3차 정밀 개선: 금고 잠금 시 공수 보존, 월요일 주간 리포트 대상 주차 정확화, 클라우드 KST 시간 통일 및 DB·동기화 캐시 최적화 (`ca35a54`)**:
   - **비용 금고 잠금 시 보정 작업 `0.0h` 덮어쓰기 버그 수정**: `supabase_client.py`(`get_adjusted_records_map`)에서 금고가 잠겨 있을 때 암호화된 보정 레코드(`ENC_ADJ:...`)를 `0.0`으로 반환해 일반 대시보드 전체에서 원본 근무시간이 `0시간`으로 증발하던 버그를 제거(원본 공수 유지)하고, 보정 테이블 1,000건 단위 페이지네이션 및 `cost_vault_service.py`(`reset_vault`) 실제 테이블명(`adjusted_work_logs`, `worktime_adjusted_work_logs`) 정합성 수정.
   - **월요일 08:00 주간 자동 리포트 대상 주차 보정 및 숫자 정렬**: `email_report_service.py`(`send_weekly_report`)에서 월요일 아침 자동 발송 시 월요일 새벽 데이터 대신 어제(일요일)가 속한 직전 완료 주차를 우선 선택하도록 개선하고, 주차 문자열 정렬 오류 방지를 위해 `(연도, 월, 주차번호)` 정수 튜플 정렬 적용.
@@ -59,20 +66,20 @@
   - 8대 기술/장비 도메인 자동 분류 및 Summary 화면 다차원 교차 분석표 상시 노출.
 
 - **단위 테스트 스위트 확장 및 품질 보증**:
-  - 보안 금고, 인증 매니저, 일정 동기화, 카톡 파서, 필터 캐싱 등 **총 38개 단위 테스트 100% 통과 (`Ran 38 tests in ~3s, OK`)**.
+  - 보안 금고, 인증 매니저, 일정 동기화, 카톡 파서, 필터 캐싱 등 **총 38개 단위 테스트 100% 통과 (`Ran 38 tests in ~2s, OK`)**.
 
 ---
 
 ## 2. 현재 시스템 상태 (Current State)
 
 - **애플리케이션 버전**: `v2.6.3`
-- **단일 진실 소스 시간**: LGU+ 공식 NTP `time.bora.net` (KST Naive datetime, 전 서비스 KST 통일 및 UDP 소켓 자동 종료 보장)
-- **보안 상태**: 자격증명 완전 환경변수화, 제로-트러스트 영지식 암호화 금고 가동 (AES-256 / PBKDF2, 금고 잠금 시 원본 공수 안전 보존), URL 세션 토큰 노출 차단, 주간·월간 이메일 개별 전송 프라이버시 보호
-- **런타임 및 성능 상태**: 클라우드 데몬 플래핑 원천 차단, 다중 엑셀 생성 `@st.cache_data` 캐싱, 수집기 상태·아웃룩 일정 30초 메모리 캐싱, 카톡-아웃룩 날짜별 $O(N)$ 고속 매칭, 아웃룩·보정 데이터 전수 페이지네이션, SQLite WAL 동시성 모드 가동
+- **단일 진실 소스 시간**: LGU+ 공식 NTP `time.bora.net` (KST Naive datetime, 전 서비스·뷰 KST 통일 및 UDP 소켓 자동 종료 보장)
+- **보안 상태**: 자격증명 완전 환경변수화, 제로-트러스트 영지식 암호화 금고 가동 (AES-256 / PBKDF2, 금고 잠금 시 원본 공수 안전 보존 및 캐시 즉시 초기화), URL 세션 토큰 노출 차단, 주간·월간 이메일 개별 전송 프라이버시 보호
+- **런타임 및 성능 상태**: 클라우드 데몬 플래핑 원천 차단, 다중 엑셀 생성 `@st.cache_data` 캐싱, 수집기 상태·아웃룩 일정·단가·보정 레코드 30초 메모리 캐싱, 카톡-아웃룩 날짜별 $O(N)$ 고속 매칭, 아웃룩·보정 데이터 전수 페이지네이션, 카톡 수집 시 사용자 클립보드 원상 복원 및 로그 파일 5MB 자동 회전, SQLite WAL 동시성 모드 가동
 - **자동화 파이프라인**: 매주 월요일 주간 리포트(`weekly_email_report.yml`, 직전 완료 주차 자동 타겟팅) + 매월 1일 08:00 전월 업무원장(`monthly_team_worklog.yml`) 무인 발송 완비
 - **화면 구성**: 12대 메뉴 (역할 기반 접근 제어: 일반 관제 / 관리자 / 최고관리자)
 - **테스트 현황**: 38/38 Tests Passing (100% 통과, OK, 리소스 누수 경고 0건)
-- **Git 브랜치**: `main` (최신 커밋: `ca35a54`)
+- **Git 브랜치**: `main` (최신 커밋: `fbce985`)
 
 ---
 
