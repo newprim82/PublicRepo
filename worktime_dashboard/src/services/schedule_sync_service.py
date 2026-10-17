@@ -11,7 +11,7 @@ except ImportError:
 from src.services.team_service import TeamService
 from src.services.client_normalizer import parse_outlook_subject_to_client_and_task
 from src.dashboard.common.ui_helpers import get_current_kst_time
-from src.parser.reply_matcher import check_is_night_work
+from src.parser.reply_matcher import check_is_night_work, check_is_weekend_work
 from src.common.logger import get_logger
 
 logger = get_logger("schedule_sync")
@@ -450,6 +450,10 @@ class ScheduleSyncService:
             if is_dup:
                 continue
 
+            est_mins_val = int(dur_hours * 60)
+            is_night = check_is_night_work(st_dt, ed_dt, parsed_desc, est_mins_val, est_mins_val)
+            is_weekend = check_is_weekend_work(st_dt, ed_dt, parsed_desc, est_mins_val, est_mins_val)
+
             # A. 현재 시간이 종료 시각 이후 -> 100% 도달 -> 자동 완료 전환
             if now >= ed_dt:
                 auto_completed_rows.append({
@@ -462,16 +466,16 @@ class ScheduleSyncService:
                     "task_description": f"[📅 일정완료] {parsed_desc}",
                     "start_time": st_time,
                     "end_time": ed_time,
-                    "estimated_minutes": int(dur_hours * 60),
-                    "actual_minutes": int(dur_hours * 60),
+                    "estimated_minutes": est_mins_val,
+                    "actual_minutes": est_mins_val,
                     "actual_hours": dur_hours,
                     "total_hours": dur_hours,
                     "status": "COMPLETED",
                     "is_outlook": True,
                     "is_all_day": is_all_day,
                     "has_both": False,
-                    "is_night_work": False,
-                    "is_weekend_work": False
+                    "is_night_work": is_night,
+                    "is_weekend_work": is_weekend
                 })
             # B. 시작 시각 이후부터 종료 이전 -> 실시간 진행 중 작업 승격 (9시 정각이 되면 위로 카드 이동)
             elif now >= st_dt:
@@ -487,7 +491,7 @@ class ScheduleSyncService:
                     "task_description": f"[📅 아웃룩] {parsed_desc}",
                     "start_time": st_time,
                     "end_time": ed_time,
-                    "estimated_minutes": int(dur_hours * 60),
+                    "estimated_minutes": est_mins_val,
                     "actual_minutes": actual_mins,
                     "total_hours": dur_hours,
                     "status": "PENDING",
@@ -495,12 +499,11 @@ class ScheduleSyncService:
                     "is_all_day": is_all_day,
                     "has_both": False,
                     "outlook_progress_pct": pct,
-                    "is_night_work": False,
-                    "is_weekend_work": False
+                    "is_night_work": is_night,
+                    "is_weekend_work": is_weekend
                 })
             # C. 시작 30분 전 이전 -> 오늘 예정 일정 (SCHEDULED)
             else:
-                is_night = check_is_night_work(st_dt, ed_dt, parsed_desc, int(dur_hours * 60))
                 upcoming_rows.append({
                     "msg_hash": f"OUTLOOK_SCHED_{r.get('entry_id', '')}",
                     "log_type": "작업",
@@ -513,7 +516,7 @@ class ScheduleSyncService:
                     "end_time": ed_time,
                     "scheduled_start_time": st_time,
                     "scheduled_end_time": ed_time,
-                    "estimated_minutes": int(dur_hours * 60),
+                    "estimated_minutes": est_mins_val,
                     "actual_minutes": 0,
                     "actual_hours": 0.0,
                     "estimated_hours": dur_hours,
@@ -524,7 +527,7 @@ class ScheduleSyncService:
                     "is_all_day": is_all_day,
                     "has_both": False,
                     "is_night_work": is_night,
-                    "is_weekend_work": False
+                    "is_weekend_work": is_weekend
                 })
 
         if promoted_pend_rows:
@@ -753,6 +756,9 @@ class ScheduleSyncService:
                         act_m = 0
 
                     task_desc = parsed_desc
+                    est_mins_val = int(dur_hours * 60)
+                    is_night_comb = check_is_night_work(st_dt, ed_dt, task_desc, est_mins_val, est_mins_val)
+                    is_weekend_comb = check_is_weekend_work(st_dt, ed_dt, task_desc, est_mins_val, est_mins_val)
 
                     row_dict = {
                         "msg_hash": f"OUTLOOK_WORK_{entry_id}",
@@ -765,7 +771,7 @@ class ScheduleSyncService:
                         "start_time": st_time,
                         "end_time": ed_time if is_completed else None,  # 🌟 18시 종료 이전(진행 중)에는 완료보고시각 None 유지
                         "scheduled_end_time": ed_time,
-                        "estimated_minutes": int(dur_hours * 60),
+                        "estimated_minutes": est_mins_val,
                         "actual_minutes": act_m,
                         "actual_hours": act_h,       # 🌟 미래시는 0.0h, 완료는 dur_hours, 진행은 경과시간
                         "estimated_hours": dur_hours,
@@ -778,8 +784,8 @@ class ScheduleSyncService:
                         "status": status,
                         "is_outlook": True,
                         "is_leave": False,
-                        "is_night_work": False,
-                        "is_weekend_work": False
+                        "is_night_work": is_night_comb,
+                        "is_weekend_work": is_weekend_comb
                     }
                     outlook_converted_rows.append(row_dict)
 
