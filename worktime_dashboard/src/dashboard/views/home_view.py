@@ -45,7 +45,10 @@ def render_empty_dashed_box(message: str, padding: str = "18px", font_size: str 
 
 def _render_single_team_pending_cards(pend_df: pd.DataFrame, title_mappings: dict):
     """🏢 단일 팀 진행 중인 작업 카드 렌더링"""
-    from ..common.ui_helpers import get_live_task_card_html as _latest_live_card
+    import importlib
+    from ..common import ui_helpers as _ui_mod
+    importlib.reload(_ui_mod)
+    _latest_live_card = _ui_mod.get_live_task_card_html
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_pend = pend_df.copy()
     t_pend = t_pend.loc[:, ~t_pend.columns.duplicated()]
@@ -68,7 +71,10 @@ def _render_single_team_pending_cards(pend_df: pd.DataFrame, title_mappings: dic
 
 def _render_single_team_upcoming_cards(sched_df: pd.DataFrame, title_mappings: dict):
     """🏢 단일 팀 오늘 예정 일정 카드 렌더링"""
-    from ..common.ui_helpers import get_upcoming_task_card_html as _latest_upcoming_card
+    import importlib
+    from ..common import ui_helpers as _ui_mod
+    importlib.reload(_ui_mod)
+    _latest_upcoming_card = _ui_mod.get_upcoming_task_card_html
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_sched = sched_df.copy()
     t_sched = t_sched.loc[:, ~t_sched.columns.duplicated()]
@@ -91,7 +97,10 @@ def _render_single_team_upcoming_cards(sched_df: pd.DataFrame, title_mappings: d
 
 def _render_kanban_upcoming_cards(t_sched: pd.DataFrame, title_mappings: dict):
     """🏛️ 전체 팀 칸반 열 오늘 예정 일정 카드 렌더링"""
-    from ..common.ui_helpers import get_upcoming_task_card_html as _latest_upcoming_card
+    import importlib
+    from ..common import ui_helpers as _ui_mod
+    importlib.reload(_ui_mod)
+    _latest_upcoming_card = _ui_mod.get_upcoming_task_card_html
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_sched_sorted = t_sched.copy()
     t_sched_sorted = t_sched_sorted.loc[:, ~t_sched_sorted.columns.duplicated()]
@@ -154,7 +163,10 @@ def render_upcoming_schedule_section(sched_df: pd.DataFrame, selected_team: str)
 
 def _render_kanban_pending_cards(t_pend: pd.DataFrame, title_mappings: dict):
     """🏛️ 전체 팀 칸반 열 진행 중인 작업 카드 렌더링"""
-    from ..common.ui_helpers import get_live_task_card_html as _latest_live_card
+    import importlib
+    from ..common import ui_helpers as _ui_mod
+    importlib.reload(_ui_mod)
+    _latest_live_card = _ui_mod.get_live_task_card_html
     kst_now_naive = get_current_kst_time().replace(tzinfo=None)
     t_pend_sorted = t_pend.copy()
     t_pend_sorted = t_pend_sorted.loc[:, ~t_pend_sorted.columns.duplicated()]
@@ -481,6 +493,28 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
     except Exception as e_sync:
         print(f"[라이브 일정 동기화 예외]: {e_sync}")
         leave_records = []
+
+    # 🛡️ 오늘 실시간 진행/예정/완료 작업의 주말·야간 플래그 최종 검증 및 보정 안전망
+    try:
+        from ...parser.reply_matcher import check_is_weekend_work, check_is_night_work
+        for _df_target in [pend_df, sched_df, comp_df]:
+            if not _df_target.empty and "start_time" in _df_target.columns:
+                for _idx, _r in _df_target.iterrows():
+                    _st = _r.get("start_time")
+                    if pd.notna(_st) and not _r.get("is_leave"):
+                        _st_dt = _st.to_pydatetime() if hasattr(_st, "to_pydatetime") else pd.to_datetime(_st)
+                        _st_dt = _st_dt.replace(tzinfo=None) if getattr(_st_dt, "tzinfo", None) is not None else _st_dt
+                        _ed = _r.get("end_time") or _st_dt
+                        _ed_dt = _ed.to_pydatetime() if hasattr(_ed, "to_pydatetime") else pd.to_datetime(_ed)
+                        _ed_dt = _ed_dt.replace(tzinfo=None) if getattr(_ed_dt, "tzinfo", None) is not None else _ed_dt
+                        _desc = str(_r.get("task_description", ""))
+                        _mins = int(float(_r.get("estimated_hours") or _r.get("actual_hours") or 1.0) * 60)
+                        if not _r.get("is_weekend_work") and check_is_weekend_work(_st_dt, _ed_dt, _desc, _mins, _mins):
+                            _df_target.at[_idx, "is_weekend_work"] = True
+                        if not _r.get("is_night_work") and check_is_night_work(_st_dt, _ed_dt, _desc, _mins, _mins):
+                            _df_target.at[_idx, "is_night_work"] = True
+    except Exception:
+        pass
 
     # 팀 필터링 재적용 (아웃룩 승격 작업 포함)
     if selected_team != "전체 팀":
