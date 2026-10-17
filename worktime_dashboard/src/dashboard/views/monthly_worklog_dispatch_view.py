@@ -9,6 +9,11 @@ from ...services.team_service import TeamService
 from ..common.ui_helpers import get_current_kst_time
 
 
+@st.cache_data(show_spinner=False)
+def _get_cached_monthly_worklog_excel(team_df: pd.DataFrame, selected_team: str, target_month: str) -> bytes:
+    return MonthlyWorklogService.generate_monthly_worklog_excel(team_df, selected_team, target_month)
+
+
 def render_monthly_worklog_dispatch_view():
     """
     📑 [팀 전월 엑셀 원장 정기 발송] 메인 뷰 (시스템 관리 하위 메뉴)
@@ -244,7 +249,7 @@ def render_monthly_worklog_dispatch_view():
                         st.error(msg)
 
         if not team_df.empty:
-            excel_bytes = MonthlyWorklogService.generate_monthly_worklog_excel(team_df, selected_team, target_month)
+            excel_bytes = _get_cached_monthly_worklog_excel(team_df, selected_team, target_month)
             clean_team_fn = selected_team.replace(" ", "")
             clean_m_fn = target_month.replace("-", "")
             st.download_button(

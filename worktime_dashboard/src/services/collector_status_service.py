@@ -1,4 +1,5 @@
 import json
+import time
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -15,6 +16,14 @@ class CollectorStatusService:
     """
     STATUS_RECORD_KEY = "SYS_STATUS_COLLECTOR"
     LOCAL_CACHE_FILE = config.BASE_DIR / "collector_status.json"
+    _status_cache: Optional[Dict[str, Any]] = None
+    _status_cache_time: float = 0.0
+    CACHE_TTL: float = 30.0
+
+    @classmethod
+    def clear_cache(cls):
+        cls._status_cache = None
+        cls._status_cache_time = 0.0
 
     @classmethod
     def report_status(cls, status_code: str, message: str, total_records: int = 0, saved_records: int = 0):
@@ -35,6 +44,9 @@ class CollectorStatusService:
                 "saved_records": saved_records,
                 "updated_at": now_str
             }
+
+            cls._status_cache = dict(payload)
+            cls._status_cache_time = time.time()
             
             # 1. 로컬 JSON 캐시 저장
             try:
@@ -62,10 +74,14 @@ class CollectorStatusService:
             print(f"[CollectorStatusService.report_status 예외]: {ex}")
 
     @classmethod
-    def get_status(cls) -> Dict[str, Any]:
+    def get_status(cls, force_reload: bool = False) -> Dict[str, Any]:
         """
-        대시보드에서 수집기 현재 상태를 실시간 조회 (클라우드 최우선 -> 로컬 파일 -> 기본값)
+        대시보드에서 수집기 현재 상태를 실시간 조회 (30초 메모리 캐시 -> 클라우드 -> 로컬 파일 -> 기본값)
         """
+        now_ts = time.time()
+        if not force_reload and cls._status_cache is not None and (now_ts - cls._status_cache_time < cls.CACHE_TTL):
+            return dict(cls._status_cache)
+
         # 1. Supabase 클라우드 조회
         if db_manager.use_supabase and db_manager.supabase:
             try:
@@ -90,12 +106,15 @@ class CollectorStatusService:
                         message = raw_title
                         
                     is_healthy = (status_code in ["ONLINE", "SUCCESS", "NO_NEW_RECORDS"])
-                    return {
+                    result = {
                         "is_healthy": is_healthy,
                         "status_code": status_code,
                         "message": message,
                         "updated_at": updated_at
                     }
+                    cls._status_cache = dict(result)
+                    cls._status_cache_time = now_ts
+                    return result
             except Exception:
                 pass
 
@@ -103,17 +122,23 @@ class CollectorStatusService:
         if cls.LOCAL_CACHE_FILE.exists():
             try:
                 content = cls.LOCAL_CACHE_FILE.read_text(encoding="utf-8")
-                return json.loads(content)
+                result = json.loads(content)
+                cls._status_cache = dict(result)
+                cls._status_cache_time = now_ts
+                return result
             except Exception:
                 pass
 
         # 3. 기본값 (알 수 없음)
-        return {
+        fallback = {
             "is_healthy": False,
             "status_code": "LOGIN_REQUIRED_OR_WINDOW_CLOSED",
             "message": "카카오톡 PC 로그인이 풀려있거나 대화방 창이 닫혀 있습니다.",
             "updated_at": get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
         }
+        cls._status_cache = dict(fallback)
+        cls._status_cache_time = now_ts
+        return fallback
 
     @classmethod
     def get_monitoring_status(cls, stale_threshold_minutes: int = 30) -> Dict[str, Any]:

@@ -32,17 +32,17 @@ def get_bora_ntp_timestamp() -> float:
     now = time.time()
     if _ntp_offset is None or (now - _ntp_last_sync > 3600):
         try:
-            client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            client.settimeout(0.8)
-            # NTP 프로토콜 헤더 (v3 client)
-            data = b'\x1b' + 47 * b'\0'
-            client.sendto(data, ('time.bora.net', 123))
-            resp, _ = client.recvfrom(1024)
-            if resp:
-                # 1900-01-01 기준 초 단위 -> 1970-01-01 Unix epoch 변환 (2208988800 초 차이)
-                t = struct.unpack('!12I', resp)[10] - 2208988800
-                _ntp_offset = float(t) - now
-                _ntp_last_sync = now
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client:
+                client.settimeout(0.8)
+                # NTP 프로토콜 헤더 (v3 client)
+                data = b'\x1b' + 47 * b'\0'
+                client.sendto(data, ('time.bora.net', 123))
+                resp, _ = client.recvfrom(1024)
+                if resp:
+                    # 1900-01-01 기준 초 단위 -> 1970-01-01 Unix epoch 변환 (2208988800 초 차이)
+                    t = struct.unpack('!12I', resp)[10] - 2208988800
+                    _ntp_offset = float(t) - now
+                    _ntp_last_sync = now
         except Exception:
             if _ntp_offset is None:
                 _ntp_offset = 0.0

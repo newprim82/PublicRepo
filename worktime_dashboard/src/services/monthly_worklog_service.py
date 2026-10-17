@@ -856,17 +856,24 @@ class MonthlyWorklogService:
             )
             msg.attach(excel_attachment)
 
-            # SMTP 전송 (SSL -> TLS Fallback)
+            # SMTP 전송 (수신자 개인정보 보호를 위한 개별 전송, SSL -> TLS Fallback)
+            def _send_to_all(srv):
+                for rcpt in recipients:
+                    if "To" in msg:
+                        del msg["To"]
+                    msg["To"] = rcpt
+                    srv.sendmail(sender, [rcpt], msg.as_string())
+
             try:
                 server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20)
                 server.login(sender, password)
-                server.sendmail(sender, recipients, msg.as_string())
+                _send_to_all(server)
                 server.quit()
             except Exception:
                 server = smtplib.SMTP("smtp.gmail.com", 587, timeout=20)
                 server.starttls()
                 server.login(sender, password)
-                server.sendmail(sender, recipients, msg.as_string())
+                _send_to_all(server)
                 server.quit()
             tot_act_h = round(team_df["actual_hours"].sum(), 1) if "actual_hours" in team_df.columns else 0.0
 

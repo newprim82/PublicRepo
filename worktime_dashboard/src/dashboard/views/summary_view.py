@@ -31,6 +31,11 @@ from ..common.ui_helpers import (
     extract_selected_row_idx
 )
 
+@st.cache_data(show_spinner=False)
+def _get_cached_summary_excel(df: pd.DataFrame, title_suffix: str) -> bytes:
+    return ExcelExportService.generate_report(df, title_suffix=title_suffix)
+
+
 def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_team: str, team_mappings: dict, month_desc: str = ""):
     """[📊 업무 실적 Summary] 주간/월간 핵심 요약 & 메일 발송"""
     if df.empty:
@@ -151,7 +156,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             b_col1, b_col2 = st.columns([1, 1])
 
         with b_col1:
-            excel_bytes = ExcelExportService.generate_report(df, title_suffix=f"{selected_team} {month_desc}".strip())
+            excel_bytes = _get_cached_summary_excel(df, title_suffix=f"{selected_team} {month_desc}".strip())
             st.download_button(
                 label="📥 엑셀 리포트",
                 data=excel_bytes,

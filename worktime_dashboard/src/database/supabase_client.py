@@ -50,12 +50,17 @@ class DatabaseManager:
             self.use_supabase = False
 
     def _init_local_db(self):
-        """로컬 SQLite 테이블 초기화 (오프라인 백업 및 캐시용)"""
+        """로컬 SQLite 테이블 초기화 (오프라인 백업 및 캐시용, WAL 동시성 모드 적용)"""
         db_path = config.LOCAL_DB_PATH
         db_path.parent.mkdir(parents=True, exist_ok=True)
         
-        conn = sqlite3.connect(str(db_path))
+        conn = sqlite3.connect(str(db_path), timeout=15.0)
         cursor = conn.cursor()
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL;")
+            cursor.execute("PRAGMA synchronous=NORMAL;")
+        except Exception:
+            pass
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS work_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -816,18 +821,24 @@ class DatabaseManager:
         except Exception as e:
             print(f"[DB 오류] 로컬 SQLite 삭제 동기화 실패: {e}")
 
-        # 2. Supabase Cloud DB에서도 삭제 대상 레코드 조회 및 삭제
+        # 2. Supabase Cloud DB에서도 삭제 대상 레코드 조회 및 삭제 (1,000건 이상 페이지네이션 대응)
         if self.use_supabase and self.supabase:
             try:
-                query = self.supabase.table("worktime_outlook_schedules").select("entry_id")
-                query = query.gte("start_time", start_time).lte("start_time", end_time)
-                query = query.in_("worker_name", target_workers)
-                res = query.execute()
-                if res.data:
-                    for item in res.data:
+                page_size = 1000
+                start_idx = 0
+                while True:
+                    query = self.supabase.table("worktime_outlook_schedules").select("entry_id")
+                    query = query.gte("start_time", start_time).lte("start_time", end_time)
+                    query = query.in_("worker_name", target_workers)
+                    res = query.range(start_idx, start_idx + page_size - 1).execute()
+                    rows = res.data or []
+                    for item in rows:
                         eid = item.get("entry_id")
                         if eid and eid not in current_entry_ids:
                             deleted_entry_ids.add(eid)
+                    if len(rows) < page_size:
+                        break
+                    start_idx += page_size
 
                 if deleted_entry_ids:
                     del_list = list(deleted_entry_ids)
@@ -844,33 +855,42 @@ class DatabaseManager:
 
     def fetch_outlook_schedules(self, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
         """
-        아웃룩 일정 데이터프레임 조회 (Supabase 우선, Fallback 로컬 SQLite)
+        아웃룩 일정 데이터프레임 조회 (Supabase 우선 + 1,000건 이상 전수 페이지네이션, Fallback 로컬 SQLite)
         """
         df = pd.DataFrame()
         if self.use_supabase and self.supabase:
             try:
-                query = self.supabase.table("worktime_outlook_schedules").select("*")
-                if start_date:
-                    query = query.gte("start_time", f"{start_date} 00:00:00")
-                if end_date:
-                    query = query.lte("end_time", f"{end_date} 23:59:59")
-                res = query.order("start_time").execute()
-                if res.data:
-                    df = pd.DataFrame(res.data)
+                all_rows = []
+                page_size = 1000
+                start_idx = 0
+                while True:
+                    query = self.supabase.table("worktime_outlook_schedules").select("*")
+                    if start_date:
+                        query = query.gte("start_time", f"{start_date} 00:00:00")
+                    if end_date:
+                        query = query.lte("start_time", f"{end_date} 23:59:59")
+                    res = query.order("start_time").range(start_idx, start_idx + page_size - 1).execute()
+                    rows = res.data or []
+                    all_rows.extend(rows)
+                    if len(rows) < page_size:
+                        break
+                    start_idx += page_size
+                if all_rows:
+                    df = pd.DataFrame(all_rows)
             except Exception as e:
                 # 테이블이 아직 Supabase에 없을 경우 등 조용히 로컬 SQLite fallback
                 df = pd.DataFrame()
 
         if df.empty:
             try:
-                conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
+                conn = sqlite3.connect(str(config.LOCAL_DB_PATH), timeout=15.0)
                 sql = "SELECT * FROM outlook_schedules WHERE 1=1"
                 params = []
                 if start_date:
                     sql += " AND start_time >= ?"
                     params.append(f"{start_date} 00:00:00")
                 if end_date:
-                    sql += " AND end_time <= ?"
+                    sql += " AND start_time <= ?"
                     params.append(f"{end_date} 23:59:59")
                 sql += " ORDER BY start_time ASC"
                 df = pd.read_sql_query(sql, conn, params=params)

@@ -23,6 +23,20 @@ from ..common.ui_helpers import (
 )
 
 
+@st.cache_data(show_spinner=False)
+def _get_cached_worker_cost_excel(df_calc: pd.DataFrame, worker_df: pd.DataFrame, title_suffix: str) -> bytes:
+    return ExcelExportService.generate_cost_estimation_report(
+        df_calc=df_calc,
+        worker_df=worker_df,
+        title_suffix=title_suffix
+    )
+
+
+@st.cache_data(show_spinner=False)
+def _get_cached_mom_cost_excel(trend_df: pd.DataFrame, selected_team: str) -> Optional[bytes]:
+    return CostEstimationService.generate_mom_excel_report(trend_df, selected_team)
+
+
 def render_cost_vault_gateway():
     """🔒 제로-트러스트 비용 보안 금고 게이트웨이 UI"""
     st.markdown("""
@@ -742,7 +756,7 @@ def render_cost_estimation_view(
                     safe_slug = re.sub(r'[\\/*?:"<>| ~()]', '_', current_report_period).strip('_')
                     safe_slug = re.sub(r'_+', '_', safe_slug)[:25]
                     file_name_suffix = f"_{safe_slug}" if safe_slug else ""
-                    excel_worker_data = ExcelExportService.generate_cost_estimation_report(
+                    excel_worker_data = _get_cached_worker_cost_excel(
                         df_calc=df_calc,
                         worker_df=worker_df,
                         title_suffix=current_report_period
@@ -1229,7 +1243,7 @@ def render_cost_estimation_view(
 
             excel_mom_data = None
             try:
-                excel_mom_data = CostEstimationService.generate_mom_excel_report(trend_df, selected_team)
+                excel_mom_data = _get_cached_mom_cost_excel(trend_df, selected_team)
             except Exception:
                 excel_mom_data = None
 
