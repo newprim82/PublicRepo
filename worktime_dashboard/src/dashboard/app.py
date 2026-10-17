@@ -636,6 +636,10 @@ def main():
             on_click=set_nav_page,
             args=("🏠 실시간 분석 대시보드",)
         )
+        if st.button("🔄 실시간 동기화 & 캐시 초기화", key="btn_global_sync_cache", use_container_width=True, help="클릭 시 웹 인메모리 캐시를 즉시 초기화하고 최신 DB 데이터를 다시 불러옵니다."):
+            clear_all_web_caches()
+            st.toast("🔄 웹 캐시가 초기화되고 최신 데이터로 동기화되었습니다!", icon="✅")
+            st.rerun()
         st.markdown('<div style="height: 14px;"></div>', unsafe_allow_html=True)
 
         is_auth = AuthManager.is_authenticated()
