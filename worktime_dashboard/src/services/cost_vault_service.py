@@ -201,8 +201,13 @@ class CostVaultService:
 
     @classmethod
     def lock(cls):
-        """금고 즉시 잠금 (RAM에서 키 영구 소멸)"""
+        """금고 즉시 잠금 (RAM에서 키 영구 소멸 및 단가/보정 캐시 초기화)"""
         cls._set_cipher(None)
+        try:
+            from ..database.supabase_client import db_manager
+            db_manager.clear_cost_cache()
+        except Exception:
+            pass
 
     @classmethod
     def setup_initial_vault(cls, password: str) -> Tuple[bool, str]:
@@ -233,6 +238,11 @@ class CostVaultService:
         
         # 기존 평문 데이터 즉시 일괄 암호화 마이그레이션 실행
         cls.migrate_legacy_data_to_encrypted()
+        try:
+            from ..database.supabase_client import db_manager
+            db_manager.clear_cost_cache()
+        except Exception:
+            pass
         return True, "비용 보안 마스터 비밀번호가 설정되고 기존 데이터가 안전하게 일괄 암호화되었습니다."
 
     @classmethod
@@ -353,6 +363,10 @@ class CostVaultService:
             if decrypted == VERIFIER_PLAINTEXT:
                 cls._set_lockout_state(0, 0.0)
                 cls._set_cipher(cipher)
+                try:
+                    db_manager.clear_cost_cache()
+                except Exception:
+                    pass
                 return True, "비용 보안 금고가 정상적으로 잠금 해제되었습니다."
             else:
                 failed_attempts += 1

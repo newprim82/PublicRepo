@@ -76,6 +76,7 @@ def render_cost_vault_gateway():
                     else:
                         ok, msg = CostVaultService.setup_initial_vault(pw1)
                         if ok:
+                            st.cache_data.clear()
                             st.toast("✅ 보안 금고가 생성되었으며 기존 데이터가 암호화되었습니다!", icon="🔒")
                             st.rerun()
                         else:
@@ -99,6 +100,7 @@ def render_cost_vault_gateway():
                     else:
                         ok, msg = CostVaultService.unlock(pw_input)
                         if ok:
+                            st.cache_data.clear()
                             st.toast("🔓 비용 금고가 정상적으로 열렸습니다!", icon="✅")
                             st.rerun()
                         else:
@@ -109,6 +111,7 @@ def render_cost_vault_gateway():
                     st.caption("금고를 초기화하면 저장된 복호화 키가 소멸되며, 기본 표준 단가로 안전 복원 후 신규 비밀번호를 다시 설정할 수 있습니다.")
                     if st.button("🗑️ 비용 금고 설정 초기화", type="secondary", use_container_width=True, key="btn_reset_vault_view"):
                         CostVaultService.reset_vault()
+                        st.cache_data.clear()
                         st.toast("✅ 금고가 초기화되었습니다. 새로고침 후 신규 비밀번호를 설정하세요.", icon="🔄")
                         st.rerun()
 
@@ -464,6 +467,7 @@ def render_cost_estimation_view(
             help="현재 복호화 키가 RAM에 로드되어 정상 표출 중입니다. 클릭 시 즉시 키를 파기하고 화면을 잠급니다."
         ):
             CostVaultService.lock()
+            st.cache_data.clear()
             st.toast("🔒 비용 금고가 잠겼습니다. (키 파기 완료)", icon="ℹ️")
             st.rerun()
 

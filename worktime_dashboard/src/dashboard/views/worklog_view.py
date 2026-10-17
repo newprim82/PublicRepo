@@ -51,10 +51,11 @@ def render_worklog_view(df: pd.DataFrame):
     
     btn_col, _ = st.columns([2.0, 5.0])
     with btn_col:
+        from ...parser.reply_matcher import get_current_kst_time
         st.download_button(
             label="📥 업무 현황 엑셀(.xlsx) 리포트 다운로드",
             data=excel_data,
-            file_name=f"업무현황_상세리포트_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            file_name=f"업무현황_상세리포트_{get_current_kst_time().strftime('%Y%m%d')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
         )

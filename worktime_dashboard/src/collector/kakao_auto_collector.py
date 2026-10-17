@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ..config import config
 from ..parser.kakao_parser import RawKakaoMessage, KakaoMessageParser
-from ..parser.reply_matcher import WorkLogMatcher, WorkLogRecord
+from ..parser.reply_matcher import WorkLogMatcher, WorkLogRecord, get_current_kst_time
 from ..database.supabase_client import db_manager
 from ..services.collector_status_service import CollectorStatusService
 
@@ -84,13 +84,24 @@ def safe_print(msg: str):
             pass
 
 
+MAX_LOG_FILE_BYTES = 5 * 1024 * 1024  # 5MB
+KEEP_LOG_FILE_BYTES = 1 * 1024 * 1024  # 1MB
+
+
 def log_trace(msg: str):
-    """자동화 동작 상세 로그 파일 기록 (@AutomationLog.txt)"""
+    """자동화 동작 상세 로그 파일 기록 (@AutomationLog.txt, 5MB 초과 시 자동 정리)"""
     safe_print(msg)
     try:
         log_file = config.BASE_DIR / "@AutomationLog.txt"
+        if log_file.exists() and log_file.stat().st_size > MAX_LOG_FILE_BYTES:
+            try:
+                raw_bytes = log_file.read_bytes()
+                tail_text = raw_bytes[-KEEP_LOG_FILE_BYTES:].decode("utf-8", errors="ignore")
+                log_file.write_text(tail_text, encoding="utf-8")
+            except Exception:
+                pass
         with open(log_file, "a", encoding="utf-8") as f:
-            f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
+            f.write(f"[{get_current_kst_time().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n")
     except Exception:
         pass
 
@@ -244,9 +255,12 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
         except Exception as e:
             log_trace(f"[창 활성화 알림]: {e}")
 
-        # 클립보드 사전 초기화 (과거 클립보드 잔여 데이터 오염 원천 방지)
+        # 클립보드 사전 백업 및 초기화 (기존 사용자의 복사 내용 보존 + 잔여 데이터 오염 방지)
+        orig_clipboard_text: Optional[str] = None
         try:
             win32clipboard.OpenClipboard()
+            if win32clipboard.IsClipboardFormatAvailable(win32con.CF_UNICODETEXT):
+                orig_clipboard_text = win32clipboard.GetClipboardData(win32con.CF_UNICODETEXT)
             win32clipboard.EmptyClipboard()
             win32clipboard.CloseClipboard()
         except Exception:
@@ -254,6 +268,20 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                 win32clipboard.CloseClipboard()
             except Exception:
                 pass
+
+        def _restore_clipboard():
+            if orig_clipboard_text is None:
+                return
+            try:
+                win32clipboard.OpenClipboard()
+                win32clipboard.EmptyClipboard()
+                win32clipboard.SetClipboardText(orig_clipboard_text, win32con.CF_UNICODETEXT)
+                win32clipboard.CloseClipboard()
+            except Exception:
+                try:
+                    win32clipboard.CloseClipboard()
+                except Exception:
+                    pass
 
         # 2. 대화목록 영역 하단(최신 메시지 영역)에 실제 OS 마우스 클릭으로 포커스 완벽 부여
         target_focus = list_hwnd if list_hwnd else hwnd
@@ -333,6 +361,7 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
         if copied_text and len(copied_text.strip()) > 10:
             lines = copied_text.strip().split("\n")
             log_trace(f"[✓ Win32 네이티브 복사 성공] 총 {len(lines)}줄 ({len(copied_text)}자) 획득")
+            _restore_clipboard()
             return copied_text.strip()
     except Exception as e:
         log_trace(f"[네이티브 복사 예외]: {e}")
@@ -356,10 +385,18 @@ def extract_text_from_kakao_window(hwnd: int, is_manual: bool = False) -> str:
                 pass
         if copied_text and len(copied_text.strip()) > 10:
             log_trace(f"[✓ UIA SendKeys 복사 성공] {len(copied_text)}자 획득")
+            try:
+                _restore_clipboard()
+            except Exception:
+                pass
             return copied_text.strip()
     except Exception as e:
         log_trace(f"[SendKeys Fallback 예외]: {e}")
 
+    try:
+        _restore_clipboard()
+    except Exception:
+        pass
     log_trace("[-] 모든 텍스트 추출 방식 실패")
     return ""
 
@@ -486,7 +523,7 @@ def background_collector_loop():
 
     COLLECTOR_STATUS["is_running"] = True
     interval = config.COLLECTOR_INTERVAL_SECONDS  # 10분 (600초)
-    COLLECTOR_STATUS["next_run_time"] = datetime.now() + timedelta(seconds=interval)
+    COLLECTOR_STATUS["next_run_time"] = get_current_kst_time() + timedelta(seconds=interval)
     
     log_trace(f"🚀 [자동 수집 데몬 기동 완료] {interval}초 주기(10분)로 실행합니다.")
     ping_streamlit_cloud_app()

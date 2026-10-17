@@ -30,17 +30,25 @@ class DatabaseManager:
     """
     
     OUTLOOK_CACHE_TTL: float = 30.0
+    COST_CACHE_TTL: float = 30.0
 
     def __init__(self):
         self.supabase: Optional[Client] = None
         self.use_supabase = False
         self._outlook_cache: Dict[ Any, Any ] = {}
+        self._rates_cache: Optional[tuple] = None
+        self._adjusted_cache: Optional[tuple] = None
         self._init_connection()
         self._init_local_db()
 
     def clear_outlook_cache(self):
         """아웃룩 일정 인메모리 캐시 즉시 초기화"""
         self._outlook_cache.clear()
+
+    def clear_cost_cache(self):
+        """직급별 단가 및 보정 레코드 인메모리 캐시 즉시 초기화"""
+        self._rates_cache = None
+        self._adjusted_cache = None
 
     def _init_connection(self):
         """Supabase 클라우드 연결 초기화"""
@@ -491,17 +499,31 @@ class DatabaseManager:
                     conn = sqlite3.connect(str(db_file))
                     c = conn.cursor()
                     for m_hash in msg_hashes:
-                        c.execute("SELECT estimated_minutes, start_time FROM work_logs WHERE msg_hash=?", (m_hash,))
+                        c.execute("SELECT estimated_minutes, start_time, raw_start_message FROM work_logs WHERE msg_hash=?", (m_hash,))
                         row = c.fetchone()
                         if row:
                             custom_mins = minutes_map.get(m_hash)
                             est_m = int(row[0] or 0)
                             act_m = custom_mins if (custom_mins is not None and custom_mins > 0) else (est_m if est_m > 0 else 60)
+                            st_str = row[1]
+                            raw_msg = str(row[2] or "")
+                            try:
+                                st_dt = pd.to_datetime(st_str).to_pydatetime()
+                                end_dt = st_dt + timedelta(minutes=act_m)
+                                end_str = end_dt.strftime("%Y-%m-%d %H:%M")
+                            except Exception:
+                                end_str = now_str
+                                st_dt = now
+                                end_dt = now
+                            is_night = int(check_is_night_work(st_dt, end_dt, raw_msg, est_m, act_m))
+                            is_weekend = int(check_is_weekend_work(st_dt, end_dt, raw_msg, est_m, act_m))
                             c.execute("""
                                 UPDATE work_logs 
-                                SET status='COMPLETED', actual_minutes=?, end_time=?, raw_end_message=?
+                                SET status='COMPLETED', actual_minutes=?, end_time=?, is_night_work=?, is_weekend_work=?, raw_end_message=?
                                 WHERE msg_hash=?
-                            """, (act_m, now_str, f"[관리자 수동 마감] {now_str}", m_hash))
+                            """, (act_m, end_str, is_night, is_weekend, f"[관리자 수동 마감] {round(act_m / 60.0, 1)}시간 완료 처리 ({now_str})", m_hash))
+                            if not (self.use_supabase and self.supabase):
+                                updated_count += 1
                     conn.commit()
                     conn.close()
                 except Exception as e:
@@ -703,6 +725,24 @@ class DatabaseManager:
 
         df["is_night_work"] = df.get("is_night_work", 0).astype(bool)
         df["is_weekend_work"] = df.get("is_weekend_work", 0).astype(bool)
+
+        # 정부 지정 임시공휴일 등록분이 기존 수집된 작업에도 즉시 반영되도록 동적 체크
+        try:
+            from ..services.holiday_service import HolidayService
+            custom_holidays = HolidayService.get_custom_holidays()
+            if custom_holidays and "date_str" in df.columns:
+                custom_h_dates = {str(h.get("holiday_date", "")).strip() for h in custom_holidays if h.get("holiday_date")}
+                if custom_h_dates:
+                    work_mins = pd.to_numeric(df.get("actual_minutes", 0), errors="coerce").fillna(0)
+                    est_mins = pd.to_numeric(df.get("estimated_minutes", 0), errors="coerce").fillna(0)
+                    eff_mins = work_mins.where(work_mins > 0, est_mins)
+                    task_desc = df.get("task_description", pd.Series("", index=df.index)).astype(str)
+                    is_leave = task_desc.str.contains("연차|반차|휴가|공가|병가", regex=True, na=False)
+                    custom_h_mask = df["date_str"].isin(custom_h_dates) & (eff_mins >= 60) & (~is_leave)
+                    if custom_h_mask.any():
+                        df.loc[custom_h_mask, "is_weekend_work"] = True
+        except Exception:
+            pass
         
         return df
 
@@ -963,7 +1003,7 @@ class DatabaseManager:
     # -------------------------------------------------------------
     def get_hourly_rates(self) -> Dict[str, int]:
         """
-        직급별 시간당 단가(원/h) 딕셔너리 반환
+        직급별 시간당 단가(원/h) 딕셔너리 반환 (30초 TTL 인메모리 캐시 지원)
         - 금고 언락 상태: 암호화된 단가를 RAM에서 즉시 복호화하여 반환
         - 금고 잠금 상태 (보안 금고 활성화 시): 보안 유지를 위해 0원 마스킹 반환
         - 금고 미설정 상태: 기존 평문 기본값 반환
@@ -972,6 +1012,12 @@ class DatabaseManager:
         rates = {}
         is_vault_init = CostVaultService.is_vault_initialized()
         is_unlocked = CostVaultService.is_unlocked()
+        now_ts = time.time()
+
+        if self._rates_cache is not None:
+            c_ts, c_init, c_unlock, c_data = self._rates_cache
+            if (now_ts - c_ts) < self.COST_CACHE_TTL and c_init == is_vault_init and c_unlock == is_unlocked:
+                return dict(c_data)
 
         # 1. Supabase 시도
         if self.use_supabase and self.supabase:
@@ -990,12 +1036,15 @@ class DatabaseManager:
                                     if dec_json:
                                         rates = json.loads(dec_json)
                                         rates = {k: int(v) for k, v in rates.items()}
+                                        self._rates_cache = (now_ts, is_vault_init, is_unlocked, dict(rates))
                                         return rates
                                 except Exception as e_dec:
                                     print(f"[CostVault] Supabase 단가 복호화 실패: {e_dec}")
                             elif is_vault_init:
                                 # 잠겨 있는 경우 0원 마스킹
-                                return {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+                                masked = {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+                                self._rates_cache = (now_ts, is_vault_init, is_unlocked, dict(masked))
+                                return masked
                     
                     # 일반 평문 레코드 폴백
                     for r in res.data:
@@ -1004,6 +1053,7 @@ class DatabaseManager:
                         if t and val >= 0 and not t.startswith("__"):
                             rates[t] = val
                     if rates and not is_vault_init:
+                        self._rates_cache = (now_ts, is_vault_init, is_unlocked, dict(rates))
                         return rates
             except Exception:
                 pass
@@ -1030,14 +1080,19 @@ class DatabaseManager:
             conn.close()
             if rates:
                 if is_vault_init and not is_unlocked:
-                    return {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+                    masked = {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+                    self._rates_cache = (now_ts, is_vault_init, is_unlocked, dict(masked))
+                    return masked
+                self._rates_cache = (now_ts, is_vault_init, is_unlocked, dict(rates))
                 return rates
         except Exception as e:
             print(f"[DB 오류] 직급별 단가 로컬 조회 실패: {e}")
 
         # 기본 폴백값 (사원, 대리, 과장, 수석 4가지 고정)
         if is_vault_init and not is_unlocked:
-            return {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+            masked = {"수석": 0, "과장": 0, "대리": 0, "사원": 0}
+            self._rates_cache = (now_ts, is_vault_init, is_unlocked, dict(masked))
+            return masked
 
         default_fallback = {
             "수석": 80000,
@@ -1047,6 +1102,7 @@ class DatabaseManager:
         }
         valid_titles = ["수석", "과장", "대리", "사원"]
         clean_rates = {k: rates.get(k, default_fallback[k]) for k in valid_titles}
+        self._rates_cache = (now_ts, is_vault_init, is_unlocked, dict(clean_rates))
         return clean_rates
 
     def save_hourly_rates(self, rates: Dict[str, int]) -> bool:
@@ -1099,9 +1155,11 @@ class DatabaseManager:
                 """, (k_clean, stored_val))
             conn.commit()
             conn.close()
+            self.clear_cost_cache()
             return True
         except Exception as e:
             print(f"[DB 오류] 직급별 단가 로컬 SQLite 저장 실패: {e}")
+            self.clear_cost_cache()
             return False
 
     # -------------------------------------------------------------
@@ -1118,7 +1176,7 @@ class DatabaseManager:
 
     def get_adjusted_records_map(self) -> Dict[str, Dict[str, Any]]:
         """
-        작업 고유 키(msg_hash)별 보정 전체 레코드 매핑 반환
+        작업 고유 키(msg_hash)별 보정 전체 레코드 매핑 반환 (30초 TTL 인메모리 캐시 지원)
         반환: {msg_hash: {"adjusted_hours": float, "original_hours": float, "note": str}}
         - 금고 언락 상태: 암호화된 note(ENC_ADJ:...)에서 원본 복호화
         - 금고 잠금 상태: 암호화된 보정 레코드는 건너뛰어 일반 대시보드에서 원본 공수가 0.0h로 증발하는 현상 방지
@@ -1126,6 +1184,12 @@ class DatabaseManager:
         from ..services.cost_vault_service import CostVaultService
         is_vault_init = CostVaultService.is_vault_initialized()
         is_unlocked = CostVaultService.is_unlocked()
+        now_ts = time.time()
+
+        if self._adjusted_cache is not None:
+            c_ts, c_init, c_unlock, c_data = self._adjusted_cache
+            if (now_ts - c_ts) < self.COST_CACHE_TTL and c_init == is_vault_init and c_unlock == is_unlocked:
+                return {k: dict(v) for k, v in c_data.items()}
 
         rec_map = {}
         # 1. Supabase 시도 (1,000건 이상 전수 페이지네이션)
@@ -1179,6 +1243,7 @@ class DatabaseManager:
                                 "note": raw_note
                             }
                     if rec_map:
+                        self._adjusted_cache = (now_ts, is_vault_init, is_unlocked, {k: dict(v) for k, v in rec_map.items()})
                         return rec_map
             except Exception:
                 pass
@@ -1221,6 +1286,7 @@ class DatabaseManager:
         except Exception as e:
             print(f"[DB 오류] 보정 레코드 로컬 조회 실패: {e}")
 
+        self._adjusted_cache = (now_ts, is_vault_init, is_unlocked, {k: dict(v) for k, v in rec_map.items()})
         return rec_map
 
     def save_adjusted_work_log(
@@ -1283,9 +1349,11 @@ class DatabaseManager:
 
             conn.commit()
             conn.close()
+            self.clear_cost_cache()
             return True
         except Exception as e:
             print(f"[DB 오류] 시간 보정 로컬 저장 실패: {e}")
+            self.clear_cost_cache()
             return False
 
     def batch_save_adjusted_work_logs(self, records: List[Dict[str, Any]]) -> int:
@@ -1369,6 +1437,7 @@ class DatabaseManager:
         except Exception as e:
             print(f"[DB 오류] 다건 시간 보정 로컬 저장 실패: {e}")
 
+        self.clear_cost_cache()
         return saved_count
 
     # -------------------------------------------------------------

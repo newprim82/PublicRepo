@@ -152,9 +152,11 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
         all_workers = sorted([w for w in search_df["worker_name"].dropna().unique() if str(w).strip()])
         sel_workers = st.multiselect("작업자 다중 선택:", options=all_workers, placeholder="작업자 선택 (전체)", key="smart_workers", label_visibility="collapsed")
     with f_col6:
+        from ...parser.reply_matcher import get_current_kst_time
         st.markdown('<div style="font-size: 13px; font-weight: 800; color: #002d42; margin-bottom: 4px;">📅 작업 기간 범위:</div>', unsafe_allow_html=True)
-        min_date = search_df["start_time"].dt.date.min() if pd.notna(search_df["start_time"].min()) else datetime.now().date()
-        max_date = search_df["start_time"].dt.date.max() if pd.notna(search_df["start_time"].max()) else datetime.now().date()
+        kst_today = get_current_kst_time().date()
+        min_date = search_df["start_time"].dt.date.min() if pd.notna(search_df["start_time"].min()) else kst_today
+        max_date = search_df["start_time"].dt.date.max() if pd.notna(search_df["start_time"].max()) else kst_today
         date_range = st.date_input("작업 기간 범위:", value=(min_date, max_date), key="smart_date_range", label_visibility="collapsed")
 
     # 🏷️ 신규: 기술/장비 도메인 & 작업 유형 다중 선택 필터

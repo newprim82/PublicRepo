@@ -810,11 +810,12 @@ class ScheduleSyncService:
         if title_mappings and "worker_name" in combined_df.columns:
             combined_df["worker_title"] = combined_df["worker_name"].map(title_mappings).fillna(combined_df.get("worker_title", ""))
 
-        # ⏱️ [시간 보정 오버라이드 영구 적용] 관리자가 수정한 작업 인정 공수를 최우선 적용
+        # ⏱️ [시간 보정 오버라이드 영구 적용] 관리자가 수정한 작업 인정 공수를 최우선 적용 및 야간/주말 재판정
         if not combined_df.empty and "msg_hash" in combined_df.columns:
             try:
                 adj_map = db_manager.get_adjusted_hours_map()
                 if adj_map:
+                    from ..parser.reply_matcher import check_is_night_work, check_is_weekend_work
                     if "is_time_adjusted" not in combined_df.columns:
                         combined_df["is_time_adjusted"] = False
                     if "original_hours" not in combined_df.columns:
@@ -823,13 +824,31 @@ class ScheduleSyncService:
                     for mh, adj_h in adj_map.items():
                         m = combined_df["msg_hash"] == mh
                         if m.any():
+                            adj_float = float(adj_h)
+                            adj_mins = int(round(max(0.0, adj_float) * 60))
                             combined_df.loc[m, "is_time_adjusted"] = True
-                            combined_df.loc[m, "actual_hours"] = float(adj_h)
-                            combined_df.loc[m, "actual_minutes"] = int(float(adj_h) * 60)
-                            combined_df.loc[m, "estimated_hours"] = float(adj_h)
-                            combined_df.loc[m, "total_hours"] = float(adj_h)
+                            combined_df.loc[m, "actual_hours"] = adj_float
+                            combined_df.loc[m, "actual_minutes"] = adj_mins
+                            combined_df.loc[m, "estimated_hours"] = adj_float
+                            combined_df.loc[m, "total_hours"] = adj_float
                             if "display_hours" in combined_df.columns:
-                                combined_df.loc[m, "display_hours"] = float(adj_h)
+                                combined_df.loc[m, "display_hours"] = adj_float
+
+                            # 보정된 시간 기준으로 야간·주말 여부 재판정
+                            for idx in combined_df.index[m]:
+                                st_val = combined_df.at[idx, "start_time"] if "start_time" in combined_df.columns else None
+                                is_lv = bool(combined_df.at[idx, "is_leave"]) if "is_leave" in combined_df.columns else False
+                                if pd.notna(st_val) and not is_lv:
+                                    try:
+                                        st_dt = pd.to_datetime(st_val).to_pydatetime()
+                                        if getattr(st_dt, "tzinfo", None) is not None:
+                                            st_dt = st_dt.replace(tzinfo=None)
+                                        ed_dt = st_dt + timedelta(minutes=adj_mins)
+                                        raw_msg = str(combined_df.at[idx, "raw_start_message"] if "raw_start_message" in combined_df.columns else "")
+                                        combined_df.at[idx, "is_night_work"] = check_is_night_work(st_dt, ed_dt, raw_msg, adj_mins, adj_mins)
+                                        combined_df.at[idx, "is_weekend_work"] = check_is_weekend_work(st_dt, ed_dt, raw_msg, adj_mins, adj_mins)
+                                    except Exception:
+                                        pass
             except Exception as e_adj:
                 print(f"[보정 시간 오버라이드 알림]: {e_adj}")
 

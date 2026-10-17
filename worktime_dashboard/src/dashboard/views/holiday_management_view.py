@@ -144,7 +144,12 @@ def render_holiday_management_view():
     """, unsafe_allow_html=True)
 
     # 올해 공휴일 통계 산출
-    current_year = datetime.now().year
+    try:
+        from src.parser.reply_matcher import get_current_kst_time
+    except ImportError:
+        from ...parser.reply_matcher import get_current_kst_time
+    now_kst = get_current_kst_time()
+    current_year = now_kst.year
     holidays_this_year = HolidayService.get_holidays_for_year(current_year)
     statutory_cnt = sum(1 for h in holidays_this_year if h["holiday_type"] == "법정공휴일")
     substitute_cnt = sum(1 for h in holidays_this_year if h["holiday_type"] == "대체공휴일")
@@ -193,7 +198,7 @@ def render_holiday_management_view():
     with col_form:
         with st.form("form_add_custom_holiday", clear_on_submit=True):
             st.markdown("##### 📝 신규 임시공휴일 등록")
-            input_date = st.date_input("📅 공휴일 지정 일자", value=date.today())
+            input_date = st.date_input("📅 공휴일 지정 일자", value=now_kst.date())
             input_name = st.text_input("🏷️ 공휴일 명칭 / 사유", placeholder="예: 국군의 날 임시공휴일, 정부 지정 임시휴일")
             btn_submit = st.form_submit_button("➕ 임시공휴일 등록 (DB 즉시 반영)", use_container_width=True, type="primary")
 

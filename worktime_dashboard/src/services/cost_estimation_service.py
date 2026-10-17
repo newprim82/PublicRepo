@@ -273,6 +273,7 @@ class CostEstimationService:
 
         adj_records = db_manager.get_adjusted_records_map()
         if adj_records and "msg_hash" in df_calc.columns:
+            from ..parser.reply_matcher import check_is_night_work, check_is_weekend_work
             for idx, mh in df_calc["msg_hash"].items():
                 mh_str = str(mh).strip()
                 if mh_str in adj_records:
@@ -283,6 +284,21 @@ class CostEstimationService:
                     df_calc.at[idx, "billable_hours"] = adj_val
                     df_calc.at[idx, "is_time_adjusted"] = True
                     df_calc.at[idx, "note"] = str(rec.get("note", ""))
+
+                    # 🔄 보정된 인정 시간 기준으로 야간/주말 근무 여부 재판정 (할증 오차 방지)
+                    st_val = df_calc.at[idx, "start_time"] if "start_time" in df_calc.columns else None
+                    if pd.notna(st_val) and not bool(df_calc.at[idx, "is_leave"] if "is_leave" in df_calc.columns else False):
+                        try:
+                            adj_mins = int(round(max(0.0, adj_val) * 60))
+                            st_dt = pd.to_datetime(st_val).to_pydatetime()
+                            if getattr(st_dt, "tzinfo", None) is not None:
+                                st_dt = st_dt.replace(tzinfo=None)
+                            ed_dt = st_dt + pd.Timedelta(minutes=adj_mins)
+                            raw_msg = str(df_calc.at[idx, "raw_start_message"] if "raw_start_message" in df_calc.columns else "")
+                            df_calc.at[idx, "is_night_work"] = check_is_night_work(st_dt, ed_dt, raw_msg, adj_mins, adj_mins)
+                            df_calc.at[idx, "is_weekend_work"] = check_is_weekend_work(st_dt, ed_dt, raw_msg, adj_mins, adj_mins)
+                        except Exception:
+                            pass
 
         # ⚖️ 근로기준법 제56조 준수: 야간(22:00~06:00) 및 주말·휴일 지원 1.5배 가산 상시 자동 적용
         is_night = pd.Series(False, index=df_calc.index)
