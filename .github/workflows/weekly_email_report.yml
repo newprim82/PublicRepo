@@ -30,7 +30,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           GMAIL_SENDER_EMAIL: ${{ secrets.GMAIL_SENDER_EMAIL || 'newprim82@gmail.com' }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD || 'dlugbvfuhgdozkgr' }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           REPORT_RECIPIENT_EMAILS: ${{ secrets.REPORT_RECIPIENT_EMAILS || '' }}
           COST_VAULT_MASTER_PASSWORD: ${{ secrets.COST_VAULT_MASTER_PASSWORD || '' }}
         working-directory: worktime_dashboard

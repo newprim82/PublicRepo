@@ -110,14 +110,34 @@ def parse_duration_to_minutes(text: str) -> int:
         total_minutes += int(minute_match.group(1))
         
     if total_minutes == 0:
-        # 단위가 생략된 숫자 (예: "5.5", "5.5완료", "3 완료")
+        # 단위가 생략된 숫자 (예: "5.5", "5.5완료", "3 완료", "소요: 2")
         num_match = _RE_NUM_ONLY.search(text)
         if num_match:
-            val = float(num_match.group(1))
-            if 0 < val <= 24:
-                total_minutes = int(val * 60)
-            else:
-                total_minutes = int(val)
+            num_str = num_match.group(1)
+            raw_span = num_match.span(1)
+            after_num = text[raw_span[1]:raw_span[1]+5]
+            before_num = text[max(0, raw_span[0]-10):raw_span[0]]
+
+            # 1. 수량/차수/식별자 단위(건, 차, 대, 개, 호, 번) 방어: "1건", "1차", "1대", "1개" 등
+            if not re.search(r'^(?:건|차|대|개|호|번)', after_num):
+                val = float(num_str)
+                is_float = "." in num_str
+
+                # 소수점(예: 1.5, 2.5)은 시간으로 인정.
+                # 정수(1, 2, 3)인 경우: 앞에 시간 힌트가 있거나 메시지 자체가 순수 숫자+완료인 경우에만 인정 (방화벽 1 완료 등 방어)
+                is_valid_time = is_float
+                if not is_valid_time:
+                    has_hint_before = bool(re.search(r'(?:소요|예정|약|공수|시간|작업시간|지원시간|:)\s*$', before_num))
+                    stripped_clean = re.sub(r'[\s\(\)\[\]\{\}\-\_]', '', text)
+                    is_pure_num_end = bool(re.match(r'^\d+(?:완[료려뇨룡룟]|종료|마무리|끝)?$', stripped_clean))
+                    if has_hint_before or is_pure_num_end:
+                        is_valid_time = True
+
+                if is_valid_time:
+                    if 0 < val <= 24:
+                        total_minutes = int(val * 60)
+                    else:
+                        total_minutes = int(val)
                 
     return total_minutes
 

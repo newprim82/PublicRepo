@@ -27,6 +27,14 @@ class TestKakaoParser(unittest.TestCase):
         self.assertEqual(parse_duration_to_minutes("2days"), 1080)
         self.assertEqual(parse_duration_to_minutes("1일"), 540)
 
+        # 단위 생략 숫자 처리 및 오인식 방어 테스트
+        self.assertEqual(parse_duration_to_minutes("2 완료"), 120)
+        self.assertEqual(parse_duration_to_minutes("1.5 완료"), 90)
+        self.assertEqual(parse_duration_to_minutes("소요: 2"), 120)
+        self.assertEqual(parse_duration_to_minutes("방화벽 1 완료"), 0)
+        self.assertEqual(parse_duration_to_minutes("스위치 1대 완료"), 0)
+        self.assertEqual(parse_duration_to_minutes("서버 1차 완료"), 0)
+
     def test_start_message_parsing_slash_format(self):
         # 표준 5개 필드: 구분 / 작업자 / 고객사 / 작업내용 / 예정시간
         msg = RawKakaoMessage(

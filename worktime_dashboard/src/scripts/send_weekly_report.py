@@ -35,8 +35,8 @@ def main():
     default_recipients_str = ", ".join(scheduled_recipients) if scheduled_recipients else "ymmoon@sangsanginworld.co.kr, khkim@sangsanginworld.co.kr"
 
     recipients = args.recipients or os.getenv("REPORT_RECIPIENT_EMAILS", "") or default_recipients_str
-    sender = os.getenv("GMAIL_SENDER_EMAIL") or config.SMTP_SENDER_EMAIL or "newprim82@gmail.com"
-    pwd = os.getenv("GMAIL_APP_PASSWORD") or config.SMTP_SENDER_PASSWORD or "dlugbvfuhgdozkgr"
+    sender = os.getenv("GMAIL_SENDER_EMAIL") or os.getenv("SMTP_SENDER_EMAIL") or config.SMTP_SENDER_EMAIL or "newprim82@gmail.com"
+    pwd = os.getenv("GMAIL_APP_PASSWORD") or os.getenv("SMTP_SENDER_PASSWORD") or config.SMTP_SENDER_PASSWORD or ""
     
     print(f"[*] 발신자: {sender}")
     print(f"[*] 수신자: {recipients}")

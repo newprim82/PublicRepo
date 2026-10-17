@@ -147,17 +147,24 @@ class EmailSender:
                     )
                     msg.attach(cost_attachment)
 
-                # 3. Gmail SMTP 발송 (SSL 465 시도 -> TLS 587 Fallback)
+                # 3. Gmail SMTP 발송 (수신자 개인정보 보호를 위한 개별 전송, SSL 465 시도 -> TLS 587 Fallback)
+                def _send_to_all(srv):
+                    for rcpt in group_recipients:
+                        if "To" in msg:
+                            del msg["To"]
+                        msg["To"] = rcpt
+                        srv.sendmail(sender, [rcpt], msg.as_string())
+
                 try:
                     server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15)
                     server.login(sender, password)
-                    server.sendmail(sender, group_recipients, msg.as_string())
+                    _send_to_all(server)
                     server.quit()
                 except Exception:
                     server = smtplib.SMTP("smtp.gmail.com", 587, timeout=15)
                     server.starttls()
                     server.login(sender, password)
-                    server.sendmail(sender, group_recipients, msg.as_string())
+                    _send_to_all(server)
                     server.quit()
 
                 pass

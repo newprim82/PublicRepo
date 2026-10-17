@@ -5,6 +5,7 @@
 - 3중 영구 저장: 로컬 SQLite + 로컬 JSON + Supabase Cloud DB
 """
 
+import os
 import json
 import time
 import sqlite3
@@ -25,7 +26,7 @@ SESSION_CACHE_FILE = DATA_DIR / ".session_cache.json"
 LOCAL_ACCOUNTS_FILE = DATA_DIR / "admin_accounts.json"
 
 SUPER_ADMIN_USERNAME = "newprim"
-DEFAULT_SUPER_ADMIN_PWD = "newprim1"
+DEFAULT_SUPER_ADMIN_PWD = os.getenv("SUPER_ADMIN_INITIAL_PWD", "").strip() or "admin1234!"
 
 # =========================================================
 # 🔒 단방향 솔트 해시 (PBKDF2-HMAC-SHA256) 보안 유틸리티
@@ -489,7 +490,7 @@ class AuthManager:
                     cls.logout()
                     return False
 
-        # 2. 브라우저 쿼리 파라미터 기반 세션 토큰 복원 (새로고침 / 탭 복원 시)
+        # 2. 브라우저 쿼리 파라미터 기반 세션 토큰 복원 (새로고침 / 탭 복원 시 1회 복원 후 즉시 주소창 클리어)
         token = str(st.query_params.get("session_token", "") or "").strip()
         if token and len(token) == 32 and all(c in "0123456789abcdefABCDEF" for c in token):
             token_hash = cls._hash_token(token)
@@ -500,12 +501,21 @@ class AuthManager:
                 login_at = s_info.get("login_at", 0)
                 if now - login_at < SESSION_DURATION_SECONDS:
                     st.session_state["auth_user"] = s_info
+                    # 🔒 주소창 노출 방지: 복원 즉시 URL에서 session_token 제거
+                    try:
+                        if "session_token" in st.query_params:
+                            del st.query_params["session_token"]
+                    except Exception:
+                        pass
                     return True
                 else:
                     del cache[lookup_key]
                     cls._save_session_cache(cache)
-                    if "session_token" in st.query_params:
-                        del st.query_params["session_token"]
+                    try:
+                        if "session_token" in st.query_params:
+                            del st.query_params["session_token"]
+                    except Exception:
+                        pass
 
         return False
 
@@ -636,8 +646,12 @@ class AuthManager:
             cache[token_hash] = session_info
             cls._save_session_cache(cache)
 
-            # 3. 브라우저 쿼리 파라미터에 세션 토큰 저장
-            st.query_params["session_token"] = token
+            # 3. 브라우저 쿼리 파라미터 정리 (주소창 URL 세션 토큰 노출 차단)
+            try:
+                if "session_token" in st.query_params:
+                    del st.query_params["session_token"]
+            except Exception:
+                pass
             return True, "🎉 로그인 성공! 모든 관리자 권한이 활성화되었습니다."
 
         # 실패 시 카운트 증가

@@ -30,8 +30,8 @@ class Config:
     COLLECTOR_INTERVAL_SECONDS: int = 600
     
     # SMTP 이메일 발신 설정 (.env 또는 환경변수에서 로드)
-    SMTP_SENDER_EMAIL: str = os.getenv("SMTP_SENDER_EMAIL", "newprim82@gmail.com").strip()
-    SMTP_SENDER_PASSWORD: str = os.getenv("SMTP_SENDER_PASSWORD", "dlugbvfuhgdozkgr").strip()
+    SMTP_SENDER_EMAIL: str = (os.getenv("SMTP_SENDER_EMAIL", "").strip() or os.getenv("GMAIL_SENDER_EMAIL", "").strip() or "newprim82@gmail.com")
+    SMTP_SENDER_PASSWORD: str = (os.getenv("SMTP_SENDER_PASSWORD", "").strip() or os.getenv("GMAIL_APP_PASSWORD", "").strip())
 
     # 로컬 SQLite 데이터베이스 경로
     LOCAL_DB_PATH: Path = BASE_DIR / os.getenv("LOCAL_DB_PATH", "data/worklog.db")

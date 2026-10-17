@@ -385,10 +385,12 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
     """
     global _last_execution_timestamp
     
-    try:
-        pythoncom.CoInitialize()
-    except Exception:
-        pass
+    if not WIN32_AVAILABLE or sys.platform != "win32":
+        return {
+            "status": "skipped",
+            "message": "Non-Windows(리눅스/클라우드) 환경에서는 로컬 카카오톡 창 수집을 실행하지 않습니다.",
+            "time": get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
+        }
 
     with _cycle_lock:
         now_ts = time.time()
@@ -509,9 +511,14 @@ def background_collector_loop():
 def start_background_collector():
     """
     프로세스 전체에서 단 1개의 백그라운드 수집기 스레드만 실행되도록 싱글톤 보장 (Race Condition 방어)
+    Non-Windows 환경(리눅스/클라우드)에서는 수집 스레드를 기동하지 않음 (상태 플래핑 차단)
     """
     global _COLLECTOR_THREAD_RUNNING
     
+    if not WIN32_AVAILABLE or sys.platform != "win32":
+        log_trace("[환경 감지] Non-Windows(리눅스/클라우드) 환경이므로 카카오톡 백그라운드 수집 데몬을 비활성화합니다.")
+        return False
+
     with _collector_start_lock:
         if _COLLECTOR_THREAD_RUNNING:
             return True
