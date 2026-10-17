@@ -2,6 +2,13 @@
 
 ## 1. 최근 완료된 핵심 작업 내역 (2026-10-08 ~ 2026-10-17)
 
+- **전체 앱 3차 정밀 개선: 금고 잠금 시 공수 보존, 월요일 주간 리포트 대상 주차 정확화, 클라우드 KST 시간 통일 및 DB·동기화 캐시 최적화 (`ca35a54`)**:
+  - **비용 금고 잠금 시 보정 작업 `0.0h` 덮어쓰기 버그 수정**: `supabase_client.py`(`get_adjusted_records_map`)에서 금고가 잠겨 있을 때 암호화된 보정 레코드(`ENC_ADJ:...`)를 `0.0`으로 반환해 일반 대시보드 전체에서 원본 근무시간이 `0시간`으로 증발하던 버그를 제거(원본 공수 유지)하고, 보정 테이블 1,000건 단위 페이지네이션 및 `cost_vault_service.py`(`reset_vault`) 실제 테이블명(`adjusted_work_logs`, `worktime_adjusted_work_logs`) 정합성 수정.
+  - **월요일 08:00 주간 자동 리포트 대상 주차 보정 및 숫자 정렬**: `email_report_service.py`(`send_weekly_report`)에서 월요일 아침 자동 발송 시 월요일 새벽 데이터 대신 어제(일요일)가 속한 직전 완료 주차를 우선 선택하도록 개선하고, 주차 문자열 정렬 오류 방지를 위해 `(연도, 월, 주차번호)` 정수 튜플 정렬 적용.
+  - **클라우드(UTC) 환경 한국 표준시(`get_current_kst_time`) 전면 통일**: `email_report_service.py`, `email_sender.py`, `email_dispatch_service.py`, `email_schedule_service.py`, `cost_estimation_service.py`, `excel_export_service.py`, `monthly_worklog_service.py`, `auth_manager.py` 내 `datetime.now()`를 `get_current_kst_time()`으로 통일하고 `email_dispatch_service.py`의 미닫힘 중복 NTP 소켓 제거.
+  - **비용 메일 화이트리스트 파일 로드 및 비활성 수신자 연동**: `authorized_recipient_service.py`(`_ensure_storage`)에서 로컬 `authorized_recipients.json` 파일을 정상 로드하도록 복구하고, 정기 발송 비활성화(`is_active=False`) 수신자는 비용 화이트리스트에서 자동 제외되도록 동기화.
+  - **동기화·DB 조회 캐시 최적화 및 캘린더 HTML 이스케이프**: `supabase_client.py` 고유 날짜별 주차 계산 캐싱 및 아웃룩 일정 30초 인메모리 캐시·200건 배치 Upsert 적용, `schedule_sync_service.py` 카카오톡-아웃룩 중복 대조 시 `(worker_name, date)` 인덱싱으로 $O(N)$ 고속화, `team_service.py`/`holiday_service.py` 중복 DB 조회 제거, `outlook_calendar_widget.py` 일정 제목 `html.escape` 적용.
+
 - **전체 앱 2차 종합 개선: 체감 속도 혁신, 아웃룩 일정 전수 페이지네이션, 월간 자동발송 복구 및 장기 구동 안정화 (`5afe8fb`)**:
   - **다중 시트 엑셀 사전 생성 병목 제거**: `summary_view.py`, `cost_estimation_view.py`, `monthly_worklog_dispatch_view.py`에서 화면 진입/클릭 시마다 무거운 `openpyxl` 엑셀 파일을 매번 새로 생성하던 병목을 `@st.cache_data` 캐싱으로 제거하여 화면 전환 및 셀 클릭 반응 속도 대폭 향상.
   - **수집기 상태 조회 30초 메모리 캐시 적용**: `collector_status_service.py`에 30초 인메모리 캐시(`CACHE_TTL = 30.0`)를 도입하여 매 클릭마다 발생하던 Supabase 네트워크 왕복 지연(200~400ms) 제거.
@@ -59,13 +66,13 @@
 ## 2. 현재 시스템 상태 (Current State)
 
 - **애플리케이션 버전**: `v2.6.3`
-- **단일 진실 소스 시간**: LGU+ 공식 NTP `time.bora.net` (KST Naive datetime, UDP 소켓 자동 종료 보장)
-- **보안 상태**: 자격증명 완전 환경변수화, 제로-트러스트 영지식 암호화 금고 가동 (AES-256 / PBKDF2), URL 세션 토큰 노출 차단, 주간·월간 이메일 개별 전송 프라이버시 보호
-- **런타임 및 성능 상태**: 클라우드 데몬 플래핑 원천 차단, 다중 엑셀 생성 `@st.cache_data` 캐싱, 수집기 상태 30초 메모리 캐싱, 아웃룩 일정 전수 페이지네이션, SQLite WAL 동시성 모드 가동
-- **자동화 파이프라인**: 매주 월요일 주간 리포트(`weekly_email_report.yml`) + 매월 1일 08:00 전월 업무원장(`monthly_team_worklog.yml`) 무인 발송 완비
+- **단일 진실 소스 시간**: LGU+ 공식 NTP `time.bora.net` (KST Naive datetime, 전 서비스 KST 통일 및 UDP 소켓 자동 종료 보장)
+- **보안 상태**: 자격증명 완전 환경변수화, 제로-트러스트 영지식 암호화 금고 가동 (AES-256 / PBKDF2, 금고 잠금 시 원본 공수 안전 보존), URL 세션 토큰 노출 차단, 주간·월간 이메일 개별 전송 프라이버시 보호
+- **런타임 및 성능 상태**: 클라우드 데몬 플래핑 원천 차단, 다중 엑셀 생성 `@st.cache_data` 캐싱, 수집기 상태·아웃룩 일정 30초 메모리 캐싱, 카톡-아웃룩 날짜별 $O(N)$ 고속 매칭, 아웃룩·보정 데이터 전수 페이지네이션, SQLite WAL 동시성 모드 가동
+- **자동화 파이프라인**: 매주 월요일 주간 리포트(`weekly_email_report.yml`, 직전 완료 주차 자동 타겟팅) + 매월 1일 08:00 전월 업무원장(`monthly_team_worklog.yml`) 무인 발송 완비
 - **화면 구성**: 12대 메뉴 (역할 기반 접근 제어: 일반 관제 / 관리자 / 최고관리자)
 - **테스트 현황**: 38/38 Tests Passing (100% 통과, OK, 리소스 누수 경고 0건)
-- **Git 브랜치**: `main` (최신 커밋: `5afe8fb`)
+- **Git 브랜치**: `main` (최신 커밋: `ca35a54`)
 
 ---
 
