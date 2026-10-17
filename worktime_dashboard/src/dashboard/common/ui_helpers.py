@@ -419,12 +419,15 @@ def get_live_task_card_html(r, title_mappings, kst_now_naive, is_single_view: bo
         is_night_flag = False
     is_weekend_flag = bool(r.get("is_weekend_work"))
     if not is_weekend_flag and st_dt is not None and pd.notna(st_dt):
-        try:
-            is_lv_tmp = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
-            if not is_lv_tmp:
-                is_weekend_flag = reply_matcher.check_is_weekend_work(st_dt_naive, None, str(t_desc), int(max(1.0, est_hours) * 60))
-        except Exception:
-            pass
+        if hasattr(st_dt, "weekday") and st_dt.weekday() in [5, 6]:
+            is_weekend_flag = True
+        else:
+            try:
+                is_lv_tmp = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
+                if not is_lv_tmp:
+                    is_weekend_flag = reply_matcher.check_is_weekend_work(st_dt_naive, None, str(t_desc), int(max(1.0, est_hours) * 60))
+            except Exception:
+                pass
     night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
     weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if is_weekend_flag else ""
     is_edu_flag = bool("교육" in str(r.get("log_type", "")) or "실습" in str(r.get("task_description", "")) or "교육" in str(r.get("task_description", "")) or "교육" in str(r.get("client_name", "")))
@@ -548,12 +551,15 @@ def get_upcoming_task_card_html(r, title_mappings, kst_now_naive, is_single_view
     is_night_flag = bool(r.get("is_night_work")) or bool(st_dt is not None and pd.notna(st_dt) and (st_dt.hour >= 18 or st_dt.hour < 6))
     is_weekend_flag = bool(r.get("is_weekend_work"))
     if not is_weekend_flag and st_dt is not None and pd.notna(st_dt):
-        try:
-            is_lv_tmp = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
-            if not is_lv_tmp:
-                is_weekend_flag = reply_matcher.check_is_weekend_work(st_dt_naive, None, str(t_desc), int(max(1.0, dur_hours) * 60))
-        except Exception:
-            pass
+        if hasattr(st_dt, "weekday") and st_dt.weekday() in [5, 6]:
+            is_weekend_flag = True
+        else:
+            try:
+                is_lv_tmp = bool(r.get("is_leave") == True or "휴가" in str(r.get("log_type", "")) or "연차" in str(r.get("client_name", "")))
+                if not is_lv_tmp:
+                    is_weekend_flag = reply_matcher.check_is_weekend_work(st_dt_naive, None, str(t_desc), int(max(1.0, dur_hours) * 60))
+            except Exception:
+                pass
     night_badge = "<span style='background:#fee2e2; color:#dc2626; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🌙 야간</span>" if is_night_flag else ""
     weekend_badge = "<span style='background:#fef3c7; color:#d97706; padding:1px 5px; border-radius:4px; font-size:10px; font-weight:700; margin-left:3px;'>🏖️ 주말</span>" if is_weekend_flag else ""
 
