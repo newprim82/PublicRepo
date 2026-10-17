@@ -821,7 +821,6 @@ class ScheduleSyncService:
             try:
                 adj_map = db_manager.get_adjusted_hours_map()
                 if adj_map:
-                    from ..parser.reply_matcher import check_is_night_work, check_is_weekend_work
                     if "is_time_adjusted" not in combined_df.columns:
                         combined_df["is_time_adjusted"] = False
                     if "original_hours" not in combined_df.columns:
