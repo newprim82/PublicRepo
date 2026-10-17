@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-17 12:42 (Outlook Weekend Badge Fix)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-17 12:50 (Outlook Weekend Badge Fix v2)
 import os
 import sys
 from pathlib import Path
