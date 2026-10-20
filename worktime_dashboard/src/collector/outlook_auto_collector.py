@@ -154,6 +154,34 @@ def extract_outlook_schedules_with_meta(months_behind: int = 2, months_ahead: in
                         item = flt.GetNext()
                         continue
 
+                    # 🛡️ [타팀 강제 공유/초대 일정 원천 배제]
+                    # 1) 취소된 회의(olMeetingCanceled = 5)는 무조건 수집 제외
+                    # 2) 수신된 회의 초대(olMeetingReceived = 3)인 경우:
+                    #    주최자(Organizer)가 소속 팀원이 아닌 타팀에서 보낸 공유 일정은 수집 대상에서 원천 제외
+                    try:
+                        meeting_status = getattr(item, "MeetingStatus", 0)
+                        if meeting_status == 5:
+                            item = flt.GetNext()
+                            continue
+                        if meeting_status == 3:
+                            organizer = str(getattr(item, "Organizer", "") or "").strip()
+                            clean_org = clean_worker_name(organizer)
+                            owner_clean = clean_worker_name(owner_name)
+                            owner_team = team_members_info.get(owner_clean, {}).get("team", "기술 1팀")
+                            org_team = team_members_info.get(clean_org, {}).get("team", "")
+
+                            is_same_team = (org_team and org_team == owner_team) or (clean_org == owner_clean)
+                            if not is_same_team:
+                                item = flt.GetNext()
+                                continue
+                    except Exception:
+                        pass
+
+                    # 🛡️ 사내 타 부서(보안사업팀 등) 키워드가 들어간 강제 배포/공유 일정 예외 차단
+                    if any(tk in subject for tk in ["보안사업팀", "타팀 공유", "전사 공유", "설명회 소개"]):
+                        item = flt.GetNext()
+                        continue
+
                     # 작업자 이름 식별
                     w_name = ""
                     m = re.search(r"\[([가-힣a-zA-Z0-9]+)\]", subject)

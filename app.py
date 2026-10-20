@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-17 13:00 (Remove Sidebar Sync Button & Enforce Weekend Tag)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 09:20 (Block External Shared Outlook Schedules)
 import os
 import sys
 from pathlib import Path

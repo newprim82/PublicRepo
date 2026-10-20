@@ -329,6 +329,18 @@ class ScheduleSyncService:
         # 3. 비-휴가 일반 작업 일정 처리 (휴가 일정 원천 배제)
         work_rows = today_out[~leave_mask]
 
+        # 🛡️ [타팀 강제 공유 일정 감지 & 원천 배제]
+        # 같은 팀 내에서 3명 이상의 팀원에게 동일 시간대에 동일한 제목/내용으로 등록된 아웃룩 단독 일정
+        # (타팀에서 우리 팀 전체에 일괄 배포한 강제 공유 회의/설명회/세미나) 원천 배제
+        shared_task_counts = {}
+        for _, r_chk in work_rows.iterrows():
+            _, c_desc = parse_outlook_subject_to_client_and_task(r_chk.get("subject", ""), r_chk.get("location", ""))
+            s_time_key = str(r_chk.get("start_time", ""))[:16]
+            key = (s_time_key, c_desc.strip())
+            shared_task_counts[key] = shared_task_counts.get(key, 0) + 1
+
+        bulk_shared_keys = {k for k, cnt in shared_task_counts.items() if cnt >= 3}
+
         for _, r in work_rows.iterrows():
             w_name = r["worker_name"]
 
@@ -365,6 +377,24 @@ class ScheduleSyncService:
 
             # 🏢 아웃룩 제목에서 [작업자] 제거 후 고객사명과 작업 내용을 스마트 분리 파싱
             parsed_client, parsed_desc = parse_outlook_subject_to_client_and_task(r["subject"], r.get("location", ""))
+
+            # 🛡️ [타팀 강제 공유 일정 배제] 사용자 요청: 팀내 기록이 아니고 타팀에서 공유된 일정은 가져오지 않음
+            # A. 사내 타 부서(보안사업팀 등) 키워드가 들어간 강제 배포/공유 일정
+            other_teams_kws = ["보안사업팀", "타팀공유", "타팀 공유", "전사공유", "전사 공유"]
+            if any(ot in str(parsed_client) for ot in other_teams_kws) or any(ot in str(r.get("subject", "")) for ot in other_teams_kws):
+                continue
+
+            # B. 3명 이상에게 동시 일괄 배포된 아웃룩 단독 일정(카톡 기보고 없음)
+            s_time_key = str(st_time)[:16]
+            if (s_time_key, parsed_desc.strip()) in bulk_shared_keys:
+                has_k_report = False
+                if not final_pend_df.empty:
+                    for _, p_row in final_pend_df.iterrows():
+                        if p_row.get("is_outlook") != True and parsed_desc.strip() in str(p_row.get("task_description", "")):
+                            has_k_report = True
+                            break
+                if not has_k_report:
+                    continue
 
             # 🛡️ 1. 휴가/개인용무 키워드 방어 (작업이 아니므로 실시간 진행/예정 작업 승격 배제)
             non_work_keywords = ["병원", "진료", "건강검진", "휴가", "연차", "반차", "공가", "병가", "외출", "조퇴", "개인용무", "개인사정"]
