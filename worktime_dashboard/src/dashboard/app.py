@@ -98,42 +98,27 @@ st.set_page_config(
 apply_custom_styles()
 
 def clear_all_web_caches():
-    """웹 메모리 캐시, RAM 인메모리 캐시 및 서브 모듈 핫리로드(Hot-Reload) 강제 실행"""
-    # 1. Streamlit 전역 캐시 초기화
-    st.cache_data.clear()
-    st.cache_resource.clear()
-    
-    # 2. TeamService RAM 캐시 초기화
+    """배포 및 버전 갱신 시 캐시 무효화 및 모든 서브모듈을 메모리에서 완전히 초기화"""
     try:
-        from src.services.team_service import TeamService
-        TeamService.clear_cache()
+        st.cache_data.clear()
+        st.cache_resource.clear()
     except Exception:
         pass
-        
-    # 3. 파이썬 서브 모듈 강제 핫리로드 (Streamlit Cloud 메모리 캐시 파괴)
-    modules_to_reload = [
-        "src.services.client_normalizer",
-        "src.dashboard.common.ui_helpers",
-        "src.services.schedule_sync_service",
-        "src.analytics.stats_service",
-        "src.dashboard.common.dialogs",
-        "src.dashboard.views.home_view",
-        "src.dashboard.views.outlook_calendar_widget",
-        "src.database.supabase_client",
-        "src.services.team_service",
-        "src.services.excel_export_service",
-        "src.services.cost_estimation_service",
-        "src.dashboard.views.cost_estimation_view"
-    ]
-    for mod_name in modules_to_reload:
-        if mod_name in sys.modules:
-            try:
-                importlib.reload(sys.modules[mod_name])
-            except Exception:
-                pass
+    
+    # 현재 실행 중인 app 모듈을 제외하고, 뷰/다이얼로그/헬퍼 서브모듈을 메모리에서 제거하여 최신 코드를 즉시 다시 읽도록 보장
+    for mod_name in list(sys.modules.keys()):
+        if mod_name != __name__ and mod_name != "src.dashboard.app":
+            if (mod_name.startswith("src.dashboard.common.") or 
+                mod_name.startswith("src.dashboard.views.") or 
+                mod_name.startswith("src.services.") or 
+                mod_name.startswith("src.analytics.")):
+                try:
+                    del sys.modules[mod_name]
+                except Exception:
+                    pass
 
 # 버전 변경 및 빌드 갱신 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
-DEPLOY_BUILD_ID = "20261020_1430_WEEKEND_ROW_BANNER_FIX"
+DEPLOY_BUILD_ID = "20261020_1445_SUBMODULE_EVICTION_WEEKEND_FIX"
 if st.session_state.get("_applied_app_version") != APP_VERSION or st.session_state.get("_applied_deploy_build_id") != DEPLOY_BUILD_ID:
     st.session_state["_applied_app_version"] = APP_VERSION
     st.session_state["_applied_deploy_build_id"] = DEPLOY_BUILD_ID
