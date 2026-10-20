@@ -949,3 +949,57 @@ def extract_selected_row_idx(event) -> Optional[int]:
         return rows[0]
 
     return None
+
+def apply_weekend_table_styling(df_disp: pd.DataFrame, highlight_scope: str = "full_row") -> Any:
+    """
+    작업 목록 표(st.dataframe)에서 주말 항목을 빨간색 배경(#dc2626) + 흰색 글씨(#ffffff, bold)로 강조 스타일링.
+    highlight_scope:
+      - 'full_row': 주말인 행 전체의 모든 칸을 빨간색 배경 + 흰색 글씨로 강조 (사용자 선택 옵션)
+      - 'badge': '주말여부' 칸만 빨간색 배경 + 흰색 글씨
+      - 'date_and_badge': '시작 보고시각'과 '주말여부' 칸을 빨간색 배경 + 흰색 글씨
+    """
+    if df_disp is None or df_disp.empty:
+        return df_disp
+
+    styled_df = df_disp.copy()
+
+    # 1. 주말여부 / 야간여부 컬럼 명칭 정규화 및 한글 텍스트 치환
+    wk_col = next((c for c in ["주말여부", "주말"] if c in styled_df.columns), None)
+    nt_col = next((c for c in ["야간여부", "야간"] if c in styled_df.columns), None)
+
+    if wk_col:
+        styled_df[wk_col] = styled_df[wk_col].apply(
+            lambda v: "주말" if (v is True or v == "True" or str(v).strip() in ["Y", "주말", "🏖️ 주말", "1", "1.0"]) else "-"
+        )
+    if nt_col:
+        styled_df[nt_col] = styled_df[nt_col].apply(
+            lambda v: "야간" if (v is True or v == "True" or str(v).strip() in ["Y", "야간", "🌙 야간", "1", "1.0"]) else "-"
+        )
+
+    # 2. 주말 판정 마스크 (주말여부 컬럼 또는 시작 보고시각 요일 직통 검사)
+    is_weekend_mask = pd.Series(False, index=styled_df.index)
+    if wk_col:
+        is_weekend_mask = is_weekend_mask | (styled_df[wk_col] == "주말")
+
+    st_col = next((c for c in ["시작 보고시각", "시작일시", "start_time"] if c in styled_df.columns), None)
+    if st_col:
+        st_series = pd.to_datetime(styled_df[st_col], errors="coerce")
+        is_weekend_mask = is_weekend_mask | (st_series.dt.weekday.isin([5, 6]))
+
+    red_style = "background-color: #dc2626; color: #ffffff; font-weight: bold;"
+
+    def _style_func(row):
+        idx = row.name
+        is_wk = is_weekend_mask.get(idx, False)
+        if not is_wk:
+            return [""] * len(row)
+        
+        if highlight_scope == "full_row":
+            return [red_style] * len(row)
+        elif highlight_scope == "badge":
+            return [red_style if col == wk_col else "" for col in row.index]
+        elif highlight_scope == "date_and_badge":
+            return [red_style if col in [st_col, wk_col] else "" for col in row.index]
+        return [""] * len(row)
+
+    return styled_df.style.apply(_style_func, axis=1)

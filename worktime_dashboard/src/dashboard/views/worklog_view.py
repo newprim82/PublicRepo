@@ -2,7 +2,7 @@ import io
 from datetime import datetime
 import pandas as pd
 import streamlit as st
-from ..common.ui_helpers import strip_tz, extract_selected_row_idx
+from ..common.ui_helpers import strip_tz, extract_selected_row_idx, apply_weekend_table_styling
 from ..common.dialogs import show_single_task_dialog
 from ...services.excel_export_service import ExcelExportService
 
@@ -106,5 +106,6 @@ def render_worklog_view(df: pd.DataFrame):
             row_dict = out_data.iloc[w_row_idx].to_dict()
             show_single_task_dialog(row_dict)
 
-    _render_worklog_table(disp_renamed, full_sorted_df)
+    styled_disp_renamed = apply_weekend_table_styling(disp_renamed, highlight_scope="full_row")
+    _render_worklog_table(styled_disp_renamed, full_sorted_df)
     return

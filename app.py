@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 09:20 (Block External Shared Outlook Schedules)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 14:05 (Highlight Weekend Rows in Red and White)
 import os
 import sys
 from pathlib import Path

@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 import plotly.express as px
-from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, strip_tz, get_current_kst_time, to_naive_kst
+from .ui_helpers import inject_dialog_title_style, format_raw_chat_display, strip_tz, get_current_kst_time, to_naive_kst, apply_weekend_table_styling
 from ...services.email_report_service import EmailReportService
 from ...services.email_sender import EmailSender
 from ...services.authorized_recipient_service import AuthorizedRecipientService
@@ -605,21 +605,23 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
         disp_w_df["end_time"] = None
     if "status" in disp_w_df.columns:
         disp_w_df["status"] = disp_w_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_w_df["status"])
+    disp_tbl_data = disp_w_df[[
+        "start_time", "end_time", "client_name", "task_description",
+        "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"
+    ]].rename(columns={
+        "start_time": "시작 보고시각",
+        "end_time": "완료 보고시각",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "actual_hours": "소요(h)",
+        "status": "상태",
+        "is_night_work": "야간여부",
+        "is_weekend_work": "주말여부"
+    })
+    styled_tbl_data = apply_weekend_table_styling(disp_tbl_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
-        disp_w_df[[
-            "start_time", "end_time", "client_name", "task_description",
-            "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"
-        ]].rename(columns={
-            "start_time": "시작 보고시각",
-            "end_time": "완료 보고시각",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "actual_hours": "소요(h)",
-            "status": "상태",
-            "is_night_work": "야간여부",
-            "is_weekend_work": "주말여부"
-        }),
+        styled_tbl_data,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
@@ -668,19 +670,21 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
         disp_cat_df["end_time"] = None
     if "status" in disp_cat_df.columns:
         disp_cat_df["status"] = disp_cat_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_cat_df["status"])
+    disp_cat_tbl_data = disp_cat_df[[
+        "start_time", "end_time", "client_name", "task_description",
+        "estimated_hours", "actual_hours", "status"
+    ]].rename(columns={
+        "start_time": "시작 보고시각",
+        "end_time": "완료 보고시각",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "actual_hours": "소요(h)",
+        "status": "상태"
+    })
+    styled_cat_tbl = apply_weekend_table_styling(disp_cat_tbl_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
-        disp_cat_df[[
-            "start_time", "end_time", "client_name", "task_description",
-            "estimated_hours", "actual_hours", "status"
-        ]].rename(columns={
-            "start_time": "시작 보고시각",
-            "end_time": "완료 보고시각",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "actual_hours": "소요(h)",
-            "status": "상태"
-        }),
+        styled_cat_tbl,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
@@ -758,18 +762,20 @@ def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
     table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
     avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
 
+    disp_team_data = disp_sorted_df[avail_cols].rename(columns={
+        "start_time": "시작 보고시각",
+        "end_time": "완료 보고시각",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "actual_hours": "소요(h)",
+        "status": "상태"
+    })
+    styled_team_data = apply_weekend_table_styling(disp_team_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
-        disp_sorted_df[avail_cols].rename(columns={
-            "start_time": "시작 보고시각",
-            "end_time": "완료 보고시각",
-            "worker_name": "담당자",
-            "worker_team": "소속팀",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "actual_hours": "소요(h)",
-            "status": "상태"
-        }),
+        styled_team_data,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
@@ -843,18 +849,20 @@ def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
     table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
     avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
 
+    disp_week_data = disp_sorted_df[avail_cols].rename(columns={
+        "start_time": "시작 보고시각",
+        "end_time": "완료 보고시각",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "actual_hours": "소요(h)",
+        "status": "상태"
+    })
+    styled_week_data = apply_weekend_table_styling(disp_week_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
-        disp_sorted_df[avail_cols].rename(columns={
-            "start_time": "시작 보고시각",
-            "end_time": "완료 보고시각",
-            "worker_name": "담당자",
-            "worker_team": "소속팀",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "actual_hours": "소요(h)",
-            "status": "상태"
-        }),
+        styled_week_data,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
@@ -914,18 +922,20 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
     table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
     avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
 
+    disp_day_popup_data = disp_sorted_df[avail_cols].rename(columns={
+        "start_time": "시작 보고시각",
+        "end_time": "완료 보고시각",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "actual_hours": "소요(h)",
+        "status": "상태"
+    })
+    styled_day_popup = apply_weekend_table_styling(disp_day_popup_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
-        disp_sorted_df[avail_cols].rename(columns={
-            "start_time": "시작 보고시각",
-            "end_time": "완료 보고시각",
-            "worker_name": "담당자",
-            "worker_team": "소속팀",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "actual_hours": "소요(h)",
-            "status": "상태"
-        }),
+        styled_day_popup,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import streamlit as st
 from ...services.team_service import TeamService, UNASSIGNED_TEAM
-from ..common.ui_helpers import strip_tz, format_raw_chat_display, is_same_team, get_all_teams_safe, extract_selected_row_idx
+from ..common.ui_helpers import strip_tz, format_raw_chat_display, is_same_team, get_all_teams_safe, extract_selected_row_idx, apply_weekend_table_styling
 from ..common.dialogs import show_single_task_dialog
 
 @st.cache_data(show_spinner=False)
@@ -312,7 +312,8 @@ def render_smart_search_tab(df_raw: pd.DataFrame, team_mappings: dict):
             row_dict = filt_df.iloc[s_row_idx].to_dict()
             show_single_task_dialog(row_dict)
 
-    _render_search_results_table(display_df, filtered_df)
+    styled_search_df = apply_weekend_table_styling(display_df, highlight_scope="full_row")
+    _render_search_results_table(styled_search_df, filtered_df)
 
 
 def render_search_view(df_raw: pd.DataFrame, team_mappings: dict):
