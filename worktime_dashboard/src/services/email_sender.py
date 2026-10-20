@@ -29,8 +29,8 @@ def get_secret(key: str, default: str = "") -> str:
     val = os.getenv(key, "").strip()
     return val if val else default
 
-DEFAULT_SENDER = config.SMTP_SENDER_EMAIL
-DEFAULT_APP_PWD = config.SMTP_SENDER_PASSWORD
+DEFAULT_SENDER = getattr(config, "SMTP_SENDER_EMAIL", "newprim82@gmail.com")
+DEFAULT_APP_PWD = getattr(config, "SMTP_SENDER_PASSWORD", "")
 DEFAULT_RECIPIENT = "ymmoon@sangsanginworld.co.kr"
 
 class EmailSender:

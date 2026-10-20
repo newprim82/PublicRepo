@@ -1,14 +1,18 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 14:45 (Force Reload All Submodules & Guaranteed Weekend Styling)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 14:55 (Universal Entrypoint & AttributeError Hotfix)
 import os
 import sys
 from pathlib import Path
 import runpy
 
-_root = Path(__file__).resolve().parent
-if (_root / "worktime_dashboard").exists():
-    _worktime_dir = _root / "worktime_dashboard"
+_file_dir = Path(__file__).resolve().parent
+
+# 루트든 src/dashboard든 상관없이 정확한 worktime_dashboard 디렉토리 자동 감지
+if (_file_dir / "worktime_dashboard").exists():
+    _worktime_dir = _file_dir / "worktime_dashboard"
+elif (_file_dir.parent.parent / "worktime_dashboard").exists():
+    _worktime_dir = _file_dir.parent.parent / "worktime_dashboard"
 else:
-    _worktime_dir = _root.parent.parent / "worktime_dashboard"
+    _worktime_dir = _file_dir
 
 os.chdir(str(_worktime_dir))
 if str(_worktime_dir) in sys.path:

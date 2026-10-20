@@ -64,7 +64,6 @@ def get_all_teams_safe() -> list:
     return ["기술본부", "기술 1팀", "기술 2팀", "기술 3팀", "PI팀"]
 from src.services.reward_leave_service import RewardLeaveService
 from src.database.supabase_client import db_manager
-from src.services.email_sender import EmailSender
 from src.services.client_normalizer import normalize_client_name
 from src.analytics.stats_service import StatsService
 from src.collector.kakao_auto_collector import start_background_collector, run_collection_cycle, get_collector_countdown_info, COLLECTOR_STATUS
