@@ -598,6 +598,8 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
     
     st.markdown(f"### 👤 **{worker_name}** 님의 전체 작업 내역 (총 **{tot_h}시간** / **{tot_cnt}건**)")
     st.markdown(f"☀️ 평일 주간: **{day_cnt}건** | 🌙 평일 야간: **{night_cnt}건** | 🏖️ **주말: {weekend_cnt}건** *(빨간색 행 강조)*")
+    if weekend_cnt > 0:
+        st.markdown(f'<div style="background-color: #dc2626; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-weight: bold; margin: 8px 0 10px 0; font-size: 13px;">🏖️ 주말 작업 {weekend_cnt}건이 포함되어 있으며, 아래 표에서 빨간색 행으로 강조 표시됩니다.</div>', unsafe_allow_html=True)
     
     st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
     disp_w_df = strip_tz(w_df.copy())
