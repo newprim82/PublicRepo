@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 14:05 (Highlight Weekend Rows in Red and White)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 14:25 (Weekend Row Styling Hotfix and Cache Invalidation)
 import os
 import sys
 from pathlib import Path
