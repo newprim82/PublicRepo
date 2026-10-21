@@ -65,7 +65,7 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
                     y=sorted_for_h_bar['worker_name'],
                     x=sorted_for_h_bar.get('weekday_night_tasks', sorted_for_h_bar['night_tasks']),
                     orientation='h',
-                    marker_color='#E53935',
+                    marker_color='#ea580c',
                     customdata=[[w, '🌙 평일 야간'] for w in sorted_for_h_bar['worker_name']]
                 ),
                 go.Bar(
@@ -73,7 +73,7 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
                     y=sorted_for_h_bar['worker_name'],
                     x=sorted_for_h_bar['weekend_tasks'],
                     orientation='h',
-                    marker_color='#FFD600',
+                    marker_color='#dc2626',
                     customdata=[[w, '🏖️ 주말 작업'] for w in sorted_for_h_bar['worker_name']]
                 )
             ])
@@ -122,14 +122,14 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
                     name='🌙 평일 야간 (18시~06시)',
                     x=display_summary['worker_name'],
                     y=display_summary.get('weekday_night_tasks', display_summary['night_tasks']),
-                    marker_color='#E53935',
+                    marker_color='#ea580c',
                     customdata=[[w, '🌙 평일 야간'] for w in display_summary['worker_name']]
                 ),
                 go.Bar(
                     name='🏖️ 주말 작업 (야간포함)',
                     x=display_summary['worker_name'],
                     y=display_summary['weekend_tasks'],
-                    marker_color='#FFD600',
+                    marker_color='#dc2626',
                     customdata=[[w, '🏖️ 주말 작업'] for w in display_summary['worker_name']]
                 )
             ])
