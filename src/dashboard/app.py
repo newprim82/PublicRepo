@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:00 (Reward Leave Granter & Auth Guard)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:02 (Auth Hotreload AttributeError Fix)
 import os
 import sys
 from pathlib import Path
@@ -24,7 +24,8 @@ for mod_name in list(sys.modules.keys()):
     if (mod_name.startswith("src.dashboard.common.") or 
         mod_name.startswith("src.dashboard.views.") or 
         mod_name.startswith("src.services.") or 
-        mod_name.startswith("src.analytics.")):
+        mod_name.startswith("src.analytics.") or 
+        mod_name.startswith("src.auth.")):
         del sys.modules[mod_name]
 
 _target_app = _worktime_dir / "src" / "dashboard" / "app.py"

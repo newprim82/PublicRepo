@@ -173,7 +173,11 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
                 st.info("💡 해당 주차는 주 52시간 이내 정상이지만, 필요 시 특별 보상 휴가를 등록할 수 있습니다.")
 
             if AuthManager.is_authenticated():
-                granter_display = AuthManager.get_current_user_display_name()
+                if hasattr(AuthManager, "get_current_user_display_name"):
+                    granter_display = AuthManager.get_current_user_display_name()
+                else:
+                    curr_u = AuthManager.get_current_user() or "관리자"
+                    granter_display = curr_u
                 st.caption(f"👤 보상 휴가 등록 담당자: **{granter_display}** (등록 시 부여자 정보가 함께 저장됩니다)")
                 with st.form(f"form_reward_leave_{target_worker}_{target_wk}"):
                     col_hrs, col_note = st.columns([1, 2])
