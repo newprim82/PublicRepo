@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:35 (Sidebar 50px Spacing)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:45 (AI Briefing Models Fix)
 import os
 import sys
 from pathlib import Path

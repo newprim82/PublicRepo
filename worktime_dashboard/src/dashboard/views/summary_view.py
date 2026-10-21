@@ -616,7 +616,7 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             """,
             unsafe_allow_html=True
         )
-        # 🔑 Gemini API 키 감지 (Streamlit Secrets / 환경변수)
+        # 🔑 Gemini API 키 감지 (Streamlit Secrets / 환경변수 / config 기본 폴백)
         gemini_api_key = ""
         try:
             if hasattr(st, "secrets"):
@@ -625,6 +625,12 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             pass
         if not gemini_api_key:
             gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        if not gemini_api_key:
+            try:
+                from src.config import config
+                gemini_api_key = (config.GEMINI_API_KEY or "").strip()
+            except Exception:
+                pass
         if gemini_api_key:
             os.environ["GEMINI_API_KEY"] = gemini_api_key
 
@@ -634,6 +640,16 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
     if re_analyze:
         with st.spinner("✨ Gemini AI가 현장 데이터를 심층 분석 중입니다 (API 토큰 소모)..."):
             ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=True, api_key=gemini_api_key, allow_ai_call=True)
+            if "Gemini" in ai_briefing.get("source", ""):
+                try:
+                    st.toast("✨ Gemini AI 심층 분석이 완료되었습니다!", icon="✨")
+                except Exception:
+                    pass
+            else:
+                try:
+                    st.warning("⚠️ Gemini AI 호출에 일시적으로 실패하여 팩트 기반 규칙 브리핑으로 표시됩니다. 잠시 후 다시 시도해 주세요.")
+                except Exception:
+                    pass
     else:
         # 평소 조회 변경 시: 토큰 소모 없이 팩트 기반 규칙 엔진 또는 이전 Gemini 캐시 표출 (0초 딜레이)
         ai_briefing = AIBriefingService.generate_briefing(facts, force_refresh=False, api_key=gemini_api_key, allow_ai_call=False)

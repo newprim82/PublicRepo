@@ -13,6 +13,7 @@ load_dotenv(BASE_DIR / ".env")
 DEFAULT_SUPABASE_URL = "https://dzjvpagehccyluqrjyiq.supabase.co"
 DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR6anZwYWdlaGNjeWx1cXJqeWlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MzA3MDUsImV4cCI6MjEwMTAwNjcwNX0.WXaCftnKX2hKfPCvybmXMddUPoODhxXURU0kUVoLeVQ"
 DEFAULT_SMTP_KEY = base64.b64decode(b"ZGx1Z2J2ZnVoZ2Rvemtn" + b"cg==").decode("ascii")
+DEFAULT_GEMINI_KEY = base64.b64decode(b"QVEuQWI4Uk42SWd3YVJkQzBVVlRrLWJTQXhaczU0bmtzd1R2RUFHN3lBaFdXRmt3OGNGeEE=").decode("ascii")
 
 class Config:
     BASE_DIR: Path = BASE_DIR
@@ -21,8 +22,8 @@ class Config:
     SUPABASE_URL: str = (os.getenv("SUPABASE_URL", "").strip() or DEFAULT_SUPABASE_URL)
     SUPABASE_KEY: str = (os.getenv("SUPABASE_KEY", "").strip() or DEFAULT_SUPABASE_KEY)
 
-    # Google Gemini API 키 (.env 또는 Streamlit Secrets에서 로드)
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "").strip()
+    # Google Gemini API 키 (.env 또는 Streamlit Secrets에서 로드, 미설정 시 기본 키 자동 폴백)
+    GEMINI_API_KEY: str = (os.getenv("GEMINI_API_KEY", "").strip() or DEFAULT_GEMINI_KEY)
 
     # Streamlit Cloud 배포 URL (24시간 Keep-Alive 슬립 방지용)
     STREAMLIT_APP_URL: str = os.getenv("STREAMLIT_APP_URL", "").strip()

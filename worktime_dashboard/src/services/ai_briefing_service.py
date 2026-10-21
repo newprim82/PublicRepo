@@ -195,10 +195,14 @@ class AIBriefingService:
                 pass
         if not final_key:
             try:
-                from ..config import config
+                from src.config import config
                 final_key = (config.GEMINI_API_KEY or "").strip()
             except Exception:
-                pass
+                try:
+                    from ..config import config
+                    final_key = (config.GEMINI_API_KEY or "").strip()
+                except Exception:
+                    pass
 
         briefing = None
         # ★ 토큰 절약 모드: 사용자가 [🔄 AI 재분석]을 직접 클릭했거나 allow_ai_call이 True일 때만 Gemini API 호출 ★
@@ -240,7 +244,12 @@ class AIBriefingService:
 [정량 데이터 팩트 JSON]:
 {json.dumps(facts, ensure_ascii=False, indent=2)}
 """
-        model_candidates = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        model_candidates = [
+            "gemini-flash-lite-latest",
+            "gemini-3.5-flash",
+            "gemini-flash-latest",
+            "gemini-3.8-flash"
+        ]
         for model in model_candidates:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
@@ -253,14 +262,16 @@ class AIBriefingService:
                     }
                 }
                 req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-                with urllib.request.urlopen(req, timeout=20) as response:
+                with urllib.request.urlopen(req, timeout=15) as response:
                     res_data = json.loads(response.read().decode("utf-8"))
                     text_content = res_data["candidates"][0]["content"]["parts"][0]["text"]
                     parsed = json.loads(text_content)
                     parsed["source"] = "✨ Gemini AI 심층 분석"
                     return parsed
-            except Exception:
+            except Exception as e_model:
+                print(f"[AIBriefingService] 모델 {model} 호출 실패: {e_model}")
                 continue
+        print("[AIBriefingService] 모든 Gemini 모델 호출 실패 또는 타임아웃, 팩트 기반 규칙 브리핑으로 폴백합니다.")
         return None
 
     @classmethod
