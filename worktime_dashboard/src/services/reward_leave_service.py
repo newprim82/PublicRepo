@@ -34,10 +34,15 @@ class RewardLeaveService:
                 week_label TEXT NOT NULL,
                 leave_hours REAL DEFAULT 0,
                 note TEXT DEFAULT '',
+                granted_by TEXT DEFAULT '',
                 updated_at TEXT DEFAULT (datetime('now', 'localtime')),
                 PRIMARY KEY (worker_name, week_label)
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE reward_leave_logs ADD COLUMN granted_by TEXT DEFAULT ''")
+        except Exception:
+            pass
         conn.commit()
         conn.close()
         cls._table_initialized = True
@@ -61,6 +66,7 @@ class RewardLeaveService:
                     leaves[key] = {
                         "leave_hours": float(row.get("leave_hours") or 0),
                         "note": row.get("note") or "",
+                        "granted_by": row.get("granted_by") or "",
                         "updated_at": row.get("updated_at") or ""
                     }
                 if leaves:
@@ -73,14 +79,26 @@ class RewardLeaveService:
         # 2. 로컬 SQLite 조회
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
-        cursor.execute("SELECT worker_name, week_label, leave_hours, note, updated_at FROM reward_leave_logs")
-        for row in cursor.fetchall():
-            key = (row[0], row[1])
-            leaves[key] = {
-                "leave_hours": float(row[2] or 0),
-                "note": row[3] or "",
-                "updated_at": row[4] or ""
-            }
+        try:
+            cursor.execute("SELECT worker_name, week_label, leave_hours, note, granted_by, updated_at FROM reward_leave_logs")
+            for row in cursor.fetchall():
+                key = (row[0], row[1])
+                leaves[key] = {
+                    "leave_hours": float(row[2] or 0),
+                    "note": row[3] or "",
+                    "granted_by": row[4] or "",
+                    "updated_at": row[5] or ""
+                }
+        except Exception:
+            cursor.execute("SELECT worker_name, week_label, leave_hours, note, updated_at FROM reward_leave_logs")
+            for row in cursor.fetchall():
+                key = (row[0], row[1])
+                leaves[key] = {
+                    "leave_hours": float(row[2] or 0),
+                    "note": row[3] or "",
+                    "granted_by": "",
+                    "updated_at": row[4] or ""
+                }
         conn.close()
 
         cls._reward_leaves_cache = dict(leaves)
@@ -94,8 +112,8 @@ class RewardLeaveService:
         return leaves.get((worker_name, week_label))
 
     @staticmethod
-    def save_reward_leave(worker_name: str, week_label: str, leave_hours: float, note: str):
-        """보상 휴가 등록 또는 수정"""
+    def save_reward_leave(worker_name: str, week_label: str, leave_hours: float, note: str, granted_by: str = ""):
+        """보상 휴가 등록 또는 수정 (부여자 정보 포함)"""
         RewardLeaveService.init_table()
 
         # 1. Supabase 저장
@@ -105,22 +123,32 @@ class RewardLeaveService:
                     "worker_name": worker_name,
                     "week_label": week_label,
                     "leave_hours": leave_hours,
-                    "note": note
+                    "note": note,
+                    "granted_by": granted_by
                 }).execute()
             except Exception as e:
-                print(f"[Supabase 보상휴가 저장 알림]: {e}")
+                try:
+                    db_manager.supabase.table("worktime_reward_leave_logs").upsert({
+                        "worker_name": worker_name,
+                        "week_label": week_label,
+                        "leave_hours": leave_hours,
+                        "note": note
+                    }).execute()
+                except Exception as fallback_e:
+                    print(f"[Supabase 보상휴가 저장 알림]: {fallback_e}")
 
         # 2. 로컬 SQLite 저장
         conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO reward_leave_logs (worker_name, week_label, leave_hours, note, updated_at)
-            VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
+            INSERT INTO reward_leave_logs (worker_name, week_label, leave_hours, note, granted_by, updated_at)
+            VALUES (?, ?, ?, ?, ?, datetime('now', 'localtime'))
             ON CONFLICT(worker_name, week_label) DO UPDATE SET
                 leave_hours=excluded.leave_hours,
                 note=excluded.note,
+                granted_by=excluded.granted_by,
                 updated_at=excluded.updated_at
-        """, (worker_name, week_label, leave_hours, note))
+        """, (worker_name, week_label, leave_hours, note, granted_by))
         conn.commit()
         conn.close()
         RewardLeaveService.clear_cache()

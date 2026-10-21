@@ -12,6 +12,7 @@ from ...services.authorized_recipient_service import AuthorizedRecipientService
 from ...services.cost_vault_service import CostVaultService
 from ...services.team_service import TeamService
 from ...services.reward_leave_service import RewardLeaveService
+from ...auth.auth_manager import AuthManager
 from ...analytics.stats_service import StatsService
 from ...config import config
 
@@ -131,13 +132,22 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         curr_reward = RewardLeaveService.get_reward_leave(target_worker, target_wk)
 
         if curr_reward:
-            st.success(f"✅ **보상 휴가 부여 완료**: **{curr_reward['leave_hours']}시간 ({curr_reward['note']})**  \n*(최종 등록 시각: {curr_reward['updated_at']})*")
+            granter_info = ""
+            if curr_reward.get("granted_by"):
+                granter_info = f" | 부여/등록자: 👤 **{curr_reward['granted_by']}**"
+            st.success(
+                f"✅ **보상 휴가 부여 완료**: **{curr_reward['leave_hours']}시간 ({curr_reward['note']})**  \n"
+                f"*(최종 등록 시각: {curr_reward['updated_at']}{granter_info})*"
+            )
             col_btn_del, _ = st.columns([1, 2])
             with col_btn_del:
-                if st.button("🗑️ 보상 휴가 취소/삭제 (미보상 전환)", key=f"del_reward_{target_worker}_{target_wk}", use_container_width=True):
-                    RewardLeaveService.delete_reward_leave(target_worker, target_wk)
-                    st.toast("보상 휴가 기록이 삭제되었습니다.", icon="🗑️")
-                    st.rerun()
+                if AuthManager.is_authenticated():
+                    if st.button("🗑️ 보상 휴가 취소/삭제 (미보상 전환)", key=f"del_reward_{target_worker}_{target_wk}", use_container_width=True):
+                        RewardLeaveService.delete_reward_leave(target_worker, target_wk)
+                        st.toast("보상 휴가 기록이 삭제되었습니다.", icon="🗑️")
+                        st.rerun()
+                else:
+                    st.caption("🔒 보상 휴가 취소/삭제는 관리자 로그인 후 가능합니다.")
         else:
             if tot_work_h >= 52.0:
                 danger_html = (
@@ -162,19 +172,24 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
             else:
                 st.info("💡 해당 주차는 주 52시간 이내 정상이지만, 필요 시 특별 보상 휴가를 등록할 수 있습니다.")
 
-            with st.form(f"form_reward_leave_{target_worker}_{target_wk}"):
-                col_hrs, col_note = st.columns([1, 2])
-                with col_hrs:
-                    default_leave_hrs = 8.0 if tot_work_h >= 52.0 else 4.0
-                    input_leave_hrs = st.number_input("보상 시간(h):", value=default_leave_hrs, step=0.5, min_value=0.5)
-                with col_note:
-                    input_leave_note = st.text_input("보상 내용 및 휴가 메모:", value="대체 휴무 1일 부여 완료" if default_leave_hrs >= 8.0 else "반차 부여 완료")
-                
-                btn_save_reward = st.form_submit_button("💾 보상 휴가 부여 확정 (초록색 전환)", use_container_width=True)
-                if btn_save_reward:
-                    RewardLeaveService.save_reward_leave(target_worker, target_wk, input_leave_hrs, input_leave_note)
-                    st.toast(f"🎉 [{target_worker}] 님에게 보상 휴가가 성공적으로 부여되었습니다!", icon="✅")
-                    st.rerun()
+            if AuthManager.is_authenticated():
+                granter_display = AuthManager.get_current_user_display_name()
+                st.caption(f"👤 보상 휴가 등록 담당자: **{granter_display}** (등록 시 부여자 정보가 함께 저장됩니다)")
+                with st.form(f"form_reward_leave_{target_worker}_{target_wk}"):
+                    col_hrs, col_note = st.columns([1, 2])
+                    with col_hrs:
+                        default_leave_hrs = 8.0 if tot_work_h >= 52.0 else 4.0
+                        input_leave_hrs = st.number_input("보상 시간(h):", value=default_leave_hrs, step=0.5, min_value=0.5)
+                    with col_note:
+                        input_leave_note = st.text_input("보상 내용 및 휴가 메모:", value="대체 휴무 1일 부여 완료" if default_leave_hrs >= 8.0 else "반차 부여 완료")
+                    
+                    btn_save_reward = st.form_submit_button("💾 보상 휴가 부여 확정 (초록색 전환)", use_container_width=True)
+                    if btn_save_reward:
+                        RewardLeaveService.save_reward_leave(target_worker, target_wk, input_leave_hrs, input_leave_note, granted_by=granter_display)
+                        st.toast(f"🎉 [{target_worker}] 님에게 보상 휴가가 성공적으로 부여되었습니다! (부여자: {granter_display})", icon="✅")
+                        st.rerun()
+            else:
+                st.warning("🔒 **보상 휴가 부여 권한 안내**: 보상 휴가는 **관리자 로그인**을 완료한 사용자만 부여할 수 있습니다. (사이드바 관리자 로그인 메뉴 이용)")
 
         st.divider()
 

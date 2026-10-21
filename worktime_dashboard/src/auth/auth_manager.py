@@ -528,6 +528,18 @@ class AuthManager:
         return None
 
     @classmethod
+    def get_current_user_display_name(cls) -> str:
+        """현재 로그인된 사용자의 표시 이름(이름 또는 사용자명) 반환"""
+        if cls.is_authenticated():
+            auth_info = st.session_state.get("auth_user", {})
+            name = (auth_info.get("name") or "").strip()
+            username = (auth_info.get("username") or "").strip()
+            if name and username:
+                return f"{name} ({username})"
+            return name or username or "관리자"
+        return ""
+
+    @classmethod
     def get_current_role(cls) -> str:
         """
         현재 사용자의 권한 반환:
