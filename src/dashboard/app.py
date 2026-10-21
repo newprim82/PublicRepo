@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:10 (Force White Text In Success Box)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:13 (Remove Root Black Text Override)
 import os
 import sys
 from pathlib import Path

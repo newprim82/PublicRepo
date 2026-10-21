@@ -176,16 +176,13 @@ def inject_dialog_title_style():
         display: block !important;
     }
 
-    /* ⚠️ 모달 내부 노란색/경고/알림창 글자색 완전 블랙 고대비 보장 (흰색 글씨 원천 차단) */
+    /* ⚠️ 모달 내부 노란색 초과근무 경고창 글자색 블랙 고대비 보장 */
     .overwork-warning-box,
     .overwork-warning-box *,
     div.overwork-warning-box *,
     div[data-testid="stDialog"] .overwork-warning-box *,
     div[role="dialog"] .overwork-warning-box *,
     div[data-baseweb="modal"] .overwork-warning-box *,
-    div[data-testid="stDialog"] div[data-testid="stAlert"] *,
-    div[role="dialog"] div[data-testid="stAlert"] *,
-    div[data-baseweb="modal"] div[data-testid="stAlert"] *,
     div[data-testid="stDialog"] div[style*="fef08a"] *,
     div[data-testid="stDialog"] div[style*="fefce8"] *,
     div[data-testid="stDialog"] div[style*="fffbeb"] *,
@@ -197,6 +194,19 @@ def inject_dialog_title_style():
         -webkit-text-fill-color: #000000 !important;
         font-weight: 800 !important;
         text-shadow: none !important;
+    }
+
+    /* ✅ 모달 내부 알림창(stAlert / st.success) 글자색 완전 화이트 보장 */
+    div[data-testid="stDialog"] div[data-testid="stAlert"] *,
+    div[role="dialog"] div[data-testid="stAlert"] *,
+    div[data-baseweb="modal"] div[data-testid="stAlert"] *,
+    div[data-testid="stDialog"] div[data-testid="stAlert"] p,
+    div[data-testid="stDialog"] div[data-testid="stAlert"] span,
+    div[data-testid="stDialog"] div[data-testid="stAlert"] strong,
+    div[data-testid="stDialog"] div[data-testid="stAlert"] b {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        font-weight: 700 !important;
     }
 
     /* 🚨 모달 내부 빨간색 경고창 글자색 보장 */
