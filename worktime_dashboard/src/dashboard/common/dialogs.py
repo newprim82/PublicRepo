@@ -150,6 +150,18 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
             except Exception:
                 pass
 
+            st.markdown("""
+            <style>
+            div[data-testid="stAlert"] *,
+            div[data-testid="stAlert"] p,
+            div[data-testid="stAlert"] span,
+            div[data-testid="stAlert"] strong,
+            div[data-testid="stAlert"] b {
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
             st.success(
                 f"**보상 휴가 부여 완료: {curr_reward['leave_hours']}시간 ({clean_note})**  \n"
                 f"최종 등록 시각: **{formatted_up_time}** &nbsp;|&nbsp; 부여/등록자: 👤 **{granter_name}**"
