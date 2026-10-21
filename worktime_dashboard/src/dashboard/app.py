@@ -43,7 +43,7 @@ from src.collector.kakao_auto_collector import (
     WIN32_AVAILABLE
 )
 
-from src.dashboard.styles import apply_custom_styles, render_header_banner
+from src.dashboard.styles import apply_custom_styles, render_header_banner, render_sidebar_status_widget
 from src.dashboard.common.ui_helpers import (
     get_bora_ntp_timestamp,
     get_all_teams_safe,
@@ -119,7 +119,7 @@ def clear_all_web_caches():
                     pass
 
 # 버전 변경 및 빌드 갱신 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
-DEPLOY_BUILD_ID = "20261021_1413_REMOVE_ROOT_BLACK_TEXT_OVERRIDE"
+DEPLOY_BUILD_ID = "20261021_1418_HEADER_MIGRATED_TO_SIDEBAR"
 if st.session_state.get("_applied_app_version") != APP_VERSION or st.session_state.get("_applied_deploy_build_id") != DEPLOY_BUILD_ID:
     st.session_state["_applied_app_version"] = APP_VERSION
     st.session_state["_applied_deploy_build_id"] = DEPLOY_BUILD_ID
@@ -603,7 +603,7 @@ def main():
     with st.sidebar:
         # 🏛️ WorkLens 브랜드 사이드바 헤더: 돋보기 로고 마크 + WorkLens 브랜드명
         st.markdown("""
-        <div class="sb-brand-wrapper" style="padding: 0px 4px 20px 4px; margin-bottom: 4px; display: block;">
+        <div class="sb-brand-wrapper" style="padding: 0px 4px 10px 4px; margin-bottom: 2px; display: block;">
             <div class="sb-brand" style="display: flex; align-items: center; gap: 10px;">
                 <div class="sb-brand-mark" style="font-size: 22px; color: #38bdf8;">🔍</div>
                 <div>
@@ -613,6 +613,14 @@ def main():
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+        # 🕒 관제포털 정상 가동 상태 및 실시간 NTP 표준시계 (사이드바 맞춤형 콤팩트 카드)
+        if "_base_bora_initial_ms" not in st.session_state:
+            bora_ts = get_bora_ntp_timestamp()
+            st.session_state["_base_bora_initial_ms"] = int(bora_ts * 1000)
+        initial_ms = st.session_state["_base_bora_initial_ms"]
+        render_sidebar_status_widget(initial_ms)
+        st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
 
         # 🏠 최상단 독립 메인 버튼: 실시간 분석 대시보드 (on_click 콜백으로 0.1초 즉시 전환)
         st.markdown('<span id="home-nav-marker" style="display:none;"></span>', unsafe_allow_html=True)
@@ -905,9 +913,8 @@ def main():
 
 
     # ==========================================
-    # 🏛️ Frame 2: 상단 대제목 헤더 독립 프레임 (NTP 시계 & 관제센터 타이틀 고정)
+    # 🏛️ Frame 2: 상단 대제목 헤더 제거됨 (사이드바 WorkLens 직하단으로 통합 이전 완료)
     # ==========================================
-    render_top_header_frame()
 
     # ==========================================
     # 🏛️ Frame 3: 하단 메인 본문 콘텐츠 독립 프레임 (12대 메뉴 뷰 라우팅 & 관제 캔버스)

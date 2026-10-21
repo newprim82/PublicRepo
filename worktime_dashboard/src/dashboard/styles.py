@@ -160,3 +160,113 @@ def render_header_banner(initial_ms: int, page_tag: str):
 # 하위 호환 별칭
 render_top_floating_header = render_header_banner
 
+def render_sidebar_status_widget(initial_ms: int):
+    """
+    🏛️ 사이드바 상단 WorkLens 로고 직하단 배치용 컴팩트 시스템 상태 & 실시간 NTP 시계 카드
+    """
+    components.html(f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{
+                margin: 0;
+                padding: 0;
+                background-color: transparent;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard, Roboto, sans-serif;
+                overflow: hidden;
+            }}
+            .sidebar-status-box {{
+                background: rgba(15, 23, 42, 0.65);
+                border: 1px solid rgba(56, 189, 248, 0.25);
+                border-radius: 8px;
+                padding: 7px 11px;
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+            }}
+            .status-row {{
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 11.5px;
+                font-weight: 700;
+                color: #4ade80;
+                line-height: 1.2;
+            }}
+            .status-dot {{
+                color: #22c55e;
+                font-size: 10px;
+                margin-right: 4px;
+                text-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
+            }}
+            .clock-row {{
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-size: 11px;
+                color: #cbd5e1;
+                font-family: 'Segoe UI', Pretendard, monospace;
+                font-weight: 600;
+                letter-spacing: -0.2px;
+                line-height: 1.2;
+            }}
+            #live-sidebar-clock {{
+                color: #ffffff;
+                font-weight: 700;
+            }}
+            .badge-ntp {{
+                background: rgba(2, 132, 199, 0.35);
+                border: 1px solid rgba(56, 189, 248, 0.4);
+                color: #38bdf8;
+                font-size: 9px;
+                font-weight: 800;
+                padding: 1px 5px;
+                border-radius: 4px;
+                letter-spacing: 0.3px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="sidebar-status-box">
+            <div class="status-row">
+                <span><span class="status-dot">●</span>관제 포털 정상 가동</span>
+                <span style="font-size: 10px; color: #94a3b8; font-weight: normal;">실시간 관제</span>
+            </div>
+            <div class="clock-row">
+                <span>🕒 <span id="live-sidebar-clock">로딩 중...</span></span>
+                <span class="badge-ntp" title="LGU+ time.bora.net NTP 타임서버 동기화">KST·NTP</span>
+            </div>
+        </div>
+        <script>
+            let serverTime = {initial_ms};
+            let clientStart = performance.now();
+            function tickSidebarClock() {{
+                let current = new Date(serverTime + (performance.now() - clientStart));
+                let formatter = new Intl.DateTimeFormat('ko-KR', {{
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                }});
+                let parts = formatter.formatToParts(current);
+                let p = {{}};
+                parts.forEach(x => p[x.type] = x.value);
+                let el = document.getElementById('live-sidebar-clock');
+                if (el) {{
+                    el.innerText = p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute + ':' + p.second;
+                }}
+            }}
+            setInterval(tickSidebarClock, 1000);
+            tickSidebarClock();
+        </script>
+    </body>
+    </html>
+    """, height=52)
+

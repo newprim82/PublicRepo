@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:13 (Remove Root Black Text Override)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:18 (Migrate Header Status & Clock to Sidebar)
 import os
 import sys
 from pathlib import Path
