@@ -17,6 +17,9 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
     chart_height = max(450, len(display_summary) * 28)
     col_t1_left, col_t1_right = st.columns(2)
     
+    ver_chart_key = "_chart_ver_worker_interactive"
+    chart_ver = st.session_state.get(ver_chart_key, 0)
+
     event_left = None
     event_right = None
 
@@ -44,7 +47,7 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
                 margin=dict(l=100, r=40, t=50, b=30),
                 yaxis=dict(tickfont=dict(size=12, family="Malgun Gothic, Arial"))
             )
-            event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_left_h")
+            event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key=f"chart_worker_left_h_{chart_ver}")
 
         with col_t1_right:
             sorted_for_h_bar = display_summary.sort_values(by="total_hours", ascending=True)
@@ -82,7 +85,7 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
                 yaxis=dict(tickfont=dict(size=12, family="Malgun Gothic, Arial")),
                 xaxis_title="작업 건수(건)"
             )
-            event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_right_h")
+            event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key=f"chart_worker_right_h_{chart_ver}")
     else:
         with col_t1_left:
             fig_worker = px.bar(
@@ -104,7 +107,7 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
                 height=450,
                 xaxis=dict(tickangle=-90, tickfont=dict(size=11, family="Malgun Gothic, Arial"), dtick=1)
             )
-            event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_left_v")
+            event_left = st.plotly_chart(fig_worker, use_container_width=True, on_select="rerun", selection_mode=["points"], key=f"chart_worker_left_v_{chart_ver}")
 
         with col_t1_right:
             fig_night = go.Figure(data=[
@@ -137,7 +140,7 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
                 xaxis=dict(tickangle=-90, tickfont=dict(size=11, family="Malgun Gothic, Arial"), dtick=1),
                 yaxis_title="작업 건수(건)"
             )
-            event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key="chart_worker_right_v")
+            event_right = st.plotly_chart(fig_night, use_container_width=True, on_select="rerun", selection_mode=["points"], key=f"chart_worker_right_v_{chart_ver}")
 
     # 🌟 [차트 클릭 인터랙션 핸들링]
     if event_left and hasattr(event_left, "selection") and event_left.selection.points:
@@ -151,7 +154,11 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
         elif "x" in pt_l:
             target_w = pt_l["x"]
         if target_w:
-            show_worker_all_tasks_dialog(target_w, df)
+            pt_id = f"w_left_{target_w}_{chart_ver}"
+            if st.session_state.get("_last_worker_chart_left") != pt_id:
+                st.session_state["_last_worker_chart_left"] = pt_id
+                st.session_state[ver_chart_key] = chart_ver + 1
+                show_worker_all_tasks_dialog(target_w, df)
 
     if event_right and hasattr(event_right, "selection") and event_right.selection.points:
         pt_r = event_right.selection.points[0]
@@ -178,7 +185,11 @@ def render_worker_charts_interactive(display_summary: pd.DataFrame, df: pd.DataF
             target_cat = "☀️ 평일 주간"
 
         if target_w:
-            show_worker_category_tasks_dialog(target_w, target_cat, df)
+            pt_id = f"w_right_{target_w}_{target_cat}_{chart_ver}"
+            if st.session_state.get("_last_worker_chart_right") != pt_id:
+                st.session_state["_last_worker_chart_right"] = pt_id
+                st.session_state[ver_chart_key] = chart_ver + 1
+                show_worker_category_tasks_dialog(target_w, target_cat, df)
 
 
 
@@ -392,8 +403,11 @@ def render_weekly_matrix_section(mat_df: pd.DataFrame):
                         target_col_name = cols[0]
 
             if target_w_name:
-                st.session_state[ver_key] = tbl_ver + 1
-                show_weekly_detail_dialog(target_w_name, mat_df, default_week_name=target_col_name)
+                tok = f"mat_{target_w_name}_{target_col_name}_{tbl_ver}"
+                if st.session_state.get("_last_matrix_modal_tok") != tok:
+                    st.session_state["_last_matrix_modal_tok"] = tok
+                    st.session_state[ver_key] = tbl_ver + 1
+                    show_weekly_detail_dialog(target_w_name, mat_df, default_week_name=target_col_name)
 
 
 
@@ -553,9 +567,12 @@ def render_worker_view(df: pd.DataFrame, selected_team: str, month_desc: str, df
             )
             w_idx = extract_selected_row_idx(sel_worker_event)
             if w_idx is not None and 0 <= w_idx < len(disp_df):
-                st.session_state[ver_key] = tbl_ver + 1
                 target_w = disp_df.iloc[w_idx]["담당자"]
-                show_worker_all_tasks_dialog(target_w, p_df)
+                tok = f"w_sum_{target_w}_{tbl_ver}"
+                if st.session_state.get("_last_worker_sum_modal_tok") != tok:
+                    st.session_state["_last_worker_sum_modal_tok"] = tok
+                    st.session_state[ver_key] = tbl_ver + 1
+                    show_worker_all_tasks_dialog(target_w, p_df)
 
         _render_worker_view_summary_table(disp_worker_summary, df_active)
     else:

@@ -46,6 +46,9 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
     </div>
     """, unsafe_allow_html=True)
 
+    ver_chart_key = "_chart_ver_team_comparison"
+    chart_ver = st.session_state.get(ver_chart_key, 0)
+
     col_t2_1, col_t2_2 = st.columns(2)
     with col_t2_1:
         fig_team_bar = px.bar(
@@ -69,7 +72,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             use_container_width=True,
             on_select="rerun",
             selection_mode=["points"],
-            key="chart_team_total_hours_bar"
+            key=f"chart_team_total_hours_bar_{chart_ver}"
         )
 
     with col_t2_2:
@@ -94,7 +97,7 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
             use_container_width=True,
             on_select="rerun",
             selection_mode=["points"],
-            key="chart_team_avg_hours_bar"
+            key=f"chart_team_avg_hours_bar_{chart_ver}"
         )
 
     st.markdown(f"##### 📋 팀별 상세 집계 표{label_suffix}")
@@ -146,12 +149,23 @@ def render_team_comparison_interactive(team_summary: pd.DataFrame, team_df: pd.D
 
     team_to_open = None
     if tbl_target:
-        st.session_state[ver_tbl_key] = tbl_ver + 1
-        team_to_open = tbl_target
+        tok = f"team_tbl_{tbl_target}_{tbl_ver}"
+        if st.session_state.get("_last_team_modal_tok") != tok:
+            st.session_state["_last_team_modal_tok"] = tok
+            st.session_state[ver_tbl_key] = tbl_ver + 1
+            team_to_open = tbl_target
     elif bar_target:
-        team_to_open = bar_target
+        tok = f"team_bar_{bar_target}_{chart_ver}"
+        if st.session_state.get("_last_team_modal_tok") != tok:
+            st.session_state["_last_team_modal_tok"] = tok
+            st.session_state[ver_chart_key] = chart_ver + 1
+            team_to_open = bar_target
     elif avg_target:
-        team_to_open = avg_target
+        tok = f"team_avg_{avg_target}_{chart_ver}"
+        if st.session_state.get("_last_team_modal_tok") != tok:
+            st.session_state["_last_team_modal_tok"] = tok
+            st.session_state[ver_chart_key] = chart_ver + 1
+            team_to_open = avg_target
 
     if team_to_open and str(team_to_open).strip() and str(team_to_open).strip() != "None":
         team_target_df = team_df[team_df["worker_team"] == team_to_open]

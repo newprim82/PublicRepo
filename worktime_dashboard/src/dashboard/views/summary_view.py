@@ -755,10 +755,13 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
 
             sel_row_idx = extract_selected_row_idx(sel_weekly_matrix)
             if sel_row_idx is not None and 0 <= sel_row_idx < len(weekly_matrix_df):
-                st.session_state[ver_key] = tbl_ver + 1
                 target_week = weekly_matrix_df.iloc[sel_row_idx]["주차"]
-                df_target_week = df_data[df_data["week_label"] == target_week]
-                show_team_work_logs_dialog(f"{target_week} 주차 전체 작업", df_target_week)
+                tok = f"sum_wk_{target_week}_{tbl_ver}"
+                if st.session_state.get("_last_sum_wk_tok") != tok:
+                    st.session_state["_last_sum_wk_tok"] = tok
+                    st.session_state[ver_key] = tbl_ver + 1
+                    df_target_week = df_data[df_data["week_label"] == target_week]
+                    show_team_work_logs_dialog(f"{target_week} 주차 전체 작업", df_target_week)
 
         if weekly_matrix_rows:
             _render_summary_weekly_matrix(weekly_matrix_rows, df_scope)
@@ -956,9 +959,12 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         )
         c_row_idx = extract_selected_row_idx(sel_client_event)
         if c_row_idx is not None and 0 <= c_row_idx < len(df_client_tbl):
-            st.session_state[ver_key] = tbl_ver + 1
             c_target_name = df_client_tbl.iloc[c_row_idx]["고객사명"]
-            show_client_tasks_dialog(c_target_name, df_data)
+            tok = f"sum_client_{c_target_name}_{tbl_ver}"
+            if st.session_state.get("_last_sum_client_tok") != tok:
+                st.session_state["_last_sum_client_tok"] = tok
+                st.session_state[ver_key] = tbl_ver + 1
+                show_client_tasks_dialog(c_target_name, df_data)
 
     if client_table_rows:
         _render_summary_client_table(client_table_rows, df_active)
@@ -1013,9 +1019,12 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
             )
             w_row_idx = extract_selected_row_idx(sel_worker_event)
             if w_row_idx is not None and 0 <= w_row_idx < len(df_worker_tbl):
-                st.session_state[ver_key] = tbl_ver + 1
                 w_target_name = df_worker_tbl.iloc[w_row_idx]["팀원명"]
-                show_worker_all_tasks_dialog(w_target_name, df_data)
+                tok = f"sum_worker_{w_target_name}_{tbl_ver}"
+                if st.session_state.get("_last_sum_worker_tok") != tok:
+                    st.session_state["_last_sum_worker_tok"] = tok
+                    st.session_state[ver_key] = tbl_ver + 1
+                    show_worker_all_tasks_dialog(w_target_name, df_data)
 
         if all_worker_rows:
             _render_summary_worker_table(all_worker_rows, df_active)
@@ -1112,10 +1121,13 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
         )
         t_row_idx = extract_selected_row_idx(sel_team_event)
         if t_row_idx is not None and 0 <= t_row_idx < len(df_team_tbl):
-            st.session_state[ver_key] = tbl_ver + 1
             t_target_name = df_team_tbl.iloc[t_row_idx]["부서/팀명"]
-            sub_team_logs = df_data[df_data["worker_team"] == t_target_name]
-            show_team_work_logs_dialog(t_target_name, sub_team_logs)
+            tok = f"sum_team_{t_target_name}_{tbl_ver}"
+            if st.session_state.get("_last_sum_team_tok") != tok:
+                st.session_state["_last_sum_team_tok"] = tok
+                st.session_state[ver_key] = tbl_ver + 1
+                sub_team_logs = df_data[df_data["worker_team"] == t_target_name]
+                show_team_work_logs_dialog(t_target_name, sub_team_logs)
 
     if team_table_rows:
         _render_summary_team_table(team_table_rows, df_teams)
@@ -1258,10 +1270,13 @@ def render_work_summary_tab(df: pd.DataFrame, df_raw: pd.DataFrame, selected_tea
                 if sel_cell:
                     row_idx, col_name = sel_cell
                     if 0 <= row_idx < len(display_df):
-                        st.session_state[ver_key] = tbl_ver + 1
                         target_domain = display_df.iloc[row_idx]["기술/장비 도메인"]
                         target_work_type = None if col_name in ["기술/장비 도메인", "합계(h)", "전체"] else col_name
-                        show_tech_domain_task_dialog(target_domain, target_work_type, df_data)
+                        tok = f"sum_cross_{target_domain}_{target_work_type}_{tbl_ver}"
+                        if st.session_state.get("_last_sum_cross_tok") != tok:
+                            st.session_state["_last_sum_cross_tok"] = tok
+                            st.session_state[ver_key] = tbl_ver + 1
+                            show_tech_domain_task_dialog(target_domain, target_work_type, df_data)
 
         _render_summary_cross_matrix(pivot_display, df_tagged)
 

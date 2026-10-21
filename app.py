@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:55 (Weekend Red & Night Orange Row Styling)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 15:15 (Fix Modal Reopen Loop & Add Night/Weekend to Category Dialog)
 import os
 import sys
 from pathlib import Path

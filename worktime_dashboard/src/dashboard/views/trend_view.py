@@ -66,6 +66,9 @@ def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFram
             )
             st.plotly_chart(fig_monthly, use_container_width=True)
         
+    ver_chart_key = "_chart_ver_trend_view"
+    chart_ver = st.session_state.get(ver_chart_key, 0)
+
     event_weekly = None
     event_daily = None
 
@@ -112,7 +115,7 @@ def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFram
                 use_container_width=True,
                 on_select="rerun",
                 selection_mode=["points"],
-                key="chart_trend_weekly_bar"
+                key=f"chart_trend_weekly_bar_{chart_ver}"
             )
 
     st.markdown("##### 📅 일자별 작업 시간 분포")
@@ -142,7 +145,7 @@ def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFram
         use_container_width=True,
         on_select="rerun",
         selection_mode=["points"],
-        key="chart_trend_daily_bar"
+        key=f"chart_trend_daily_bar_{chart_ver}"
     )
 
     # 🖱️ 클릭 이벤트 감지 및 세부 작업 내역 모달 팝업 연동
@@ -168,33 +171,26 @@ def render_trend_interactive_charts(df: pd.DataFrame, monthly_trend: pd.DataFram
         elif "x" in curr_day_pt:
             day_target = curr_day_pt["x"]
 
-    wk_changed = (wk_target is not None) and (wk_target != last_wk_id)
-    day_changed = (day_target is not None) and (day_target != last_day_id)
-
-    dialog_to_open = None
-    if day_changed:
-        st.session_state["last_selected_trend_day"] = day_target
-        st.session_state["last_selected_trend_week"] = None
-        dialog_to_open = ("day", day_target)
-    elif wk_changed:
-        st.session_state["last_selected_trend_week"] = wk_target
-        st.session_state["last_selected_trend_day"] = None
-        dialog_to_open = ("week", wk_target)
-    elif day_target and not wk_target:
-        dialog_to_open = ("day", day_target)
-    elif wk_target and not day_target:
-        dialog_to_open = ("week", wk_target)
-
-    if dialog_to_open:
-        dtype, dval = dialog_to_open
-        if dtype == "week" and dval:
-            target_df = df[df["week_label"] == dval]
+    if wk_target:
+        tok = f"trend_wk_{wk_target}_{chart_ver}"
+        if st.session_state.get("_last_trend_modal_tok") != tok:
+            st.session_state["_last_trend_modal_tok"] = tok
+            st.session_state[ver_chart_key] = chart_ver + 1
+            st.session_state["last_selected_trend_week"] = None
+            st.session_state["last_selected_trend_day"] = None
+            target_df = df[df["week_label"] == wk_target]
             if not target_df.empty:
-                show_week_summary_dialog(dval, target_df)
-        elif dtype == "day" and dval:
-            target_df = df[df["date_str"] == dval]
+                show_week_summary_dialog(wk_target, target_df)
+    elif day_target:
+        tok = f"trend_day_{day_target}_{chart_ver}"
+        if st.session_state.get("_last_trend_modal_tok") != tok:
+            st.session_state["_last_trend_modal_tok"] = tok
+            st.session_state[ver_chart_key] = chart_ver + 1
+            st.session_state["last_selected_trend_week"] = None
+            st.session_state["last_selected_trend_day"] = None
+            target_df = df[df["date_str"] == day_target]
             if not target_df.empty:
-                show_calendar_day_dialog(dval, target_df)
+                show_calendar_day_dialog(day_target, target_df)
 
 
 def render_trend_view(df: pd.DataFrame, df_filtered_base: pd.DataFrame, selected_months: list, available_months: list, month_desc: str):

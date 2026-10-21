@@ -42,7 +42,7 @@ def render_chat_messages_expander(target_df: pd.DataFrame, max_display: int = 20
         if total_cnt > max_display:
             st.caption(f"💡 성능 최적화를 위해 최근 {display_cnt}건만 표시됩니다. (전체 {total_cnt}건)")
 
-@st.dialog("🔍 세부 작업 내역 및 카카오톡 원본 분석", width="large", on_dismiss="rerun")
+@st.dialog("🔍 세부 작업 내역 및 카카오톡 원본 분석", width="large", on_dismiss="ignore")
 def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default_week_name: str = None):
     inject_dialog_title_style()
     worker_df = df_data[df_data["worker_name"] == target_worker]
@@ -257,12 +257,14 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         disp_detail["is_night_work"] = disp_detail["is_night_work"].fillna(False).astype(bool)
 
         weekend_cnt = int(disp_detail["is_weekend_work"].sum())
-        if weekend_cnt > 0:
-            st.markdown(
-                f'<div style="background-color: #dc2626; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-weight: bold; margin: 8px 0 10px 0; font-size: 13px;">'
-                f'🏖️ 주말 작업 {weekend_cnt}건이 포함되어 있으며, 아래 표에서 빨간색 행(흰색 글씨)으로 강조 표시됩니다.</div>',
-                unsafe_allow_html=True
-            )
+        night_cnt = int(((disp_detail["is_weekend_work"] == False) & (disp_detail["is_night_work"] == True)).sum())
+        if weekend_cnt > 0 or night_cnt > 0:
+            badges = []
+            if weekend_cnt > 0:
+                badges.append(f'<span style="background-color: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px; margin-right: 6px;">🏖️ 주말 작업 {weekend_cnt}건 (빨간색)</span>')
+            if night_cnt > 0:
+                badges.append(f'<span style="background-color: #ea580c; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px;">🌙 평일 야간 {night_cnt}건 (주황색)</span>')
+            st.markdown(f'<div style="margin: 6px 0 10px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">{"".join(badges)}</div>', unsafe_allow_html=True)
 
         tbl_cols = [
             "start_time", "end_time", "client_name", "task_description",
@@ -276,8 +278,8 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
             "task_description": "작업내용",
             "actual_hours": "소요(h)",
             "status": "상태",
-            "is_night_work": "야간여부",
-            "is_weekend_work": "주말여부"
+            "is_night_work": "야간",
+            "is_weekend_work": "주말"
         })
         styled_tbl = apply_weekend_table_styling(tbl_data, highlight_scope="full_row")
         st.dataframe(
@@ -294,7 +296,7 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
 # ----------------------------------------------------
 # 🌟 5대 핵심 KPI 카드별 세부 내역 팝업 모달 (@st.dialog)
 # ----------------------------------------------------
-@st.dialog("⏱️ 총 지원 시간 세부 작업 내역", width="large", on_dismiss="rerun")
+@st.dialog("⏱️ 총 지원 시간 세부 작업 내역", width="large", on_dismiss="ignore")
 def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     if df_data.empty:
@@ -363,8 +365,8 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
         "estimated_hours": "예정(h)",
         "actual_hours": "소요(h)",
         "status": "상태",
-        "is_night_work": "야간여부",
-        "is_weekend_work": "주말여부"
+        "is_night_work": "야간",
+        "is_weekend_work": "주말"
     })
     styled_total_tbl = apply_weekend_table_styling(tbl_total_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
@@ -385,7 +387,7 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
     render_chat_messages_expander(sorted_df, max_display=20, title_prefix="전체 작업")
 
 
-@st.dialog("📋 총 작업 건수 세부 내역 (완료 / 진행 중)", width="large", on_dismiss="rerun")
+@st.dialog("📋 총 작업 건수 세부 내역 (완료 / 진행 중)", width="large", on_dismiss="ignore")
 def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     if df_data.empty:
@@ -498,7 +500,7 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
                 st.code(f"시작 보고 ({st_time}): {sel_r2.get('raw_start_message', '')}", language="text")
 
 
-@st.dialog("👥 투입 인원 및 팀원별 공수 상세", width="large", on_dismiss="rerun")
+@st.dialog("👥 투입 인원 및 팀원별 공수 상세", width="large", on_dismiss="ignore")
 def show_kpi_workers_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     if df_data.empty:
@@ -532,7 +534,7 @@ def show_kpi_workers_dialog(df_data: pd.DataFrame):
     )
 
 
-@st.dialog("🌙 야간 / 주말 긴급 작업 세부 내역", width="large", on_dismiss="rerun")
+@st.dialog("🌙 야간 / 주말 긴급 작업 세부 내역", width="large", on_dismiss="ignore")
 def show_kpi_urgent_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     if df_data.empty:
@@ -634,7 +636,7 @@ def show_kpi_urgent_dialog(df_data: pd.DataFrame):
                 st.code(format_raw_chat_display(sel_uw), language="text")
 
 
-@st.dialog("⚠️ 예정 시간 초과 작업 세부 내역 및 카카오톡 원본 확인", width="large", on_dismiss="rerun")
+@st.dialog("⚠️ 예정 시간 초과 작업 세부 내역 및 카카오톡 원본 확인", width="large", on_dismiss="ignore")
 def show_kpi_overdue_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     if df_data.empty:
@@ -729,7 +731,7 @@ def show_kpi_overdue_dialog(df_data: pd.DataFrame):
 
 
 
-@st.dialog("👤 팀원 전체 작업 상세 내역", width="large", on_dismiss="rerun")
+@st.dialog("👤 팀원 전체 작업 상세 내역", width="large", on_dismiss="ignore")
 def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
     inject_dialog_title_style()
     w_df = df_data[df_data["worker_name"] == worker_name].sort_values(by="start_time", ascending=False).reset_index(drop=True)
@@ -770,8 +772,8 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
         "estimated_hours": "예정(h)",
         "actual_hours": "소요(h)",
         "status": "상태",
-        "is_night_work": "야간여부",
-        "is_weekend_work": "주말여부"
+        "is_night_work": "야간",
+        "is_weekend_work": "주말"
     })
     styled_tbl_data = apply_weekend_table_styling(disp_tbl_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
@@ -791,7 +793,7 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
     render_chat_messages_expander(w_df, max_display=20, title_prefix="전체 작업")
 
 
-@st.dialog("🔍 작업 구분별 세부 내역", width="large", on_dismiss="rerun")
+@st.dialog("🔍 작업 구분별 세부 내역", width="large", on_dismiss="ignore")
 def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: pd.DataFrame):
     inject_dialog_title_style()
     w_df = df_data[df_data["worker_name"] == worker_name].copy()
@@ -817,24 +819,48 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
     tot_cnt = len(cat_df)
     
     st.markdown(f"### {cat_icon} **{worker_name}** 님의 **[{cat_name}]** 세부 내역 (총 **{tot_h}시간** / **{tot_cnt}건**)")
-    st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
-    
+
     disp_cat_df = strip_tz(cat_df.copy())
     if "end_time" not in disp_cat_df.columns:
         disp_cat_df["end_time"] = None
     if "status" in disp_cat_df.columns:
         disp_cat_df["status"] = disp_cat_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_cat_df["status"])
-    disp_cat_tbl_data = disp_cat_df[[
+
+    st_sc = pd.to_datetime(disp_cat_df["start_time"], errors="coerce")
+    if "is_weekend_work" not in disp_cat_df.columns:
+        disp_cat_df["is_weekend_work"] = False
+    disp_cat_df["is_weekend_work"] = disp_cat_df["is_weekend_work"].fillna(False).astype(bool) | st_sc.dt.weekday.isin([5, 6])
+    if "is_night_work" not in disp_cat_df.columns:
+        disp_cat_df["is_night_work"] = False
+    disp_cat_df["is_night_work"] = disp_cat_df["is_night_work"].fillna(False).astype(bool)
+
+    w_cnt = int(disp_cat_df["is_weekend_work"].sum())
+    n_cnt = int(((disp_cat_df["is_weekend_work"] == False) & (disp_cat_df["is_night_work"] == True)).sum())
+    if w_cnt > 0 or n_cnt > 0:
+        badges = []
+        if w_cnt > 0:
+            badges.append(f'<span style="background-color: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px; margin-right: 6px;">🏖️ 주말 작업 {w_cnt}건 (빨간색)</span>')
+        if n_cnt > 0:
+            badges.append(f'<span style="background-color: #ea580c; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px;">🌙 평일 야간 {n_cnt}건 (주황색)</span>')
+        st.markdown(f'<div style="margin: 4px 0 8px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">{"".join(badges)}</div>', unsafe_allow_html=True)
+
+    st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
+
+    cat_cols = [
         "start_time", "end_time", "client_name", "task_description",
-        "estimated_hours", "actual_hours", "status"
-    ]].rename(columns={
+        "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"
+    ]
+    avail_cat_cols = [c for c in cat_cols if c in disp_cat_df.columns]
+    disp_cat_tbl_data = disp_cat_df[avail_cat_cols].rename(columns={
         "start_time": "시작 보고시각",
         "end_time": "완료 보고시각",
         "client_name": "고객사",
         "task_description": "작업내용",
         "estimated_hours": "예정(h)",
         "actual_hours": "소요(h)",
-        "status": "상태"
+        "status": "상태",
+        "is_night_work": "야간",
+        "is_weekend_work": "주말"
     })
     styled_cat_tbl = apply_weekend_table_styling(disp_cat_tbl_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
@@ -856,7 +882,7 @@ def show_worker_category_tasks_dialog(worker_name: str, category: str, df_data: 
 
 
 
-@st.dialog("🏢 팀별 세부 작업 원장 및 카카오톡 원본", width="large", on_dismiss="rerun")
+@st.dialog("🏢 팀별 세부 작업 원장 및 카카오톡 원본", width="large", on_dismiss="ignore")
 def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
     """팀 클릭 시 열리는 상세 작업 원장 모달 팝업"""
     inject_dialog_title_style()
@@ -948,7 +974,7 @@ def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
     render_chat_messages_expander(sorted_df, max_display=20, title_prefix="전체 작업")
 
 
-@st.dialog("📆 주차별 세부 지원 내역 및 카카오톡 원본", width="large", on_dismiss="rerun")
+@st.dialog("📆 주차별 세부 지원 내역 및 카카오톡 원본", width="large", on_dismiss="ignore")
 def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
     """주차별 막대 클릭 시 열리는 상세 작업 내역 모달 팝업"""
     inject_dialog_title_style()
@@ -1037,7 +1063,7 @@ def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
     render_chat_messages_expander(sorted_df, max_display=20, title_prefix="전체 작업")
 
 
-@st.dialog("📅 일자별 세부 작업 내역", width="large", on_dismiss="rerun")
+@st.dialog("📅 일자별 세부 작업 내역", width="large", on_dismiss="ignore")
 def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
     """일자 클릭 시 열리는 상세 작업 내역 원장 모달 팝업"""
     inject_dialog_title_style()
@@ -1114,7 +1140,7 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
 
 
 
-@st.dialog("📧 업무 실적 Summary 메일 발송", width="medium", on_dismiss="rerun")
+@st.dialog("📧 업무 실적 Summary 메일 발송", width="medium", on_dismiss="ignore")
 def show_email_report_dialog(selected_team: str):
     """업무 실적 Summary 이메일 발송 전용 팝업 모달 (화면 데이터 100% 동기화)"""
     ctx = st.session_state.get("exec_summary_context", {})
@@ -1368,7 +1394,7 @@ def show_email_report_dialog(selected_team: str):
             st.markdown(card_html, unsafe_allow_html=True)
 
 
-@st.dialog("🧹 24시간 초과 미마감(진행 중) 작업 정리 도구", width="large", on_dismiss="rerun")
+@st.dialog("🧹 24시간 초과 미마감(진행 중) 작업 정리 도구", width="large", on_dismiss="ignore")
 def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
     inject_dialog_title_style()
     now_naive = get_current_kst_time()
@@ -1473,7 +1499,7 @@ def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
                     st.rerun()
 
 
-@st.dialog("🏷️ 기술 장비군 & 작업 유형 세부 작업 내역", width="large", on_dismiss="rerun")
+@st.dialog("🏷️ 기술 장비군 & 작업 유형 세부 작업 내역", width="large", on_dismiss="ignore")
 def show_tech_domain_task_dialog(domain_name: str, work_type_name: str | None, df_tagged: pd.DataFrame):
     """
     기술 장비 도메인 및 작업 유형별 세부 작업 내역을 표출하는 팝업 모달
@@ -1557,7 +1583,7 @@ def show_tech_domain_task_dialog(domain_name: str, work_type_name: str | None, d
     render_chat_messages_expander(target_df, max_display=20, title_prefix=prefix)
 
 
-@st.dialog("🏢 고객사별 세부 작업 내역", width="large", on_dismiss="rerun")
+@st.dialog("🏢 고객사별 세부 작업 내역", width="large", on_dismiss="ignore")
 def show_client_tasks_dialog(client_name: str, client_df: pd.DataFrame):
     """특정 고객사에 투입된 모든 작업 내역과 엔지니어 투입 현황을 표시하는 모달"""
     inject_dialog_title_style()
@@ -1625,7 +1651,7 @@ def show_client_tasks_dialog(client_name: str, client_df: pd.DataFrame):
     render_chat_messages_expander(c_df, max_display=20, title_prefix=f"{client_name} 작업")
 
 
-@st.dialog("💰 비용 산정 세부 작업 내역", width="large", on_dismiss="rerun")
+@st.dialog("💰 비용 산정 세부 작업 내역", width="large", on_dismiss="ignore")
 def show_cost_detail_dialog(title: str, cost_df: pd.DataFrame):
     """비용 산정/정산 관련 상세 작업 목록 및 금액 내역 모달"""
     inject_dialog_title_style()
@@ -1690,7 +1716,7 @@ def show_cost_detail_dialog(title: str, cost_df: pd.DataFrame):
     render_chat_messages_expander(cost_df, max_display=20, title_prefix=title)
 
 
-@st.dialog("💬 작업 세부 정보 및 카카오톡 원본 대화", width="large", on_dismiss="rerun")
+@st.dialog("💬 작업 세부 정보 및 카카오톡 원본 대화", width="large", on_dismiss="ignore")
 def show_single_task_dialog(row_data: dict):
     """단일 작업 클릭 시 카카오톡 원본 대화 및 상세 정보 모달"""
     inject_dialog_title_style()
