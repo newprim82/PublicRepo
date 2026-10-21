@@ -150,19 +150,10 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
             except Exception:
                 pass
 
-            reward_banner_html = (
-                f'<div style="background-color: #15803d !important; color: #ffffff !important; padding: 13px 18px !important; border-radius: 8px !important; border: 1.5px solid #22c55e !important; margin-bottom: 14px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;">'
-                f'<div style="font-weight: 800 !important; font-size: 14.5px !important; color: #ffffff !important; display: flex; align-items: center; gap: 8px; line-height: 1.5 !important;">'
-                f'<span style="font-size: 16px !important;">✅</span>'
-                f'<span style="color: #ffffff !important; font-weight: 800 !important;">보상 휴가 부여 완료: {curr_reward["leave_hours"]}시간 ({clean_note})</span>'
-                f'</div>'
-                f'<div style="font-size: 12.5px !important; color: #ffffff !important; margin-top: 5px !important; opacity: 0.95 !important; line-height: 1.5 !important;">'
-                f'최종 등록 시각: <b style="color: #ffffff !important;">{formatted_up_time}</b> &nbsp;|&nbsp; '
-                f'부여/등록자: 👤 <b style="color: #ffffff !important;">{granter_name}</b>'
-                f'</div>'
-                f'</div>'
+            st.success(
+                f"**보상 휴가 부여 완료: {curr_reward['leave_hours']}시간 ({clean_note})**  \n"
+                f"최종 등록 시각: **{formatted_up_time}** &nbsp;|&nbsp; 부여/등록자: 👤 **{granter_name}**"
             )
-            st.markdown(reward_banner_html, unsafe_allow_html=True)
             col_btn_del, _ = st.columns([1, 2])
             with col_btn_del:
                 if AuthManager.is_authenticated():

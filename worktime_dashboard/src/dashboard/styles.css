@@ -419,11 +419,16 @@
             color: #075985 !important;
             font-weight: 700 !important;
         }
-        /* success (초록색 배경) -> 짙은 그린 텍스트 (다이얼로그/모달 내부에서는 선명한 흰색 보장) */
+        /* success (초록색 배경) -> 모든 환경에서 100% 선명한 흰색 텍스트 (#ffffff) */
         div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]),
         div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"],
-        div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"] * {
-            color: #14532d !important;
+        div[data-testid="stAlert"] [data-testid="stAlertContentSuccess"] *,
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) p,
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) span,
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) strong,
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) b,
+        div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) em {
+            color: #ffffff !important;
             font-weight: 700 !important;
         }
         div[data-testid="stDialog"] div[data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]) *,
