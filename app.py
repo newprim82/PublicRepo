@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 11:35 (Weekly & Monthly Email Auto-Dispatch Fix)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 11:40 (40/52h Governance Weekend Red Row Styling Fix)
 import os
 import sys
 from pathlib import Path

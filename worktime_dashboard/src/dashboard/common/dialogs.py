@@ -200,19 +200,42 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
             disp_detail["end_time"] = None
         if "status" in disp_detail.columns:
             disp_detail["status"] = disp_detail["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_detail["status"])
+
+        # 주말/야간 근무 여부 보장
+        if "is_weekend_work" not in disp_detail.columns:
+            disp_detail["is_weekend_work"] = False
+        st_series = pd.to_datetime(disp_detail["start_time"], errors="coerce")
+        disp_detail["is_weekend_work"] = disp_detail["is_weekend_work"].fillna(False).astype(bool) | st_series.dt.weekday.isin([5, 6])
+        if "is_night_work" not in disp_detail.columns:
+            disp_detail["is_night_work"] = False
+        disp_detail["is_night_work"] = disp_detail["is_night_work"].fillna(False).astype(bool)
+
+        weekend_cnt = int(disp_detail["is_weekend_work"].sum())
+        if weekend_cnt > 0:
+            st.markdown(
+                f'<div style="background-color: #dc2626; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-weight: bold; margin: 8px 0 10px 0; font-size: 13px;">'
+                f'🏖️ 주말 작업 {weekend_cnt}건이 포함되어 있으며, 아래 표에서 빨간색 행(흰색 글씨)으로 강조 표시됩니다.</div>',
+                unsafe_allow_html=True
+            )
+
+        tbl_cols = [
+            "start_time", "end_time", "client_name", "task_description",
+            "actual_hours", "status", "is_night_work", "is_weekend_work"
+        ]
+        disp_cols = [c for c in tbl_cols if c in disp_detail.columns]
+        tbl_data = disp_detail[disp_cols].rename(columns={
+            "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
+            "client_name": "고객사",
+            "task_description": "작업내용",
+            "actual_hours": "소요(h)",
+            "status": "상태",
+            "is_night_work": "야간여부",
+            "is_weekend_work": "주말여부"
+        })
+        styled_tbl = apply_weekend_table_styling(tbl_data, highlight_scope="full_row")
         st.dataframe(
-            disp_detail[[
-                "start_time", "end_time", "client_name", "task_description",
-                "actual_hours", "status", "is_night_work"
-            ]].rename(columns={
-                "start_time": "시작 보고시각",
-                "end_time": "완료 보고시각",
-                "client_name": "고객사",
-                "task_description": "작업내용",
-                "actual_hours": "소요(h)",
-                "status": "상태",
-                "is_night_work": "야간여부"
-            }),
+            styled_tbl,
             use_container_width=True,
             hide_index=True
         )
@@ -259,23 +282,45 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
     if "status" in disp_sorted_df.columns:
         disp_sorted_df["status"] = disp_sorted_df["status"].map({"PENDING": "진행 중", "COMPLETED": "완료"}).fillna(disp_sorted_df["status"])
     
+    if "is_weekend_work" not in disp_sorted_df.columns:
+        disp_sorted_df["is_weekend_work"] = False
+    st_s = pd.to_datetime(disp_sorted_df["start_time"], errors="coerce")
+    disp_sorted_df["is_weekend_work"] = disp_sorted_df["is_weekend_work"].fillna(False).astype(bool) | st_s.dt.weekday.isin([5, 6])
+    if "is_night_work" not in disp_sorted_df.columns:
+        disp_sorted_df["is_night_work"] = False
+    disp_sorted_df["is_night_work"] = disp_sorted_df["is_night_work"].fillna(False).astype(bool)
+
+    w_cnt = int(disp_sorted_df["is_weekend_work"].sum())
     st.markdown("#### 📋 전체 지원 작업 상세 목록")
+    if w_cnt > 0:
+        st.markdown(
+            f'<div style="background-color: #dc2626; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-weight: bold; margin: 4px 0 8px 0; font-size: 13px;">'
+            f'🏖️ 주말 작업 {w_cnt}건이 포함되어 있으며, 아래 표에서 빨간색 행(흰색 글씨)으로 강조 표시됩니다.</div>',
+            unsafe_allow_html=True
+        )
     st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
+
+    total_cols = [
+        "start_time", "end_time", "worker_name", "worker_team",
+        "client_name", "task_description", "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"
+    ]
+    disp_total_cols = [c for c in total_cols if c in disp_sorted_df.columns]
+    tbl_total_data = disp_sorted_df[disp_total_cols].rename(columns={
+        "start_time": "시작 보고시각",
+        "end_time": "완료 보고시각",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "actual_hours": "소요(h)",
+        "status": "상태",
+        "is_night_work": "야간여부",
+        "is_weekend_work": "주말여부"
+    })
+    styled_total_tbl = apply_weekend_table_styling(tbl_total_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
-        disp_sorted_df[[
-            "start_time", "end_time", "worker_name", "worker_team",
-            "client_name", "task_description", "estimated_hours", "actual_hours", "status"
-        ]].rename(columns={
-            "start_time": "시작 보고시각",
-            "end_time": "완료 보고시각",
-            "worker_name": "담당자",
-            "worker_team": "소속팀",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "actual_hours": "소요(h)",
-            "status": "상태"
-        }),
+        styled_total_tbl,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
