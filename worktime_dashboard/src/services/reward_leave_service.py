@@ -116,6 +116,11 @@ class RewardLeaveService:
         """보상 휴가 등록 또는 수정 (부여자 정보 포함)"""
         RewardLeaveService.init_table()
 
+        # note에 부여자 정보 메타태그 함께 기록하여 Supabase 컬럼 부재 시에도 영구 보존
+        full_note = note
+        if granted_by and "부여자:" not in note:
+            full_note = f"{note} | 부여자: {granted_by}"
+
         # 1. Supabase 저장
         if db_manager.use_supabase and db_manager.supabase:
             try:
@@ -123,7 +128,7 @@ class RewardLeaveService:
                     "worker_name": worker_name,
                     "week_label": week_label,
                     "leave_hours": leave_hours,
-                    "note": note,
+                    "note": full_note,
                     "granted_by": granted_by
                 }).execute()
             except Exception as e:
@@ -132,7 +137,7 @@ class RewardLeaveService:
                         "worker_name": worker_name,
                         "week_label": week_label,
                         "leave_hours": leave_hours,
-                        "note": note
+                        "note": full_note
                     }).execute()
                 except Exception as fallback_e:
                     print(f"[Supabase 보상휴가 저장 알림]: {fallback_e}")

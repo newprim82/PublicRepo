@@ -132,13 +132,37 @@ def show_weekly_detail_dialog(target_worker: str, df_data: pd.DataFrame, default
         curr_reward = RewardLeaveService.get_reward_leave(target_worker, target_wk)
 
         if curr_reward:
-            granter_info = ""
-            if curr_reward.get("granted_by"):
-                granter_info = f" | 부여/등록자: 👤 **{curr_reward['granted_by']}**"
-            st.success(
-                f"✅ **보상 휴가 부여 완료**: **{curr_reward['leave_hours']}시간 ({curr_reward['note']})**  \n"
-                f"*(최종 등록 시각: {curr_reward['updated_at']}{granter_info})*"
+            # 부여자 정보 추출 (기존 등록 건은 '최고 관리자 (기존 승인)'으로 자동 표출)
+            granter_name = curr_reward.get("granted_by")
+            raw_note = curr_reward.get("note") or ""
+            if not granter_name:
+                m_g = re.search(r"부여자:\s*([^|)]+)", raw_note)
+                granter_name = m_g.group(1).strip() if m_g else "최고 관리자 (기존 승인)"
+
+            clean_note = re.sub(r"\s*\|\s*부여자:.*$", "", raw_note).strip()
+
+            # 등록 시각 한국 시간 깔끔한 포맷팅
+            raw_up_time = str(curr_reward.get("updated_at") or "")
+            formatted_up_time = raw_up_time
+            try:
+                clean_time_str = raw_up_time.replace("T", " ").split(".")[0].split("+")[0]
+                formatted_up_time = f"{clean_time_str}"
+            except Exception:
+                pass
+
+            reward_banner_html = (
+                f'<div style="background-color: #15803d !important; color: #ffffff !important; padding: 13px 18px !important; border-radius: 8px !important; border: 1.5px solid #22c55e !important; margin-bottom: 14px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;">'
+                f'<div style="font-weight: 800 !important; font-size: 14.5px !important; color: #ffffff !important; display: flex; align-items: center; gap: 8px; line-height: 1.5 !important;">'
+                f'<span style="font-size: 16px !important;">✅</span>'
+                f'<span style="color: #ffffff !important; font-weight: 800 !important;">보상 휴가 부여 완료: {curr_reward["leave_hours"]}시간 ({clean_note})</span>'
+                f'</div>'
+                f'<div style="font-size: 12.5px !important; color: #ffffff !important; margin-top: 5px !important; opacity: 0.95 !important; line-height: 1.5 !important;">'
+                f'최종 등록 시각: <b style="color: #ffffff !important;">{formatted_up_time}</b> &nbsp;|&nbsp; '
+                f'부여/등록자: 👤 <b style="color: #ffffff !important;">{granter_name}</b>'
+                f'</div>'
+                f'</div>'
             )
+            st.markdown(reward_banner_html, unsafe_allow_html=True)
             col_btn_del, _ = st.columns([1, 2])
             with col_btn_del:
                 if AuthManager.is_authenticated():
