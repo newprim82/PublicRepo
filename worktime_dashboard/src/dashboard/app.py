@@ -43,7 +43,17 @@ from src.collector.kakao_auto_collector import (
     WIN32_AVAILABLE
 )
 
-from src.dashboard.styles import apply_custom_styles, render_header_banner, render_sidebar_status_widget
+try:
+    from src.dashboard.styles import apply_custom_styles, render_header_banner, render_sidebar_status_widget
+except (ImportError, AttributeError):
+    import importlib
+    import sys
+    if "src.dashboard.styles" in sys.modules:
+        try:
+            importlib.reload(sys.modules["src.dashboard.styles"])
+        except Exception:
+            del sys.modules["src.dashboard.styles"]
+    from src.dashboard.styles import apply_custom_styles, render_header_banner, render_sidebar_status_widget
 from src.dashboard.common.ui_helpers import (
     get_bora_ntp_timestamp,
     get_all_teams_safe,
@@ -108,18 +118,14 @@ def clear_all_web_caches():
     # 현재 실행 중인 app 모듈을 제외하고, 뷰/다이얼로그/헬퍼 서브모듈을 메모리에서 제거하여 최신 코드를 즉시 다시 읽도록 보장
     for mod_name in list(sys.modules.keys()):
         if mod_name != __name__ and mod_name != "src.dashboard.app":
-            if (mod_name.startswith("src.dashboard.common.") or 
-                mod_name.startswith("src.dashboard.views.") or 
-                mod_name.startswith("src.services.") or 
-                mod_name.startswith("src.analytics.") or 
-        mod_name.startswith("src.auth.")):
+            if mod_name.startswith("src."):
                 try:
                     del sys.modules[mod_name]
                 except Exception:
                     pass
 
 # 버전 변경 및 빌드 갱신 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
-DEPLOY_BUILD_ID = "20261021_1418_HEADER_MIGRATED_TO_SIDEBAR"
+DEPLOY_BUILD_ID = "20261021_1425_HOTRELOAD_MODULE_CACHE_FIX"
 if st.session_state.get("_applied_app_version") != APP_VERSION or st.session_state.get("_applied_deploy_build_id") != DEPLOY_BUILD_ID:
     st.session_state["_applied_app_version"] = APP_VERSION
     st.session_state["_applied_deploy_build_id"] = DEPLOY_BUILD_ID
