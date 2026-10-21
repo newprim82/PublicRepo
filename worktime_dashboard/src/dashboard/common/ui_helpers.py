@@ -961,23 +961,25 @@ def extract_selected_row_idx(event) -> Optional[int]:
 
 def apply_weekend_table_styling(df_disp: pd.DataFrame, highlight_scope: str = "full_row") -> Any:
     """
-    작업 목록 표(st.dataframe)에서 주말 항목을 빨간색 배경(#dc2626) + 흰색 글씨(#ffffff, bold)로 강조 스타일링.
+    작업 목록 표(st.dataframe)에서:
+      - 주말 작업: 빨간색 배경(#dc2626) + 흰색 굵은 글씨(#ffffff, bold)
+      - 야간 작업 (평일 야간): 주황색 배경(#ea580c) + 흰색 굵은 글씨(#ffffff, bold)
     highlight_scope:
-      - 'full_row': 주말인 행 전체의 모든 칸을 빨간색 배경 + 흰색 글씨로 강조 (사용자 선택 옵션)
-      - 'badge': '주말여부' 칸만 빨간색 배경 + 흰색 글씨
-      - 'date_and_badge': '시작 보고시각'과 '주말여부' 칸을 빨간색 배경 + 흰색 글씨
+      - 'full_row': 해당 행 전체의 모든 칸에 배경색 + 흰색 글씨 적용
+      - 'badge': '주말'/'야간' 칸만 적용
+      - 'date_and_badge': 날짜 및 배지 칸 적용
     """
     if df_disp is None or df_disp.empty:
         return df_disp
 
     styled_df = df_disp.copy()
 
-    # 1. 주말여부 / 야간여부 컬럼 찾기
-    wk_col = next((c for c in ["주말여부", "주말"] if c in styled_df.columns), None)
-    nt_col = next((c for c in ["야간여부", "야간"] if c in styled_df.columns), None)
-    st_col = next((c for c in ["시작 보고시각", "시작일시", "start_time"] if c in styled_df.columns), None)
+    # 1. 주말여부 / 야간여부 / 시작시각 컬럼 자동 감지
+    wk_col = next((c for c in ["주말여부", "주말", "is_weekend_work"] if c in styled_df.columns), None)
+    nt_col = next((c for c in ["야간여부", "야간", "is_night_work"] if c in styled_df.columns), None)
+    st_col = next((c for c in ["시작 보고시각", "시작시각", "시작시간", "일자", "일시", "start_time"] if c in styled_df.columns), None)
 
-    # 2. 주말 판정 마스크 (주말여부 컬럼 원본 값 또는 시작 보고시각 요일 직통 검사)
+    # 2. 주말 판정 마스크 (주말 컬럼 원본 값 또는 시작시각 요일 직통 검사)
     is_weekend_mask = pd.Series(False, index=styled_df.index)
     if wk_col:
         is_weekend_mask = is_weekend_mask | styled_df[wk_col].apply(
@@ -988,30 +990,47 @@ def apply_weekend_table_styling(df_disp: pd.DataFrame, highlight_scope: str = "f
         st_series = pd.to_datetime(styled_df[st_col], errors="coerce")
         is_weekend_mask = is_weekend_mask | (st_series.dt.weekday.isin([5, 6]))
 
-    # 3. 주말/야간 컬럼을 확실한 문자열 배지로 변환 (Glide Data Grid의 불리언 체크박스 강제 해제)
+    # 3. 야간 판정 마스크 (야간 컬럼 원본 값 검사)
+    is_night_mask = pd.Series(False, index=styled_df.index)
+    if nt_col:
+        is_night_mask = is_night_mask | styled_df[nt_col].apply(
+            lambda v: bool(v is True or v == "True" or str(v).strip() in ["Y", "야간", "🌙 야간", "1", "1.0"])
+        )
+
+    # 4. 주말/야간 컬럼을 확실한 문자열 배지로 변환
     if wk_col:
         styled_df[wk_col] = styled_df.index.map(
             lambda idx: "🏖️ 주말" if is_weekend_mask.get(idx, False) else "-"
         )
     if nt_col:
-        styled_df[nt_col] = styled_df[nt_col].apply(
-            lambda v: "🌙 야간" if (v is True or v == "True" or str(v).strip() in ["Y", "야간", "🌙 야간", "1", "1.0"]) else "-"
+        styled_df[nt_col] = styled_df.index.map(
+            lambda idx: "🌙 야간" if is_night_mask.get(idx, False) else "-"
         )
 
     red_style = "background-color: #dc2626; color: #ffffff; font-weight: bold;"
+    orange_style = "background-color: #ea580c; color: #ffffff; font-weight: bold;"
 
     def _style_func(row):
         idx = row.name
         is_wk = is_weekend_mask.get(idx, False)
-        if not is_wk:
+        is_nt = is_night_mask.get(idx, False)
+        
+        target_style = ""
+        if is_wk:
+            target_style = red_style
+        elif is_nt:
+            target_style = orange_style
+
+        if not target_style:
             return [""] * len(row)
         
         if highlight_scope == "full_row":
-            return [red_style] * len(row)
+            return [target_style] * len(row)
         elif highlight_scope == "badge":
-            return [red_style if col == wk_col else "" for col in row.index]
+            return [target_style if col in [wk_col, nt_col] else "" for col in row.index]
         elif highlight_scope == "date_and_badge":
-            return [red_style if col in [st_col, wk_col] else "" for col in row.index]
+            targets = [c for c in [st_col, wk_col, nt_col] if c]
+            return [target_style if col in targets else "" for col in row.index]
         return [""] * len(row)
 
     def _format_smart_num(val):
@@ -1028,12 +1047,13 @@ def apply_weekend_table_styling(df_disp: pd.DataFrame, highlight_scope: str = "f
     # float/int 컬럼 및 소요(h), 예정(h) 등 시간/숫자 컬럼의 소수점 과다 표시(.000000)를 방지하고 깔끔한 정수/소수로 원복
     format_dict = {}
     for col in styled_df.columns:
-        if pd.api.types.is_float_dtype(styled_df[col]) or pd.api.types.is_integer_dtype(styled_df[col]):
-            format_dict[col] = _format_smart_num
-        elif any(k in str(col).lower() for k in ["소요", "예정", "시간", "hours", "(h)"]):
+        if any(keyword in col for keyword in ["(h)", "시간", "공수", "소요", "예정", "건수"]):
             format_dict[col] = _format_smart_num
 
     if format_dict:
-        styler = styler.format(format_dict)
+        try:
+            styler = styler.format(format_dict)
+        except Exception:
+            pass
 
     return styler

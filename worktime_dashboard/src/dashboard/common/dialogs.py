@@ -337,13 +337,15 @@ def show_kpi_total_hours_dialog(df_data: pd.DataFrame):
     disp_sorted_df["is_night_work"] = disp_sorted_df["is_night_work"].fillna(False).astype(bool)
 
     w_cnt = int(disp_sorted_df["is_weekend_work"].sum())
+    n_cnt = int(((disp_sorted_df["is_weekend_work"] == False) & (disp_sorted_df["is_night_work"] == True)).sum())
     st.markdown("#### 📋 전체 지원 작업 상세 목록")
-    if w_cnt > 0:
-        st.markdown(
-            f'<div style="background-color: #dc2626; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-weight: bold; margin: 4px 0 8px 0; font-size: 13px;">'
-            f'🏖️ 주말 작업 {w_cnt}건이 포함되어 있으며, 아래 표에서 빨간색 행(흰색 글씨)으로 강조 표시됩니다.</div>',
-            unsafe_allow_html=True
-        )
+    if w_cnt > 0 or n_cnt > 0:
+        badges = []
+        if w_cnt > 0:
+            badges.append(f'<span style="background-color: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px; margin-right: 6px;">🏖️ 주말 작업 {w_cnt}건 (빨간색)</span>')
+        if n_cnt > 0:
+            badges.append(f'<span style="background-color: #ea580c; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px;">🌙 평일 야간 {n_cnt}건 (주황색)</span>')
+        st.markdown(f'<div style="margin: 4px 0 8px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">{"".join(badges)}</div>', unsafe_allow_html=True)
     st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
 
     total_cols = [
@@ -405,20 +407,31 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
         disp_comp = strip_tz(comp_df.copy())
         if "end_time" not in disp_comp.columns:
             disp_comp["end_time"] = None
+        st_s1 = pd.to_datetime(disp_comp["start_time"], errors="coerce")
+        if "is_weekend_work" not in disp_comp.columns:
+            disp_comp["is_weekend_work"] = False
+        disp_comp["is_weekend_work"] = disp_comp["is_weekend_work"].fillna(False).astype(bool) | st_s1.dt.weekday.isin([5, 6])
+        if "is_night_work" not in disp_comp.columns:
+            disp_comp["is_night_work"] = False
+        disp_comp["is_night_work"] = disp_comp["is_night_work"].fillna(False).astype(bool)
+
+        comp_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "is_night_work", "is_weekend_work"]
+        avail_comp = [c for c in comp_cols if c in disp_comp.columns]
+        tbl_comp = disp_comp[avail_comp].rename(columns={
+            "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
+            "worker_name": "담당자",
+            "worker_team": "소속팀",
+            "client_name": "고객사",
+            "task_description": "작업내용",
+            "estimated_hours": "예정(h)",
+            "actual_hours": "소요(h)",
+            "is_night_work": "야간",
+            "is_weekend_work": "주말"
+        })
+        styled_comp = apply_weekend_table_styling(tbl_comp, highlight_scope="full_row")
         sel_t1 = st.dataframe(
-            disp_comp[[
-                "start_time", "end_time", "worker_name", "worker_team",
-                "client_name", "task_description", "estimated_hours", "actual_hours"
-            ]].rename(columns={
-                "start_time": "시작 보고시각",
-                "end_time": "완료 보고시각",
-                "worker_name": "담당자",
-                "worker_team": "소속팀",
-                "client_name": "고객사",
-                "task_description": "작업내용",
-                "estimated_hours": "예정(h)",
-                "actual_hours": "소요(h)"
-            }),
+            styled_comp,
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
@@ -448,19 +461,30 @@ def show_kpi_total_tasks_dialog(df_data: pd.DataFrame):
                     cur_desc = str(p_r.get("task_description") or "").strip()
                     if not re.search(r'\(\d+/\d+일차\)', cur_desc):
                         disp_pend.at[p_i, "task_description"] = f"{cur_desc} (1/{tot_d}일차)"
+            st_s2 = pd.to_datetime(disp_pend["start_time"], errors="coerce")
+            if "is_weekend_work" not in disp_pend.columns:
+                disp_pend["is_weekend_work"] = False
+            disp_pend["is_weekend_work"] = disp_pend["is_weekend_work"].fillna(False).astype(bool) | st_s2.dt.weekday.isin([5, 6])
+            if "is_night_work" not in disp_pend.columns:
+                disp_pend["is_night_work"] = False
+            disp_pend["is_night_work"] = disp_pend["is_night_work"].fillna(False).astype(bool)
+
+            pend_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "is_night_work", "is_weekend_work"]
+            avail_pend = [c for c in pend_cols if c in disp_pend.columns]
+            tbl_pend = disp_pend[avail_pend].rename(columns={
+                "start_time": "시작 보고시각",
+                "end_time": "완료 보고시각",
+                "worker_name": "담당자",
+                "worker_team": "소속팀",
+                "client_name": "고객사",
+                "task_description": "작업내용",
+                "estimated_hours": "예정(h)",
+                "is_night_work": "야간",
+                "is_weekend_work": "주말"
+            })
+            styled_pend = apply_weekend_table_styling(tbl_pend, highlight_scope="full_row")
             sel_t2 = st.dataframe(
-                disp_pend[[
-                    "start_time", "end_time", "worker_name", "worker_team",
-                    "client_name", "task_description", "estimated_hours"
-                ]].rename(columns={
-                    "start_time": "시작 보고시각",
-                    "end_time": "완료 보고시각",
-                    "worker_name": "담당자",
-                    "worker_team": "소속팀",
-                    "client_name": "고객사",
-                    "task_description": "작업내용",
-                    "estimated_hours": "예정(h)"
-                }),
+                styled_pend,
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
@@ -533,19 +557,30 @@ def show_kpi_urgent_dialog(df_data: pd.DataFrame):
             disp_night = strip_tz(night_df.copy())
             if "end_time" not in disp_night.columns:
                 disp_night["end_time"] = None
+            st_sn = pd.to_datetime(disp_night["start_time"], errors="coerce")
+            if "is_weekend_work" not in disp_night.columns:
+                disp_night["is_weekend_work"] = False
+            disp_night["is_weekend_work"] = disp_night["is_weekend_work"].fillna(False).astype(bool) | st_sn.dt.weekday.isin([5, 6])
+            if "is_night_work" not in disp_night.columns:
+                disp_night["is_night_work"] = True
+            disp_night["is_night_work"] = disp_night["is_night_work"].fillna(True).astype(bool)
+
+            u_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "actual_hours", "is_night_work", "is_weekend_work"]
+            avail_un = [c for c in u_cols if c in disp_night.columns]
+            tbl_un = disp_night[avail_un].rename(columns={
+                "start_time": "시작 보고시각",
+                "end_time": "완료 보고시각",
+                "worker_name": "담당자",
+                "worker_team": "소속팀",
+                "client_name": "고객사",
+                "task_description": "작업내용",
+                "actual_hours": "소요(h)",
+                "is_night_work": "야간",
+                "is_weekend_work": "주말"
+            })
+            styled_un = apply_weekend_table_styling(tbl_un, highlight_scope="full_row")
             sel_u1 = st.dataframe(
-                disp_night[[
-                    "start_time", "end_time", "worker_name", "worker_team",
-                    "client_name", "task_description", "actual_hours"
-                ]].rename(columns={
-                    "start_time": "시작 보고시각",
-                    "end_time": "완료 보고시각",
-                    "worker_name": "담당자",
-                    "worker_team": "소속팀",
-                    "client_name": "고객사",
-                    "task_description": "작업내용",
-                    "actual_hours": "소요(h)"
-                }),
+                styled_un,
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
@@ -565,19 +600,28 @@ def show_kpi_urgent_dialog(df_data: pd.DataFrame):
             disp_weekend = strip_tz(weekend_df.copy())
             if "end_time" not in disp_weekend.columns:
                 disp_weekend["end_time"] = None
+            st_sw = pd.to_datetime(disp_weekend["start_time"], errors="coerce")
+            disp_weekend["is_weekend_work"] = True
+            if "is_night_work" not in disp_weekend.columns:
+                disp_weekend["is_night_work"] = False
+            disp_weekend["is_night_work"] = disp_weekend["is_night_work"].fillna(False).astype(bool)
+
+            uw_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "actual_hours", "is_night_work", "is_weekend_work"]
+            avail_uw = [c for c in uw_cols if c in disp_weekend.columns]
+            tbl_uw = disp_weekend[avail_uw].rename(columns={
+                "start_time": "시작 보고시각",
+                "end_time": "완료 보고시각",
+                "worker_name": "담당자",
+                "worker_team": "소속팀",
+                "client_name": "고객사",
+                "task_description": "작업내용",
+                "actual_hours": "소요(h)",
+                "is_night_work": "야간",
+                "is_weekend_work": "주말"
+            })
+            styled_uw = apply_weekend_table_styling(tbl_uw, highlight_scope="full_row")
             sel_u2 = st.dataframe(
-                disp_weekend[[
-                    "start_time", "end_time", "worker_name", "worker_team",
-                    "client_name", "task_description", "actual_hours"
-                ]].rename(columns={
-                    "start_time": "시작 보고시각",
-                    "end_time": "완료 보고시각",
-                    "worker_name": "담당자",
-                    "worker_team": "소속팀",
-                    "client_name": "고객사",
-                    "task_description": "작업내용",
-                    "actual_hours": "소요(h)"
-                }),
+                styled_uw,
                 use_container_width=True,
                 hide_index=True,
                 on_select="rerun",
@@ -620,22 +664,34 @@ def show_kpi_overdue_dialog(df_data: pd.DataFrame):
         disp_overdue = strip_tz(overdue_df.copy())
         if "end_time" not in disp_overdue.columns:
             disp_overdue["end_time"] = None
+        st_so = pd.to_datetime(disp_overdue["start_time"], errors="coerce")
+        if "is_weekend_work" not in disp_overdue.columns:
+            disp_overdue["is_weekend_work"] = False
+        disp_overdue["is_weekend_work"] = disp_overdue["is_weekend_work"].fillna(False).astype(bool) | st_so.dt.weekday.isin([5, 6])
+        if "is_night_work" not in disp_overdue.columns:
+            disp_overdue["is_night_work"] = False
+        disp_overdue["is_night_work"] = disp_overdue["is_night_work"].fillna(False).astype(bool)
+
+        tbl_od = disp_overdue[[
+            "start_time", "end_time", "worker_name", "worker_team",
+            "client_name", "task_description", "estimated_hours",
+            "actual_hours", "diff_hours", "is_night_work", "is_weekend_work"
+        ]].rename(columns={
+            "start_time": "시작 보고시각",
+            "end_time": "완료 보고시각",
+            "worker_name": "담당자",
+            "worker_team": "소속팀",
+            "client_name": "고객사",
+            "task_description": "작업내용",
+            "estimated_hours": "예정(h)",
+            "actual_hours": "실제소요(h)",
+            "diff_hours": "초과시간(+h)",
+            "is_night_work": "야간",
+            "is_weekend_work": "주말"
+        })
+        styled_od = apply_weekend_table_styling(tbl_od, highlight_scope="full_row")
         sel_overdue = st.dataframe(
-            disp_overdue[[
-                "start_time", "end_time", "worker_name", "worker_team",
-                "client_name", "task_description", "estimated_hours",
-                "actual_hours", "diff_hours"
-            ]].rename(columns={
-                "start_time": "시작 보고시각",
-                "end_time": "완료 보고시각",
-                "worker_name": "담당자",
-                "worker_team": "소속팀",
-                "client_name": "고객사",
-                "task_description": "작업내용",
-                "estimated_hours": "예정(h)",
-                "actual_hours": "실제소요(h)",
-                "diff_hours": "초과시간(+h)"
-            }),
+            styled_od,
             use_container_width=True,
             hide_index=True,
             on_select="rerun",
@@ -688,9 +744,14 @@ def show_worker_all_tasks_dialog(worker_name: str, df_data: pd.DataFrame):
     day_cnt = tot_cnt - night_cnt - weekend_cnt
     
     st.markdown(f"### 👤 **{worker_name}** 님의 전체 작업 내역 (총 **{tot_h}시간** / **{tot_cnt}건**)")
-    st.markdown(f"☀️ 평일 주간: **{day_cnt}건** | 🌙 평일 야간: **{night_cnt}건** | 🏖️ **주말: {weekend_cnt}건** *(빨간색 행 강조)*")
-    if weekend_cnt > 0:
-        st.markdown(f'<div style="background-color: #dc2626; color: #ffffff; padding: 7px 12px; border-radius: 6px; font-weight: bold; margin: 8px 0 10px 0; font-size: 13px;">🏖️ 주말 작업 {weekend_cnt}건이 포함되어 있으며, 아래 표에서 빨간색 행으로 강조 표시됩니다.</div>', unsafe_allow_html=True)
+    st.markdown(f"☀️ 평일 주간: **{day_cnt}건** | 🌙 평일 야간: **{night_cnt}건** *(주황색 행)* | 🏖️ **주말: {weekend_cnt}건** *(빨간색 행)*")
+    if weekend_cnt > 0 or night_cnt > 0:
+        badges = []
+        if weekend_cnt > 0:
+            badges.append(f'<span style="background-color: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px; margin-right: 6px;">🏖️ 주말 작업 {weekend_cnt}건 (빨간색)</span>')
+        if night_cnt > 0:
+            badges.append(f'<span style="background-color: #ea580c; color: #ffffff; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 12.5px;">🌙 평일 야간 {night_cnt}건 (주황색)</span>')
+        st.markdown(f'<div style="margin: 8px 0 10px 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">{"".join(badges)}</div>', unsafe_allow_html=True)
     
     st.caption("💡 표에서 행을 클릭하시면 해당 작업의 **카카오톡 시작/완료 보고 원본 대화**가 아래에 표시됩니다.")
     disp_w_df = strip_tz(w_df.copy())
@@ -852,7 +913,7 @@ def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
     st.markdown("#### 📋 팀 전체 지원 작업 상세 원장")
     st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
 
-    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
+    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"]
     avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
 
     disp_team_data = disp_sorted_df[avail_cols].rename(columns={
@@ -864,7 +925,9 @@ def show_team_work_logs_dialog(team_name: str, team_logs_df: pd.DataFrame):
         "task_description": "작업내용",
         "estimated_hours": "예정(h)",
         "actual_hours": "소요(h)",
-        "status": "상태"
+        "status": "상태",
+        "is_night_work": "야간",
+        "is_weekend_work": "주말"
     })
     styled_team_data = apply_weekend_table_styling(disp_team_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
@@ -939,7 +1002,7 @@ def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
     st.markdown("#### 📋 해당 주차 전체 작업 상세 목록")
     st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
 
-    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
+    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"]
     avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
 
     disp_week_data = disp_sorted_df[avail_cols].rename(columns={
@@ -951,7 +1014,9 @@ def show_week_summary_dialog(week_title: str, week_df: pd.DataFrame):
         "task_description": "작업내용",
         "estimated_hours": "예정(h)",
         "actual_hours": "소요(h)",
-        "status": "상태"
+        "status": "상태",
+        "is_night_work": "야간",
+        "is_weekend_work": "주말"
     })
     styled_week_data = apply_weekend_table_styling(disp_week_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
@@ -1012,7 +1077,7 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
     st.markdown("#### 📋 전체 지원 작업 상세 원장")
     st.caption("💡 표에서 특정 행을 클릭하시면, 해당 작업의 **카카오톡 시작/완료 원본 메시지**를 바로 아래에서 확인하실 수 있습니다.")
 
-    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status"]
+    table_cols = ["start_time", "end_time", "worker_name", "worker_team", "client_name", "task_description", "estimated_hours", "actual_hours", "status", "is_night_work", "is_weekend_work"]
     avail_cols = [col for col in table_cols if col in disp_sorted_df.columns]
 
     disp_day_popup_data = disp_sorted_df[avail_cols].rename(columns={
@@ -1024,7 +1089,9 @@ def show_calendar_day_dialog(date_title: str, day_df: pd.DataFrame):
         "task_description": "작업내용",
         "estimated_hours": "예정(h)",
         "actual_hours": "소요(h)",
-        "status": "상태"
+        "status": "상태",
+        "is_night_work": "야간",
+        "is_weekend_work": "주말"
     })
     styled_day_popup = apply_weekend_table_styling(disp_day_popup_data, highlight_scope="full_row")
     sel_tbl = st.dataframe(
@@ -1347,20 +1414,31 @@ def show_stale_pending_tasks_dialog(df_data: pd.DataFrame):
     
     disp_df = stale_df.copy()
     disp_df["start_str"] = disp_df["_st_dt"].dt.strftime("%Y-%m-%d %H:%M")
-    
+    st_sp = pd.to_datetime(disp_df["start_time"], errors="coerce")
+    if "is_weekend_work" not in disp_df.columns:
+        disp_df["is_weekend_work"] = False
+    disp_df["is_weekend_work"] = disp_df["is_weekend_work"].fillna(False).astype(bool) | st_sp.dt.weekday.isin([5, 6])
+    if "is_night_work" not in disp_df.columns:
+        disp_df["is_night_work"] = False
+    disp_df["is_night_work"] = disp_df["is_night_work"].fillna(False).astype(bool)
+
+    tbl_stale = disp_df[[
+        "start_str", "worker_name", "worker_team", "client_name", "task_description",
+        "estimated_hours", "elapsed_hours", "is_night_work", "is_weekend_work"
+    ]].rename(columns={
+        "start_str": "시작일시",
+        "worker_name": "담당자",
+        "worker_team": "소속팀",
+        "client_name": "고객사",
+        "task_description": "작업내용",
+        "estimated_hours": "예정(h)",
+        "elapsed_hours": "경과시간(h)",
+        "is_night_work": "야간",
+        "is_weekend_work": "주말"
+    })
+    styled_stale = apply_weekend_table_styling(tbl_stale, highlight_scope="full_row")
     sel = st.dataframe(
-        disp_df[[
-            "start_str", "worker_name", "worker_team", "client_name", "task_description",
-            "estimated_hours", "elapsed_hours"
-        ]].rename(columns={
-            "start_str": "시작일시",
-            "worker_name": "담당자",
-            "worker_team": "소속팀",
-            "client_name": "고객사",
-            "task_description": "작업내용",
-            "estimated_hours": "예정(h)",
-            "elapsed_hours": "경과시간(h)"
-        }),
+        styled_stale,
         use_container_width=True,
         hide_index=True,
         on_select="rerun",
@@ -1437,25 +1515,42 @@ def show_tech_domain_task_dialog(domain_name: str, work_type_name: str | None, d
     # 상세 그리드 테이블
     disp_df = target_df.copy()
     if "start_time" in disp_df.columns:
-        disp_df["일자"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d")
+        disp_df["시작시각"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M")
         disp_df = disp_df.sort_values(by="start_time", ascending=False)
     else:
-        disp_df["일자"] = "-"
+        disp_df["시작시각"] = "-"
+
+    if "end_time" in disp_df.columns:
+        disp_df["완료시각"] = pd.to_datetime(disp_df["end_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M").fillna("진행 중")
+    else:
+        disp_df["완료시각"] = "진행 중"
+
+    st_series = pd.to_datetime(disp_df["start_time"], errors="coerce")
+    if "is_weekend_work" not in disp_df.columns:
+        disp_df["is_weekend_work"] = False
+    disp_df["주말"] = disp_df["is_weekend_work"].fillna(False).astype(bool) | st_series.dt.weekday.isin([5, 6])
+
+    if "is_night_work" not in disp_df.columns:
+        disp_df["is_night_work"] = False
+    disp_df["야간"] = disp_df["is_night_work"].fillna(False).astype(bool)
 
     table_cols = {
-        "일자": "일자",
+        "시작시각": "시작시각",
+        "완료시각": "완료시각",
         "worker_name": "담당자",
         "worker_team": "소속팀",
         "client_name": "고객사",
         "work_type": "작업유형",
         "actual_hours": "공수(h)",
+        "야간": "야간",
+        "주말": "주말",
         "task_description": "작업내용"
     }
     
     existing_cols = [c for c in table_cols.keys() if c in disp_df.columns]
     grid_df = disp_df[existing_cols].rename(columns={c: table_cols[c] for c in existing_cols})
-    
-    st.dataframe(grid_df, use_container_width=True, hide_index=True)
+    styled_grid = apply_weekend_table_styling(grid_df, highlight_scope="full_row")
+    st.dataframe(styled_grid, use_container_width=True, hide_index=True)
 
     # 카카오톡 원본 메시지 익스팬더
     prefix = f"{domain_name} {work_type_name or ''}".strip()
@@ -1492,22 +1587,40 @@ def show_client_tasks_dialog(client_name: str, client_df: pd.DataFrame):
     st.write("")
     disp_df = c_df.copy()
     if "start_time" in disp_df.columns:
-        disp_df["일자"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M")
+        disp_df["시작시각"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M")
         disp_df = disp_df.sort_values(by="start_time", ascending=False)
     else:
-        disp_df["일자"] = "-"
+        disp_df["시작시각"] = "-"
+
+    if "end_time" in disp_df.columns:
+        disp_df["완료시각"] = pd.to_datetime(disp_df["end_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M").fillna("진행 중")
+    else:
+        disp_df["완료시각"] = "진행 중"
+
+    st_series = pd.to_datetime(disp_df["start_time"], errors="coerce")
+    if "is_weekend_work" not in disp_df.columns:
+        disp_df["is_weekend_work"] = False
+    disp_df["주말"] = disp_df["is_weekend_work"].fillna(False).astype(bool) | st_series.dt.weekday.isin([5, 6])
+
+    if "is_night_work" not in disp_df.columns:
+        disp_df["is_night_work"] = False
+    disp_df["야간"] = disp_df["is_night_work"].fillna(False).astype(bool)
 
     table_cols = {
-        "일자": "시작시각",
+        "시작시각": "시작시각",
+        "완료시각": "완료시각",
         "worker_name": "담당자",
         "worker_team": "소속팀",
         "work_type": "작업유형",
         "actual_hours": "공수(h)",
+        "야간": "야간",
+        "주말": "주말",
         "task_description": "작업내용"
     }
     existing_cols = [c for c in table_cols.keys() if c in disp_df.columns]
     grid_df = disp_df[existing_cols].rename(columns={c: table_cols[c] for c in existing_cols})
-    st.dataframe(grid_df, use_container_width=True, hide_index=True)
+    styled_grid = apply_weekend_table_styling(grid_df, highlight_scope="full_row")
+    st.dataframe(styled_grid, use_container_width=True, hide_index=True)
 
     render_chat_messages_expander(c_df, max_display=20, title_prefix=f"{client_name} 작업")
 
@@ -1538,23 +1651,41 @@ def show_cost_detail_dialog(title: str, cost_df: pd.DataFrame):
     st.write("")
     disp_df = cost_df.copy()
     if "start_time" in disp_df.columns:
-        disp_df["일자"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M")
+        disp_df["시작시각"] = pd.to_datetime(disp_df["start_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M")
         disp_df = disp_df.sort_values(by="start_time", ascending=False)
     else:
-        disp_df["일자"] = "-"
+        disp_df["시작시각"] = "-"
+
+    if "end_time" in disp_df.columns:
+        disp_df["완료시각"] = pd.to_datetime(disp_df["end_time"], errors="coerce").dt.strftime("%Y-%m-%d %H:%M").fillna("진행 중")
+    else:
+        disp_df["완료시각"] = "진행 중"
+
+    st_series = pd.to_datetime(disp_df["start_time"], errors="coerce")
+    if "is_weekend_work" not in disp_df.columns:
+        disp_df["is_weekend_work"] = False
+    disp_df["주말"] = disp_df["is_weekend_work"].fillna(False).astype(bool) | st_series.dt.weekday.isin([5, 6])
+
+    if "is_night_work" not in disp_df.columns:
+        disp_df["is_night_work"] = False
+    disp_df["야간"] = disp_df["is_night_work"].fillna(False).astype(bool)
 
     table_cols = {
-        "일자": "시작시각",
+        "시작시각": "시작시각",
+        "완료시각": "완료시각",
         "worker_name": "담당자",
         "client_name": "고객사",
         "billable_hours": "청구공수(h)",
+        "야간": "야간",
+        "주말": "주말",
         "rate_multiplier": "배율",
         "estimated_cost": "산정금액(원)",
         "task_description": "작업내용"
     }
     existing_cols = [c for c in table_cols.keys() if c in disp_df.columns]
     grid_df = disp_df[existing_cols].rename(columns={c: table_cols[c] for c in existing_cols})
-    st.dataframe(grid_df, use_container_width=True, hide_index=True)
+    styled_grid = apply_weekend_table_styling(grid_df, highlight_scope="full_row")
+    st.dataframe(styled_grid, use_container_width=True, hide_index=True)
 
     render_chat_messages_expander(cost_df, max_display=20, title_prefix=title)
 
