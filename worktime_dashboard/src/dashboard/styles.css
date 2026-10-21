@@ -1155,54 +1155,80 @@
             line-height: 1.1;
         }
 
-        /* 🏠 홈 버튼: 하위 메뉴 활성 표시와 동일한 시안 좌측 바 방식으로 통일 (빨간 선 제거) */
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker),
-        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) {
+        /* 🏛️ 사이드바 WorkLens 브랜드 홈 버튼 (헤더 겸 네비게이션) */
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker),
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) {
             display: none !important;
             height: 0px !important;
             margin: 0px !important;
             padding: 0px !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container,
-        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] {
-            margin-top: 6px !important;
-            margin-bottom: 14px !important;
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"],
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container {
+            margin-top: 0px !important;
+            margin-bottom: 6px !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button,
-        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button {
-            background: rgba(0, 180, 216, 0.06) !important;
-            background-color: rgba(0, 180, 216, 0.06) !important;
-            color: #e2e8f0 !important;
-            font-weight: 700 !important;
-            border: 1px solid rgba(0, 180, 216, 0.22) !important;
-            border-left: 3px solid rgba(0, 180, 216, 0.35) !important;
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button,
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button {
+            background: transparent !important;
+            border: 1px solid rgba(0, 180, 216, 0.15) !important;
             border-radius: 8px !important;
-            padding: 8px 12px !important;
-            height: 40px !important;
+            padding: 8px 10px !important;
+            min-height: 48px !important;
             box-shadow: none !important;
-            justify-content: center !important;
-            text-align: center !important;
-            transform: none !important;
+            justify-content: flex-start !important;
+            text-align: left !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            cursor: pointer !important;
+            width: 100% !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button[kind="primary"],
-        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button[kind="primary"] {
-            background: linear-gradient(90deg, rgba(0, 180, 216, 0.22) 0%, rgba(0, 180, 216, 0.08) 100%) !important;
-            background-color: rgba(0, 180, 216, 0.18) !important;
-            border: 1px solid rgba(0, 180, 216, 0.45) !important;
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button[kind="primary"],
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button[kind="primary"] {
+            background: linear-gradient(90deg, rgba(0, 180, 216, 0.16) 0%, rgba(0, 180, 216, 0.04) 100%) !important;
+            border: 1px solid rgba(0, 180, 216, 0.4) !important;
             border-left: 3px solid #00b4d8 !important;
-            box-shadow: 0 0 12px rgba(0, 180, 216, 0.15) !important;
+            box-shadow: 0 0 14px rgba(0, 180, 216, 0.12) !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button *,
-        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button * {
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button:hover,
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button:hover {
+            background: rgba(0, 180, 216, 0.10) !important;
+            border-color: rgba(0, 180, 216, 0.5) !important;
+            transform: translateY(-1px) !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button [data-testid="stMarkdownContainer"],
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button [data-testid="stMarkdownContainer"] {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            width: 100% !important;
+            text-align: left !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button [data-testid="stMarkdownContainer"]::before,
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button [data-testid="stMarkdownContainer"]::before {
+            content: "🔍";
+            font-size: 22px !important;
+            margin-right: 10px !important;
+            line-height: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button strong,
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button strong {
+            font-size: 19px !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.5px !important;
             color: #ffffff !important;
-            justify-content: center !important;
-            text-align: center !important;
+            line-height: 1.2 !important;
         }
-        [data-testid="stSidebar"] .element-container:has(#home-nav-marker) + .element-container button:hover,
-        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#home-nav-marker) + [data-testid="stElementContainer"] button:hover {
-            background-color: rgba(0, 180, 216, 0.16) !important;
-            border-left: 3px solid #00b4d8 !important;
-            transform: none !important;
+        [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button span,
+        [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button span {
+            font-size: 10.5px !important;
+            font-weight: 600 !important;
+            color: #94a3b8 !important;
+            letter-spacing: 0.5px !important;
+            line-height: 1.1 !important;
         }
 
         /* 🗂️ 조회 기준 필터 카드 (반투명 네이비 카드 1장으로 묶음) */

@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:25 (Sidebar Status Widget Cache Eviction Fix)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:30 (Brand Home Button Integration)
 import os
 import sys
 from pathlib import Path
