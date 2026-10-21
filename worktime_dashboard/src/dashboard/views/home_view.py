@@ -738,7 +738,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                             if hasattr(_chk_dt, "weekday") and _chk_dt.weekday() in [5, 6]:
                                                 is_wknd_c = True
                                             else:
-                                                from ...utils.time_utils import check_is_weekend_work
+                                                from ...common.time_utils import check_is_weekend_work
                                                 is_wknd_c = check_is_weekend_work(st_dt, ed_dt if pd.notna(ed_dt) else st_dt)
                                         except Exception:
                                             pass
@@ -816,7 +816,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                                         if hasattr(_chk_dt, "weekday") and _chk_dt.weekday() in [5, 6]:
                                             is_wknd_c = True
                                         else:
-                                            from ...utils.time_utils import check_is_weekend_work
+                                            from ...common.time_utils import check_is_weekend_work
                                             is_wknd_c = check_is_weekend_work(st_dt, ed_dt if pd.notna(ed_dt) else st_dt)
                                     except Exception:
                                         pass

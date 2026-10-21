@@ -148,7 +148,7 @@ class EmailScheduleService:
         try:
             conn = sqlite3.connect(str(config.LOCAL_DB_PATH))
             cur = conn.cursor()
-            from ..utils.time_utils import get_current_kst_time
+            from ..common.time_utils import get_current_kst_time
             now_kst_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
             for r in recipients:
                 cur.execute("""
@@ -176,7 +176,7 @@ class EmailScheduleService:
             return cls._cached_recipients
 
         recipients_map: Dict[str, Dict[str, Any]] = {}
-        from ..utils.time_utils import get_current_kst_time
+        from ..common.time_utils import get_current_kst_time
         now_kst_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
 
         # 0. 기본 내장 수신자 사전 탑재
@@ -294,7 +294,7 @@ class EmailScheduleService:
             if r["email"].lower() == clean_email:
                 return False, f"이미 등록되어 있는 이메일 주소입니다. ({clean_email})"
 
-        from ..utils.time_utils import get_current_kst_time
+        from ..common.time_utils import get_current_kst_time
         now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
         new_item = {
             "email": clean_email,
@@ -384,7 +384,7 @@ class EmailScheduleService:
         target["is_active"] = bool(is_active)
         target["include_cost"] = bool(include_cost)
         target["note"] = note.strip()
-        from ..utils.time_utils import get_current_kst_time
+        from ..common.time_utils import get_current_kst_time
         now_str = get_current_kst_time().strftime("%Y-%m-%d %H:%M:%S")
 
         # 1. Supabase 동기화

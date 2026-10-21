@@ -1,3 +1,4 @@
+import os
 import io
 import re
 import html
@@ -127,7 +128,7 @@ class EmailReportService:
             df_scope = df.copy()
             clean_target = (target_week_label or "").replace("📌 ", "").strip()
 
-            if clean_target in ["📅 월간 전체 종합", "월간 전체 종합", "월간 전체"] or not available_weeks:
+            if clean_target in ["📅 월간 전체 종합", "월간 전체 종합", "월간 전체"] or (not clean_target and str(kwargs.get("dispatch_type", "")).upper() == "AUTO_MONTHLY") or not available_weeks:
                 # 월간 전체 종합
                 df_active = df[df["week_label"].isin(available_weeks)].copy() if available_weeks else df.copy()
                 if "msg_hash" in df_active.columns:
@@ -157,8 +158,12 @@ class EmailReportService:
                 else:
                     now_kst = get_current_kst_time()
                     prev_day_week = get_week_label(now_kst - timedelta(days=1))
-                    if now_kst.weekday() == 0 and prev_day_week in available_weeks:
-                        target_week = prev_day_week
+                    if str(kwargs.get("dispatch_type", "")).upper() == "AUTO_WEEKLY" or now_kst.weekday() == 0:
+                        this_monday = (now_kst - timedelta(days=now_kst.weekday())).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+                        raw_st = pd.to_datetime(df["start_time"], errors="coerce").dt.tz_localize(None)
+                        prev_week_set = set(df[raw_st < this_monday]["week_label"].dropna().unique())
+                        prev_weeks_ordered = [w for w in available_weeks if w in prev_week_set]
+                        target_week = prev_weeks_ordered[-1] if prev_weeks_ordered else (prev_day_week if prev_day_week in available_weeks else available_weeks[-1])
                     else:
                         target_week = available_weeks[-1]
                 df_active = df[df["week_label"] == target_week].copy()
@@ -594,6 +599,9 @@ class EmailReportService:
         if include_cost_estimation and not df_active.empty:
             try:
                 from .cost_vault_service import CostVaultService
+                if CostVaultService.is_vault_initialized() and not CostVaultService.is_unlocked():
+                    if os.getenv("COST_VAULT_MASTER_PASSWORD", "").strip():
+                        CostVaultService.unlock(os.getenv("COST_VAULT_MASTER_PASSWORD", "").strip())
                 if CostVaultService.is_vault_initialized() and not CostVaultService.is_unlocked():
                     cost_dashboard_html = """
                     <div style="margin-top: 24px; padding: 18px 20px; background-color: #fef2f2; border: 1.5px dashed #f87171; border-radius: 8px;">

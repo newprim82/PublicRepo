@@ -24,7 +24,7 @@ from ..database.supabase_client import db_manager
 from .schedule_sync_service import ScheduleSyncService
 from .team_service import TeamService
 from .email_dispatch_service import EmailDispatchService
-from ..dashboard.common.ui_helpers import get_current_kst_time, strip_tz
+from ..common.time_utils import get_current_kst_time
 
 
 DATA_DIR = config.BASE_DIR / "data"
@@ -127,6 +127,17 @@ class MonthlyWorklogService:
                     if isinstance(file_configs, dict):
                         for k, v in file_configs.items():
                             configs[k] = v
+            if db_manager.use_supabase and db_manager.supabase:
+                res = db_manager.supabase.table("worktime_hourly_rates").select("job_title").eq("hourly_rate", -99996).execute()
+                if res.data:
+                    for row in res.data:
+                        jt = str(row.get("job_title", ""))
+                        if jt.startswith("__MONTHLY_TEAM_CONFIGS__:"):
+                            cloud_cfgs = json.loads(jt[len("__MONTHLY_TEAM_CONFIGS__:"):])
+                            if isinstance(cloud_cfgs, dict):
+                                for k, v in cloud_cfgs.items():
+                                    if isinstance(v, dict):
+                                        configs[k] = v
         except Exception:
             pass
 
@@ -190,6 +201,15 @@ class MonthlyWorklogService:
             }
             with open(LOCAL_CONFIG_JSON, "w", encoding="utf-8") as f:
                 json.dump(configs, f, ensure_ascii=False, indent=2)
+            try:
+                if db_manager.use_supabase and db_manager.supabase:
+                    db_manager.supabase.table("worktime_hourly_rates").delete().eq("hourly_rate", -99996).execute()
+                    db_manager.supabase.table("worktime_hourly_rates").insert({
+                        "job_title": f"__MONTHLY_TEAM_CONFIGS__:{json.dumps(configs, ensure_ascii=False)}",
+                        "hourly_rate": -99996
+                    }).execute()
+            except Exception:
+                pass
             cls._cached_configs = configs
         except Exception:
             pass
@@ -1051,4 +1071,25 @@ class MonthlyWorklogService:
             conn.close()
         except Exception as e:
             print(f"[MonthlyWorklogService] 발송 이력 SQLite 조회 실패: {e}")
+        return logs
+
+    @classmethod
+    def has_monthly_auto_dispatched(cls, team_name: str = "기술 1팀", target_month: Optional[str] = None) -> bool:
+        """해당 팀 및 대상 전월에 대해 이미 AUTO_MONTHLY 성공 발송 이력이 존재하는지 확인 (중복 발송 원천 차단)"""
+        try:
+            t_month = target_month or cls.get_previous_month()
+            clean_team = str(team_name).replace(" ", "").strip()
+            logs = cls.get_recent_dispatches(team_name=None, limit=30)
+            for item in logs:
+                if str(item.get("status", "")).upper() != "SUCCESS":
+                    continue
+                if str(item.get("dispatch_type", "")).upper() != "AUTO_MONTHLY":
+                    continue
+                if str(item.get("target_month", "")).strip() != t_month:
+                    continue
+                if str(item.get("team_name", "")).replace(" ", "").strip() == clean_team:
+                    return True
+        except Exception:
+            pass
+        return False
         return logs

@@ -1,10 +1,10 @@
 import sqlite3
 from typing import List, Dict, Optional, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ..config import config
 from ..database.supabase_client import db_manager
-from ..dashboard.common.ui_helpers import get_current_kst_time
+from ..common.time_utils import get_current_kst_time
 
 
 class EmailDispatchService:
@@ -168,5 +168,28 @@ class EmailDispatchService:
             conn.close()
         except Exception as e:
             print(f'[이메일 로그 오류] SQLite 조회 실패: {e}')
+
+        return dispatches
+
+    @classmethod
+    def has_weekly_auto_dispatched_this_week(cls, selected_team: str = "기술 1팀") -> bool:
+        """이번 주 월요일 00:00 KST 이후에 이미 AUTO_WEEKLY 성공 발송 이력이 존재하는지 확인 (중복 발송 원천 차단)"""
+        try:
+            now_kst = get_current_kst_time()
+            this_monday_str = (now_kst - timedelta(days=now_kst.weekday())).strftime("%Y-%m-%d 00:00:00")
+            clean_target_team = str(selected_team).replace(" ", "").strip()
+            logs = cls.get_recent_dispatches(limit=20, dispatch_type="AUTO_WEEKLY")
+            for item in logs:
+                if str(item.get("status", "")).upper() != "SUCCESS":
+                    continue
+                item_team = str(item.get("selected_team", "")).replace(" ", "").strip()
+                if item_team and clean_target_team and item_team != clean_target_team:
+                    continue
+                dt_str = str(item.get("created_at", "")).replace("T", " ")[:19]
+                if dt_str >= this_monday_str:
+                    return True
+        except Exception:
+            pass
+        return False
 
         return dispatches

@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-20 14:55 (Universal Entrypoint & AttributeError Hotfix)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 11:35 (Weekly & Monthly Email Auto-Dispatch Fix)
 import os
 import sys
 from pathlib import Path

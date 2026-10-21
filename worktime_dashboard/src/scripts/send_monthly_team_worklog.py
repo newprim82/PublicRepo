@@ -20,14 +20,19 @@ def main():
     parser.add_argument("--team", default="기술 1팀", help="발송 대상 팀명 (기본: 기술 1팀)")
     parser.add_argument("--email", default="", help="수신 팀 대표 이메일 (지정 안할 시 설정값 사용)")
     parser.add_argument("--month", default="", help="대상 월 (예: 2026-09, 기본값: 전월)")
+    parser.add_argument("--force", action="store_true", help="이미 발송된 이력이 있어도 강제 재발송")
     args = parser.parse_args()
 
     team_name = args.team
     target_month = args.month or MonthlyWorklogService.get_previous_month()
-    
+
     cfg = MonthlyWorklogService.get_team_config(team_name)
     if not cfg.get("is_active", True) and not args.email:
         print(f"[{team_name}] 월간 자동 발송 설정이 비활성화(OFF)되어 있어 발송을 건너뜁니다.")
+        return
+
+    if not args.force and MonthlyWorklogService.has_monthly_auto_dispatched(team_name, target_month):
+        print(f"[✓] [{team_name}] {target_month} 전월 업무 원장(AUTO_MONTHLY)이 이미 발송 완료되어 중복 발송을 건너뜁니다.")
         return
 
     recipient_email = args.email or cfg.get("team_email", "GE101@sangsanginworld.co.kr")

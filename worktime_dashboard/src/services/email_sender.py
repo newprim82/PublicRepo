@@ -103,6 +103,7 @@ class EmailSender:
                     team_mappings_override=team_mappings_override,
                     include_cost_estimation=include_cost,
                     return_cost_excel=True,
+                    dispatch_type=dispatch_type,
                     **kwargs
                 )
                 if len(report_res) == 4:
@@ -181,12 +182,17 @@ class EmailSender:
 
             try:
                 from .email_dispatch_service import EmailDispatchService
+                actual_period_label = (
+                    current_period_label_override
+                    or target_week_label
+                    or (subject.split("] ", 1)[-1].strip() if "] " in subject else f"{selected_team} 서머리")
+                )
                 EmailDispatchService.record_dispatch(
                     dispatch_type=dispatch_type,
                     recipient_emails=combined_rcpts_str,
                     sender_email=sender,
                     selected_team=selected_team,
-                    period_label=current_period_label_override or target_week_label or f"{selected_team} 서머리",
+                    period_label=actual_period_label,
                     subject=subject,
                     status="SUCCESS"
                 )

@@ -416,6 +416,67 @@ def trigger_outlook_collection_safely(months_behind: int = 2, months_ahead: int 
         return {"success": False, "error": str(e_out)}
 
 
+_last_weekly_email_check_date: str = ""
+_last_monthly_email_check_month: str = ""
+
+
+def check_and_run_scheduled_emails():
+    """
+    📬 주간(매주 월요일 08:00~11:59 KST) 및 월간(매월 1일 08:00~11:59 KST) 정기 메일 자동 발송 백업 스케줄러
+    - GitHub Actions와 이중화 동작하며, Supabase 클라우드 발송 이력 기반으로 중복 발송을 100% 원천 차단합니다.
+    """
+    global _last_weekly_email_check_date, _last_monthly_email_check_month
+    try:
+        now_kst = get_current_kst_time()
+        today_str = now_kst.strftime("%Y-%m-%d")
+        ym_str = now_kst.strftime("%Y-%m")
+
+        # 1. 주간 정기 자동 발송 (매주 월요일 08:00 ~ 11:59 KST)
+        if now_kst.weekday() == 0 and 8 <= now_kst.hour < 12 and _last_weekly_email_check_date != today_str:
+            from ..services.email_dispatch_service import EmailDispatchService
+            from ..services.email_schedule_service import EmailScheduleService
+            from ..services.email_sender import EmailSender
+            if EmailDispatchService.has_weekly_auto_dispatched_this_week("기술 1팀"):
+                _last_weekly_email_check_date = today_str
+            else:
+                active_emails = EmailScheduleService.get_active_recipient_emails()
+                if active_emails:
+                    log_trace(f"[📬 주간 정기 메일 자동 발송 가동] 대상: {', '.join(active_emails)}")
+                    ok, msg = EmailSender.send_weekly_report(
+                        recipient_emails=active_emails,
+                        sender_email=config.SMTP_SENDER_EMAIL,
+                        sender_password=config.SMTP_SENDER_PASSWORD,
+                        selected_team="기술 1팀",
+                        dispatch_type="AUTO_WEEKLY"
+                    )
+                    log_trace(f"[📬 주간 정기 메일 결과] {msg}")
+                    if ok:
+                        _last_weekly_email_check_date = today_str
+
+        # 2. 월간 팀 전월 엑셀 원장 정기 발송 (매월 1일 08:00 ~ 11:59 KST)
+        if now_kst.day == 1 and 8 <= now_kst.hour < 12 and _last_monthly_email_check_month != ym_str:
+            from ..services.monthly_worklog_service import MonthlyWorklogService
+            target_month = MonthlyWorklogService.get_previous_month(now_kst)
+            cfg = MonthlyWorklogService.get_team_config("기술 1팀")
+            if not cfg.get("is_active", True):
+                _last_monthly_email_check_month = ym_str
+            elif MonthlyWorklogService.has_monthly_auto_dispatched("기술 1팀", target_month):
+                _last_monthly_email_check_month = ym_str
+            else:
+                log_trace(f"[📑 월간 팀 원장 자동 발송 가동] 대상월: {target_month}")
+                ok, msg = MonthlyWorklogService.send_monthly_team_report(
+                    team_name="기술 1팀",
+                    recipient_email=cfg.get("team_email", "GE101@sangsanginworld.co.kr"),
+                    month_str=target_month,
+                    dispatch_type="AUTO_MONTHLY"
+                )
+                log_trace(f"[📑 월간 팀 원장 결과] {msg}")
+                if ok:
+                    _last_monthly_email_check_month = ym_str
+    except Exception as e_sched:
+        log_trace(f"[정기 메일 스케줄러 알림]: {e_sched}")
+
+
 def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
     """
     1회 증분 수집 사이클 실행: 아웃룩 독립 동기화 보장 + 카톡 창 탐색 -> 텍스트 추출 -> 파싱 -> DB Upsert
@@ -444,7 +505,9 @@ def run_collection_cycle(is_manual: bool = False) -> Dict[str, Any]:
         COLLECTOR_STATUS["next_run_time"] = kst_now + timedelta(seconds=config.COLLECTOR_INTERVAL_SECONDS)
         
         # 📅 1. 아웃룩 캘린더 동기화 (카카오톡 창 상태/로그인 여부와 100% 독립 실행)
+        # 📅 1. 아웃룩 캘린더 동기화 & 정기 메일 스케줄러 점검 (카카오톡 창 상태/로그인 여부와 100% 독립 실행)
         trigger_outlook_collection_safely()
+        check_and_run_scheduled_emails()
 
         try:
             log_trace(f"==================================================")

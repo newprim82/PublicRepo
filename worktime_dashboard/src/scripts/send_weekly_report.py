@@ -13,12 +13,15 @@ if str(project_root) not in sys.path:
 
 from src.services.email_sender import EmailSender
 from src.services.email_schedule_service import EmailScheduleService
+from src.services.email_dispatch_service import EmailDispatchService
+
 
 def main():
     parser = argparse.ArgumentParser(description="업무 실적 Summary 자동 이메일 발송 배치 스크립트")
     parser.add_argument("--type", choices=["weekly", "monthly"], default="weekly", help="발송 주기 (weekly: 주간 자동, monthly: 월간 자동)")
     parser.add_argument("--team", default="기술 1팀", help="대상 팀명 (기본: 기술 1팀)")
     parser.add_argument("--recipients", default="", help="수신자 이메일 목록 (쉼표 구분)")
+    parser.add_argument("--force", action="store_true", help="이미 발송된 이력이 있어도 강제 재발송")
     args = parser.parse_args()
 
     dispatch_type = "AUTO_MONTHLY" if args.type == "monthly" else "AUTO_WEEKLY"
@@ -27,8 +30,12 @@ def main():
     print("==================================================")
     print(f"[{report_title}] 업무 실적 Summary Email Sending ({dispatch_type})")
     print("==================================================")
-    
+
     from src.config import config
+
+    if dispatch_type == "AUTO_WEEKLY" and not args.force and EmailDispatchService.has_weekly_auto_dispatched_this_week(args.team):
+        print(f"[✓] [{args.team}] 금주 주간 자동 보고서(AUTO_WEEKLY)가 이미 발송 완료되어 중복 발송을 건너뜁니다.")
+        return
 
     # 📬 DB 및 설정에 등록된 정기 메일 발송 활성 수신자 목록 자동 로드
     scheduled_recipients = EmailScheduleService.get_active_recipient_emails()
@@ -37,12 +44,12 @@ def main():
     recipients = args.recipients or os.getenv("REPORT_RECIPIENT_EMAILS", "") or default_recipients_str
     sender = os.getenv("GMAIL_SENDER_EMAIL") or os.getenv("SMTP_SENDER_EMAIL") or config.SMTP_SENDER_EMAIL or "newprim82@gmail.com"
     pwd = os.getenv("GMAIL_APP_PASSWORD") or os.getenv("SMTP_SENDER_PASSWORD") or config.SMTP_SENDER_PASSWORD or ""
-    
+
     print(f"[*] 발신자: {sender}")
     print(f"[*] 수신자: {recipients}")
     print(f"[*] 대상 팀: {args.team}")
     print(f"[*] 발송 유형: {dispatch_type}")
-    
+
     success, message = EmailSender.send_weekly_report(
         recipient_emails=recipients,
         sender_email=sender,
@@ -50,10 +57,11 @@ def main():
         selected_team=args.team,
         dispatch_type=dispatch_type
     )
-    
+
     print(message)
     if not success:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
