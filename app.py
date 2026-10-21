@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:30 (Brand Home Button Integration)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 14:35 (Sidebar 50px Spacing)
 import os
 import sys
 from pathlib import Path

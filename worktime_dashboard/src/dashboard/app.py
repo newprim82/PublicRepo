@@ -125,7 +125,7 @@ def clear_all_web_caches():
                     pass
 
 # 버전 변경 및 빌드 갱신 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
-DEPLOY_BUILD_ID = "20261021_1430_BRAND_HOME_INTEGRATION"
+DEPLOY_BUILD_ID = "20261021_1435_SIDEBAR_SPACING_50PX"
 if st.session_state.get("_applied_app_version") != APP_VERSION or st.session_state.get("_applied_deploy_build_id") != DEPLOY_BUILD_ID:
     st.session_state["_applied_app_version"] = APP_VERSION
     st.session_state["_applied_deploy_build_id"] = DEPLOY_BUILD_ID
@@ -618,7 +618,7 @@ def main():
             on_click=set_nav_page,
             args=("🏠 실시간 분석 대시보드",)
         )
-        st.markdown('<div style="height: 6px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 50px;"></div>', unsafe_allow_html=True)
 
         # 🕒 관제포털 정상 가동 상태 및 실시간 NTP 표준시계 (사이드바 맞춤형 콤팩트 카드)
         if "_base_bora_initial_ms" not in st.session_state:
@@ -626,7 +626,7 @@ def main():
             st.session_state["_base_bora_initial_ms"] = int(bora_ts * 1000)
         initial_ms = st.session_state["_base_bora_initial_ms"]
         render_sidebar_status_widget(initial_ms)
-        st.markdown('<div style="height: 12px;"></div>', unsafe_allow_html=True)
+        st.markdown('<div style="height: 50px;"></div>', unsafe_allow_html=True)
 
         is_auth = AuthManager.is_authenticated()
 

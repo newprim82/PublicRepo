@@ -1166,7 +1166,7 @@
         [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"],
         [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container {
             margin-top: 0px !important;
-            margin-bottom: 6px !important;
+            margin-bottom: 0px !important;
         }
         [data-testid="stSidebar"] [data-testid="stElementContainer"]:has(#brand-nav-marker) + [data-testid="stElementContainer"] button,
         [data-testid="stSidebar"] .element-container:has(#brand-nav-marker) + .element-container button {
