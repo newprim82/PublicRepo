@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 13:00 (Hours Display Integer Format Restore)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 13:45 (Rebrand to WorkLens)
 import os
 import sys
 from pathlib import Path

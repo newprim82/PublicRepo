@@ -789,7 +789,7 @@ class EmailReportService:
             except Exception as cost_e:
                 cost_dashboard_html = f"<!-- 비용산정 섹션 렌더링 오류: {cost_e} -->"
 
-        subject_prefix = "📊 [업무 실적 및 예상 비용산정 Summary]" if include_cost_estimation else "📊 [업무 실적 Summary]"
+        subject_prefix = "🔍 [WorkLens 업무 실적 및 예상 비용산정 Summary]" if include_cost_estimation else "🔍 [WorkLens 업무 실적 Summary]"
         subject = f"{subject_prefix} {current_period_label}"
 
         # ----------------------------------------------------
@@ -811,7 +811,7 @@ class EmailReportService:
                         <table width="100%" cellpadding="0" cellspacing="0" border="0">
                             <tr>
                                 <td>
-                                    <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.5px;">📊 기술본부 작업 실적 Summary</div>
+                                    <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.5px;">🔍 WorkLens 주간 업무 실적 Summary</div>
                                     <div style="font-size: 13px; color: #bae6fd; margin-top: 6px;">📅 대상 기준: <b>{current_period_label}</b></div>
                                 </td>
                                 <td style="text-align: right; vertical-align: middle;">
@@ -958,7 +958,7 @@ class EmailReportService:
                 <!-- 푸터 안내 -->
                 <tr>
                     <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 30px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.6;">
-                        본 메일은 기술본부 현장 업무 관제 시스템에서 발송된 업무 실적 Summary 리포트입니다.<br>
+                        본 메일은 WorkLens 스마트 업무 분석 관제 시스템에서 발송된 업무 실적 Summary 리포트입니다.<br>
                         상세 작업 내역은 첨부된 엑셀 파일(<code>Work_Summary_{get_current_kst_time().strftime('%Y%m%d')}.xlsx</code>) 또는 웹 대시보드에서 확인하실 수 있습니다.
                     </td>
                 </tr>

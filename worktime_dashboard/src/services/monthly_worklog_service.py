@@ -663,7 +663,7 @@ class MonthlyWorklogService:
         """
         이메일 제목과 Cisco ACI 표준 세련된 HTML 본문 생성
         """
-        subject = f"[기술본부] {team_name} {month_str} 전월 업무 원장(카톡/아웃룩) 정기 보고"
+        subject = f"[WorkLens] {team_name} {month_str} 전월 업무 원장(카톡/아웃룩) 정기 보고"
 
         tot_records = len(df)
         kakao_df = df[~df["is_outlook"]] if "is_outlook" in df.columns else df
@@ -721,7 +721,7 @@ class MonthlyWorklogService:
                 <!-- 상단 헤더 -->
                 <div style="background: linear-gradient(135deg, #002D42 0%, #005073 100%); padding: 28px 32px; color: #ffffff;">
                     <div style="font-size: 11.5px; font-weight: 800; letter-spacing: 1px; color: #38bdf8; margin-bottom: 6px; text-transform: uppercase;">
-                        FIELD SUPPORT PORTAL | MONTHLY WORKLOG REPORT
+                        WORKLENS | MONTHLY WORKLOG REPORT
                     </div>
                     <h1 style="margin: 0; font-size: 21px; font-weight: 800; line-height: 1.35; color: #ffffff;">
                         {team_name} {month_str} 전월 업무 원장 정기 보고
@@ -803,7 +803,7 @@ class MonthlyWorklogService:
 
                 <!-- 푸터 -->
                 <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 32px; font-size: 11.5px; color: #94a3b8; line-height: 1.6;">
-                    본 메일은 기술본부 업무관제 시스템의 월간 정기 배치 스케줄러(매월 1일 08:00)에 의해 자동으로 생성되어 발송되었습니다.<br>
+                    본 메일은 WorkLens 업무 분석 관제 시스템의 월간 정기 배치 스케줄러(매월 1일 08:00)에 의해 자동으로 생성되어 발송되었습니다.<br>
                     궁금하신 사항은 기술본부 시스템 담당자에게 문의해 주시기 바랍니다.
                 </div>
 

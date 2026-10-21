@@ -89,8 +89,8 @@ except Exception as e:
 # 2. 페이지 설정 및 Cisco 테마 CSS 주입
 # -------------------------------------------------------------
 st.set_page_config(
-    page_title="팀 업무량 & 지원 시간 분석 대시보드",
-    page_icon="📊",
+    page_title="WorkLens - 스마트 업무 분석 대시보드",
+    page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -118,7 +118,7 @@ def clear_all_web_caches():
                     pass
 
 # 버전 변경 및 빌드 갱신 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
-DEPLOY_BUILD_ID = "20261021_1300_SMART_HOURS_FORMAT_RESTORE"
+DEPLOY_BUILD_ID = "20261021_1345_REBRAND_WORKLENS"
 if st.session_state.get("_applied_app_version") != APP_VERSION or st.session_state.get("_applied_deploy_build_id") != DEPLOY_BUILD_ID:
     st.session_state["_applied_app_version"] = APP_VERSION
     st.session_state["_applied_deploy_build_id"] = DEPLOY_BUILD_ID
@@ -600,14 +600,14 @@ def main():
     # 사이드바: Cisco Catalyst Center 5대 네비게이션 드로어
     # ==========================================
     with st.sidebar:
-        # 🏛️ APIC 스타일 사이드바 헤더: 시안 로고 마크 + 브랜드명 (버전 표기 제거)
+        # 🏛️ WorkLens 브랜드 사이드바 헤더: 돋보기 로고 마크 + WorkLens 브랜드명
         st.markdown("""
         <div class="sb-brand-wrapper" style="padding: 0px 4px 20px 4px; margin-bottom: 4px; display: block;">
             <div class="sb-brand" style="display: flex; align-items: center; gap: 10px;">
-                <div class="sb-brand-mark">◆</div>
+                <div class="sb-brand-mark" style="font-size: 22px; color: #38bdf8;">🔍</div>
                 <div>
-                    <div class="sb-brand-title">기술본부 관제센터</div>
-                    <div class="sb-brand-sub">FIELD SUPPORT PORTAL</div>
+                    <div class="sb-brand-title" style="font-size: 19px; font-weight: 800; letter-spacing: -0.5px; color: #ffffff;">WorkLens</div>
+                    <div class="sb-brand-sub" style="font-size: 10.5px; color: #94a3b8; letter-spacing: 0.5px;">FIELD WORK INTELLIGENCE</div>
                 </div>
             </div>
         </div>

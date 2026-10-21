@@ -1,7 +1,8 @@
-﻿@echo off
+@echo off
 chcp 65001 > nul
+title WorkLens 대시보드 실행
 echo ===================================================================
-echo   [대시보드 시작] 팀 지원 시간 & 업무량 분석 웹 대시보드 실행 중...
+echo   [대시보드 시작] WorkLens 스마트 업무 분석 웹 대시보드 실행 중...
 echo ===================================================================
 cd /d "%~dp0worktime_dashboard"
 python -m streamlit run src\dashboard\app.py
