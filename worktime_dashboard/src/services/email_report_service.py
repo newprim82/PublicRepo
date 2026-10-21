@@ -959,7 +959,7 @@ class EmailReportService:
                 <tr>
                     <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 30px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.6;">
                         본 메일은 WorkLens 스마트 업무 분석 관제 시스템에서 발송된 업무 실적 Summary 리포트입니다.<br>
-                        상세 작업 내역은 첨부된 엑셀 파일(<code>Work_Summary_{get_current_kst_time().strftime('%Y%m%d')}.xlsx</code>) 또는 웹 대시보드에서 확인하실 수 있습니다.
+                        상세 작업 내역은 첨부된 엑셀 파일(<code>Work_Summary_{get_current_kst_time().strftime('%Y%m%d')}.xlsx</code>) 또는 <a href="https://worklens.streamlit.app" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: underline;">WorkLens 웹 대시보드</a>에서 확인하실 수 있습니다.
                     </td>
                 </tr>
             </table>

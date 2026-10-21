@@ -7,7 +7,7 @@
 - **타깃 사용자**: 기술본부 팀장, 엔지니어, 운영자
 - **실행 환경**:
   - 사내 로컬 환경 (Windows PC 카카오톡 대화 실시간 수집 및 배치 실행: `update_and_run.bat`)
-  - 인터넷 클라우드 웹 (`https://worktimes.streamlit.app` - Streamlit Community Cloud)
+  - 인터넷 클라우드 웹 (`https://worklens.streamlit.app` - Streamlit Community Cloud)
 
 ## 3. 핵심 기능 범위
 - **실시간 업무량/공수 관제**: 팀별, 엔지니어별, 고객사별 투입 시간 자동 집계 및 KPI 지표 분석.

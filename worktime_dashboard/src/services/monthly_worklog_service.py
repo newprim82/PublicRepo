@@ -804,7 +804,7 @@ class MonthlyWorklogService:
                 <!-- 푸터 -->
                 <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 32px; font-size: 11.5px; color: #94a3b8; line-height: 1.6;">
                     본 메일은 WorkLens 업무 분석 관제 시스템의 월간 정기 배치 스케줄러(매월 1일 08:00)에 의해 자동으로 생성되어 발송되었습니다.<br>
-                    궁금하신 사항은 기술본부 시스템 담당자에게 문의해 주시기 바랍니다.
+                    실시간 관제 및 조회는 <a href="https://worklens.streamlit.app" target="_blank" style="color: #0284c7; font-weight: bold; text-decoration: underline;">WorkLens 웹 포털</a>을 이용해 주시기 바랍니다.
                 </div>
 
             </div>

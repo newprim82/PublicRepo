@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 13:45 (Rebrand to WorkLens)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 13:52 (WorkLens URL Sync)
 import os
 import sys
 from pathlib import Path
