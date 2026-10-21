@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 11:40 (40/52h Governance Weekend Red Row Styling Fix)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 13:00 (Hours Display Integer Format Restore)
 import os
 import sys
 from pathlib import Path

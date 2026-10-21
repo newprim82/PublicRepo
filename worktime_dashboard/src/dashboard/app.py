@@ -118,7 +118,7 @@ def clear_all_web_caches():
                     pass
 
 # 버전 변경 및 빌드 갱신 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
-DEPLOY_BUILD_ID = "20261021_1140_GOVERNANCE_WEEKEND_ROW_FIX"
+DEPLOY_BUILD_ID = "20261021_1300_SMART_HOURS_FORMAT_RESTORE"
 if st.session_state.get("_applied_app_version") != APP_VERSION or st.session_state.get("_applied_deploy_build_id") != DEPLOY_BUILD_ID:
     st.session_state["_applied_app_version"] = APP_VERSION
     st.session_state["_applied_deploy_build_id"] = DEPLOY_BUILD_ID

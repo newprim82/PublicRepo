@@ -1004,4 +1004,26 @@ def apply_weekend_table_styling(df_disp: pd.DataFrame, highlight_scope: str = "f
             return [red_style if col in [st_col, wk_col] else "" for col in row.index]
         return [""] * len(row)
 
-    return styled_df.style.apply(_style_func, axis=1)
+    def _format_smart_num(val):
+        if pd.isna(val):
+            return ""
+        try:
+            f = float(val)
+            return f"{int(f)}" if f.is_integer() else f"{f:.2f}".rstrip("0").rstrip(".")
+        except Exception:
+            return str(val)
+
+    styler = styled_df.style.apply(_style_func, axis=1)
+
+    # float/int 컬럼 및 소요(h), 예정(h) 등 시간/숫자 컬럼의 소수점 과다 표시(.000000)를 방지하고 깔끔한 정수/소수로 원복
+    format_dict = {}
+    for col in styled_df.columns:
+        if pd.api.types.is_float_dtype(styled_df[col]) or pd.api.types.is_integer_dtype(styled_df[col]):
+            format_dict[col] = _format_smart_num
+        elif any(k in str(col).lower() for k in ["소요", "예정", "시간", "hours", "(h)"]):
+            format_dict[col] = _format_smart_num
+
+    if format_dict:
+        styler = styler.format(format_dict)
+
+    return styler
