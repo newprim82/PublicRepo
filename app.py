@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-21 15:20 (Match Chart Weekend Red & Night Orange)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-10-28 15:15 (Supabase Cloud Admin Accounts & 7-Day Cookie Session Persistence)
 import os
 import sys
 from pathlib import Path

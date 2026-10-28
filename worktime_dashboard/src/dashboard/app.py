@@ -588,6 +588,7 @@ def render_main_content_frame(
 def main():
     from src.parser.reply_matcher import WorkLogMatcher
 
+    AuthManager.ensure_cloud_sync()
     df_raw = load_data()
     team_mappings = TeamService.get_team_mappings()
     all_workers_list = sorted(df_raw["worker_name"].dropna().unique()) if not df_raw.empty else []
@@ -901,6 +902,7 @@ def main():
     if df_raw.empty:
         st.warning("⚠️ 현재 등록된 작업 로그 데이터가 없습니다.")
         st.info("💡 사이드바의 **[카카오톡 대화 파일 업로드]**를 통해 대화 텍스트(.txt)를 업로드하거나, PC 카카오톡 자동 수집기를 실행해주세요.")
+        AuthManager.sync_browser_cookie()
         return
 
 
@@ -936,6 +938,7 @@ def main():
         weekend_only=weekend_only,
         custom_period_desc=custom_period_desc
     )
+    AuthManager.sync_browser_cookie()
 
 
 _APP_FULLY_INITIALIZED = True

@@ -71,7 +71,7 @@ def render_login_page():
         <div class="login-card">
             <div style="font-size: 36px;">🔐</div>
             <div class="login-title">기술본부 관리자 로그인</div>
-            <div class="login-sub">시스템 설정 및 작업 원장 관리를 위한 관리자 인증 (24시간 세션 유지)</div>
+            <div class="login-sub">시스템 설정 및 작업 원장 관리를 위한 관리자 인증 (7일간 로그인 유지 · 클라우드 영구 동기화)</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -125,7 +125,8 @@ def render_login_page():
             </div>
             <div class="login-security-desc">
                 • <b>단방향 해시(One-Way Hash):</b> 복호화 키 자체가 세상에 존재하지 않는 완전 단방향 암호화 방식으로, 관리자나 개발자도 원래 비밀번호를 복원할 수 없습니다.<br>
-                • <b>솔트(Salt) & 100,000회 해시:</b> 계정마다 무작위 16바이트 고유 솔트(Salt)와 100,000회 반복 스트레칭을 적용하여 레인보우 테이블 및 무차별 대입 공격을 원천 방어합니다.
+                • <b>솔트(Salt) & 100,000회 해시:</b> 계정마다 무작위 16바이트 고유 솔트(Salt)와 100,000회 반복 스트레칭을 적용하여 레인보우 테이블 및 무차별 대입 공격을 원천 방어합니다.<br>
+                • <b>클라우드 영구 보존:</b> 등록된 관리자 계정과 변경된 비밀번호 해시는 Supabase 클라우드 원장에 실시간 동기화되어 서버 재부팅 시에도 초기화되지 않습니다.
             </div>
         </div>
         """, unsafe_allow_html=True)
