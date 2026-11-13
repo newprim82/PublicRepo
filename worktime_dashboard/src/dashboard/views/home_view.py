@@ -157,6 +157,7 @@ def render_upcoming_schedule_section(sched_df: pd.DataFrame, selected_team: str)
         title_mappings = TeamService.get_title_mappings()
         theme = get_team_theme(selected_team)
         with st.container(border=True):
+            st.markdown('<span class="team-upcoming-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
             st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid #6366f1; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">📅 {len(sched_df)}건 예정</span></div>""", unsafe_allow_html=True)
             _render_single_team_upcoming_cards(sched_df, title_mappings)
 
@@ -256,6 +257,7 @@ def render_leave_section(leave_records: list, selected_team: str):
     else:
         theme = get_team_theme(selected_team)
         with st.container(border=True):
+            st.markdown('<span class="team-leave-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
             st.markdown(
                 f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid #a855f7; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);">"""
                 f"""<div style="display: flex; align-items: center; gap: 9px;">"""
@@ -313,6 +315,7 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
         title_mappings = TeamService.get_title_mappings()
         theme = get_team_theme(selected_team)
         with st.container(border=True):
+            st.markdown('<span class="team-pending-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
             st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(pend_df)}건 진행 중</span></div>""", unsafe_allow_html=True)
             _render_single_team_pending_cards(pend_df, title_mappings)
 
@@ -643,15 +646,15 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
 
         # 0. 🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (휴가자가 없을 때도 상시 표출, 진행 중/예정 섹션과 동일한 간격 및 구분선)
         render_leave_section(leave_records, selected_team)
-        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 4. 실시간 진행 중(PENDING) 작업 섹션 (단일 통합 1분 자동 갱신)
         render_live_pending_section(pend_df, selected_team)
-        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 5. 📅 오늘 예정 일정(SCHEDULED) 섹션 (3단 라이브 관제의 중간 섹션)
         render_upcoming_schedule_section(sched_df, selected_team)
-        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1.5px solid #e2e8f0;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 22px; margin-bottom: 20px; border-top: 1px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
         # 6. 오늘 완료된 작업(COMPLETED) 섹션 (팀 단위 그룹 렌더링)
         st.markdown(f"""<div style="font-size: 17px; font-weight: 800; color: #002d42; border-left: 4px solid #10b981; padding-left: 10px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">✅ 오늘 완료된 작업 <span style="background: #ede9fe; color: #5b21b6; border-radius: 12px; padding: 2px 9px; font-size: 12px; font-weight: 800;">{len(comp_df)}건</span></div>""", unsafe_allow_html=True)
@@ -760,6 +763,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 title_mappings = TeamService.get_title_mappings()
                 theme = get_team_theme(selected_team)
                 with st.container(border=True):
+                    st.markdown('<span class="team-comp-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
                     st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 10px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(comp_df)}건 완료</span></div>""", unsafe_allow_html=True)
 
                     t_comp = comp_df.copy()
@@ -948,6 +952,16 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                 # 📊 과중근무 알림 버튼: 실시간 카드 프로그레스 바 타입 스타일링
                 st.markdown("""
                 <style>
+                    /* 🏛️ 과중근무 배너 컨테이너 외곽선: 부드러운 옅은 핑크/회색 테두리 */
+                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) {
+                        background: #fff5f5 !important;
+                        border: 1px solid #fecaca !important;
+                        border-left: 6px solid #dc2626 !important;
+                        border-radius: 8px !important;
+                        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+                        padding: 14px 20px !important;
+                    }
+
                     /* 불필요한 마커 컨테이너 숨김 */
                     div.element-container:has(.overwork-banner-zone),
                     div.element-container:has(.danger-chip-zone),
@@ -1174,14 +1188,14 @@ def render_home_view(
     render_overwork_banner_fragment(df)
 
     # 4. 과중 근무 배너와 회색선, 회색선과 LIVE 관제 사이 간격 (28px 균일)
-    st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1.5px solid #cbd5e1;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top: 28px; margin-bottom: 28px; border-top: 1px solid #e2e8f0;'></div>", unsafe_allow_html=True)
 
     # 5. 🟢 오늘 실시간 작업 현황 라이브 보드 (현재시: LIVE 관제)
     render_today_live_board(df_raw, team_mappings, selected_team)
 
     # 6. 📏 LIVE 관제 카드 아래와 미래시 일정표 사이 20px 대칭 구분선
     st.markdown("""
-    <div class="live-to-calendar-divider" style="margin-top: 20px; margin-bottom: 20px; border-top: 1.5px solid #cbd5e1; width: 100%;"></div>
+    <div class="live-to-calendar-divider" style="margin-top: 20px; margin-bottom: 20px; border-top: 1px solid #e2e8f0; width: 100%;"></div>
     """, unsafe_allow_html=True)
 
     # 7. 🌟 📅 월간캘린더 통합 일정표 (동기화: 아웃룩&Teams 캘린더 - 프리미엄 NOC 헤더 바)
@@ -1190,6 +1204,7 @@ def render_home_view(
     st.markdown(cal_header_html, unsafe_allow_html=True)
 
     with st.container(border=True):
+        st.markdown('<span class="calendar-widget-container" style="display:none;"></span>', unsafe_allow_html=True)
         try:
             render_outlook_calendar_widget(
                 selected_team=selected_team,

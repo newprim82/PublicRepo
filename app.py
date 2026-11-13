@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-10-28 15:15 (Supabase Cloud Admin Accounts & 7-Day Cookie Session Persistence)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-11-13 10:50 (Refine Dashboard Container Borders to Soft Gray #e2e8f0)
 import os
 import sys
 from pathlib import Path

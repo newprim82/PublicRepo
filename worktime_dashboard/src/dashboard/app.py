@@ -115,9 +115,9 @@ def clear_all_web_caches():
     except Exception:
         pass
     
-    # 현재 실행 중인 app 모듈을 제외하고, 뷰/다이얼로그/헬퍼 서브모듈을 메모리에서 제거하여 최신 코드를 즉시 다시 읽도록 보장
+    # 현재 실행 중인 app 모듈 및 패키지 루트를 제외하고, 뷰/다이얼로그/헬퍼 서브모듈을 메모리에서 제거하여 최신 코드를 즉시 다시 읽도록 보장
     for mod_name in list(sys.modules.keys()):
-        if mod_name != __name__ and mod_name != "src.dashboard.app":
+        if mod_name != __name__ and mod_name not in ["src", "src.dashboard", "src.dashboard.app"]:
             if mod_name.startswith("src."):
                 try:
                     del sys.modules[mod_name]
@@ -125,7 +125,7 @@ def clear_all_web_caches():
                     pass
 
 # 버전 변경 및 빌드 갱신 시 Streamlit Cloud 및 접속 세션 캐시 자동 무효화 (최신 반영 100% 보장)
-DEPLOY_BUILD_ID = "20261021_1520_MATCH_CHART_WEEKEND_RED_NIGHT_ORANGE"
+DEPLOY_BUILD_ID = "20261113_1050_SOFT_GRAY_CONTAINER_BORDER"
 if st.session_state.get("_applied_app_version") != APP_VERSION or st.session_state.get("_applied_deploy_build_id") != DEPLOY_BUILD_ID:
     st.session_state["_applied_app_version"] = APP_VERSION
     st.session_state["_applied_deploy_build_id"] = DEPLOY_BUILD_ID
