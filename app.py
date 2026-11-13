@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-11-13 11:15 (Streamlit 1.62.0 st-key Container Soft Gray Border Fix)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-11-13 14:02 (Revert overwork border changes)
 import os
 import sys
 from pathlib import Path
