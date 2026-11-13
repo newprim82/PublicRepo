@@ -1,4 +1,4 @@
-# Streamlit Cloud Auto-Deploy Trigger: 2026-11-13 14:02 (Revert overwork border changes)
+# Streamlit Cloud Auto-Deploy Trigger: 2026-11-13 14:05 (Clean up inner borders in overwork banner, preserve outer border only)
 import os
 import sys
 from pathlib import Path

@@ -992,18 +992,30 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                 # 📊 과중근무 알림 버튼: 실시간 카드 프로그레스 바 타입 스타일링
                 st.markdown("""
                 <style>
-                    /* 🏛️ 과중근무 배너 컨테이너 외곽선: 부드러운 옅은 핑크/회색 테두리 */
+                    /* 🏛️ 과중근무 배너 컨테이너 외곽선: 최외곽 배너에만 테두리 적용 */
                     .st-key-overwork_banner_container,
-                    div[class*="st-key-overwork_banner_container"],
-                    div[data-testid="stVerticalBlock"]:has(> div .overwork-banner-zone),
-                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone),
-                    div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) {
+                    div[class*="st-key-overwork_banner_container"] {
                         background: #fff5f5 !important;
                         border: 1px solid #fecaca !important;
                         border-left: 6px solid #dc2626 !important;
                         border-radius: 8px !important;
                         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
                         padding: 14px 20px !important;
+                    }
+
+                    /* 🚫 배너 내부의 하위 컬럼/블록 테두리 및 배경 완전 제거 (최외곽 테두리만 유지) */
+                    .st-key-overwork_banner_container div[data-testid="stVerticalBlock"],
+                    .st-key-overwork_banner_container div[data-testid="stColumn"],
+                    .st-key-overwork_banner_container div[data-testid="column"],
+                    .st-key-overwork_banner_container div[data-testid="stHorizontalBlock"],
+                    div[class*="st-key-overwork_banner_container"] div[data-testid="stVerticalBlock"],
+                    div[class*="st-key-overwork_banner_container"] div[data-testid="stColumn"],
+                    div[class*="st-key-overwork_banner_container"] div[data-testid="column"],
+                    div[class*="st-key-overwork_banner_container"] div[data-testid="stHorizontalBlock"] {
+                        border: none !important;
+                        border-left: none !important;
+                        background: transparent !important;
+                        box-shadow: none !important;
                     }
 
                     /* 불필요한 마커 컨테이너 숨김 */
