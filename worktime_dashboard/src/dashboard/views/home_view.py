@@ -156,7 +156,7 @@ def render_upcoming_schedule_section(sched_df: pd.DataFrame, selected_team: str)
     else:
         title_mappings = TeamService.get_title_mappings()
         theme = get_team_theme(selected_team)
-        with st.container(border=True):
+        with st.container(border=True, key="live_upcoming_single_team_container"):
             st.markdown('<span class="team-upcoming-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
             st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid #6366f1; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">📅 {len(sched_df)}건 예정</span></div>""", unsafe_allow_html=True)
             _render_single_team_upcoming_cards(sched_df, title_mappings)
@@ -256,7 +256,7 @@ def render_leave_section(leave_records: list, selected_team: str):
                     print(f"[전체팀 휴가 카드 렌더링 예외]: {e_card}")
     else:
         theme = get_team_theme(selected_team)
-        with st.container(border=True):
+        with st.container(border=True, key="live_leave_single_team_container"):
             st.markdown('<span class="team-leave-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
             st.markdown(
                 f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid #a855f7; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);">"""
@@ -314,7 +314,7 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
     else:
         title_mappings = TeamService.get_title_mappings()
         theme = get_team_theme(selected_team)
-        with st.container(border=True):
+        with st.container(border=True, key="live_pending_single_team_container"):
             st.markdown('<span class="team-pending-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
             st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 12px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #d1e7dd; color: #0f5132; border: 1px solid #a3cfbb; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">🟢 {len(pend_df)}건 진행 중</span></div>""", unsafe_allow_html=True)
             _render_single_team_pending_cards(pend_df, title_mappings)
@@ -434,6 +434,46 @@ def render_live_pending_section(pend_df: pd.DataFrame, selected_team: str, leave
 
 
 def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_team: str = "전체 팀"):
+    # 🏛️ 라이브 보드 모든 컨테이너 외곽선: 부드러운 옅은 회색 (#e2e8f0) 브라우저 1순위 즉시 강제 적용
+    st.markdown("""
+    <style>
+    .st-key-live_board_main_container,
+    div[class*="st-key-live_board_main_container"],
+    .st-key-live_pending_single_team_container,
+    div[class*="st-key-live_pending_single_team_container"],
+    .st-key-live_upcoming_single_team_container,
+    div[class*="st-key-live_upcoming_single_team_container"],
+    .st-key-live_leave_single_team_container,
+    div[class*="st-key-live_leave_single_team_container"],
+    .st-key-live_comp_single_team_container,
+    div[class*="st-key-live_comp_single_team_container"],
+    .st-key-calendar_widget_container,
+    div[class*="st-key-calendar_widget_container"],
+    div[data-testid="stVerticalBlock"]:has(> div .live-board-main-container),
+    div[data-testid="stVerticalBlock"]:has(.live-board-main-container),
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.live-board-main-container),
+    div[data-testid="stVerticalBlock"]:has(> div .team-pending-cards-container),
+    div[data-testid="stVerticalBlock"]:has(.team-pending-cards-container),
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.team-pending-cards-container),
+    div[data-testid="stVerticalBlock"]:has(> div .team-upcoming-cards-container),
+    div[data-testid="stVerticalBlock"]:has(.team-upcoming-cards-container),
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.team-upcoming-cards-container),
+    div[data-testid="stVerticalBlock"]:has(> div .team-leave-cards-container),
+    div[data-testid="stVerticalBlock"]:has(.team-leave-cards-container),
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.team-leave-cards-container),
+    div[data-testid="stVerticalBlock"]:has(> div .team-comp-cards-container),
+    div[data-testid="stVerticalBlock"]:has(.team-comp-cards-container),
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.team-comp-cards-container),
+    div[data-testid="stVerticalBlock"]:has(> div .calendar-widget-container),
+    div[data-testid="stVerticalBlock"]:has(.calendar-widget-container) {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     # 팀명 공백 무관 안전 비교 헬퍼 (예: "기술1팀" == "기술 1팀")
     def is_same_team(t1, t2):
         return str(t1).replace(" ", "").strip() == str(t2).replace(" ", "").strip()
@@ -641,7 +681,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
         return
 
     # 4, 5 & 6. 🏛️ LIVE 관제 중 하위 전체 내용을 하나로 묶는 대형 통합 네모 컨테이너
-    with st.container(border=True):
+    with st.container(border=True, key="live_board_main_container"):
         st.markdown('<span class="live-board-main-container" style="display:none;"></span>', unsafe_allow_html=True)
 
         # 0. 🏖️ 오늘 휴가 / 연차 / 반차 현황 섹션 (휴가자가 없을 때도 상시 표출, 진행 중/예정 섹션과 동일한 간격 및 구분선)
@@ -762,7 +802,7 @@ def render_today_live_board(df_raw: pd.DataFrame, team_mappings: dict, selected_
                 # 🏢 단일 팀 선택 시: 기존 4열 그리드 레이아웃
                 title_mappings = TeamService.get_title_mappings()
                 theme = get_team_theme(selected_team)
-                with st.container(border=True):
+                with st.container(border=True, key="live_comp_single_team_container"):
                     st.markdown('<span class="team-comp-cards-container" style="display:none;"></span>', unsafe_allow_html=True)
                     st.markdown(f"""<div style="margin-top: 2px; margin-bottom: 10px; background: {theme['bg_gradient']}; border: 1px solid {theme['border']}; border-left: 6px solid {theme['primary']}; border-radius: 8px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);"><div style="display: flex; align-items: center; gap: 9px;"><span style="font-size: 18px;">{theme['icon']}</span><span style="font-size: 16px; font-weight: 800; color: {theme['text_color']}; letter-spacing: -0.3px;">{selected_team}</span><span style="background: {theme['primary']}; color: #ffffff; border-radius: 4px; padding: 2px 7px; font-size: 10.5px; font-weight: 800; letter-spacing: -0.2px;">{theme['tag']}</span></div><span style="background-color: #ede9fe; color: #5b21b6; border: 1.5px solid #c4b5fd; padding: 2.5px 11px; border-radius: 20px; font-size: 11.5px; font-weight: 800;">✅ {len(comp_df)}건 완료</span></div>""", unsafe_allow_html=True)
 
@@ -945,7 +985,7 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     caution_items.append(item)
 
         if danger_items or caution_items or rewarded_items:
-            with st.container(border=True):
+            with st.container(border=True, key="overwork_banner_container"):
                 # 🏷️ 과중근무 배너 전용 마커
                 st.markdown('<span class="overwork-banner-zone" style="display:none;"></span>', unsafe_allow_html=True)
 
@@ -953,6 +993,10 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                 st.markdown("""
                 <style>
                     /* 🏛️ 과중근무 배너 컨테이너 외곽선: 부드러운 옅은 핑크/회색 테두리 */
+                    .st-key-overwork_banner_container,
+                    div[class*="st-key-overwork_banner_container"],
+                    div[data-testid="stVerticalBlock"]:has(> div .overwork-banner-zone),
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone),
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) {
                         background: #fff5f5 !important;
                         border: 1px solid #fecaca !important;
@@ -976,7 +1020,11 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     /* 🚨 [52h 초과] 레드 프로그레스 바 버튼 타입 */
                     div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
                     div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button,
+                    .st-key-overwork_banner_container div[data-testid="stColumn"]:has(.danger-chip-zone) button,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.danger-chip-zone) button,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.danger-chip-zone) button,
+                    .st-key-overwork_banner_container button[kind="primary"],
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) button[kind="primary"],
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"] {
                         background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%) !important;
                         background-color: #dc2626 !important;
@@ -991,6 +1039,8 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     }
                     div[data-testid="stColumn"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
                     div[data-testid="column"]:has(.danger-chip-zone) div[data-testid="stButton"] > button:hover,
+                    .st-key-overwork_banner_container button[kind="primary"]:hover,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) button[kind="primary"]:hover,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="primary"]:hover {
                         background: linear-gradient(90deg, #b91c1c 0%, #dc2626 100%) !important;
                         border-color: #991b1b !important;
@@ -1001,8 +1051,14 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     /* ⚠️ [40h 초과] 주황색 프로그레스 바 버튼 타입 */
                     div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
                     div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button,
+                    .st-key-overwork_banner_container div[data-testid="stColumn"]:has(.caution-chip-zone) button,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button,
+                    .st-key-overwork_banner_container button[kind="secondary"],
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) button[kind="secondary"],
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) button[kind="secondary"],
+                    .st-key-overwork_banner_container div.stButton > button:not([kind="primary"]),
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div.stButton > button:not([kind="primary"]),
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div.stButton > button:not([kind="primary"]) {
                         background: linear-gradient(90deg, #ea580c 0%, #f97316 100%) !important;
                         background-color: #ea580c !important;
@@ -1017,6 +1073,8 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     }
                     div[data-testid="stColumn"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
                     div[data-testid="column"]:has(.caution-chip-zone) div[data-testid="stButton"] > button:hover,
+                    .st-key-overwork_banner_container div[data-testid="stColumn"]:has(.caution-chip-zone) button:hover,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button:hover,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.caution-chip-zone) button:hover {
                         background: linear-gradient(90deg, #c2410c 0%, #ea580c 100%) !important;
                         border-color: #9a3412 !important;
@@ -1027,6 +1085,8 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     /* ✅ [보상 완료] 초록색 프로그레스 바 버튼 타입 */
                     div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
                     div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button,
+                    .st-key-overwork_banner_container div[data-testid="stColumn"]:has(.reward-chip-zone) button,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button {
                         background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%) !important;
                         background-color: #16a34a !important;
@@ -1041,6 +1101,8 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     }
                     div[data-testid="stColumn"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
                     div[data-testid="column"]:has(.reward-chip-zone) div[data-testid="stButton"] > button:hover,
+                    .st-key-overwork_banner_container div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stColumn"]:has(.reward-chip-zone) button:hover {
                         background: linear-gradient(90deg, #15803d 0%, #16a34a 100%) !important;
                         border-color: #166534 !important;
@@ -1049,8 +1111,14 @@ def render_overwork_banner_fragment(ov_df: pd.DataFrame):
                     }
 
                     /* 📝 프로그레스 바 내부 볼드 화이트 텍스트 + 입체 텍스트 그림자 */
+                    .st-key-overwork_banner_container div[data-testid="stButton"] > button *,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button *,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button *,
+                    .st-key-overwork_banner_container div[data-testid="stButton"] > button p,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button p,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button p,
+                    .st-key-overwork_banner_container div[data-testid="stButton"] > button span,
+                    div[data-testid="stVerticalBlock"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button span,
                     div[data-testid="stVerticalBlockBorderWrapper"]:has(.overwork-banner-zone) div[data-testid="stButton"] > button span {
                         color: #ffffff !important;
                         font-weight: 700 !important;
@@ -1203,7 +1271,7 @@ def render_home_view(
     cal_header_html = f"""<div style="background: linear-gradient(135deg, #002233 0%, #003a55 50%, #004d71 100%); border: 1px solid #005f8a; border-radius: 9px; padding: 13px 20px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; box-shadow: 0 4px 14px rgba(0, 34, 51, 0.25);"><div style="display: flex; align-items: center; gap: 11px;"><span style="background-color: #0284c7; color: #ffffff; border: 1px solid #38bdf8; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 0 8px rgba(2, 132, 199, 0.4);">● 월간캘린더</span><span style="font-size: 16.5px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">통합 일정표</span><span style="font-size: 12px; color: #38bdf8; background-color: rgba(0, 180, 216, 0.22); border: 1px solid rgba(56, 189, 248, 0.5); padding: 3px 9px; border-radius: 6px; font-weight: 700;">동기화: 아웃룩&Teams 캘린더</span></div><div style="display: flex; align-items: center; gap: 20px; font-size: 13.5px; font-weight: 600;"><span style="color: #cbd5e1;">🏢 조회 기준: <b style="color: #38bdf8; font-size: 14.5px; font-weight: 800;">{cal_team_label}</b></span><span style="color: #cbd5e1;">🔄 연동 주기: <b style="color: #4ade80; font-size: 14.5px; font-weight: 800;">10분 자동</b></span><span style="color: #cbd5e1;">📅 일정 뷰: <b style="color: #fbbf24; font-size: 14.5px; font-weight: 800;">월간 캘린더</b></span></div></div>"""
     st.markdown(cal_header_html, unsafe_allow_html=True)
 
-    with st.container(border=True):
+    with st.container(border=True, key="calendar_widget_container"):
         st.markdown('<span class="calendar-widget-container" style="display:none;"></span>', unsafe_allow_html=True)
         try:
             render_outlook_calendar_widget(
